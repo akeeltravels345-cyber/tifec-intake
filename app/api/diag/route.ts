@@ -1,6 +1,7 @@
 // TEMPORARY SMTP diagnostic — gated by the admin key. Remove after debugging.
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 
@@ -10,13 +11,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const p = process.env.SMTP_PASS || "";
   const env = {
     SMTP_HOST: process.env.SMTP_HOST || null,
     SMTP_PORT: process.env.SMTP_PORT || null,
     SMTP_USER: process.env.SMTP_USER || null,
     SMTP_FROM: process.env.SMTP_FROM || null,
-    SMTP_PASS_set: !!process.env.SMTP_PASS,
-    SMTP_PASS_len: process.env.SMTP_PASS ? process.env.SMTP_PASS.length : 0,
+    SMTP_PASS_set: !!p,
+    SMTP_PASS_len: p.length,
+    // Google app passwords are exactly 16 lowercase letters, no spaces/digits.
+    SMTP_PASS_is_valid_format: /^[a-z]{16}$/.test(p),
+    SMTP_PASS_has_space: /\s/.test(p),
+    SMTP_PASS_has_uppercase: /[A-Z]/.test(p),
+    SMTP_PASS_has_digit: /[0-9]/.test(p),
+    SMTP_PASS_fp: p ? crypto.createHash("sha256").update(p).digest("hex").slice(0, 8) : null,
     APP_URL: process.env.APP_URL || null,
   };
 
