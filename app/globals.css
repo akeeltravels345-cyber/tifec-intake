@@ -538,7 +538,7 @@ body:has(.auth-wrap) .brandbar { display: none; }
 .auth-points li span { flex-shrink: 0; }
 
 /* Right form panel */
-.auth-panel { padding: 48px 44px; display: flex; align-items: center; }
+.auth-panel { padding: 48px 44px; display: flex; flex-direction: column; justify-content: center; }
 .auth-form-inner { width: 100%; }
 .auth-heading { font-size: 25px; margin: 0 0 6px; letter-spacing: -0.01em; }
 .auth-subtle { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
