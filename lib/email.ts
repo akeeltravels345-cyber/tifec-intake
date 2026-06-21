@@ -42,11 +42,19 @@ function transport() {
   });
 }
 
-/** First name only, ignoring honorifics and parentheticals (e.g. "Dr. Joan Latty" → "Joan"). */
-function firstName(name: string): string {
+/** Title + first name, ignoring surname/parentheticals (e.g. "Dr. Joan Latty" → "Dr. Joan", "Nick O'Connor" → "Nick"). */
+function greetingName(name: string): string {
   const cleaned = name.replace(/\(.*?\)/g, "").trim();
-  const words = cleaned.split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss|prof)\.?$/i.test(w));
-  return words[0] || cleaned || name;
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  const isTitle = (w: string) => /^(dr|mrs|mr|ms|miss|prof)\.?$/i.test(w);
+  let title = "";
+  let rest = tokens;
+  if (tokens[0] && isTitle(tokens[0])) {
+    title = tokens[0];
+    rest = tokens.slice(1);
+  }
+  const first = rest[0] || cleaned || name;
+  return title ? `${title} ${first}` : first;
 }
 
 /** Build the subject/text/html for the notification (exported so it can be previewed). */
@@ -55,7 +63,7 @@ export function buildNotification(args: NotifyArgs): { subject: string; text: st
   const link = `${appUrl}/submissions/${args.token}`;
   const when = new Date(args.submittedAt).toLocaleString("en-US");
   const formName = args.formLabel || "client intake form";
-  const greetName = firstName(args.clinicianName);
+  const greetName = greetingName(args.clinicianName);
   const subject = `New client intake form submitted${args.formLabel ? ` (${args.formLabel})` : ""}`;
 
   const text = [
