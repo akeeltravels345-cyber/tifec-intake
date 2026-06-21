@@ -5,8 +5,7 @@ import { decrypt } from "@/lib/crypto";
 import { templateLabel } from "@/lib/forms";
 import ShareLink from "@/components/ShareLink";
 import CoupleLink from "@/components/CoupleLink";
-import { type DashItem } from "@/components/DashboardSubmissions";
-import DashboardShell from "@/components/DashboardShell";
+import DashboardShell, { type DashItem } from "@/components/DashboardShell";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +17,9 @@ const STATUS_LABEL: Record<SubmissionStatus, string> = {
 
 // Icon, short description, and accent tint for each form type's card.
 const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
-  individual: { icon: "📝", desc: "Standard intake for an individual client.", bg: "#e7f1f0" },
-  couples: { icon: "💞", desc: "Each partner fills out their own form, linked together.", bg: "#fbeef0" },
-  "dsm5-level1-adult": { icon: "📊", desc: "Brief 23-item symptom screening measure.", bg: "#fcf3da" },
+  individual: { icon: "📝", desc: "Standard intake for an individual client.", bg: "#d9edec" },
+  couples: { icon: "💞", desc: "Each partner fills out their own form, linked together.", bg: "#e4e6f3" },
+  "dsm5-level1-adult": { icon: "📊", desc: "Brief 23-item symptom screening measure.", bg: "#f6edd6" },
 };
 
 // Short, scannable label per form type for the submissions list.
@@ -30,7 +29,7 @@ const SHORT_FORM: Record<string, string> = {
   "dsm5-level1-adult": "DSM-5 Level 1",
 };
 
-/** Initials from a clinician name, ignoring honorifics. */
+/** Initials from the clinician's name, ignoring honorifics. */
 function initials(name: string): string {
   const words = name
     .replace(/\(.*?\)/g, "")
@@ -40,17 +39,23 @@ function initials(name: string): string {
   return (letters || name[0] || "?").toUpperCase();
 }
 
-/** Pull a display name + concern snippet out of an encrypted row (clinician is authed + owns it). */
-function display(row: SubmissionRow): { name: string; concern: string } {
+/** Initials from a client name (first letters of up to two words). */
+function clientInitials(name: string): string {
+  const words = name.replace(/\(.*?\)/g, "").split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map((w) => w[0]).join("");
+  return (letters || name[0] || "?").toUpperCase();
+}
+
+/** Pull display name, email, and concern out of an encrypted row (clinician is authed + owns it). */
+function display(row: SubmissionRow): { name: string; email: string } {
   try {
     const a = JSON.parse(decrypt(row.answers_encrypted)) as Record<string, string>;
-    // Individual intake uses full_name; couples uses his_name / hers_name.
     const couple = [a.his_name, a.hers_name].filter(Boolean).join(" & ");
     const name = a.full_name || couple || a.consent_signature_name || "Unnamed client";
-    const concern = (a.reasons_for_help || a.his_reasons || a.hers_reasons || "").slice(0, 80);
-    return { name, concern };
+    const email = a.email || a.his_email || a.hers_email || "";
+    return { name, email };
   } catch {
-    return { name: "Unreadable (key mismatch)", concern: "" };
+    return { name: "Unreadable (key mismatch)", email: "" };
   }
 }
 
@@ -60,46 +65,28 @@ export default async function Dashboard() {
 
   const all = await getSubmissionsByClinician(me.id);
 
-  // Map each couple_id to the partner names that have submitted (for linkage labels).
-  const coupleNames = new Map<string, string[]>();
-  for (const r of all) {
-    if (!r.couple_id) continue;
-    const arr = coupleNames.get(r.couple_id) ?? [];
-    arr.push(display(r).name);
-    coupleNames.set(r.couple_id, arr);
-  }
-
-  // All submissions, decrypted to display data, for the live search + filter list.
   const items: DashItem[] = all.map((r) => {
     const d = display(r);
-    let coupleLabel: string | undefined;
-    if (r.couple_id) {
-      const others = (coupleNames.get(r.couple_id) ?? []).filter((n) => n !== d.name);
-      coupleLabel = others.length ? `Couple · with ${others.join(", ")}` : "Couple · awaiting partner";
-    }
     return {
       token: r.token,
       name: d.name,
-      concern: d.concern + (d.concern.length >= 80 ? "…" : ""),
+      email: d.email,
+      initials: clientInitials(d.name),
       formLabel: SHORT_FORM[r.form_key] ?? (r.form_key || "Intake"),
-      dateLabel: new Date(r.created_at).toLocaleString("en-US"),
+      createdAt: r.created_at,
       status: r.status,
       statusLabel: STATUS_LABEL[r.status],
       hasNotes: !!r.notes_encrypted,
-      coupleLabel,
+      isCouple: !!r.couple_id,
     };
   });
 
   const needReview = items.filter((i) => i.status === "new").length;
 
+  // Forms view (rendered inside the shell when the Forms tab is active).
   const formsSlot = (
     <>
-      <h2 className="section-title">Your intake {me.forms.length > 1 ? "forms" : "form"}</h2>
-      <p className="section-desc">
-        Share the right link with each client. The Informed Consent is included in every form, and
-        completed forms appear under Dashboard.
-      </p>
-      <div className="form-cards">
+      <div className="form-cards" style={{ maxWidth: 900 }}>
         {me.forms.map((key) => {
           const meta = FORM_META[key];
           return (
@@ -124,15 +111,13 @@ export default async function Dashboard() {
   );
 
   return (
-    <div className="container">
-      <DashboardShell
-        name={me.name}
-        initials={initials(me.name)}
-        isAdmin={!!me.admin}
-        needReview={needReview}
-        items={items}
-        formsSlot={formsSlot}
-      />
-    </div>
+    <DashboardShell
+      name={me.name}
+      initials={initials(me.name)}
+      isAdmin={!!me.admin}
+      needReview={needReview}
+      items={items}
+      formsSlot={formsSlot}
+    />
   );
 }

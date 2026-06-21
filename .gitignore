@@ -9,3 +9,5 @@ data/users.local.json
 data/access_log.local.json
 
 PRODUCTION-SECRETS.local.txt
+
+vercel-import.env
