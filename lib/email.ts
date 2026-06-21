@@ -70,7 +70,7 @@ export function buildNotification(args: NotifyArgs): { subject: string; text: st
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden">
       <tr><td style="height:5px;background:${BRAND_BLUE};font-size:0;line-height:0">&nbsp;</td></tr>
       <tr><td style="padding:30px 36px 0;text-align:center">
-        <img src="${appUrl}/tifec-logo.png" alt="${PRACTICE_NAME}" style="height:44px;width:auto" />
+        <img src="${appUrl}/tifec-logo.png" alt="${PRACTICE_NAME}" style="height:64px;width:auto" />
       </td></tr>
       <tr><td style="padding:24px 36px 0;text-align:center">
         <h1 style="font-size:21px;font-weight:700;margin:0;color:${BRAND_CHARCOAL}">New client intake form</h1>
