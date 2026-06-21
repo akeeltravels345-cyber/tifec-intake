@@ -42,16 +42,24 @@ function transport() {
   });
 }
 
+/** First name only, ignoring honorifics and parentheticals (e.g. "Dr. Joan Latty" → "Joan"). */
+function firstName(name: string): string {
+  const cleaned = name.replace(/\(.*?\)/g, "").trim();
+  const words = cleaned.split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss|prof)\.?$/i.test(w));
+  return words[0] || cleaned || name;
+}
+
 /** Build the subject/text/html for the notification (exported so it can be previewed). */
 export function buildNotification(args: NotifyArgs): { subject: string; text: string; html: string; link: string } {
   const appUrl = process.env.APP_URL || "http://localhost:3000";
   const link = `${appUrl}/submissions/${args.token}`;
   const when = new Date(args.submittedAt).toLocaleString("en-US");
   const formName = args.formLabel || "client intake form";
+  const greetName = firstName(args.clinicianName);
   const subject = `New client intake form submitted${args.formLabel ? ` (${args.formLabel})` : ""}`;
 
   const text = [
-    `Hello ${args.clinicianName},`,
+    `Hello ${greetName},`,
     ``,
     `A new intake form has been submitted for you.`,
     ``,
@@ -76,7 +84,7 @@ export function buildNotification(args: NotifyArgs): { subject: string; text: st
         <h1 style="font-size:21px;font-weight:700;margin:0;color:${BRAND_CHARCOAL}">New client intake form</h1>
       </td></tr>
       <tr><td style="padding:20px 36px 0">
-        <p style="font-size:16px;line-height:1.7;margin:0">Hello ${args.clinicianName},</p>
+        <p style="font-size:16px;line-height:1.7;margin:0">Hello ${greetName},</p>
         <p style="font-size:16px;line-height:1.7;margin:10px 0 0">A new intake form has been submitted for you. Here are the details:</p>
       </td></tr>
       <tr><td style="padding:20px 36px 0">
