@@ -8,6 +8,7 @@ import {
   pruneAccessLog,
   getSubmissionsByClinician,
 } from "@/lib/db";
+import { listFeedback } from "@/lib/feedback";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
 import AdminClient, { type ClinicianAdminInfo } from "./AdminClient";
@@ -114,6 +115,7 @@ export default async function AdminPage({
   // Retention: drop audit entries older than ~2 years before showing the latest.
   await pruneAccessLog(730);
   const audit = await listAccessLog(10);
+  const reports = await listFeedback(15).catch(() => []);
 
   return (
     <div className="container">
@@ -167,6 +169,29 @@ export default async function AdminPage({
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="card">
+        <h2 className="section-title">Reported issues</h2>
+        <p className="section-desc">Problems and suggestions clinicians have reported from the app.</p>
+        {reports.length === 0 ? (
+          <p className="muted">No issues reported yet.</p>
+        ) : (
+          reports.map((r) => (
+            <div className="answer-row" key={r.id}>
+              <div className="a" style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>
+                <span className="type-chip" style={{ marginBottom: 6 }}>{r.category}</span>
+                <br />
+                {r.message}
+              </div>
+              <div className="q">
+                {getClinician(r.clinician_id)?.name ?? r.clinician_id}
+                <br />
+                {new Date(r.created_at).toLocaleString("en-US")}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="card">

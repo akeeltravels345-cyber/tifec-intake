@@ -43,3 +43,13 @@ CREATE TABLE IF NOT EXISTS clinician_users (
   password_hash TEXT NOT NULL,             -- scrypt "salt:hash" (see lib/auth.ts)
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Clinician-submitted issue reports ("Report an issue").
+CREATE TABLE IF NOT EXISTS feedback (
+  id            TEXT PRIMARY KEY,
+  clinician_id  TEXT NOT NULL,
+  category      TEXT NOT NULL DEFAULT 'Issue',
+  message       TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS feedback_created_idx ON feedback (created_at DESC);

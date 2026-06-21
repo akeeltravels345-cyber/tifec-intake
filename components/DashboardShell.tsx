@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
+import FeedbackButton from "@/components/FeedbackButton";
 
 export interface DashItem {
   token: string;
@@ -174,6 +175,7 @@ export default function DashboardShell({
           <Link href="/account">Change password</Link>
           <button onClick={signOut}>Sign out</button>
         </div>
+        <FeedbackButton />
       </aside>
 
       <main className="dm-main">

@@ -152,3 +152,44 @@ export async function sendNotification(args: NotifyArgs): Promise<{ sent: boolea
   });
   return { sent: true };
 }
+
+/** Email a clinician's issue report to the support inbox (SUPPORT_EMAIL, default admin@). */
+export async function sendFeedback(args: {
+  fromName: string;
+  fromId: string;
+  category: string;
+  message: string;
+}): Promise<{ sent: boolean }> {
+  const to = process.env.SUPPORT_EMAIL || "admin@caymanessentialcare.com";
+  const when = new Date().toLocaleString("en-US");
+  const subject = `TIFEC issue report - ${args.category}`;
+  const text = [
+    `Issue report from ${args.fromName} (${args.fromId})`,
+    `Category: ${args.category}`,
+    `When: ${when}`,
+    ``,
+    args.message,
+  ].join("\n");
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:${BRAND_CHARCOAL};max-width:560px">
+    <p style="font-size:15px;margin:0 0 6px"><strong>New issue report</strong> from ${args.fromName}</p>
+    <p style="font-size:13px;color:${BRAND_MUTED};margin:0 0 14px">${args.category} · ${when} · ${args.fromId}</p>
+    <div style="font-size:15px;line-height:1.6;white-space:pre-wrap;background:#f5f8fc;border:1px solid #e2ebf5;border-radius:10px;padding:14px 16px">${args.message
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</div>
+  </div>`;
+
+  if (!process.env.SMTP_HOST) {
+    console.log("[email:dev] feedback (SMTP off):\n" + text);
+    return { sent: false };
+  }
+  await transport().sendMail({
+    from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+    to,
+    subject,
+    text,
+    html,
+  });
+  return { sent: true };
+}

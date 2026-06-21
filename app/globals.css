@@ -1054,3 +1054,24 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .dsm2-row { display: grid; grid-template-columns: 1fr 124px; align-items: center; gap: 22px; padding: 15px 2px; border-top: 1px solid #f0f2f3; }
 .dsm2-q { font-size: 15.5px; line-height: 1.6; color: #232a3d; max-width: 60ch; }
 .dsm2-row .sev { justify-self: end; min-width: 112px; text-align: center; }
+
+/* Report-an-issue button + modal */
+.dm-report { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 9px 10px; background: #fff; border: 1px solid #e4ebec; border-radius: 10px; font: inherit; font-size: 12.5px; font-weight: 600; color: #5f6b70; cursor: pointer; transition: border-color .12s, color .12s, background .12s; }
+.dm-report:hover { border-color: #319A9F; color: #267277; background: #f4fafa; }
+
+.fb-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(28, 32, 80, .42); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.fb-modal { width: 100%; max-width: 460px; background: #fff; border-radius: 16px; padding: 26px 26px 22px; box-shadow: 0 24px 60px rgba(28, 32, 80, .28); animation: riseIn .25s ease both; }
+.fb-title { font-family: "Carlito", sans-serif; font-size: 20px; font-weight: 700; margin: 0 0 6px; color: #232a3d; }
+.fb-sub { font-size: 13.5px; line-height: 1.55; color: #6b7679; margin: 0 0 18px; }
+.fb-label { font-size: 12px; font-weight: 700; letter-spacing: .03em; color: #8a9799; text-transform: uppercase; margin: 0 0 8px; }
+.fb-cats { display: flex; gap: 8px; margin-bottom: 16px; }
+.fb-cat { flex: 1; padding: 9px 10px; border: 1.5px solid #e4ebec; border-radius: 9px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #5f6b70; cursor: pointer; transition: border-color .12s, background .12s, color .12s; }
+.fb-cat:hover { border-color: #2E3192; }
+.fb-cat.active { border-color: #2E3192; background: #eceef7; color: #2E3192; }
+.fb-modal textarea { margin-bottom: 4px; }
+.fb-error { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
+.fb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.fb-done { text-align: center; padding: 8px 0 4px; }
+.fb-check { width: 52px; height: 52px; border-radius: 50%; background: #e8f5ec; color: #2c7a55; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+.fb-done .fb-title { margin-bottom: 4px; }
+.fb-done .fb-sub { margin-bottom: 18px; }

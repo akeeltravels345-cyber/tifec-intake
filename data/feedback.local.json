@@ -1,0 +1,9 @@
+[
+  {
+    "id": "13dc85d80c70fdb19d6ea962ee3263c8",
+    "clinician_id": "akeel-test",
+    "category": "Bug",
+    "message": "Test report: the date filter felt confusing on mobile.",
+    "created_at": "2026-06-21T23:37:24.427Z"
+  }
+]
