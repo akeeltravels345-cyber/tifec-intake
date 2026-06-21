@@ -52,9 +52,6 @@ const file = (a: boolean) => (
 const star = (a: boolean) => (
   <svg width="18" height="18" viewBox="0 0 24 24" stroke={a ? "#319A9F" : "#8a9799"} strokeWidth="1.9" {...S}><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.6 5.8 21 7 14 2 9.3 9 8.5" /></svg>
 );
-const plus = (
-  <svg width="14" height="14" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2.2" {...S}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-);
 const search = (
   <svg width="16" height="16" viewBox="0 0 24 24" stroke="#9aa6a8" strokeWidth="2" {...S}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
 );
@@ -156,13 +153,7 @@ export default function DashboardShell({
 
         <div className="dm-spacer" />
 
-        <div className="dm-promo">
-          <div className="dm-promo-title">Share intake link</div>
-          <div className="dm-promo-text">Send clients a secure form link.</div>
-          <button className="dm-promo-btn" onClick={() => setView("forms")}>
-            {plus} New link
-          </button>
-        </div>
+        <FeedbackButton />
 
         <div className="dm-user">
           <div className="dm-user-av">{initials}</div>
@@ -175,7 +166,6 @@ export default function DashboardShell({
           <Link href="/account">Change password</Link>
           <button onClick={signOut}>Sign out</button>
         </div>
-        <FeedbackButton />
       </aside>
 
       <main className="dm-main">

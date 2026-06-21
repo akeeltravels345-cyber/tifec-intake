@@ -47,12 +47,16 @@ export default function FeedbackButton() {
 
   return (
     <>
-      <button type="button" className="dm-report" onClick={() => setOpen(true)}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        Report an issue
-      </button>
+      <div className="dm-promo">
+        <div className="dm-promo-title">Need help?</div>
+        <div className="dm-promo-text">Found a problem or have an idea? Let us know.</div>
+        <button type="button" className="dm-promo-btn" onClick={() => setOpen(true)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          Report an issue
+        </button>
+      </div>
 
       {open && (
         <div className="fb-overlay" onClick={close} role="dialog" aria-modal="true">
