@@ -201,9 +201,13 @@ export default function DashboardShell({
                 </h1>
                 <div className="dm-subtitle">
                   {dateStr} ·{" "}
-                  {needReview > 0
-                    ? `${needReview} submission${needReview > 1 ? "s" : ""} waiting for review`
-                    : "you're all caught up"}
+                  {needReview > 0 ? (
+                    <button type="button" className="dm-review-link" onClick={() => setStatus("new")}>
+                      {needReview} submission{needReview > 1 ? "s" : ""} waiting for review
+                    </button>
+                  ) : (
+                    "you're all caught up"
+                  )}
                 </div>
               </div>
               <div className="dm-search">
@@ -275,15 +279,22 @@ export default function DashboardShell({
                           {r.initials}
                         </div>
                         <div className="dm-row-main">
-                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
                             <span className="dm-row-name">{r.name}</span>
                             {r.isCouple && <span className="dm-couple">Couple</span>}
+                            {r.hasNotes && (
+                              <span className="dm-note" title="Has clinician notes">
+                                ✎ Note
+                              </span>
+                            )}
                           </div>
-                          <div className="dm-row-email">{r.email || "—"}</div>
+                          <div className="dm-row-email">{r.email || "No email provided"}</div>
                         </div>
                         <div className="dm-row-form">
                           <div className="dm-row-formtype">{r.formLabel}</div>
-                          <div className="dm-row-time">{relTime(r.createdAt)}</div>
+                          <div className="dm-row-time" title={new Date(r.createdAt).toLocaleString("en-US")}>
+                            {relTime(r.createdAt)}
+                          </div>
                         </div>
                         <span className={`dm-status dm-status-${r.status}`}>{r.statusLabel}</span>
                         <div className="dm-open">Open {chevron}</div>
