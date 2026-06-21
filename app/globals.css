@@ -1,22 +1,22 @@
 :root {
-  /* TIFEC brand palette (from caymanessentialcare.com) */
-  --teal: #7bb5b2;        /* brand accent */
-  --teal-dark: #5d9a97;
-  --gold: #edd286;        /* light accent */
-  --cream: #eae6dd;       /* warm background */
-  --charcoal: #2d2d2a;    /* text */
+  /* TIFEC brand palette (official: indigo + teal) */
+  --teal: #319A9F;        /* brand teal accent */
+  --teal-dark: #2a8488;
+  --gold: #e7c350;        /* light accent */
+  --cream: #eef2f4;       /* cool background */
+  --charcoal: #232a3d;    /* text */
 
-  --bg: #f3efe6;          /* soft cream page background */
+  --bg: #eef2f4;          /* soft cool page background */
   --card: #ffffff;
-  --ink: #2d2d2a;
-  --muted: #74716a;
-  --line: #e4ded2;        /* warm border */
-  --brand: #34659b;       /* TIFEC blue - primary actions */
-  --brand-dark: #2a527e;
-  --brand-tint: #eaf0f7;  /* light blue wash for selected/tabs */
-  --brand-glow: rgba(52, 101, 155, 0.2);
+  --ink: #232a3d;
+  --muted: #6b7679;
+  --line: #e3e9ed;        /* cool border */
+  --brand: #2E3192;       /* TIFEC indigo - primary actions */
+  --brand-dark: #25276f;
+  --brand-tint: #eceef7;  /* light indigo wash for selected/tabs */
+  --brand-glow: rgba(46, 49, 146, 0.2);
   --danger: #b91c1c;
-  --ok: #047857;
+  --ok: #2c7a55;
 }
 
 * { box-sizing: border-box; }
@@ -25,8 +25,8 @@ html, body {
   margin: 0;
   padding: 0;
   background:
-    radial-gradient(1100px 460px at 100% -8%, rgba(123, 181, 178, 0.18), transparent 60%),
-    radial-gradient(900px 420px at -10% 4%, rgba(52, 101, 155, 0.10), transparent 55%),
+    radial-gradient(1100px 460px at 100% -8%, rgba(49, 154, 159, 0.12), transparent 60%),
+    radial-gradient(900px 420px at -10% 4%, rgba(46, 49, 146, 0.07), transparent 55%),
     var(--bg);
   background-attachment: fixed;
   color: var(--ink);
@@ -98,10 +98,10 @@ a { color: var(--brand); }
   overflow: hidden;
   padding: 36px 28px;
   background:
-    radial-gradient(120% 130% at 0% 0%, rgba(123, 181, 178, 0.16), transparent 55%),
-    radial-gradient(120% 130% at 100% 100%, rgba(52, 101, 155, 0.12), transparent 55%),
+    radial-gradient(120% 130% at 0% 0%, rgba(49, 154, 159, 0.13), transparent 55%),
+    radial-gradient(120% 130% at 100% 100%, rgba(46, 49, 146, 0.10), transparent 55%),
     #ffffff;
-  border: 1px solid #e7e1d4;
+  border: 1px solid #e3e9ed;
 }
 .hero-eyebrow {
   display: inline-block;
@@ -132,8 +132,8 @@ a { color: var(--brand); }
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; margin-bottom: 16px;
 }
-.door-client .door-icon { background: #e7f1f0; }
-.door-clinician .door-icon { background: var(--brand-tint); }
+.door-client .door-icon { background: #d9edec; }
+.door-clinician .door-icon { background: #e4e6f3; }
 .door-title { font-size: 20px; margin: 0 0 8px; letter-spacing: -0.01em; }
 .door-text { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 0 0 20px; flex: 1; }
 .door-note { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 14px 0 0; }
