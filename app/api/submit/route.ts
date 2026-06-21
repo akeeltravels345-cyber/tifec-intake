@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClinician } from "@/lib/clinicians";
-import { buildSections, fieldVisible } from "@/lib/forms";
+import { buildSections, fieldVisible, templateLabel } from "@/lib/forms";
 import { encrypt, secureToken, randomId } from "@/lib/crypto";
 import { insertSubmission } from "@/lib/db";
 import { sendNotification } from "@/lib/email";
@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       clinicianName: clinician.name,
       token,
       submittedAt: now,
+      formLabel: templateLabel(formKey),
     });
   } catch (err) {
     // The submission is saved; a failed email shouldn't lose the client's data.
