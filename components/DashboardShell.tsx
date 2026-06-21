@@ -129,14 +129,7 @@ export default function DashboardShell({
     { key: "all", label: "TOTAL", value: counts.all, dot: "#2E3192", num: "#2E3192", trend: "all time", color: "#2E3192" },
   ] as const;
 
-  const tabs = [
-    { k: "all", l: "All" },
-    { k: "new", l: "New" },
-    { k: "reviewed", l: "Reviewed" },
-    { k: "archived", l: "Archived" },
-  ] as const;
-  const filterName = { all: "", new: "new ", reviewed: "reviewed ", archived: "archived " }[status];
-  const resultLabel = `${filtered.length} ${filterName}${filtered.length === 1 ? "submission" : "submissions"}`;
+  const filterWord = { all: "", new: "new", reviewed: "reviewed", archived: "archived" }[status];
 
   return (
     <div className="dm-shell">
@@ -237,7 +230,6 @@ export default function DashboardShell({
                       <span className="dm-kpi-dot" style={{ background: k.dot }} />
                       {k.label}
                     </span>
-                    <span className="dm-kpi-trend">{k.trend}</span>
                   </div>
                   <div className="dm-kpi-num" style={{ color: k.num }}>
                     {k.value}
@@ -247,18 +239,20 @@ export default function DashboardShell({
             </div>
 
             <div className="dm-toolbar">
-              <div className="dm-tabs">
-                {tabs.map((t) => (
-                  <button
-                    key={t.k}
-                    className={`dm-tab ${status === t.k ? "active" : ""}`}
-                    onClick={() => setStatus(t.k as Status)}
-                  >
-                    {t.l}
+              {status === "all" ? (
+                <div className="dm-result">
+                  {filtered.length} {filtered.length === 1 ? "client" : "clients"}
+                  {items.length > 0 && <span className="dm-hint"> · tap a card above to filter</span>}
+                </div>
+              ) : (
+                <div className="dm-result">
+                  Showing <strong>{filtered.length}</strong> {filterWord}{" "}
+                  {filtered.length === 1 ? "client" : "clients"}
+                  <button type="button" className="dm-clear" onClick={() => setStatus("all")}>
+                    Show all
                   </button>
-                ))}
-              </div>
-              <div className="dm-result">{resultLabel}</div>
+                </div>
+              )}
             </div>
 
             <div className="dm-list">
