@@ -20,14 +20,6 @@ export interface DashItem {
 type View = "dashboard" | "forms";
 type Status = "all" | "new" | "reviewed" | "archived";
 
-// Avatar colour palette, cycled per row.
-const AV = [
-  { bg: "#d9edec", fg: "#267277" },
-  { bg: "#e4e6f3", fg: "#3a3f93" },
-  { bg: "#eaf3e4", fg: "#4f7a3a" },
-  { bg: "#f3ece0", fg: "#8a6d3a" },
-];
-
 function relTime(iso: string): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return "";
@@ -265,13 +257,10 @@ export default function DashboardShell({
                 </div>
               ) : (
                 <div className="dm-rows">
-                  {filtered.map((r, i) => {
-                    const av = AV[i % AV.length];
+                  {filtered.map((r) => {
                     return (
                       <Link key={r.token} href={`/submissions/${r.token}`} className="dm-row">
-                        <div className="dm-row-av" style={{ background: av.bg, color: av.fg }}>
-                          {r.initials}
-                        </div>
+                        <div className="dm-row-av">{r.initials}</div>
                         <div className="dm-row-main">
                           <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
                             <span className="dm-row-name">{r.name}</span>
