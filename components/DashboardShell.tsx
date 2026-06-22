@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
 import FeedbackButton from "@/components/FeedbackButton";
+import DashboardTour from "@/components/DashboardTour";
 
 export interface DashItem {
   token: string;
@@ -125,6 +126,7 @@ export default function DashboardShell({
   return (
     <div className="dm-shell">
       <IdleLogout />
+      <DashboardTour />
 
       <aside className="dm-side">
         <div className="dm-brand">
@@ -166,6 +168,7 @@ export default function DashboardShell({
         <div className="dm-user-actions">
           <Link href="/account">Change password</Link>
           <button onClick={signOut}>Sign out</button>
+          <button onClick={() => window.dispatchEvent(new Event("tifec-tour"))}>Take a tour</button>
         </div>
       </aside>
 

@@ -1091,3 +1091,16 @@ body:has(.dm-shell) { background: #f3f6f7; }
 
 /* "Linked" indicator on dashboard rows */
 .dm-linked { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #eceef7; color: #3a3f93; font-size: 11px; font-weight: 700; }
+
+/* First-login guided tour */
+.tour-block { position: fixed; inset: 0; z-index: 2000; }
+.tour-dim { position: fixed; inset: 0; z-index: 2001; background: rgba(20, 24, 46, 0.55); }
+.tour-spot { position: fixed; z-index: 2001; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(20, 24, 46, 0.55); border: 2px solid #fff; pointer-events: none; transition: all 0.25s ease; }
+.tour-tip { background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(20, 24, 46, 0.32); animation: riseIn 0.2s ease both; }
+.tour-step { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #8a9799; margin-bottom: 6px; }
+.tour-title { font-family: "Carlito", sans-serif; font-size: 19px; font-weight: 700; margin: 0 0 6px; color: #232a3d; }
+.tour-body { font-size: 14.5px; line-height: 1.6; color: #46545a; margin: 0 0 16px; }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-nav { display: flex; gap: 8px; margin-left: auto; }
+.tour-skip { background: none; border: none; padding: 6px 2px; font: inherit; font-size: 13px; color: #8a9799; cursor: pointer; }
+.tour-skip:hover { color: #2E3192; }
