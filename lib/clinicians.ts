@@ -30,6 +30,8 @@ export interface Clinician {
   extraSections: FormSection[];
   /** Practice admins can oversee ALL clinicians' submissions and manage logins. */
   admin?: boolean;
+  /** Shows the shareable public Wellbeing Self-Check card on the dashboard. */
+  selfCheck?: boolean;
 }
 
 // TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.

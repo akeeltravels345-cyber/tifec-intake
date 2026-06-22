@@ -11,3 +11,6 @@ data/access_log.local.json
 PRODUCTION-SECRETS.local.txt
 
 vercel-import.env
+
+# local billing dev data
+data/billing-*.local.json
