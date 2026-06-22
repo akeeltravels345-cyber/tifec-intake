@@ -303,7 +303,7 @@ export default function IntakeForm({
               {section.intro?.map((p, idx) => (
                 <p key={idx} className="consent-text">{p}</p>
               ))}
-              <h2 className="section-title" style={{ marginTop: 6 }}>{section.title}</h2>
+              <h2 className="section-title" style={{ marginTop: 6, marginBottom: 18 }}>{section.title}</h2>
               {section.description && <p className="section-desc">{section.description}</p>}
             </>
           ) : (
