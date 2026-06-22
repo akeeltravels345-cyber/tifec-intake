@@ -5,6 +5,7 @@ import { decrypt } from "@/lib/crypto";
 import { templateLabel } from "@/lib/forms";
 import ShareLink from "@/components/ShareLink";
 import CoupleLink from "@/components/CoupleLink";
+import ScreeningShare from "@/components/ScreeningShare";
 import DashboardShell, { type DashItem } from "@/components/DashboardShell";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,22 @@ export default async function Dashboard() {
             </div>
           );
         })}
+
+        {me.admin && (
+          <div className="form-card">
+            <div className="form-card-head">
+              <div className="form-card-icon" style={{ background: "#d9edec" }}>🧭</div>
+              <div className="form-card-body">
+                <div className="form-card-name">Wellbeing self-check (shareable)</div>
+                <div className="form-card-desc">
+                  A public self-screening for talks, workshops, or groups. People see their own results on their own
+                  device - nothing is sent to you or stored.
+                </div>
+              </div>
+            </div>
+            <ScreeningShare />
+          </div>
+        )}
       </div>
     </>
   );
