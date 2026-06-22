@@ -506,6 +506,7 @@ export const DSM_LEVEL1_ADULT: FormSection[] = [
     title: "Client Information",
     fields: [
       { name: "full_name", label: "Name", type: "text", required: true },
+      { name: "dob", label: "Date of birth", type: "date", required: true },
       { name: "age", label: "Age", type: "number" },
       {
         name: "informant_relationship",
