@@ -1088,3 +1088,6 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .screening-qr img { width: 190px; height: 190px; display: block; margin: 0 auto; }
 .screening-qr-url { font-size: 12px; color: var(--muted); margin: 10px 0 4px; word-break: break-all; }
 .screening-qr-dl { display: inline-block; margin-top: 8px; }
+
+/* "Linked" indicator on dashboard rows */
+.dm-linked { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #eceef7; color: #3a3f93; font-size: 11px; font-weight: 700; }

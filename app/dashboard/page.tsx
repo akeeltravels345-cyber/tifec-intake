@@ -66,8 +66,20 @@ export default async function Dashboard() {
 
   const all = await getSubmissionsByClinician(me.id);
 
-  const items: DashItem[] = all.map((r) => {
-    const d = display(r);
+  // Decrypt once, then flag clients whose name or email appears on more than one form.
+  const decoded = all.map((r) => ({ r, d: display(r) }));
+  const nameCount: Record<string, number> = {};
+  const emailCount: Record<string, number> = {};
+  for (const { d } of decoded) {
+    const nm = d.name.trim().toLowerCase();
+    const em = (d.email || "").trim().toLowerCase();
+    if (nm) nameCount[nm] = (nameCount[nm] || 0) + 1;
+    if (em) emailCount[em] = (emailCount[em] || 0) + 1;
+  }
+
+  const items: DashItem[] = decoded.map(({ r, d }) => {
+    const nm = d.name.trim().toLowerCase();
+    const em = (d.email || "").trim().toLowerCase();
     return {
       token: r.token,
       name: d.name,
@@ -79,6 +91,7 @@ export default async function Dashboard() {
       statusLabel: STATUS_LABEL[r.status],
       hasNotes: !!r.notes_encrypted,
       isCouple: !!r.couple_id,
+      isLinked: (!!nm && nameCount[nm] > 1) || (!!em && emailCount[em] > 1),
     };
   });
 

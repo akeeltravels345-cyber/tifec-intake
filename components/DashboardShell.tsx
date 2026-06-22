@@ -16,6 +16,7 @@ export interface DashItem {
   statusLabel: string;
   hasNotes: boolean;
   isCouple: boolean;
+  isLinked: boolean;
 }
 
 type View = "dashboard" | "forms";
@@ -257,6 +258,11 @@ export default function DashboardShell({
                           <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0 }}>
                             <span className="dm-row-name">{r.name}</span>
                             {r.isCouple && <span className="dm-couple">Couple</span>}
+                            {r.isLinked && (
+                              <span className="dm-linked" title="This client has more than one form">
+                                🔗 Linked
+                              </span>
+                            )}
                             {r.hasNotes && (
                               <span className="dm-note" title="Has clinician notes">
                                 ✎ Note
