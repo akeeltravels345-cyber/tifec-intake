@@ -59,6 +59,7 @@ export interface FormSection {
   title: string;
   description?: string;
   intro?: string[]; // read-only paragraphs shown before the fields (e.g. consent text)
+  titleBelowIntro?: boolean; // render the title AFTER the intro paragraphs (as a lead-in to the questions)
   fields: FormField[];
 }
 
@@ -521,6 +522,7 @@ export const DSM_LEVEL1_ADULT: FormSection[] = [
   {
     id: "dsm-symptoms",
     title: "During the past TWO (2) WEEKS, how much (or how often) have you been bothered by…",
+    titleBelowIntro: true,
     intro: [
       "The questions below ask about things that might have bothered you. For each question, select the response that best describes how much (or how often) you have been bothered by each problem during the past TWO (2) WEEKS.",
       "If you are in crisis or thinking about hurting yourself, call 911 or go to your nearest emergency room - this form is not monitored in real time.",

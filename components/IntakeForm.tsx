@@ -298,11 +298,23 @@ export default function IntakeForm({
 
       {sections.map((section) => (
         <div className="card" key={section.id}>
-          <h2 className="section-title">{section.title}</h2>
-          {section.description && <p className="section-desc">{section.description}</p>}
-          {section.intro?.map((p, idx) => (
-            <p key={idx} className="consent-text">{p}</p>
-          ))}
+          {section.titleBelowIntro ? (
+            <>
+              {section.intro?.map((p, idx) => (
+                <p key={idx} className="consent-text">{p}</p>
+              ))}
+              <h2 className="section-title" style={{ marginTop: 6 }}>{section.title}</h2>
+              {section.description && <p className="section-desc">{section.description}</p>}
+            </>
+          ) : (
+            <>
+              <h2 className="section-title">{section.title}</h2>
+              {section.description && <p className="section-desc">{section.description}</p>}
+              {section.intro?.map((p, idx) => (
+                <p key={idx} className="consent-text">{p}</p>
+              ))}
+            </>
+          )}
           {section.fields
             .filter((f) => fieldVisible(f, values))
             .map((f) => (
