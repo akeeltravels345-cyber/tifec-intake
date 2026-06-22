@@ -72,10 +72,6 @@ export default function SelfScreening() {
           This is for your own awareness and is <strong>not a diagnosis</strong>. If anything here concerns you, please
           speak with a qualified professional.
         </p>
-        <p className="consent-text">
-          If you are in crisis or thinking about hurting yourself, call <strong>911</strong> or go to your nearest
-          emergency room. This is not monitored.
-        </p>
 
         <div className="field" style={{ borderTop: "none", paddingTop: 0, marginTop: 20 }}>
           <label className="q">
