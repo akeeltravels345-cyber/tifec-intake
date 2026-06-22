@@ -1075,3 +1075,10 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .fb-check { width: 52px; height: 52px; border-radius: 50%; background: #e8f5ec; color: #2c7a55; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
 .fb-done .fb-title { margin-bottom: 4px; }
 .fb-done .fb-sub { margin-bottom: 18px; }
+
+/* Print: keep DSM severity shading and align the column cleanly to the right */
+@media print {
+  .sev, .badge, .badge-flag, .badge-alert, .clin-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dsm2-row .sev { min-width: 0; text-align: right; }
+  .dsm2-group, .dsm2-row, .dsm-row, .dsm-domain, .answer-row { break-inside: avoid; }
+}
