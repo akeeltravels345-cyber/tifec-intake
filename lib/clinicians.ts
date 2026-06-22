@@ -41,6 +41,7 @@ export const CLINICIANS: Clinician[] = [
     email: "Therapy@caymanessentialcare.com",
     forms: ["individual", "couples", "dsm5-level1-adult"],
     extraSections: [],
+    admin: true,
   },
   {
     id: "donnet-oconnor",
