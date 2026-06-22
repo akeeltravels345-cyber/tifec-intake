@@ -32,6 +32,10 @@ export interface Clinician {
   admin?: boolean;
   /** Shows the shareable public Wellbeing Self-Check card on the dashboard. */
   selfCheck?: boolean;
+  /** Billing-system role. Omitted = a regular clinician (logs their own sessions).
+   *  "biller" = marks insurance payments; "admin" = full billing config + disbursements.
+   *  (A practice admin is also a billing admin automatically.) */
+  billing?: "biller" | "admin";
 }
 
 // TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.
@@ -44,6 +48,7 @@ export const CLINICIANS: Clinician[] = [
     forms: ["individual", "couples", "dsm5-level1-adult"],
     extraSections: [],
     admin: true,
+    selfCheck: true,
   },
   {
     id: "donnet-oconnor",

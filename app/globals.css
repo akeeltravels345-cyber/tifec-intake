@@ -1104,3 +1104,31 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .tour-nav { display: flex; gap: 8px; margin-left: auto; }
 .tour-skip { background: none; border: none; padding: 6px 2px; font: inherit; font-size: 13px; color: #8a9799; cursor: pointer; }
 .tour-skip:hover { color: #2E3192; }
+
+/* ============================ Billing (/billing) ============================ */
+.bz-bar { background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 1px 10px rgba(45,45,42,.04); }
+.bz-bar-inner { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+.bz-brand { display: flex; align-items: center; gap: 9px; font-family: "Carlito", sans-serif; font-weight: 700; font-size: 16px; color: #232a3d; }
+.bz-logo { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#319A9F,#2E3192); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+.bz-nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.bz-link { font-size: 14px; font-weight: 600; color: #5f6b70; text-decoration: none; padding: 7px 12px; border-radius: 9px; }
+.bz-link:hover { background: #f1f3f8; }
+.bz-link.active { background: var(--brand-tint); color: var(--brand-dark); }
+.bz-bar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.bz-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #8a9799; background: #eef1f2; border-radius: 999px; padding: 3px 10px; }
+.bz-signout { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+.bz-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
+.bz-amount { font-variant-numeric: tabular-nums; }
+.bz-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.bz-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bz-table td { padding: 11px 10px; border-bottom: 1px solid #f0ece3; vertical-align: top; }
+.bz-table tr:last-child td { border-bottom: none; }
+.bz-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bz-pill-paid { background: #d8f0e0; color: #2c7a55; }
+.bz-pill-pending { background: #fbeecb; color: #9a7322; }
+.bz-chip { display: inline-block; font-size: 11px; font-weight: 700; background: #eef1f2; color: #5f6b70; border-radius: 6px; padding: 2px 7px; margin: 2px 3px 0 0; }
+.bz-cpt { display: flex; flex-wrap: wrap; gap: 8px; }
+.bz-cpt-opt { border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 13px; font-size: 13.5px; cursor: pointer; background: #fff; user-select: none; }
+.bz-cpt-opt.on { border-color: var(--brand); background: var(--brand-tint); color: var(--brand-dark); font-weight: 600; }
+.bz-empty { text-align: center; color: var(--muted); padding: 40px 16px; }

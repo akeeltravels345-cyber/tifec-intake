@@ -123,7 +123,7 @@ export default async function Dashboard() {
           );
         })}
 
-        {me.admin && (
+        {me.selfCheck && (
           <div className="form-card">
             <div className="form-card-head">
               <div className="form-card-icon" style={{ background: "#d9edec" }}>🧭</div>
