@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSubmissionByToken, getCoupleSubmissions, logAccess } from "@/lib/db";
+import { getSubmissionByToken, getCoupleSubmissions, getSubmissionsByClinician, logAccess } from "@/lib/db";
 import { getClinician } from "@/lib/clinicians";
 import { getCurrentClinician } from "@/lib/auth";
 import { buildSections, labelMap, templateLabel, type FormTemplateKey } from "@/lib/forms";
@@ -112,6 +112,33 @@ export default async function SubmissionView({
     }
   }
 
+  // Auto-linked: this client's other forms (same clinician, matching name or email).
+  const meName = (answers.full_name || [answers.his_name, answers.hers_name].filter(Boolean).join(" & ") || "").trim().toLowerCase();
+  const meEmail = (answers.email || answers.his_email || answers.hers_email || "").trim().toLowerCase();
+  const STATUS_TXT: Record<string, string> = { new: "New", reviewed: "Reviewed", archived: "Archived" };
+  const linked: { token: string; label: string; dateLabel: string; status: string }[] = [];
+  if (clinician && !decryptError && (meName || meEmail)) {
+    const all = await getSubmissionsByClinician(row.clinician_id);
+    for (const c of all) {
+      if (c.token === row.token) continue;
+      try {
+        const a = JSON.parse(decrypt(c.answers_encrypted)) as Record<string, string>;
+        const cName = (a.full_name || [a.his_name, a.hers_name].filter(Boolean).join(" & ") || "").trim().toLowerCase();
+        const cEmail = (a.email || a.his_email || a.hers_email || "").trim().toLowerCase();
+        if ((meEmail && meEmail === cEmail) || (meName && meName === cName)) {
+          linked.push({
+            token: c.token,
+            label: templateLabel((c.form_key || "individual") as FormTemplateKey),
+            dateLabel: new Date(c.created_at).toLocaleDateString("en-US"),
+            status: c.status,
+          });
+        }
+      } catch {
+        /* skip unreadable rows */
+      }
+    }
+  }
+
   return (
     <div className="container">
       <IdleLogout />
@@ -168,6 +195,24 @@ export default async function SubmissionView({
               The other partner hasn&apos;t submitted their form yet.
             </p>
           )}
+        </div>
+      )}
+
+      {linked.length > 0 && (
+        <div className="card">
+          <h2 className="section-title" style={{ marginBottom: 4 }}>🔗 This client&apos;s other forms</h2>
+          <p className="section-desc" style={{ margin: "0 0 10px" }}>
+            Linked automatically by matching name or email.
+          </p>
+          {linked.map((l) => (
+            <Link key={l.token} href={`/submissions/${l.token}`} className="sub-row">
+              <div style={{ minWidth: 0 }}>
+                <div className="sub-name">{l.label}</div>
+                <div className="sub-meta">{l.dateLabel}</div>
+              </div>
+              <span className={`badge badge-${l.status}`}>{STATUS_TXT[l.status] ?? l.status}</span>
+            </Link>
+          ))}
         </div>
       )}
 
