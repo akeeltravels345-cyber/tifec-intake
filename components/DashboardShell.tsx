@@ -79,7 +79,7 @@ export default function DashboardShell({
   formsSlot: React.ReactNode;
 }) {
   const [view, setView] = useState<View>("dashboard");
-  const [status, setStatus] = useState<Status>("all");
+  const [status, setStatus] = useState<Status>("new");
   const [query, setQuery] = useState("");
 
   const counts = useMemo(
