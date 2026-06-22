@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
 import FeedbackButton from "@/components/FeedbackButton";
-import DashboardTour from "@/components/DashboardTour";
+import Tour from "@/components/Tour";
 
 export interface DashItem {
   token: string;
@@ -71,6 +71,7 @@ export default function DashboardShell({
   needReview,
   items,
   formsSlot,
+  tourToken,
 }: {
   name: string;
   initials: string;
@@ -78,10 +79,21 @@ export default function DashboardShell({
   needReview: number;
   items: DashItem[];
   formsSlot: React.ReactNode;
+  tourToken?: string;
 }) {
   const [view, setView] = useState<View>("dashboard");
   const [status, setStatus] = useState<Status>("new");
   const [query, setQuery] = useState("");
+
+  // Let the guided tour switch to the Forms view when it reaches that step.
+  useEffect(() => {
+    const onSetView = (e: Event) => {
+      const v = (e as CustomEvent).detail;
+      if (v === "forms" || v === "dashboard") setView(v);
+    };
+    window.addEventListener("tifec-set-view", onSetView);
+    return () => window.removeEventListener("tifec-set-view", onSetView);
+  }, []);
 
   const counts = useMemo(
     () => ({
@@ -126,7 +138,7 @@ export default function DashboardShell({
   return (
     <div className="dm-shell">
       <IdleLogout />
-      <DashboardTour />
+      <Tour mount="dashboard" tourToken={tourToken} />
 
       <aside className="dm-side">
         <div className="dm-brand">

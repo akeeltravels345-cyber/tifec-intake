@@ -9,6 +9,7 @@ import { isDsmForm } from "@/lib/dsm";
 import StatusControl from "@/components/StatusControl";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
+import Tour from "@/components/Tour";
 import SubmissionActions from "@/components/SubmissionActions";
 import NotesEditor from "@/components/NotesEditor";
 import DsmSummary from "@/components/DsmSummary";
@@ -142,6 +143,7 @@ export default async function SubmissionView({
   return (
     <div className="container">
       <IdleLogout />
+      <Tour mount="record" />
       <div className="detail-topbar no-print">
         <Link href="/dashboard" className="back-link" style={{ margin: 0 }}>← Dashboard</Link>
         <LogoutButton />
@@ -158,7 +160,7 @@ export default async function SubmissionView({
               {clinician?.name ?? "Client"} · Submitted {when}
             </p>
           </div>
-          <SubmissionActions token={row.token} />
+          <span className="tour-print"><SubmissionActions token={row.token} /></span>
         </div>
 
         {snap.length > 0 && (
@@ -172,7 +174,7 @@ export default async function SubmissionView({
           </div>
         )}
 
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: 14 }} className="tour-status">
           <StatusControl token={row.token} initial={row.status} />
         </div>
       </div>
@@ -199,7 +201,7 @@ export default async function SubmissionView({
       )}
 
       {linked.length > 0 && (
-        <div className="card">
+        <div className="card tour-linked">
           <h2 className="section-title" style={{ marginBottom: 4 }}>🔗 This client&apos;s other forms</h2>
           <p className="section-desc" style={{ margin: "0 0 10px" }}>
             Linked automatically by matching name or email.
@@ -226,7 +228,7 @@ export default async function SubmissionView({
         <>
           {isDsmForm(formKey) && <DsmSummary answers={answers} />}
 
-          <div className="card">
+          <div className="card tour-notes">
             <NotesEditor token={row.token} initial={notes} />
           </div>
 

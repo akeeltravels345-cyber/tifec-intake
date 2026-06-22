@@ -96,6 +96,8 @@ export default async function Dashboard() {
   });
 
   const needReview = items.filter((i) => i.status === "new").length;
+  // For the guided tour: open a real record (prefer one with DSM scoring to demo).
+  const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;
 
   // Forms view (rendered inside the shell when the Forms tab is active).
   const formsSlot = (
@@ -148,6 +150,7 @@ export default async function Dashboard() {
       needReview={needReview}
       items={items}
       formsSlot={formsSlot}
+      tourToken={tourToken}
     />
   );
 }
