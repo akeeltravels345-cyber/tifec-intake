@@ -510,7 +510,7 @@ export const DSM_LEVEL1_ADULT: FormSection[] = [
       { name: "age", label: "Age", type: "number" },
       {
         name: "is_informant",
-        label: "Is someone else completing this for the client?",
+        label: "Are you completing this form on behalf of someone else?",
         type: "radio",
         options: YES_NO,
         required: true,
