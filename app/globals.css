@@ -1146,3 +1146,8 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .bz-pay-action { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bz-sm { font-size: 12.5px; padding: 6px 12px; }
 button.bz-link { border: none; background: transparent; color: var(--brand); cursor: pointer; font: inherit; }
+/* admin Setup */
+.bz-config section { margin-bottom: 28px; }
+.bz-sec { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 10px; }
+.bz-err { font-size: 12px; color: #b42318; }
+.bz-config .bz-table input, .bz-config .bz-table select { width: 100%; }
