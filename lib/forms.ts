@@ -63,7 +63,7 @@ export interface FormSection {
   fields: FormField[];
 }
 
-export type FormTemplateKey = "individual" | "couples" | "dsm5-level1-adult";
+export type FormTemplateKey = "individual" | "couples" | "dsm5-level1-adult" | "dsm5-level1-child";
 
 // ---- shared option lists -------------------------------------------------
 const YES_NO = ["Yes", "No"];
@@ -572,6 +572,73 @@ export const DSM_LEVEL1_ADULT: FormSection[] = [
 ];
 
 // =============================================================================
+// DSM-5-TR Parent/Guardian-Rated Level 1 Cross-Cutting Symptom Measure - Child 6-17
+// -----------------------------------------------------------------------------
+// © 2013 American Psychiatric Association. Verbatim, reproduced for clinician use
+// with their patients; MUST NOT be modified (APA terms). Items 1-19 use the 0-4
+// scale; items 20-25 are Yes/No/Don't Know. Field names cq1..cq25.
+// =============================================================================
+const YES_NO_DK = ["Yes", "No", "Don't Know"];
+
+function childItem(n: number, text: string): FormField {
+  return { name: `cq${n}`, label: `${n}. ${text}`, type: "radio", options: DSM_SCALE, required: true, stack: true };
+}
+function childYesNo(n: number, text: string): FormField {
+  return { name: `cq${n}`, label: `${n}. ${text}`, type: "radio", options: YES_NO_DK, required: true };
+}
+
+export const DSM_CHILD_LEVEL1: FormSection[] = [
+  {
+    id: "child-info",
+    title: "Child Information",
+    fields: [
+      { name: "full_name", label: "Child's name", type: "text", required: true },
+      { name: "dob", label: "Child's date of birth", type: "date", required: true },
+      { name: "age", label: "Child's age", type: "number" },
+      { name: "respondent_relationship", label: "Your relationship to the child", type: "text", required: true },
+      { name: "email", label: "Your email", type: "email", required: true },
+    ],
+  },
+  {
+    id: "child-symptoms",
+    title: "During the past TWO (2) WEEKS, how much (or how often) has your child…",
+    titleBelowIntro: true,
+    intro: [
+      "The questions below ask about things that might have bothered your child. For each question, select the response that best describes how much (or how often) your child has been bothered by each problem during the past TWO (2) WEEKS.",
+      "If your child is in crisis or thinking about hurting themselves, call 911 or go to your nearest emergency room - this form is not monitored in real time.",
+    ],
+    fields: [
+      childItem(1, "Complained of stomachaches, headaches, or other aches and pains?"),
+      childItem(2, "Said he/she was worried about his/her health or about getting sick?"),
+      childItem(3, "Had problems sleeping - trouble falling asleep, staying asleep, or waking up too early?"),
+      childItem(4, "Had problems paying attention when he/she was in class or doing his/her homework or reading a book or playing a game?"),
+      childItem(5, "Had less fun doing things than he/she used to?"),
+      childItem(6, "Seemed sad or depressed for several hours?"),
+      childItem(7, "Seemed more irritated or easily annoyed than usual?"),
+      childItem(8, "Seemed angry or lost his/her temper?"),
+      childItem(9, "Started lots more projects than usual or did more risky things than usual?"),
+      childItem(10, "Slept less than usual for him/her, but still had lots of energy?"),
+      childItem(11, "Said he/she felt nervous, anxious, or scared?"),
+      childItem(12, "Not been able to stop worrying?"),
+      childItem(13, "Said he/she couldn't do things he/she wanted to or should have done, because they made him/her feel nervous?"),
+      childItem(14, "Said that he/she heard voices - when there was no one there - speaking about him/her or telling him/her what to do or saying bad things to him/her?"),
+      childItem(15, "Said that he/she had a vision when he/she was completely awake - saw something or someone that no one else could see?"),
+      childItem(16, "Said that he/she had thoughts that kept coming into his/her mind that he/she would do something bad, or that something bad would happen to him/her or to someone else?"),
+      childItem(17, "Said he/she felt the need to check on certain things over and over again, like whether a door was locked or whether the stove was turned off?"),
+      childItem(18, "Seemed to worry a lot about things he/she touched being dirty or having germs or being poisoned?"),
+      childItem(19, "Said that he/she had to do things in a certain way, like counting or saying special things out loud, in order to keep something bad from happening?"),
+      { name: "_child_substance_intro", type: "statement", label: "In the past TWO (2) WEEKS, has your child…" },
+      childYesNo(20, "Had an alcoholic beverage (beer, wine, liquor, etc.)?"),
+      childYesNo(21, "Smoked a cigarette, a cigar, or pipe, or used snuff or chewing tobacco?"),
+      childYesNo(22, "Used drugs like marijuana, cocaine or crack, club drugs (like ecstasy), hallucinogens (like LSD), heroin, inhalants or solvents (like glue), or methamphetamine (like speed)?"),
+      childYesNo(23, "Used any medicine without a doctor's prescription (e.g., painkillers [like Vicodin], stimulants [like Ritalin or Adderall], sedatives or tranquilizers [like sleeping pills or Valium], or steroids)?"),
+      childYesNo(24, "Talked about wanting to kill himself/herself or about wanting to commit suicide?"),
+      childYesNo(25, "Has he/she EVER tried to kill himself/herself?"),
+    ],
+  },
+];
+
+// =============================================================================
 // Form registry
 // -----------------------------------------------------------------------------
 // Add a new intake form here: give it a key + label + body sections, then add
@@ -615,6 +682,13 @@ export const FORM_TEMPLATES: Record<FormTemplateKey, FormTemplate> = {
     clientLabel: "Wellbeing Screening",
     body: DSM_LEVEL1_ADULT,
     // Repeatable screening measure - no consent re-sign, no insurance section.
+  },
+  "dsm5-level1-child": {
+    key: "dsm5-level1-child",
+    label: "DSM-5-TR Level 1 (Parent/Guardian of Child 6-17)",
+    clientLabel: "Child Wellbeing Screening",
+    body: DSM_CHILD_LEVEL1,
+    // Parent/guardian-rated screening measure - no consent re-sign, no insurance.
   },
 };
 

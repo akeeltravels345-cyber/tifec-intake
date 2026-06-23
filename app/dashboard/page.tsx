@@ -21,6 +21,7 @@ const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
   individual: { icon: "📝", desc: "Standard intake for an individual client.", bg: "#d9edec" },
   couples: { icon: "💞", desc: "Each partner fills out their own form, linked together.", bg: "#e4e6f3" },
   "dsm5-level1-adult": { icon: "📊", desc: "Brief 23-item symptom screening measure.", bg: "#f6edd6" },
+  "dsm5-level1-child": { icon: "🧒", desc: "Parent/guardian-rated screening for a child age 6-17 (25 items).", bg: "#eaf3e4" },
 };
 
 // Short, scannable label per form type for the submissions list.
@@ -28,6 +29,7 @@ const SHORT_FORM: Record<string, string> = {
   individual: "Individual Intake",
   couples: "Couples Intake",
   "dsm5-level1-adult": "DSM-5 Level 1",
+  "dsm5-level1-child": "DSM-5 Child (6-17)",
 };
 
 /** Initials from the clinician's name, ignoring honorifics. */

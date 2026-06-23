@@ -45,7 +45,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Dr. Shion O'Connor",
     credentials: "Clinical Psychologist & Family Therapist · Founder",
     email: "Therapy@caymanessentialcare.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
     admin: true,
     selfCheck: true,
@@ -55,7 +55,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Dr. Donnet O'Connor",
     credentials: "Ph.D. · Counselling Psychologist & Therapist",
     email: "donnetoconnor@caymanessentialcare.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
   },
   {
@@ -63,7 +63,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Dr. Joan Latty",
     credentials: "Psy.D. · Clinical Psychologist, Marriage & Family Therapist",
     email: "joanlatty@caymanessentialcare.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
   },
   {
@@ -71,7 +71,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Mrs. Sofia Hamilton",
     credentials: "MSc · Educational Psychologist",
     email: "sofiahamilton@caymanessentialcare.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
   },
   {
@@ -79,7 +79,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Nick O'Connor",
     credentials: "Training Clinician (Practicum)",
     email: "tifec.billing@gmail.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
   },
   // TEST / ADMIN account - remove or rename before go-live.
@@ -88,7 +88,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Akeel (Test)",
     credentials: "Practice Administrator",
     email: "admin@caymanessentialcare.com",
-    forms: ["individual", "couples", "dsm5-level1-adult"],
+    forms: ["individual", "couples", "dsm5-level1-adult", "dsm5-level1-child"],
     extraSections: [],
     admin: true,
   },

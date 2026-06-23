@@ -6,6 +6,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { buildSections, labelMap, templateLabel, type FormTemplateKey } from "@/lib/forms";
 import { decrypt, randomId } from "@/lib/crypto";
 import { isDsmForm } from "@/lib/dsm";
+import { isDsmChildForm } from "@/lib/dsmChild";
 import StatusControl from "@/components/StatusControl";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
@@ -14,6 +15,7 @@ import SubmissionActions from "@/components/SubmissionActions";
 import NotesEditor from "@/components/NotesEditor";
 import DsmSummary from "@/components/DsmSummary";
 import DsmAnswers from "@/components/DsmAnswers";
+import DsmChild from "@/components/DsmChild";
 
 export const dynamic = "force-dynamic";
 
@@ -227,6 +229,7 @@ export default async function SubmissionView({
       ) : (
         <>
           {isDsmForm(formKey) && <DsmSummary answers={answers} />}
+          {isDsmChildForm(formKey) && <DsmChild answers={answers} labels={labels} />}
 
           <div className="card tour-notes">
             <NotesEditor token={row.token} initial={notes} />
@@ -237,6 +240,8 @@ export default async function SubmissionView({
             if (isDsmForm(formKey) && section.id === "dsm-symptoms") {
               return <DsmAnswers key={section.id} answers={answers} labels={labels} examples={fieldExamples} />;
             }
+            // Child measure responses are rendered by DsmChild above.
+            if (isDsmChildForm(formKey) && section.id === "child-symptoms") return null;
             const rows = section.fields.filter((f) => answers[f.name] !== undefined && answers[f.name] !== "");
             if (rows.length === 0) return null;
             return (
