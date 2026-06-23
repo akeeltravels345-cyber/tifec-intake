@@ -9,6 +9,7 @@ import CoupleLink from "@/components/CoupleLink";
 import ScreeningShare from "@/components/ScreeningShare";
 import DashboardShell, { type DashItem } from "@/components/DashboardShell";
 import { LEVEL2_MEASURES } from "@/lib/level2";
+import FormIcon from "@/components/FormIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,7 @@ export default async function Dashboard() {
     return (
       <div key={key} className="form-card">
         <div className="form-card-head">
-          <div className="form-card-icon" style={{ background: meta?.bg }}>{meta?.icon ?? "📄"}</div>
+          <div className="form-card-icon" style={{ background: meta?.bg }}><FormIcon formKey={key} /></div>
           <div className="form-card-body">
             <div className="form-card-name">{templateLabel(key as never)}</div>
             {meta?.desc && <div className="form-card-desc">{meta.desc}</div>}
@@ -155,7 +156,7 @@ export default async function Dashboard() {
   const selfCheckCard = me.selfCheck ? (
     <div className="form-card" key="selfcheck">
       <div className="form-card-head">
-        <div className="form-card-icon" style={{ background: "#d9edec" }}>🧭</div>
+        <div className="form-card-icon" style={{ background: "#d9edec" }}><FormIcon symbol="compass" /></div>
         <div className="form-card-body">
           <div className="form-card-name">Wellbeing self-check (shareable)</div>
           <div className="form-card-desc">
