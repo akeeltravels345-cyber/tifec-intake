@@ -7,6 +7,7 @@ import ShareLink from "@/components/ShareLink";
 import CoupleLink from "@/components/CoupleLink";
 import ScreeningShare from "@/components/ScreeningShare";
 import DashboardShell, { type DashItem } from "@/components/DashboardShell";
+import { LEVEL2_MEASURES } from "@/lib/level2";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,12 @@ const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
   couples: { icon: "💞", desc: "Each partner fills out their own form, linked together.", bg: "#e4e6f3" },
   "dsm5-level1-adult": { icon: "📊", desc: "Brief 23-item symptom screening measure.", bg: "#f6edd6" },
   "dsm5-level1-child": { icon: "🧒", desc: "Parent/guardian-rated screening for a child age 6-17 (25 items).", bg: "#eaf3e4" },
+  ...Object.fromEntries(
+    LEVEL2_MEASURES.map((m) => [
+      m.key,
+      { icon: m.icon, desc: `In-depth follow-up for the ${m.domain.toLowerCase()} domain.`, bg: "#e9eef3" },
+    ])
+  ),
 };
 
 // Short, scannable label per form type for the submissions list.
@@ -30,6 +37,7 @@ const SHORT_FORM: Record<string, string> = {
   couples: "Couples Intake",
   "dsm5-level1-adult": "DSM-5 Level 1",
   "dsm5-level1-child": "DSM-5 Child (6-17)",
+  ...Object.fromEntries(LEVEL2_MEASURES.map((m) => [m.key, m.short])),
 };
 
 /** Initials from the clinician's name, ignoring honorifics. */
@@ -102,28 +110,32 @@ export default async function Dashboard() {
   const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;
 
   // Forms view (rendered inside the shell when the Forms tab is active).
+  // Primary intake/screening forms vs. the Level 2 follow-up measures (grouped).
+  const primaryForms = me.forms.filter((k) => !k.startsWith("l2-"));
+  const level2Forms = me.forms.filter((k) => k.startsWith("l2-"));
+  const formCard = (key: string) => {
+    const meta = FORM_META[key];
+    return (
+      <div key={key} className="form-card">
+        <div className="form-card-head">
+          <div className="form-card-icon" style={{ background: meta?.bg }}>{meta?.icon ?? "📄"}</div>
+          <div className="form-card-body">
+            <div className="form-card-name">{templateLabel(key as never)}</div>
+            {meta?.desc && <div className="form-card-desc">{meta.desc}</div>}
+          </div>
+        </div>
+        {key === "couples" ? (
+          <CoupleLink clinicianId={me.id} />
+        ) : (
+          <ShareLink path={`/intake?clinician=${me.id}&form=${key}`} />
+        )}
+      </div>
+    );
+  };
   const formsSlot = (
     <>
       <div className="form-cards" style={{ maxWidth: 900 }}>
-        {me.forms.map((key) => {
-          const meta = FORM_META[key];
-          return (
-            <div key={key} className="form-card">
-              <div className="form-card-head">
-                <div className="form-card-icon" style={{ background: meta?.bg }}>{meta?.icon ?? "📄"}</div>
-                <div className="form-card-body">
-                  <div className="form-card-name">{templateLabel(key)}</div>
-                  {meta?.desc && <div className="form-card-desc">{meta.desc}</div>}
-                </div>
-              </div>
-              {key === "couples" ? (
-                <CoupleLink clinicianId={me.id} />
-              ) : (
-                <ShareLink path={`/intake?clinician=${me.id}&form=${key}`} />
-              )}
-            </div>
-          );
-        })}
+        {primaryForms.map(formCard)}
 
         {me.selfCheck && (
           <div className="form-card">
@@ -141,6 +153,17 @@ export default async function Dashboard() {
           </div>
         )}
       </div>
+
+      {level2Forms.length > 0 && (
+        <div style={{ maxWidth: 900, marginTop: 26 }}>
+          <h2 className="section-title" style={{ marginBottom: 2 }}>DSM-5-TR Level 2 follow-up measures</h2>
+          <p className="section-desc" style={{ marginTop: 0, marginBottom: 12 }}>
+            Send one of these when a Level 1 domain flags - a deeper, scored look at a single area (anxiety,
+            depression, sleep, and more).
+          </p>
+          <div className="form-cards">{level2Forms.map(formCard)}</div>
+        </div>
+      )}
     </>
   );
 

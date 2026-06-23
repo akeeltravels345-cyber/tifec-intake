@@ -8,6 +8,8 @@
 // may add their own `extraSections`, and the Informed Consent is appended to all.
 // =============================================================================
 
+import { LEVEL2_MEASURES, level2Sections } from "./level2";
+
 export type FieldType =
   | "text"
   | "textarea"
@@ -63,7 +65,19 @@ export interface FormSection {
   fields: FormField[];
 }
 
-export type FormTemplateKey = "individual" | "couples" | "dsm5-level1-adult" | "dsm5-level1-child";
+export type FormTemplateKey =
+  | "individual"
+  | "couples"
+  | "dsm5-level1-adult"
+  | "dsm5-level1-child"
+  | "l2-depression"
+  | "l2-anxiety"
+  | "l2-anger"
+  | "l2-mania"
+  | "l2-sleep"
+  | "l2-somatic"
+  | "l2-repetitive"
+  | "l2-substance";
 
 // ---- shared option lists -------------------------------------------------
 const YES_NO = ["Yes", "No"];
@@ -659,7 +673,15 @@ export interface FormTemplate {
   appendConsent?: boolean;
 }
 
-export const FORM_TEMPLATES: Record<FormTemplateKey, FormTemplate> = {
+// DSM-5-TR Level 2 follow-up measures, generated from their config (lib/level2.ts).
+const L2_TEMPLATES = Object.fromEntries(
+  LEVEL2_MEASURES.map((m) => [
+    m.key,
+    { key: m.key, label: m.label, clientLabel: "Follow-up Questionnaire", body: level2Sections(m) } as FormTemplate,
+  ])
+) as Record<string, FormTemplate>;
+
+export const FORM_TEMPLATES = {
   individual: {
     key: "individual",
     label: "Individual Client Intake", // clinician-facing
@@ -690,7 +712,8 @@ export const FORM_TEMPLATES: Record<FormTemplateKey, FormTemplate> = {
     body: DSM_CHILD_LEVEL1,
     // Parent/guardian-rated screening measure - no consent re-sign, no insurance.
   },
-};
+  ...L2_TEMPLATES,
+} as Record<FormTemplateKey, FormTemplate>;
 
 /** Internal/clinician-facing name. */
 export function templateLabel(key: FormTemplateKey): string {
