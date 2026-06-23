@@ -307,7 +307,7 @@ export default function DashboardShell({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h1 className="dm-greeting">Intake forms</h1>
                 <div className="dm-subtitle">
-                  Share the right link with each client — completed forms appear under Dashboard.
+                  Share the right link with each client. Completed forms appear under Dashboard.
                 </div>
               </div>
               <div className="dm-pill-note">{shield} Consent included in every form</div>
