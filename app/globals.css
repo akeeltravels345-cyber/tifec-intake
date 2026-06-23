@@ -1151,3 +1151,24 @@ button.bz-link { border: none; background: transparent; color: var(--brand); cur
 .bz-sec { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 10px; }
 .bz-err { font-size: 12px; color: #b42318; }
 .bz-config .bz-table input, .bz-config .bz-table select { width: 100%; }
+/* month picker */
+.bz-month { display: inline-flex; align-items: center; gap: 6px; }
+.bz-month-nav { border: 1px solid var(--line); background: #fff; border-radius: 8px; width: 32px; height: 36px; font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink); }
+.bz-month select { height: 36px; }
+/* disbursement cards */
+.bz-disb-list { display: grid; gap: 14px; }
+.bz-disb { padding: 16px 18px; }
+.bz-disb-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 12px; }
+.bz-disb-name { font-size: 16px; font-weight: 700; color: var(--ink); }
+.bz-disb-net { font-size: 22px; font-weight: 700; color: var(--brand); }
+.bz-disb-net small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); text-align: right; text-transform: uppercase; letter-spacing: .03em; }
+.bz-disb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 18px; }
+.bz-disb-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.bz-disb-grid span { font-size: 12px; color: var(--muted); }
+.bz-disb-grid strong { font-size: 16px; font-weight: 600; color: var(--ink); }
+.bz-disb-grid strong.minus { color: #b42318; }
+.bz-disb-foot { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.bz-tagline { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.bz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.bz-dot.rollover { background: #319A9F; }
+.bz-dot.out { background: #e0a106; }
