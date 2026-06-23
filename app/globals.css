@@ -946,13 +946,24 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .dm-promo-text { font-size: 12px; line-height: 1.5; color: #6b7679; margin: 5px 0 12px; }
 .dm-promo-btn { display: flex; align-items: center; justify-content: center; gap: 7px; background: #319A9F; color: #fff; font-size: 13px; font-weight: 600; padding: 10px; border-radius: 9px; border: none; cursor: pointer; width: 100%; font-family: inherit; transition: background .14s; }
 .dm-promo-btn:hover { background: #2a8488; }
-.dm-user { display: flex; align-items: center; gap: 11px; padding: 14px 8px 2px; margin-top: 8px; }
+.dm-account { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.dm-user { display: flex; align-items: center; gap: 11px; padding: 0 6px 8px; }
 .dm-user-av { width: 34px; height: 34px; flex: none; border-radius: 50%; background: linear-gradient(135deg, #319A9F, #2E3192); color: #fff; font-family: "Carlito", sans-serif; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-.dm-user-name { font-size: 13px; font-weight: 600; color: #2c3a3c; }
+.dm-user-meta { line-height: 1.25; flex: 1; min-width: 0; }
+.dm-user-name { font-size: 13px; font-weight: 600; color: #2c3a3c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dm-user-role { font-size: 11px; color: #8a9799; }
-.dm-user-actions { display: flex; gap: 14px; padding: 2px 10px 0; }
-.dm-user-actions a, .dm-user-actions button { background: none; border: none; padding: 4px 0; font: inherit; font-size: 12px; color: #8a9799; cursor: pointer; text-decoration: none; }
-.dm-user-actions a:hover, .dm-user-actions button:hover { color: #2E3192; }
+.dm-user-actions { display: flex; flex-direction: column; gap: 1px; }
+.dm-user-actions a, .dm-user-actions button {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 8px; padding: 8px 10px;
+  font: inherit; font-size: 12.5px; font-weight: 500; color: #6b7779; cursor: pointer; text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.dm-user-actions svg { color: #9aa6a8; flex: none; transition: color 0.12s ease; }
+.dm-user-actions a:hover, .dm-user-actions button:hover { background: #eef2f4; color: #2E3192; }
+.dm-user-actions a:hover svg, .dm-user-actions button:hover svg { color: #2E3192; }
+.dm-user-actions .danger:hover { background: #fbecec; color: #c0392b; }
+.dm-user-actions .danger:hover svg { color: #c0392b; }
 
 /* main */
 .dm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
@@ -1017,7 +1028,8 @@ body:has(.dm-shell) { background: #f3f6f7; }
   .dm-nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
   .dm-nav-item { width: auto; padding: 8px 11px; font-size: 13.5px; }
   .dm-nav-badge { margin-left: 4px; }
-  .dm-user { margin: 0 0 0 auto; padding: 0; }
+  .dm-account { margin: 0 0 0 auto; padding: 0; border: 0; }
+  .dm-user { margin: 0; padding: 0; }
   .dm-user-actions { display: none; }
   .dm-main { overflow: visible; }
   .dm-topbar { flex-wrap: wrap; padding: 16px 16px 12px; }

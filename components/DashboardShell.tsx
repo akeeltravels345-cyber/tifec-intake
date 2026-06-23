@@ -63,6 +63,16 @@ const chevron = (
 const shield = (
   <svg width="14" height="14" viewBox="0 0 24 24" stroke="#319A9F" strokeWidth="2" {...S}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
 );
+// Account-menu glyphs (inherit colour from the row).
+const icCompass = (
+  <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" {...S}><circle cx="12" cy="12" r="10" /><polygon points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8" /></svg>
+);
+const icLock = (
+  <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" {...S}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+);
+const icLogout = (
+  <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" {...S}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+);
 
 export default function DashboardShell({
   name,
@@ -170,17 +180,19 @@ export default function DashboardShell({
 
         <FeedbackButton />
 
-        <div className="dm-user">
-          <div className="dm-user-av">{initials}</div>
-          <div style={{ lineHeight: 1.25, flex: 1, minWidth: 0 }}>
-            <div className="dm-user-name">{firstName}</div>
-            <div className="dm-user-role">{isAdmin ? "Admin" : "Clinician"}</div>
+        <div className="dm-account">
+          <div className="dm-user">
+            <div className="dm-user-av">{initials}</div>
+            <div className="dm-user-meta">
+              <div className="dm-user-name">{firstName}</div>
+              <div className="dm-user-role">{isAdmin ? "Admin" : "Clinician"}</div>
+            </div>
           </div>
-        </div>
-        <div className="dm-user-actions">
-          <Link href="/account">Change password</Link>
-          <button onClick={signOut}>Sign out</button>
-          <button onClick={() => window.dispatchEvent(new Event("tifec-tour"))}>Take a tour</button>
+          <div className="dm-user-actions">
+            <button onClick={() => window.dispatchEvent(new Event("tifec-tour"))}>{icCompass} Take a tour</button>
+            <Link href="/account">{icLock} Change password</Link>
+            <button className="danger" onClick={signOut}>{icLogout} Sign out</button>
+          </div>
         </div>
       </aside>
 
