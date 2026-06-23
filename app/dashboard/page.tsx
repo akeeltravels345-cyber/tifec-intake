@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { getCurrentClinician } from "@/lib/auth";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
@@ -19,10 +20,10 @@ const STATUS_LABEL: Record<SubmissionStatus, string> = {
 
 // Icon, short description, and accent tint for each form type's card.
 const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
-  individual: { icon: "📝", desc: "Standard intake for an individual client.", bg: "#d9edec" },
-  couples: { icon: "💞", desc: "Each partner fills out their own form, linked together.", bg: "#e4e6f3" },
-  "dsm5-level1-adult": { icon: "📊", desc: "Brief 23-item symptom screening measure.", bg: "#f6edd6" },
-  "dsm5-level1-child": { icon: "🧒", desc: "Parent/guardian-rated screening for a child age 6-17 (25 items).", bg: "#eaf3e4" },
+  individual: { icon: "👤", desc: "Standard intake for an individual client.", bg: "#d9edec" },
+  couples: { icon: "💑", desc: "Each partner fills out their own form, linked together.", bg: "#e4e6f3" },
+  "dsm5-level1-adult": { icon: "🧠", desc: "Brief 23-item cross-cutting symptom screen (adult).", bg: "#f6edd6" },
+  "dsm5-level1-child": { icon: "🧒", desc: "Parent/guardian screen for a child age 6-17 (25 items).", bg: "#eaf3e4" },
   ...Object.fromEntries(
     LEVEL2_MEASURES.map((m) => [
       m.key,
@@ -110,9 +111,12 @@ export default async function Dashboard() {
   const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;
 
   // Forms view (rendered inside the shell when the Forms tab is active).
-  // Primary intake/screening forms vs. the Level 2 follow-up measures (grouped).
-  const primaryForms = me.forms.filter((k) => !k.startsWith("l2-"));
+  // Grouped into clear families: intake, Level 1 screeners, Level 2 follow-ups,
+  // and shareable tools - so the long list is easy to scan.
+  const intakeForms = me.forms.filter((k) => k === "individual" || k === "couples");
+  const level1Forms = me.forms.filter((k) => k.startsWith("dsm5-level1"));
   const level2Forms = me.forms.filter((k) => k.startsWith("l2-"));
+
   const formCard = (key: string) => {
     const meta = FORM_META[key];
     return (
@@ -132,38 +136,49 @@ export default async function Dashboard() {
       </div>
     );
   };
+
+  const group = (title: string, desc: string, keys: string[], first = false, extra: ReactNode = null) =>
+    keys.length === 0 && !extra ? null : (
+      <section style={{ maxWidth: 900, marginTop: first ? 0 : 30 }}>
+        <h2 className="section-title" style={{ marginBottom: 2 }}>{title}</h2>
+        <p className="section-desc" style={{ marginTop: 0, marginBottom: 12 }}>{desc}</p>
+        <div className="form-cards">
+          {keys.map(formCard)}
+          {extra}
+        </div>
+      </section>
+    );
+
+  const selfCheckCard = me.selfCheck ? (
+    <div className="form-card" key="selfcheck">
+      <div className="form-card-head">
+        <div className="form-card-icon" style={{ background: "#d9edec" }}>🧭</div>
+        <div className="form-card-body">
+          <div className="form-card-name">Wellbeing self-check (shareable)</div>
+          <div className="form-card-desc">
+            A public self-screening for talks, workshops, or groups. People see their own results on their own device -
+            nothing is sent to you or stored.
+          </div>
+        </div>
+      </div>
+      <ScreeningShare />
+    </div>
+  ) : null;
+
   const formsSlot = (
     <>
-      <div className="form-cards" style={{ maxWidth: 900 }}>
-        {primaryForms.map(formCard)}
-
-        {me.selfCheck && (
-          <div className="form-card">
-            <div className="form-card-head">
-              <div className="form-card-icon" style={{ background: "#d9edec" }}>🧭</div>
-              <div className="form-card-body">
-                <div className="form-card-name">Wellbeing self-check (shareable)</div>
-                <div className="form-card-desc">
-                  A public self-screening for talks, workshops, or groups. People see their own results on their own
-                  device - nothing is sent to you or stored.
-                </div>
-              </div>
-            </div>
-            <ScreeningShare />
-          </div>
-        )}
-      </div>
-
-      {level2Forms.length > 0 && (
-        <div style={{ maxWidth: 900, marginTop: 26 }}>
-          <h2 className="section-title" style={{ marginBottom: 2 }}>DSM-5-TR Level 2 follow-up measures</h2>
-          <p className="section-desc" style={{ marginTop: 0, marginBottom: 12 }}>
-            Send one of these when a Level 1 domain flags - a deeper, scored look at a single area (anxiety,
-            depression, sleep, and more).
-          </p>
-          <div className="form-cards">{level2Forms.map(formCard)}</div>
-        </div>
+      {group("Intake forms", "A client's first paperwork - Informed Consent is included automatically.", intakeForms, true)}
+      {group(
+        "Screening measures (Level 1)",
+        "Brief DSM-5-TR cross-cutting symptom screens that flag which areas to look at next.",
+        level1Forms
       )}
+      {group(
+        "Level 2 follow-up measures",
+        "Send one when a Level 1 domain flags - a deeper, scored look at a single area.",
+        level2Forms
+      )}
+      {group("Shareable tools", "Public self-checks for talks, workshops, and groups.", [], false, selfCheckCard)}
     </>
   );
 
