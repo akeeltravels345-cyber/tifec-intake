@@ -25,10 +25,16 @@ export default function Level2Score({
   return (
     <>
       <div className="card">
-        <h2 className="section-title">{m.short.replace(/^L2 /, "")} follow-up summary</h2>
+        <h2 className="section-title">
+          {m.tier === "severity" ? `${m.short} summary` : `${m.short.replace(/^L2 /, "")} follow-up summary`}
+        </h2>
         <p className="section-desc">
-          {m.instrument} - follow-up for the &ldquo;{m.domain}&rdquo; domain. A screening aid, not a diagnosis.
+          {m.tier === "severity"
+            ? `${m.instrument} - tracks the severity of ${m.domain}. A screening aid, not a diagnosis.`
+            : `${m.instrument} - follow-up for the “${m.domain}” domain. A screening aid, not a diagnosis.`}
         </p>
+
+        {r.alert && <div className="dsm-urgent">⚠ {r.alert}</div>}
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", margin: "10px 0" }}>
           <span className={`sev sev-${r.sev}`} style={{ fontSize: "0.95rem", padding: "4px 12px" }}>

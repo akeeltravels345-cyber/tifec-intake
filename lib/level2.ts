@@ -27,7 +27,7 @@ export interface L2Item {
   scale?: L2Option[]; // overrides the measure default scale (Sleep, ASRM, FOCI)
   optional?: boolean; // e.g. PHQ-15 "women only" item
 }
-export type L2ScoringKind = "promis" | "phq" | "asrm" | "foci" | "substance";
+export type L2ScoringKind = "promis" | "phq" | "asrm" | "foci" | "substance" | "phq9" | "average";
 
 export interface L2Measure {
   key: string;
@@ -35,13 +35,19 @@ export interface L2Measure {
   short: string; // dashboard chip
   icon: string;
   instrument: string; // source instrument name
-  domain: string; // the Level 1 domain this follows up on
+  domain: string; // Level 2: the Level 1 domain this follows up on. Severity: the disorder.
   window: string; // recall window shown to the client
   instructions: string;
   scale: L2Option[]; // default response scale
   stackItems: boolean; // render options stacked (long anchors) vs. inline
   items: L2Item[];
   scoring: { kind: L2ScoringKind; table?: Record<number, number> };
+  /** "level2" = cross-cutting follow-up (default). "severity" = disorder-specific severity measure. */
+  tier?: "level2" | "severity";
+  /** Extra client-info fields (e.g. the traumatic-event fields on the stress measures). */
+  extraInfo?: FormField[];
+  /** Optional extra context paragraph shown above the items (e.g. defining "social situations"). */
+  intro?: string;
 }
 
 // ---- shared scales ----------------------------------------------------------
@@ -65,6 +71,31 @@ const FREQ_2W: L2Option[] = [
   { label: "Several days", value: 2 },
   { label: "More than half the days", value: 3 },
   { label: "Nearly every day", value: 4 },
+];
+// Severity-measure scales.
+const PHQ4: L2Option[] = [
+  { label: "Not at all", value: 0 },
+  { label: "Several days", value: 1 },
+  { label: "More than half the days", value: 2 },
+  { label: "Nearly every day", value: 3 },
+];
+const NEVER_ALL: L2Option[] = [
+  { label: "Never", value: 0 },
+  { label: "Occasionally", value: 1 },
+  { label: "Half of the time", value: 2 },
+  { label: "Most of the time", value: 3 },
+  { label: "All of the time", value: 4 },
+];
+const NSESSS: L2Option[] = [
+  { label: "Not at all", value: 0 },
+  { label: "A little bit", value: 1 },
+  { label: "Moderately", value: 2 },
+  { label: "Quite a bit", value: 3 },
+  { label: "Extremely", value: 4 },
+];
+const TRAUMA_INFO: FormField[] = [
+  { name: "trauma_event", label: "Please list the traumatic event that you experienced", type: "text" },
+  { name: "trauma_date", label: "Date of the traumatic event", type: "date" },
 ];
 // Sleep uses three label sets, with items 2/3/7/8 reverse-scored.
 const A = ["Not at all", "A little bit", "Somewhat", "Quite a bit", "Very much"];
@@ -362,12 +393,173 @@ export const LEVEL2_MEASURES: L2Measure[] = [
     ],
     scoring: { kind: "substance" },
   },
+
+  // -------- Disorder-specific Severity Measures (Adult) ----------------------
+  {
+    key: "sev-depression",
+    label: "Severity Measure - Depression (Adult)",
+    short: "Depression (PHQ-9)",
+    icon: "😔",
+    instrument: "PHQ-9",
+    domain: "depression",
+    window: "last 7 days",
+    tier: "severity",
+    instructions: "Over the last 7 days, how often have you been bothered by any of the following problems?",
+    scale: PHQ4,
+    stackItems: false,
+    items: [
+      { text: "Little interest or pleasure in doing things" },
+      { text: "Feeling down, depressed, or hopeless" },
+      { text: "Trouble falling or staying asleep, or sleeping too much" },
+      { text: "Feeling tired or having little energy" },
+      { text: "Poor appetite or overeating" },
+      { text: "Feeling bad about yourself - or that you are a failure or have let yourself or your family down" },
+      { text: "Trouble concentrating on things, such as reading the newspaper or watching television" },
+      { text: "Moving or speaking so slowly that other people could have noticed? Or the opposite - being so fidgety or restless that you have been moving around a lot more than usual" },
+      { text: "Thoughts that you would be better off dead or of hurting yourself in some way" },
+    ],
+    scoring: { kind: "phq9" },
+  },
+  {
+    key: "sev-gad",
+    label: "Severity Measure - Generalized Anxiety Disorder (Adult)",
+    short: "GAD severity",
+    icon: "😟",
+    instrument: "DSM-5-TR GAD severity measure",
+    domain: "generalized anxiety disorder",
+    window: "past 7 days",
+    tier: "severity",
+    instructions: "During the PAST 7 DAYS, I have…",
+    scale: NEVER_ALL,
+    stackItems: false,
+    items: [
+      { text: "felt moments of sudden terror, fear, or fright" },
+      { text: "felt anxious, worried, or nervous" },
+      { text: "had thoughts of bad things happening, such as family tragedy, ill health, loss of a job, or accidents" },
+      { text: "felt a racing heart, sweaty, trouble breathing, faint, or shaky" },
+      { text: "felt tense muscles, felt on edge or restless, or had trouble relaxing or trouble sleeping" },
+      { text: "avoided, or did not approach or enter, situations about which I worry" },
+      { text: "left situations early or participated only minimally due to worries" },
+      { text: "spent lots of time making decisions, putting off making decisions, or preparing for situations, due to worries" },
+      { text: "sought reassurance from others due to worries" },
+      { text: "needed help to cope with anxiety (e.g., alcohol or medication, superstitious objects, or other people)" },
+    ],
+    scoring: { kind: "average" },
+  },
+  {
+    key: "sev-social-anxiety",
+    label: "Severity Measure - Social Anxiety Disorder (Adult)",
+    short: "Social anxiety",
+    icon: "🫣",
+    instrument: "DSM-5-TR social anxiety disorder severity measure",
+    domain: "social anxiety disorder",
+    window: "past 7 days",
+    tier: "severity",
+    instructions: "During the PAST 7 DAYS, I have…",
+    intro:
+      "These questions ask about social situations - for example: public speaking, speaking in meetings, attending social events or parties, introducing yourself to others, having conversations, giving and receiving compliments, making requests of others, and eating and writing in public.",
+    scale: NEVER_ALL,
+    stackItems: false,
+    items: [
+      { text: "felt moments of sudden terror, fear, or fright in social situations" },
+      { text: "felt anxious, worried, or nervous about social situations" },
+      { text: "had thoughts of being rejected, humiliated, embarrassed, ridiculed, or offending others" },
+      { text: "felt a racing heart, sweaty, trouble breathing, faint, or shaky in social situations" },
+      { text: "felt tense muscles, felt on edge or restless, or had trouble relaxing in social situations" },
+      { text: "avoided, or did not approach or enter, social situations" },
+      { text: "left social situations early or participated only minimally (e.g., said little, avoided eye contact)" },
+      { text: "spent a lot of time preparing what to say or how to act in social situations" },
+      { text: "distracted myself to avoid thinking about social situations" },
+      { text: "needed help to cope with social situations (e.g., alcohol or medications, superstitious objects)" },
+    ],
+    scoring: { kind: "average" },
+  },
+  {
+    key: "sev-separation-anxiety",
+    label: "Severity Measure - Separation Anxiety Disorder (Adult)",
+    short: "Separation anxiety",
+    icon: "🫂",
+    instrument: "DSM-5-TR separation anxiety disorder severity measure",
+    domain: "separation anxiety disorder",
+    window: "past 7 days",
+    tier: "severity",
+    instructions: "During the PAST 7 DAYS, I have…",
+    intro: "These questions ask about being separated from home or from people who are important to you.",
+    scale: NEVER_ALL,
+    stackItems: false,
+    items: [
+      { text: "felt moments of sudden terror, fear, or fright when separated" },
+      { text: "felt anxious, worried, or nervous about being separated" },
+      { text: "have had thoughts of bad things happening to people important to me or bad things happening to me when separated from them (e.g., getting lost, accidents)" },
+      { text: "felt a racing heart, sweaty, trouble breathing, faint, or shaky when separated" },
+      { text: "felt tense muscles, felt on edge or restless, or had trouble relaxing or trouble sleeping when separated" },
+      { text: "avoided going places where I would be separated" },
+      { text: "when separated, left places early to go home" },
+      { text: "spent a lot of time preparing for how to deal with separation" },
+      { text: "distracted myself to avoid thinking about being separated" },
+      { text: "needed help to cope with separation (e.g., alcohol or medications, superstitious objects)" },
+    ],
+    scoring: { kind: "average" },
+  },
+  {
+    key: "sev-acute-stress",
+    label: "Severity of Acute Stress Symptoms (Adult)",
+    short: "Acute stress",
+    icon: "💥",
+    instrument: "National Stressful Events Survey - Acute Stress Disorder Short Scale (NSESSS)",
+    domain: "acute stress disorder",
+    window: "past 7 days",
+    tier: "severity",
+    instructions:
+      "How much have you been bothered during the PAST SEVEN (7) DAYS by each of the following problems that occurred or became worse after an extremely stressful event or experience?",
+    scale: NSESSS,
+    stackItems: true,
+    extraInfo: TRAUMA_INFO,
+    items: [
+      { text: "Having “flashbacks,” that is, you suddenly acted or felt as if a stressful experience from the past was happening all over again (for example, you reexperienced parts of a stressful experience by seeing, hearing, smelling, or physically feeling parts of the experience)?" },
+      { text: "Feeling very emotionally upset when something reminded you of a stressful experience?" },
+      { text: "Feeling detached or distant from yourself, your body, your physical surroundings, or your memories?" },
+      { text: "Trying to avoid thoughts, feelings, or physical sensations that reminded you of a stressful experience?" },
+      { text: "Being “super alert,” on guard, or constantly on the lookout for danger?" },
+      { text: "Feeling jumpy or easily startled when you hear an unexpected noise?" },
+      { text: "Being extremely irritable or angry to the point where you yelled at other people, got into fights, or destroyed things?" },
+    ],
+    scoring: { kind: "average" },
+  },
+  {
+    key: "sev-ptsd",
+    label: "Severity of Posttraumatic Stress Symptoms (Adult)",
+    short: "PTSD severity",
+    icon: "🌩️",
+    instrument: "National Stressful Events Survey - PTSD Short Scale (NSESSS)",
+    domain: "posttraumatic stress disorder",
+    window: "past 7 days",
+    tier: "severity",
+    instructions:
+      "How much have you been bothered during the PAST SEVEN (7) DAYS by each of the following problems that occurred or became worse after an extremely stressful event or experience?",
+    scale: NSESSS,
+    stackItems: true,
+    extraInfo: TRAUMA_INFO,
+    items: [
+      { text: "Having “flashbacks,” that is, you suddenly acted or felt as if a stressful experience from the past was happening all over again (for example, you reexperienced parts of a stressful experience by seeing, hearing, smelling, or physically feeling parts of the experience)?" },
+      { text: "Feeling very emotionally upset when something reminded you of a stressful experience?" },
+      { text: "Trying to avoid thoughts, feelings, or physical sensations that reminded you of a stressful experience?" },
+      { text: "Thinking that a stressful event happened because you or someone else (who didn't directly harm you) did something wrong or didn't do everything possible to prevent it, or because of something about you?" },
+      { text: "Having a very negative emotional state (for example, you were experiencing lots of fear, anger, guilt, shame, or horror) after a stressful experience?" },
+      { text: "Losing interest in activities you used to enjoy before having a stressful experience?" },
+      { text: "Being “super alert,” on guard, or constantly on the lookout for danger?" },
+      { text: "Feeling jumpy or easily startled when you hear an unexpected noise?" },
+      { text: "Being extremely irritable or angry to the point where you yelled at other people, got into fights, or destroyed things?" },
+    ],
+    scoring: { kind: "average" },
+  },
 ];
 
 const BY_KEY: Record<string, L2Measure> = Object.fromEntries(LEVEL2_MEASURES.map((m) => [m.key, m]));
 
 export function isLevel2Form(formKey: string): boolean {
-  return formKey.startsWith("l2-") && formKey in BY_KEY;
+  // True for any scored measure (Level 2 follow-ups and disorder-severity measures).
+  return formKey in BY_KEY;
 }
 export function getLevel2(formKey: string): L2Measure | undefined {
   return BY_KEY[formKey];
@@ -405,6 +597,8 @@ export interface L2Result {
   note: string;
   /** substance: substances used (value > 0) */
   used?: string[];
+  /** urgent banner (e.g. PHQ-9 item 9 endorsed) */
+  alert?: string;
 }
 
 export function scoreLevel2(formKey: string, answers: Record<string, string>): L2Result | null {
@@ -471,6 +665,27 @@ export function scoreLevel2(formKey: string, answers: Record<string, string>): L
     return { measure: m, items, answered, total, raw, band: `Average: ${avgLabel}`, sev: Math.round(avg), flagged, note: `Raw ${raw} of 20 (average ${avg.toFixed(1)} = ${avgLabel}).${flagged ? " A score of 8 or higher may warrant a more detailed assessment for obsessive-compulsive disorder." : ""}` };
   }
 
+  if (m.scoring.kind === "phq9") {
+    const band =
+      raw <= 4 ? "None / minimal" : raw <= 9 ? "Mild" : raw <= 14 ? "Moderate" : raw <= 19 ? "Moderately severe" : "Severe";
+    const q9 = items[8]?.value ?? 0; // item 9: thoughts of being better off dead / self-harm
+    return {
+      measure: m, items, answered, total, raw, band, sev: sevFromBand(band), flagged: raw >= 10 || q9 > 0,
+      note: `Depression severity: ${band} (raw ${raw} of 27).`,
+      alert: q9 > 0 ? "Item 9 (thoughts of being better off dead or of self-harm) was endorsed. Review per your risk-assessment protocol." : undefined,
+    };
+  }
+
+  if (m.scoring.kind === "average") {
+    const avg = answered ? raw / answered : 0;
+    const avgLabel = ["None", "Mild", "Moderate", "Severe", "Extreme"][Math.round(avg)];
+    const maxRaw = total * 4;
+    return {
+      measure: m, items, answered, total, raw, band: avgLabel, sev: Math.round(avg), flagged: avg >= 2,
+      note: `Raw ${raw} of ${maxRaw} · average ${avg.toFixed(1)} = ${avgLabel}.`,
+    };
+  }
+
   // substance: each item independent
   const used = items.filter((r) => (r.value ?? 0) > 0).map((r) => r.text);
   const flagged = used.length > 0;
@@ -485,6 +700,7 @@ const L2_CLIENT_INFO = (m: L2Measure): FormSection => ({
     { name: "full_name", label: "Name", type: "text", required: true },
     { name: "email", label: "Email", type: "email", required: true },
     { name: "age", label: "Age", type: "number" },
+    ...(m.extraInfo ?? []),
     {
       name: "informant_relationship",
       label: "If you are completing this on behalf of someone else, what is your relationship to them?",
@@ -510,15 +726,17 @@ export function level2Sections(m: L2Measure): FormSection[] {
       stack: m.stackItems,
     };
   });
+  const lead =
+    m.tier === "severity"
+      ? `This is the DSM-5-TR ${m.label} (${m.instrument}). Please answer about the ${m.window}.`
+      : `This is the DSM-5-TR ${m.label.replace(/^Level 2 - /, "Level 2 ")} follow-up measure (${m.instrument}). Please answer about the ${m.window}.`;
   return [
     L2_CLIENT_INFO(m),
     {
       id: `${m.key}-items`,
       title: m.instructions,
       titleBelowIntro: true,
-      intro: [
-        `This is the DSM-5-TR ${m.label.replace(/^Level 2 - /, "Level 2 ")} follow-up measure (${m.instrument}). Please answer about the ${m.window}.`,
-      ],
+      intro: m.intro ? [lead, m.intro] : [lead],
       fields,
     },
   ];

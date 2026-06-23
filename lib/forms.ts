@@ -77,7 +77,13 @@ export type FormTemplateKey =
   | "l2-sleep"
   | "l2-somatic"
   | "l2-repetitive"
-  | "l2-substance";
+  | "l2-substance"
+  | "sev-depression"
+  | "sev-gad"
+  | "sev-social-anxiety"
+  | "sev-separation-anxiety"
+  | "sev-acute-stress"
+  | "sev-ptsd";
 
 // ---- shared option lists -------------------------------------------------
 const YES_NO = ["Yes", "No"];
@@ -677,7 +683,12 @@ export interface FormTemplate {
 const L2_TEMPLATES = Object.fromEntries(
   LEVEL2_MEASURES.map((m) => [
     m.key,
-    { key: m.key, label: m.label, clientLabel: "Follow-up Questionnaire", body: level2Sections(m) } as FormTemplate,
+    {
+      key: m.key,
+      label: m.label,
+      clientLabel: m.tier === "severity" ? "Severity Questionnaire" : "Follow-up Questionnaire",
+      body: level2Sections(m),
+    } as FormTemplate,
   ])
 ) as Record<string, FormTemplate>;
 

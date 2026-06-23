@@ -27,7 +27,9 @@ const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
   ...Object.fromEntries(
     LEVEL2_MEASURES.map((m) => [
       m.key,
-      { icon: m.icon, desc: `In-depth follow-up for the ${m.domain.toLowerCase()} domain.`, bg: "#e9eef3" },
+      m.tier === "severity"
+        ? { icon: m.icon, desc: `Tracks the severity of ${m.domain} over time.`, bg: "#efeaf4" }
+        : { icon: m.icon, desc: `In-depth follow-up for the ${m.domain.toLowerCase()} domain.`, bg: "#e9eef3" },
     ])
   ),
 };
@@ -116,6 +118,7 @@ export default async function Dashboard() {
   const intakeForms = me.forms.filter((k) => k === "individual" || k === "couples");
   const level1Forms = me.forms.filter((k) => k.startsWith("dsm5-level1"));
   const level2Forms = me.forms.filter((k) => k.startsWith("l2-"));
+  const severityForms = me.forms.filter((k) => k.startsWith("sev-"));
 
   const formCard = (key: string) => {
     const meta = FORM_META[key];
@@ -177,6 +180,11 @@ export default async function Dashboard() {
         "Level 2 follow-up measures",
         "Send one when a Level 1 domain flags - a deeper, scored look at a single area.",
         level2Forms
+      )}
+      {group(
+        "Disorder severity measures",
+        "Track how severe a specific diagnosis is over time (depression, GAD, PTSD, and more).",
+        severityForms
       )}
       {group("Shareable tools", "Public self-checks for talks, workshops, and groups.", [], false, selfCheckCard)}
     </>
