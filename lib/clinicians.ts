@@ -32,6 +32,8 @@ export interface Clinician {
   admin?: boolean;
   /** Shows the shareable public Wellbeing Self-Check card on the dashboard. */
   selfCheck?: boolean;
+  /** Admin-only / non-practicing account: hidden from the client-facing clinician picker. */
+  intakeHidden?: boolean;
   /** Billing-system role. Omitted = a regular clinician (logs their own sessions).
    *  "biller" = marks insurance payments; "admin" = full billing config + disbursements.
    *  (A practice admin is also a billing admin automatically.) */
@@ -205,6 +207,7 @@ export const CLINICIANS: Clinician[] = [
     ],
     extraSections: [],
     admin: true,
+    intakeHidden: true, // admin-only account - not a clinician clients can be assigned to
   },
 ];
 
