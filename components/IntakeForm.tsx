@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { fieldVisible } from "@/lib/forms";
 import type { FormField, FormSection } from "@/lib/forms";
-
-const draftKey = (clinicianId: string, formKey: string) => `tifec-draft-${clinicianId}-${formKey}`;
 
 export interface ClinicianForm {
   key: string;
@@ -38,7 +36,6 @@ export default function IntakeForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const [draftRestored, setDraftRestored] = useState(false);
   const [invalid, setInvalid] = useState<Set<string>>(new Set());
 
   const selected = clinicians.find((c) => c.id === clinicianId);
@@ -47,36 +44,6 @@ export default function IntakeForm({
   const effectiveFormKey = formKey || (forms.length === 1 ? forms[0].key : "");
   const selectedForm = forms.find((f) => f.key === effectiveFormKey);
   const sections = selectedForm?.sections ?? [];
-
-  // Load any saved draft once a clinician + form are chosen.
-  useEffect(() => {
-    if (!clinicianId || !effectiveFormKey) return;
-    try {
-      const saved = localStorage.getItem(draftKey(clinicianId, effectiveFormKey));
-      const parsed = saved ? JSON.parse(saved) : null;
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) {
-        setValues(parsed);
-        setDraftRestored(true);
-      } else {
-        setValues({});
-        setDraftRestored(false);
-      }
-    } catch {
-      setValues({});
-    }
-  }, [clinicianId, effectiveFormKey]);
-
-  // Autosave the draft locally as the client types (never leaves their device).
-  useEffect(() => {
-    if (!clinicianId || !effectiveFormKey || done) return;
-    try {
-      if (Object.keys(values).length) {
-        localStorage.setItem(draftKey(clinicianId, effectiveFormKey), JSON.stringify(values));
-      }
-    } catch {
-      /* storage full / disabled - non-fatal */
-    }
-  }, [values, clinicianId, effectiveFormKey, done]);
 
   function setValue(name: string, v: string) {
     setValues((prev) => ({ ...prev, [name]: v }));
@@ -87,16 +54,6 @@ export default function IntakeForm({
       next.delete(name);
       return next;
     });
-  }
-
-  function startOver() {
-    try {
-      localStorage.removeItem(draftKey(clinicianId, effectiveFormKey));
-    } catch {
-      /* ignore */
-    }
-    setValues({});
-    setDraftRestored(false);
   }
 
   /** Names of every visible required question that hasn't been answered. */
@@ -148,11 +105,6 @@ export default function IntakeForm({
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Submission failed. Please try again.");
-      }
-      try {
-        localStorage.removeItem(draftKey(clinicianId, effectiveFormKey));
-      } catch {
-        /* ignore */
       }
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -242,19 +194,12 @@ export default function IntakeForm({
   const pct = requiredFields.length ? Math.round((filledCount / requiredFields.length) * 100) : 0;
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} autoComplete="off">
       <div className="notice">
         🔒 Your responses are encrypted and shared only with your clinician. If you are in crisis,
         call <strong>911</strong> or go to your nearest emergency room - this form is not
         monitored in real time.
       </div>
-
-      {draftRestored && (
-        <div className="draft-banner">
-          <span>We restored your saved progress on this device.</span>
-          <button type="button" onClick={startOver}>Start over</button>
-        </div>
-      )}
 
       <div className="card">
         <h2 className="section-title">{selectedForm.label}</h2>
@@ -330,7 +275,7 @@ export default function IntakeForm({
   );
 }
 
-function Field({
+export function Field({
   field: f,
   value,
   onChange,
@@ -407,7 +352,7 @@ function Field({
     return wrap(
       <>
         {labelEl}
-        <textarea id={id} value={value} placeholder={f.placeholder} onChange={(e) => onChange(f.name, e.target.value)} />
+        <textarea id={id} value={value} placeholder={f.placeholder} autoComplete="off" onChange={(e) => onChange(f.name, e.target.value)} />
       </>
     );
   }
@@ -416,7 +361,7 @@ function Field({
     return wrap(
       <>
         {labelEl}
-        <select id={id} value={value} onChange={(e) => onChange(f.name, e.target.value)}>
+        <select id={id} value={value} autoComplete="off" onChange={(e) => onChange(f.name, e.target.value)}>
           <option value="">- Select -</option>
           {f.options?.map((o) => (
             <option key={o} value={o}>{o}</option>
@@ -451,6 +396,7 @@ function Field({
         type={f.type === "number" ? "number" : f.type}
         value={value}
         placeholder={f.placeholder}
+        autoComplete="off"
         onChange={(e) => onChange(f.name, e.target.value)}
       />
     </>

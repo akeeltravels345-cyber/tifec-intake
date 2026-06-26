@@ -699,7 +699,7 @@ const L2_CLIENT_INFO = (m: L2Measure): FormSection => ({
   fields: [
     { name: "full_name", label: "Name", type: "text", required: true },
     { name: "email", label: "Email", type: "email", required: true },
-    { name: "age", label: "Age", type: "number" },
+    { name: "dob", label: "Date of birth", type: "date", required: true },
     ...(m.extraInfo ?? []),
     {
       name: "informant_relationship",

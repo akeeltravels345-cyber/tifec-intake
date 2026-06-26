@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSubmissionByToken, getCoupleSubmissions, getSubmissionsByClinician, logAccess } from "@/lib/db";
 import { getClinician } from "@/lib/clinicians";
 import { getCurrentClinician } from "@/lib/auth";
-import { buildSections, labelMap, templateLabel, type FormTemplateKey } from "@/lib/forms";
+import { ageFromDob, buildSections, labelMap, templateLabel, type FormTemplateKey } from "@/lib/forms";
 import { decrypt, randomId } from "@/lib/crypto";
 import { isDsmForm } from "@/lib/dsm";
 import { isDsmChildForm } from "@/lib/dsmChild";
@@ -30,7 +30,9 @@ function snapshot(a: Record<string, string>): { label: string; value: string }[]
   if (a.full_name || a.dob) {
     add("Name", a.full_name);
     add("Date of birth", a.dob);
-    add("Age", a.age);
+    // Age is derived from date of birth (older records may still carry a stored age).
+    const age = a.dob ? ageFromDob(a.dob) : a.age ? Number(a.age) : null;
+    add("Age", age != null && !Number.isNaN(age) ? String(age) : undefined);
     add("Phone", a.cell_phone || a.home_phone);
     add("Email", a.email);
   } else {
@@ -150,7 +152,10 @@ export default async function SubmissionView({
       <Tour mount="record" />
       <div className="detail-topbar no-print">
         <Link href="/dashboard" className="back-link" style={{ margin: 0 }}>← Dashboard</Link>
-        <LogoutButton />
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <Link href={`/submissions/${token}/edit`} className="back-link" style={{ margin: 0 }}>✏️ Edit responses</Link>
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="card">
@@ -248,10 +253,19 @@ export default async function SubmissionView({
             // Level 2 item responses are rendered by Level2Score above.
             if (isLevel2Form(formKey) && section.id.endsWith("-items")) return null;
             const rows = section.fields.filter((f) => answers[f.name] !== undefined && answers[f.name] !== "");
-            if (rows.length === 0) return null;
+            // Show the full consent text the client read (not just their agreement).
+            const consentText = section.id === "informed-consent" ? section.intro ?? [] : [];
+            if (rows.length === 0 && consentText.length === 0) return null;
             return (
               <div className="card" key={section.id}>
                 <h2 className="section-title">{section.title}</h2>
+                {consentText.length > 0 && (
+                  <div className="consent-read" style={{ marginBottom: rows.length ? 16 : 0 }}>
+                    {consentText.map((p, i) => (
+                      <p key={i} className="consent-text">{p}</p>
+                    ))}
+                  </div>
+                )}
                 {rows.map((f) => (
                   <div className="answer-row" key={f.name}>
                     <div className="q">

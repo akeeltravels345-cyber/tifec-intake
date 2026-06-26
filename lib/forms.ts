@@ -114,7 +114,6 @@ export const INDIVIDUAL_INTAKE: FormSection[] = [
     fields: [
       { name: "full_name", label: "Full name", type: "text", required: true },
       { name: "dob", label: "Date of birth", type: "date", required: true },
-      { name: "age", label: "Age", type: "number" },
       { name: "gender", label: "Gender", type: "text" },
       {
         name: "guardian_name",
@@ -307,7 +306,6 @@ export const COUPLES_INTAKE: FormSection[] = [
       { name: "full_name", label: "Your name", type: "text", required: true },
       { name: "partner_name", label: "Your partner's name", type: "text", required: true },
       { name: "dob", label: "Date of birth", type: "date" },
-      { name: "age", label: "Age", type: "number" },
       { name: "address", label: "Address", type: "textarea" },
       { name: "cell_phone", label: "Cell phone", type: "tel", required: true },
       { name: "email", label: "Email", type: "email", help: EMAIL_NOTE },
@@ -528,7 +526,6 @@ export const DSM_LEVEL1_ADULT: FormSection[] = [
       { name: "full_name", label: "Name", type: "text", required: true },
       { name: "dob", label: "Date of birth", type: "date", required: true },
       { name: "email", label: "Email", type: "email", required: true },
-      { name: "age", label: "Age", type: "number" },
       {
         name: "is_informant",
         label: "Are you completing this form on behalf of someone else?",
@@ -614,7 +611,6 @@ export const DSM_CHILD_LEVEL1: FormSection[] = [
     fields: [
       { name: "full_name", label: "Child's name", type: "text", required: true },
       { name: "dob", label: "Child's date of birth", type: "date", required: true },
-      { name: "age", label: "Child's age", type: "number" },
       { name: "respondent_relationship", label: "Your relationship to the child", type: "text", required: true },
       { name: "email", label: "Your email", type: "email", required: true },
     ],
@@ -756,7 +752,7 @@ export function buildSections(template: FormTemplateKey, extraSections: FormSect
 }
 
 /** Whole years between a date-of-birth string and today, or null if unparseable. */
-function ageFromDob(dob: string): number | null {
+export function ageFromDob(dob: string): number | null {
   if (!dob) return null;
   const d = new Date(dob);
   if (Number.isNaN(d.getTime())) return null;

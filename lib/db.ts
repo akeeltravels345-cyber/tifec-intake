@@ -170,6 +170,27 @@ export async function updateSubmissionNotes(
   return true;
 }
 
+/** Overwrite a submission's encrypted answers (clinician correcting an error) - scoped to the owner. */
+export async function updateSubmissionAnswers(
+  token: string,
+  clinicianId: string | null,
+  answersEncrypted: string
+): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    const res = (await (clinicianId === null
+      ? sql`UPDATE submissions SET answers_encrypted = ${answersEncrypted} WHERE token = ${token} RETURNING id`
+      : sql`UPDATE submissions SET answers_encrypted = ${answersEncrypted} WHERE token = ${token} AND clinician_id = ${clinicianId} RETURNING id`)) as { id: string }[];
+    return res.length > 0;
+  }
+  const rows = readLocal();
+  const row = rows.find((r) => r.token === token && owns(r, clinicianId));
+  if (!row) return false;
+  row.answers_encrypted = answersEncrypted;
+  writeLocal(rows);
+  return true;
+}
+
 /** Permanently delete a submission - scoped to `clinicianId`, or any when null (admin). */
 export async function deleteSubmission(token: string, clinicianId: string | null): Promise<boolean> {
   if (usePostgres) {
@@ -206,6 +227,7 @@ export type AuditAction =
   | "view"
   | "status"
   | "notes"
+  | "edit"
   | "delete"
   | "login"
   | "login_failed"
