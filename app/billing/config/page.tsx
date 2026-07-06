@@ -16,10 +16,10 @@ export default async function ConfigPage() {
 
   return (
     <div>
-      <div className="bz-head">
+      <div className="ov-headrow">
         <div>
-          <h2 className="section-title">Setup</h2>
-          <p className="section-desc">Insurers &amp; co-pay rules, service codes, and each clinician&apos;s split (40% company retention by default). Owner only.</p>
+          <h2 className="ov-title">Setup</h2>
+          <p className="ov-sub">Insurers &amp; co-pay rules, service codes, and each clinician&apos;s split (40% company retention by default). Owner only.</p>
         </div>
       </div>
       <ConfigClient insurers={insurers} cptCodes={cptCodes} clinicians={clinicians} settings={settings} />

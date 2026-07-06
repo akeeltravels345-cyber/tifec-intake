@@ -16,10 +16,10 @@ export default async function NewSessionPage() {
 
   return (
     <div className="container-form" style={{ padding: 0 }}>
-      <div className="bz-head">
+      <div className="ov-headrow">
         <div>
-          <h2 className="section-title">Log a session</h2>
-          <p className="section-desc">Logged as {user.clinician.name}. One row per visit.</p>
+          <h2 className="ov-title">Log a session</h2>
+          <p className="ov-sub">Logged as {user.clinician.name}. One row per visit.</p>
         </div>
         <Link href="/billing/me" className="bz-link">← Back</Link>
       </div>

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { listSessions, getClinicianSettings } from "@/lib/billing";
-import { computeClinicianMonth, computeBusinessMonth } from "@/lib/billingCalc";
+import { listSessions, listInsurers, getClinicianSettings } from "@/lib/billing";
+import { computeClinicianMonth, computeBusinessMonth, insurancePortion } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
 import MonthPicker from "@/components/billing/MonthPicker";
 
@@ -38,7 +38,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const prevY = month === 1 ? year - 1 : year;
   const prevM = month === 1 ? 12 : month - 1;
 
-  const allSessions = await listSessions();
+  const [allSessions, insurers] = await Promise.all([listSessions(), listInsurers()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
   const settingsMap = new Map(CLINICIANS.map((c, i) => [c.id, settingsList[i]]));
   const bizFor = (y: number, m: number) =>
@@ -58,6 +58,21 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const collectedDelta = prev.collected > 0 ? ((biz.collected - prev.collected) / prev.collected) * 100 : null;
   const pipelineTotal = biz.collected + biz.outstanding;
   const payoutFrac = biz.collected > 0 ? biz.totalPayout / biz.collected : 0;
+
+  // Outstanding grouped by insurer (running, all months) — the cashflow lever.
+  const insName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? "Other";
+  const outMap = new Map<string, { name: string; amount: number; count: number }>();
+  for (const s of allSessions) {
+    if (!s.insurerId || s.insurancePaid) continue;
+    const amt = insurancePortion(s);
+    if (amt <= 0) continue;
+    const cur = outMap.get(s.insurerId) ?? { name: insName(s.insurerId), amount: 0, count: 0 };
+    cur.amount = Math.round((cur.amount + amt) * 100) / 100;
+    cur.count += 1;
+    outMap.set(s.insurerId, cur);
+  }
+  const outByInsurer = [...outMap.values()].sort((a, b) => b.amount - a.amount);
+  const outMax = Math.max(1, ...outByInsurer.map((x) => x.amount));
 
   const deltaChip = collectedDelta === null
     ? null
@@ -115,6 +130,24 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
         <div className="ov-stat"><div className="k">Insurance billed</div><div className="v">{money0(biz.billed)}</div></div>
         <div className="ov-stat"><div className="k">Collected at visit</div><div className="v">{money0(biz.copays)}</div></div>
       </div>
+
+      {outByInsurer.length > 0 && (
+        <div className="ov-card ov-ins-card">
+          <div className="ov-clin-head2" style={{ margin: "0 0 16px" }}>
+            <span className="ov-eyebrow">Waiting on insurance</span>
+            <span className="help" style={{ margin: 0 }}>Where your outstanding money is sitting today</span>
+          </div>
+          <div className="ov-ins">
+            {outByInsurer.map((i) => (
+              <div className="ov-ins-row" key={i.name}>
+                <div className="ov-ins-name">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"}</small></div>
+                <div className="ov-ins-track"><span style={{ width: `${(i.amount / outMax) * 100}%` }} /></div>
+                <div className="ov-ins-amt">{money0(i.amount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="ov-clin-head2">
         <h3 className="bz-sec" style={{ margin: 0 }}>By clinician</h3>

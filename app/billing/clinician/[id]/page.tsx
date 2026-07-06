@@ -74,6 +74,9 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           )}
           <div className="ov-rtotal"><span className="k"><span className="ov-dotkey" style={{ background: "#2E3192" }} />Clinician payout</span><span className="v">{money(c.payout)}</span></div>
           <p className="ov-keeps">The practice keeps {money(c.companyKeeps)} from {clinician.name.split(" ").slice(-1)} this month. Payout follows money actually collected, so unpaid appointments pay out the month insurance settles them.</p>
+          <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="ov-stmt-link">
+            <span aria-hidden="true">🧾</span> View payout statement
+          </Link>
         </div>
 
         <div className="ov-card">

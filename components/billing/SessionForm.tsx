@@ -73,7 +73,7 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
   }
 
   return (
-    <form onSubmit={submit} className="card">
+    <form onSubmit={submit} className="ov-card">
       {error && <div className="field-required" style={{ marginBottom: 14 }}>{error}</div>}
 
       <div className="field" style={{ borderTop: "none", paddingTop: 0 }}>
