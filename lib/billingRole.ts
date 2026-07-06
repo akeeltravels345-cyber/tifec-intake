@@ -1,4 +1,5 @@
 // Billing role resolution + server-side access helpers for the /billing area.
+import { cookies } from "next/headers";
 import { getCurrentClinician } from "./auth";
 import type { Clinician } from "./clinicians";
 
@@ -21,7 +22,18 @@ export interface BillingUser {
 export async function getBillingUser(): Promise<BillingUser | null> {
   const c = await getCurrentClinician();
   if (!c) return null;
-  return { clinician: c, role: billingRoleOf(c) };
+  let role = billingRoleOf(c);
+  // LOCAL DEV ONLY: the "View as" switcher can force a role via the `dev_role` cookie.
+  if (process.env.NODE_ENV !== "production" && process.env.DEV_AUTOLOGIN) {
+    const forced = (await cookies()).get("dev_role")?.value;
+    if (forced === "owner" || forced === "biller" || forced === "clinician") role = forced;
+  }
+  return { clinician: c, role };
+}
+
+/** Is the local dev bypass active? (Server-only; always false in production.) */
+export function devMode(): boolean {
+  return process.env.NODE_ENV !== "production" && !!process.env.DEV_AUTOLOGIN;
 }
 
 // Owners see the business overview + every clinician; billers + owners mark billed;
