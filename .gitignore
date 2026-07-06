@@ -16,3 +16,6 @@ vercel-import.env
 data/billing-*.local.json
 .vercel
 .env*
+
+# local dev note (worktree-specific)
+BILLING-WORKSPACE.md

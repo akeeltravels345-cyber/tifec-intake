@@ -165,7 +165,8 @@ export async function deleteCptCode(code: string): Promise<void> {
 }
 
 // ===================== Clinician billing settings ===========================
-const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 0, otherDeductionPct: 0, otherDeductionFixed: 0 });
+// The practice keeps 40% by default; each clinician can be overridden in Setup.
+const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0 });
 
 export async function listClinicianSettings(): Promise<ClinicianBillingSettings[]> {
   if (usePostgres) {

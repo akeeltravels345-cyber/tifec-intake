@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-export default function MonthPicker({ year, month }: { year: number; month: number }) {
+export default function MonthPicker({ year, month, path }: { year: number; month: number; path: string }) {
   const router = useRouter();
-  const go = (y: number, m: number) => router.push(`/billing/dashboard?y=${y}&m=${m}`);
+  const go = (y: number, m: number) => router.push(`${path}?y=${y}&m=${m}`);
   const prev = () => (month === 1 ? go(year - 1, 12) : go(year, month - 1));
   const next = () => (month === 12 ? go(year + 1, 1) : go(year, month + 1));
-  const years = [year - 1, year, year + 1];
+  const years = [year - 2, year - 1, year, year + 1];
 
   return (
     <div className="bz-month">

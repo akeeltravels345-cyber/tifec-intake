@@ -2,10 +2,12 @@
 import { getCurrentClinician } from "./auth";
 import type { Clinician } from "./clinicians";
 
-export type BillingRole = "clinician" | "biller" | "admin";
+// The practice owner (Dr. Shion) sees the whole business AND their own clients.
+// A biller marks insurance payments. A clinician sees only their own numbers.
+export type BillingRole = "clinician" | "biller" | "owner";
 
 export function billingRoleOf(c: Clinician): BillingRole {
-  if (c.admin || c.billing === "admin") return "admin";
+  if (c.admin || c.billing === "admin") return "owner";
   if (c.billing === "biller") return "biller";
   return "clinician";
 }
@@ -22,6 +24,12 @@ export async function getBillingUser(): Promise<BillingUser | null> {
   return { clinician: c, role: billingRoleOf(c) };
 }
 
-export const canMarkPaid = (r: BillingRole) => r === "biller" || r === "admin";
-export const canConfigure = (r: BillingRole) => r === "admin";
-export const canLogSessions = () => true; // every signed-in clinician can log their own
+// Owners see the business overview + every clinician; billers + owners mark billed;
+// only owners configure the practice. Every signed-in person sees their own clients.
+export const isOwner = (r: BillingRole) => r === "owner";
+export const canMarkBilled = (r: BillingRole) => r === "biller" || r === "owner";
+export const canConfigure = (r: BillingRole) => r === "owner";
+export const canSeeBusiness = (r: BillingRole) => r === "owner";
+
+// Backwards-compatible alias (old name).
+export const canMarkPaid = canMarkBilled;

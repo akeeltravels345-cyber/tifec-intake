@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function BillingHome() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing");
-  if (user.role === "admin") redirect("/billing/dashboard");
+  if (user.role === "owner") redirect("/billing/overview");
   if (user.role === "biller") redirect("/billing/payments");
-  redirect("/billing/sessions");
+  redirect("/billing/me");
 }

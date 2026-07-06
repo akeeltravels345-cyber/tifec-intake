@@ -1184,3 +1184,47 @@ button.bz-link { border: none; background: transparent; color: var(--brand); cur
 .bz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .bz-dot.rollover { background: #319A9F; }
 .bz-dot.out { background: #e0a106; }
+
+/* ===== Owner overview + clinician detail (rebuild) ===== */
+.bz-kpi .bz-kpi-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.bz-kpi.soft { background: #f6f8f9; border-color: transparent; }
+.bz-kpi-val.sm { font-size: 19px; }
+.bz-kpis-lg .bz-kpi { padding: 18px 20px; }
+.bz-kpis-lg .bz-kpi-val { font-size: 28px; }
+
+/* clickable per-clinician rows */
+.bz-clin-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.bz-clin-row {
+  display: grid; grid-template-columns: minmax(0,1.6fr) 60px repeat(4, minmax(0,1fr)) 22px;
+  align-items: center; gap: 10px;
+  padding: 14px 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  text-decoration: none; color: var(--ink); transition: border-color .12s, box-shadow .12s, transform .12s;
+}
+a.bz-clin-row:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(46,49,146,.08); transform: translateY(-1px); }
+.bz-clin-head { background: transparent; border: none; padding: 4px 16px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); border-radius: 0; }
+.bz-clin-head:hover { transform: none; box-shadow: none; }
+.bz-clin-row .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bz-clin-name { font-weight: 600; }
+.bz-clin-row .strong { font-weight: 700; }
+.bz-clin-row .brand { color: var(--brand); }
+.bz-out { color: #b8860b; }
+.bz-clin-go { color: var(--muted); font-size: 18px; text-align: center; }
+.bz-you { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--teal-dark); background: #d9edec; border-radius: 6px; padding: 2px 6px; margin-left: 8px; font-style: normal; vertical-align: middle; }
+.bz-back { display: inline-block; margin-bottom: 8px; font-size: 13px; }
+
+/* payout + this-month breakdown cards */
+.bz-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 4px 0 18px; }
+.bz-payout-line { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.bz-payout-line:last-of-type { border-bottom: none; }
+.bz-payout-line span { color: var(--muted); }
+.bz-payout-line strong { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.bz-payout-line.minus strong { color: #b42318; }
+.bz-payout-line.total { border-top: 2px solid var(--line); border-bottom: none; margin-top: 4px; padding-top: 12px; }
+.bz-payout-line.total span { color: var(--ink); font-weight: 600; }
+.bz-payout-line.total strong { font-size: 22px; color: var(--brand); font-weight: 700; }
+@media (max-width: 720px) {
+  .bz-two { grid-template-columns: 1fr; }
+  .bz-clin-row { grid-template-columns: minmax(0,1.4fr) 44px repeat(2, minmax(0,1fr)) 18px; }
+  .bz-clin-row > .num:nth-child(3), .bz-clin-head > span:nth-child(3),
+  .bz-clin-row > .num:nth-child(5), .bz-clin-head > span:nth-child(5) { display: none; }
+}

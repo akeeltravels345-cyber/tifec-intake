@@ -64,7 +64,7 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
-      router.push("/billing/sessions");
+      router.push("/billing/me");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");

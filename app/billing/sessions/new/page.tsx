@@ -21,7 +21,7 @@ export default async function NewSessionPage() {
           <h2 className="section-title">Log a session</h2>
           <p className="section-desc">Logged as {user.clinician.name}. One row per visit.</p>
         </div>
-        <Link href="/billing/sessions" className="bz-link">← Back</Link>
+        <Link href="/billing/me" className="bz-link">← Back</Link>
       </div>
       <SessionForm insurers={activeInsurers} cptCodes={activeCpt} />
     </div>
