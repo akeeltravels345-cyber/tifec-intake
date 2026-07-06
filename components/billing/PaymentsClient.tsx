@@ -50,15 +50,9 @@ export default function PaymentsClient({ rows, today }: { rows: PaymentRow[]; to
 
   return (
     <div>
-      <div className="bz-kpis" style={{ marginBottom: 18 }}>
-        <div className="bz-kpi">
-          <span className="bz-kpi-label">Outstanding (all months)</span>
-          <span className="bz-kpi-val">{money(outstandingTotal)}</span>
-        </div>
-        <div className="bz-kpi">
-          <span className="bz-kpi-label">Claims awaiting insurance</span>
-          <span className="bz-kpi-val">{outstandingRows.length}</span>
-        </div>
+      <div className="ov-strip" style={{ margin: "0 0 18px" }}>
+        <div className="ov-stat"><div className="k">Outstanding (all months)</div><div className="v">{money(outstandingTotal)}</div></div>
+        <div className="ov-stat"><div className="k">Claims awaiting insurance</div><div className="v">{outstandingRows.length}</div></div>
       </div>
 
       <div className="bz-tabs">
@@ -68,7 +62,7 @@ export default function PaymentsClient({ rows, today }: { rows: PaymentRow[]; to
 
       {error && <div className="field-required" style={{ margin: "12px 0" }}>{error}</div>}
 
-      <div className="card" style={{ padding: 0, overflow: "hidden", marginTop: 14 }}>
+      <div className="ov-card" style={{ padding: 0, overflow: "hidden", marginTop: 14 }}>
         {shown.length === 0 ? (
           <div className="bz-empty">{tab === "outstanding" ? "Nothing outstanding. All caught up." : "Nothing marked billed yet."}</div>
         ) : (

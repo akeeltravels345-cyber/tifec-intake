@@ -33,10 +33,10 @@ export default async function BillingQueuePage() {
 
   return (
     <div>
-      <div className="bz-head">
+      <div className="ov-headrow">
         <div>
-          <h2 className="section-title">Billing queue</h2>
-          <p className="section-desc">Mark a claim as billed once insurance has paid it. Amounts in KYD.</p>
+          <h2 className="ov-title">Billing queue</h2>
+          <p className="ov-sub">Mark a claim as billed once insurance has paid it. Amounts in KYD.</p>
         </div>
       </div>
       <PaymentsClient rows={rows} today={today} />

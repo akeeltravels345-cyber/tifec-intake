@@ -9,7 +9,22 @@ import MonthPicker from "@/components/billing/MonthPicker";
 export const dynamic = "force-dynamic";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const pctWidth = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
+
+// Two-segment donut: payout (indigo) vs company net (teal), as a share of collected.
+function Donut({ payoutFrac }: { payoutFrac: number }) {
+  const size = 116, stroke = 18, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const payoutLen = Math.max(0, Math.min(1, payoutFrac)) * c;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }} aria-hidden="true">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#319A9F" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2E3192" strokeWidth={stroke}
+        strokeDasharray={`${payoutLen} ${c - payoutLen}`} strokeLinecap="butt" />
+    </svg>
+  );
+}
 
 export default async function OwnerOverview({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
@@ -20,98 +35,122 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const now = new Date();
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const prevY = month === 1 ? year - 1 : year;
+  const prevM = month === 1 ? 12 : month - 1;
 
   const allSessions = await listSessions();
-  const perClinician = await Promise.all(
-    CLINICIANS.map(async (c) => {
-      const mine = allSessions.filter((s) => s.clinicianId === c.id);
-      const settings = await getClinicianSettings(c.id);
-      return computeClinicianMonth(mine, settings, year, month);
-    })
-  );
-  const biz = computeBusinessMonth(perClinician, year, month);
+  const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
+  const settingsMap = new Map(CLINICIANS.map((c, i) => [c.id, settingsList[i]]));
+  const bizFor = (y: number, m: number) =>
+    computeBusinessMonth(
+      CLINICIANS.map((c) => computeClinicianMonth(allSessions.filter((s) => s.clinicianId === c.id), settingsMap.get(c.id)!, y, m)),
+      y, m
+    );
+  const biz = bizFor(year, month);
+  const prev = bizFor(prevY, prevM);
 
   const nameOf = (id: string) => CLINICIANS.find((c) => c.id === id)?.name ?? id;
-  // Show clinicians with any activity this month (or money still owed to the practice).
   const rows = biz.perClinician
     .map((c) => ({ c, name: nameOf(c.clinicianId) }))
     .filter(({ c }) => c.appointments > 0 || c.collected > 0 || c.outstanding > 0)
     .sort((a, b) => b.c.collected - a.c.collected);
 
+  const collectedDelta = prev.collected > 0 ? ((biz.collected - prev.collected) / prev.collected) * 100 : null;
+  const pipelineTotal = biz.collected + biz.outstanding;
+  const payoutFrac = biz.collected > 0 ? biz.totalPayout / biz.collected : 0;
+
+  const deltaChip = collectedDelta === null
+    ? null
+    : (() => {
+        const up = collectedDelta >= 0;
+        return <span className={`ov-delta ${Math.abs(collectedDelta) < 0.5 ? "flat" : up ? "up" : "down"}`}>{up ? "▲" : "▼"} {Math.abs(collectedDelta).toFixed(0)}% vs {MONTHS[prevM - 1]}</span>;
+      })();
+
   return (
     <div>
-      <div className="bz-head">
+      <div className="ov-headrow">
         <div>
-          <h2 className="section-title">Business overview</h2>
-          <p className="section-desc">Everything across the practice for {MONTHS[month - 1]} {year}. Amounts in KYD.</p>
+          <h2 className="ov-title">Business overview</h2>
+          <p className="ov-sub">The whole practice, at a glance. Amounts in KYD.</p>
         </div>
         <MonthPicker year={year} month={month} path="/billing/overview" />
       </div>
 
-      <div className="bz-kpis bz-kpis-lg">
-        <div className="bz-kpi accent">
-          <span className="bz-kpi-label">Collected this month</span>
-          <span className="bz-kpi-val">{money(biz.collected)}</span>
-          <span className="bz-kpi-sub">money actually in</span>
+      <div className="ov-hero">
+        <div className="ov-card">
+          <span className="ov-eyebrow">Collected · {MONTHS[month - 1]} {year}</span>
+          <div className="ov-big">{money(biz.collected)}{deltaChip}</div>
+          <div className="ov-bar" role="img" aria-label={`${money(biz.collected)} collected, ${money(biz.outstanding)} outstanding`}>
+            <span className="seg-c" style={{ width: `${pctWidth(biz.collected, pipelineTotal)}%` }} />
+            <span className="seg-o" style={{ width: `${pctWidth(biz.outstanding, pipelineTotal)}%` }} />
+          </div>
+          <div className="ov-legend">
+            <span className="k"><span className="ov-dot c" />Collected&nbsp;<b>{money0(biz.collected)}</b></span>
+            <span className="k"><span className="ov-dot o" />Outstanding&nbsp;<b>{money0(biz.outstanding)}</b></span>
+            <span className="k"><span className="ov-dot n" />Coming in&nbsp;<b>{money0(biz.revenueGenerated)}</b></span>
+          </div>
         </div>
-        <div className="bz-kpi">
-          <span className="bz-kpi-label">Coming in this month</span>
-          <span className="bz-kpi-val">{money(biz.revenueGenerated)}</span>
-          <span className="bz-kpi-sub">{biz.appointments} appointment{biz.appointments === 1 ? "" : "s"}</span>
-        </div>
-        <div className="bz-kpi">
-          <span className="bz-kpi-label">Outstanding</span>
-          <span className="bz-kpi-val">{money(biz.outstanding)}</span>
-          <span className="bz-kpi-sub">waiting on insurance</span>
+
+        <div className="ov-card">
+          <span className="ov-eyebrow">Where the collected money goes</span>
+          <div className="ov-split">
+            <div className="ov-donut">
+              <Donut payoutFrac={payoutFrac} />
+              <div className="ov-donut-center">
+                <span className="n">{money0(biz.companyNet)}</span>
+                <span className="l">company net</span>
+              </div>
+            </div>
+            <div className="ov-split-legend">
+              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#2E3192" }} />Payout to clinicians</span><div className="v">{money(biz.totalPayout)}</div></div>
+              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#319A9F" }} />Company net</span><div className="v">{money(biz.companyNet)}</div></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bz-kpis" style={{ marginTop: 12, marginBottom: 24 }}>
-        <div className="bz-kpi soft">
-          <span className="bz-kpi-label">Insurance billed</span>
-          <span className="bz-kpi-val sm">{money(biz.billed)}</span>
-        </div>
-        <div className="bz-kpi soft">
-          <span className="bz-kpi-label">Collected at visit</span>
-          <span className="bz-kpi-val sm">{money(biz.copays)}</span>
-        </div>
-        <div className="bz-kpi soft">
-          <span className="bz-kpi-label">Payout to clinicians</span>
-          <span className="bz-kpi-val sm">{money(biz.totalPayout)}</span>
-        </div>
-        <div className="bz-kpi soft">
-          <span className="bz-kpi-label">Company net</span>
-          <span className="bz-kpi-val sm">{money(biz.companyNet)}</span>
-        </div>
+      <div className="ov-strip">
+        <div className="ov-stat"><div className="k">Appointments</div><div className="v">{biz.appointments}</div></div>
+        <div className="ov-stat"><div className="k">Coming in</div><div className="v">{money0(biz.revenueGenerated)}</div></div>
+        <div className="ov-stat"><div className="k">Insurance billed</div><div className="v">{money0(biz.billed)}</div></div>
+        <div className="ov-stat"><div className="k">Collected at visit</div><div className="v">{money0(biz.copays)}</div></div>
       </div>
 
-      <h3 className="bz-sec">By clinician</h3>
-      <p className="help" style={{ marginTop: -4 }}>Tap a clinician to see their appointments, what&apos;s billed vs outstanding, and their payout.</p>
+      <div className="ov-clin-head2">
+        <h3 className="bz-sec" style={{ margin: 0 }}>By clinician</h3>
+        <span className="help" style={{ margin: 0 }}>Tap to see appointments, billed vs outstanding, and payout</span>
+      </div>
 
       {rows.length === 0 ? (
         <div className="card bz-empty">No billing activity for {MONTHS[month - 1]} {year}.</div>
       ) : (
-        <div className="bz-clin-list">
-          <div className="bz-clin-row bz-clin-head">
-            <span>Clinician</span>
-            <span className="num">Appts</span>
-            <span className="num">Coming in</span>
-            <span className="num">Collected</span>
-            <span className="num">Outstanding</span>
-            <span className="num">Payout</span>
-            <span aria-hidden="true" />
-          </div>
-          {rows.map(({ c, name }) => (
-            <Link key={c.clinicianId} href={`/billing/clinician/${c.clinicianId}?y=${year}&m=${month}`} className="bz-clin-row">
-              <span className="bz-clin-name">{name}{c.clinicianId === user.clinician.id && <em className="bz-you">you</em>}</span>
-              <span className="num">{c.appointments}</span>
-              <span className="num">{money(c.revenueGenerated)}</span>
-              <span className="num strong">{money(c.collected)}</span>
-              <span className="num">{c.outstanding > 0 ? <span className="bz-out">{money(c.outstanding)}</span> : money(0)}</span>
-              <span className="num strong brand">{money(c.payout)}</span>
-              <span className="bz-clin-go" aria-hidden="true">›</span>
-            </Link>
-          ))}
+        <div className="ov-clin">
+          {rows.map(({ c, name }) => {
+            const total = c.collected + c.outstanding;
+            return (
+              <Link key={c.clinicianId} href={`/billing/clinician/${c.clinicianId}?y=${year}&m=${month}`} className="ov-crow">
+                <div className="ov-crow-name">
+                  {name}{c.clinicianId === user.clinician.id && <span className="ov-youtag">you</span>}
+                  <small>{c.appointments} appointment{c.appointments === 1 ? "" : "s"}</small>
+                </div>
+                <div className="ov-crow-barwrap">
+                  <div className="ov-crow-track" role="img" aria-label={`${money(c.collected)} collected, ${money(c.outstanding)} outstanding`}>
+                    <span className="c" style={{ width: `${pctWidth(c.collected, total)}%` }} />
+                    <span className="o" style={{ width: `${pctWidth(c.outstanding, total)}%` }} />
+                  </div>
+                  <div className="cap">
+                    <span>{money0(c.collected)} collected</span>
+                    <span>{c.outstanding > 0 ? `${money0(c.outstanding)} outstanding` : "all collected"}</span>
+                  </div>
+                </div>
+                <div className="ov-crow-amt">
+                  <div className="p">{money(c.payout)}</div>
+                  <div className="s">payout</div>
+                </div>
+                <span className="ov-crow-go" aria-hidden="true">›</span>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
