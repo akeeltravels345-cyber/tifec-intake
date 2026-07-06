@@ -14,3 +14,5 @@ vercel-import.env
 
 # local billing dev data
 data/billing-*.local.json
+.vercel
+.env*
