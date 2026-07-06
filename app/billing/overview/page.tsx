@@ -55,9 +55,13 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     .filter(({ c }) => c.appointments > 0 || c.collected > 0 || c.outstanding > 0)
     .sort((a, b) => b.c.collected - a.c.collected);
 
-  const collectedDelta = prev.collected > 0 ? ((biz.collected - prev.collected) / prev.collected) * 100 : null;
-  const pipelineTotal = biz.collected + biz.outstanding;
   const payoutFrac = biz.collected > 0 ? biz.totalPayout / biz.collected : 0;
+  // The owner leads with revenue earned this month, split into collected vs still-outstanding.
+  // These reconcile: collected + outstanding = revenue earned (this month's work).
+  const revenue = biz.revenueGenerated;
+  const thisMonthOutstanding = biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0);
+  const collectedOfRevenue = Math.max(0, Math.round((revenue - thisMonthOutstanding) * 100) / 100);
+  const revenueDelta = prev.revenueGenerated > 0 ? ((revenue - prev.revenueGenerated) / prev.revenueGenerated) * 100 : null;
 
   // Outstanding grouped by insurer (running, all months) — the cashflow lever.
   const insName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? "Other";
@@ -74,12 +78,11 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const outByInsurer = [...outMap.values()].sort((a, b) => b.amount - a.amount);
   const outMax = Math.max(1, ...outByInsurer.map((x) => x.amount));
 
-  const deltaChip = collectedDelta === null
-    ? null
-    : (() => {
-        const up = collectedDelta >= 0;
-        return <span className={`ov-delta ${Math.abs(collectedDelta) < 0.5 ? "flat" : up ? "up" : "down"}`}>{up ? "▲" : "▼"} {Math.abs(collectedDelta).toFixed(0)}% vs {MONTHS[prevM - 1]}</span>;
-      })();
+  const deltaChip = (pct: number | null) => {
+    if (pct === null) return null;
+    const up = pct >= 0;
+    return <span className={`ov-delta ${Math.abs(pct) < 0.5 ? "flat" : up ? "up" : "down"}`}>{up ? "▲" : "▼"} {Math.abs(pct).toFixed(0)}% vs {MONTHS[prevM - 1]}</span>;
+  };
 
   return (
     <div>
@@ -93,21 +96,20 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
 
       <div className="ov-hero">
         <div className="ov-card">
-          <span className="ov-eyebrow">Collected · {MONTHS[month - 1]} {year}</span>
-          <div className="ov-big">{money(biz.collected)}{deltaChip}</div>
-          <div className="ov-bar" role="img" aria-label={`${money(biz.collected)} collected, ${money(biz.outstanding)} outstanding`}>
-            <span className="seg-c" style={{ width: `${pctWidth(biz.collected, pipelineTotal)}%` }} />
-            <span className="seg-o" style={{ width: `${pctWidth(biz.outstanding, pipelineTotal)}%` }} />
+          <span className="ov-eyebrow">Revenue earned · {MONTHS[month - 1]} {year}</span>
+          <div className="ov-big">{money(revenue)}{deltaChip(revenueDelta)}</div>
+          <div className="ov-bar" role="img" aria-label={`${money(collectedOfRevenue)} collected, ${money(thisMonthOutstanding)} outstanding`}>
+            <span className="seg-c" style={{ width: `${pctWidth(collectedOfRevenue, revenue)}%` }} />
+            <span className="seg-o" style={{ width: `${pctWidth(thisMonthOutstanding, revenue)}%` }} />
           </div>
           <div className="ov-legend">
-            <span className="k"><span className="ov-dot c" />Collected&nbsp;<b>{money0(biz.collected)}</b></span>
-            <span className="k"><span className="ov-dot o" />Outstanding&nbsp;<b>{money0(biz.outstanding)}</b></span>
-            <span className="k"><span className="ov-dot n" />Coming in&nbsp;<b>{money0(biz.revenueGenerated)}</b></span>
+            <span className="k"><span className="ov-dot c" />Collected&nbsp;<b>{money0(collectedOfRevenue)}</b></span>
+            <span className="k"><span className="ov-dot o" />Outstanding&nbsp;<b>{money0(thisMonthOutstanding)}</b></span>
           </div>
         </div>
 
         <div className="ov-card">
-          <span className="ov-eyebrow">Where the collected money goes</span>
+          <span className="ov-eyebrow">Where the money goes</span>
           <div className="ov-split">
             <div className="ov-donut">
               <Donut payoutFrac={payoutFrac} />
@@ -126,9 +128,9 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
 
       <div className="ov-strip">
         <div className="ov-stat"><div className="k">Appointments</div><div className="v">{biz.appointments}</div></div>
-        <div className="ov-stat"><div className="k">Coming in</div><div className="v">{money0(biz.revenueGenerated)}</div></div>
-        <div className="ov-stat"><div className="k">Insurance billed</div><div className="v">{money0(biz.billed)}</div></div>
-        <div className="ov-stat"><div className="k">Collected at visit</div><div className="v">{money0(biz.copays)}</div></div>
+        <div className="ov-stat"><div className="k">Avg / appointment</div><div className="v">{money0(biz.appointments ? revenue / biz.appointments : 0)}</div></div>
+        <div className="ov-stat"><div className="k">Insurance received</div><div className="v">{money0(biz.billed)}</div></div>
+        <div className="ov-stat"><div className="k">Co-pays collected</div><div className="v">{money0(biz.copays)}</div></div>
       </div>
 
       {outByInsurer.length > 0 && (
