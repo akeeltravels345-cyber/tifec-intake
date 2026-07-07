@@ -115,12 +115,12 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
               <Donut payoutFrac={payoutFrac} />
               <div className="ov-donut-center">
                 <span className="n">{money0(biz.companyNet)}</span>
-                <span className="l">company net</span>
+                <span className="l">net profit</span>
               </div>
             </div>
             <div className="ov-split-legend">
               <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#2E3192" }} />Payout to clinicians</span><div className="v">{money(biz.totalPayout)}</div></div>
-              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#319A9F" }} />Company net</span><div className="v">{money(biz.companyNet)}</div></div>
+              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#319A9F" }} />Company net profit</span><div className="v">{money(biz.companyNet)}</div></div>
             </div>
           </div>
         </div>
