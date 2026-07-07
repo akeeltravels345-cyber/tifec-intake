@@ -1165,8 +1165,8 @@ button.bz-link { border: none; background: transparent; color: var(--brand); cur
 .bz-config .bz-table input, .bz-config .bz-table select { width: 100%; }
 /* month picker */
 .bz-month { display: inline-flex; align-items: center; gap: 6px; }
-.bz-month-nav { border: 1px solid var(--line); background: #fff; border-radius: 8px; width: 32px; height: 36px; font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink); }
-.bz-month select { height: 36px; }
+.bz-month-nav { border: 1px solid var(--line); background: #fff; border-radius: 8px; width: 34px; height: 42px; font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink); }
+.bz-month select { height: 42px; padding-top: 8px; padding-bottom: 8px; line-height: 1.3; }
 /* disbursement cards */
 .bz-disb-list { display: grid; gap: 14px; }
 .bz-disb { padding: 16px 18px; }
