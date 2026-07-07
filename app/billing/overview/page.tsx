@@ -69,6 +69,9 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
       .filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && !s.dateOfService?.startsWith(mKey))
       .reduce((t, s) => t + insurancePortion(s), 0) * 100
   ) / 100;
+  // Insurance collected from THIS month's appointments only (excludes rollover, so the
+  // strip parts don't double-count): total collected − co-pays = this-month insurance.
+  const insuranceCollectedThisMonth = Math.round((collectedOfRevenue - biz.copays) * 100) / 100;
 
   // Outstanding grouped by insurer (running, all months) — the cashflow lever.
   const insName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? "Other";
@@ -110,7 +113,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
             <span className="seg-o" style={{ width: `${pctWidth(thisMonthOutstanding, revenue)}%` }} />
           </div>
           <div className="ov-legend">
-            <span className="k"><span className="ov-dot c" />Collected&nbsp;<b>{money0(collectedOfRevenue)}</b></span>
+            <span className="k"><span className="ov-dot c" />Total collected&nbsp;<b>{money0(collectedOfRevenue)}</b></span>
             <span className="k"><span className="ov-dot o" />Outstanding&nbsp;<b>{money0(thisMonthOutstanding)}</b></span>
           </div>
         </div>
@@ -135,9 +138,9 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
 
       <div className="ov-strip">
         <div className="ov-stat"><div className="k">Appointments</div><div className="v">{biz.appointments}</div></div>
-        <div className="ov-stat"><div className="k">Rollover collected</div><div className="v">{money0(rolloverCollected)}</div></div>
-        <div className="ov-stat"><div className="k">Insurance received</div><div className="v">{money0(biz.billed)}</div></div>
+        <div className="ov-stat"><div className="k">Insurance collected</div><div className="v">{money0(insuranceCollectedThisMonth)}</div></div>
         <div className="ov-stat"><div className="k">Co-pays collected</div><div className="v">{money0(biz.copays)}</div></div>
+        <div className="ov-stat"><div className="k">Insurance rollover collected</div><div className="v">{money0(rolloverCollected)}</div></div>
       </div>
 
       {outByInsurer.length > 0 && (
