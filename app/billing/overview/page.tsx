@@ -62,6 +62,13 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const thisMonthOutstanding = biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0);
   const collectedOfRevenue = Math.max(0, Math.round((revenue - thisMonthOutstanding) * 100) / 100);
   const revenueDelta = prev.revenueGenerated > 0 ? ((revenue - prev.revenueGenerated) / prev.revenueGenerated) * 100 : null;
+  // Rollover collected: insurance received THIS month for appointments from an EARLIER month.
+  const mKey = `${year}-${String(month).padStart(2, "0")}`;
+  const rolloverCollected = Math.round(
+    allSessions
+      .filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && !s.dateOfService?.startsWith(mKey))
+      .reduce((t, s) => t + insurancePortion(s), 0) * 100
+  ) / 100;
 
   // Outstanding grouped by insurer (running, all months) — the cashflow lever.
   const insName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? "Other";
@@ -128,7 +135,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
 
       <div className="ov-strip">
         <div className="ov-stat"><div className="k">Appointments</div><div className="v">{biz.appointments}</div></div>
-        <div className="ov-stat"><div className="k">Avg / appointment</div><div className="v">{money0(biz.appointments ? revenue / biz.appointments : 0)}</div></div>
+        <div className="ov-stat"><div className="k">Rollover collected</div><div className="v">{money0(rolloverCollected)}</div></div>
         <div className="ov-stat"><div className="k">Insurance received</div><div className="v">{money0(biz.billed)}</div></div>
         <div className="ov-stat"><div className="k">Co-pays collected</div><div className="v">{money0(biz.copays)}</div></div>
       </div>
