@@ -19,7 +19,16 @@ CREATE TABLE IF NOT EXISTS billing_insurers (
 CREATE TABLE IF NOT EXISTS billing_cpt_codes (
   code        TEXT PRIMARY KEY,
   description TEXT NOT NULL DEFAULT '',
-  active      BOOLEAN NOT NULL DEFAULT true
+  active      BOOLEAN NOT NULL DEFAULT true,
+  fee         NUMERIC,   -- default service fee (KYD)
+  hrs         NUMERIC    -- duration in hours
+);
+-- Existing installs: ALTER TABLE billing_cpt_codes ADD COLUMN IF NOT EXISTS fee NUMERIC, ADD COLUMN IF NOT EXISTS hrs NUMERIC;
+
+-- Practice-wide money rules (biller commission %, running expenses) as one JSON blob.
+CREATE TABLE IF NOT EXISTS billing_config (
+  key   TEXT PRIMARY KEY,   -- 'practice'
+  value JSONB NOT NULL
 );
 
 -- Per-clinician payout configuration (stacks to compute net payout).
