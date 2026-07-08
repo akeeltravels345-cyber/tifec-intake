@@ -159,7 +159,7 @@ export default function DashboardShell({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/tifec-mark.png" alt="TIFEC" />
           <div>
-            <div className="dm-brand-name">TIFEC</div>
+            <div className="dm-brand-name">TIFEC Intake</div>
             <div className="dm-brand-sub">Client Intake</div>
           </div>
         </div>

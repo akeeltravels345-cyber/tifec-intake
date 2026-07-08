@@ -49,8 +49,12 @@ export default function Tour({ mount, tourToken, autoStart }: { mount: Mount; to
   useEffect(() => {
     let a = false, s = 0;
     try { a = localStorage.getItem(ACTIVE) === "1"; s = parseInt(localStorage.getItem(STEP) || "0", 10) || 0; } catch {}
-    setActive(a);
-    setIdx(s);
+    // Only resume an in-progress tour if this account is still eligible (first login)
+    // or we're on the record page mid-flow. A "seen" account never resumes a stale flag.
+    const resume = a && (autoStart || mount === "record");
+    if (a && !resume) { try { localStorage.removeItem(ACTIVE); localStorage.removeItem(STEP); } catch {} }
+    setActive(resume);
+    setIdx(resume ? s : 0);
     const onReplay = () => start();
     window.addEventListener("tifec-tour", onReplay);
     let t: ReturnType<typeof setTimeout> | undefined;
