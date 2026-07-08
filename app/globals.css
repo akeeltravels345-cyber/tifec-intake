@@ -1762,3 +1762,46 @@ body:has(.biz) { background: var(--paper, #FBF9F4); }
   .bq-row .dos, .bq-row .comm { display: none; }
   .bq-brow { grid-template-columns: 1fr 96px 70px; gap: 10px; }
 }
+
+/* ---- Setup (design handoff) ---- */
+.su-topbar { padding-bottom: 20px; border-bottom: 1.5px solid var(--indigo); margin-bottom: 26px; }
+.su-h1 { font: 500 26px "Newsreader", serif; letter-spacing: -.01em; margin: 0; color: var(--ink); }
+.su-sub { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.su-sec { margin-bottom: 30px; }
+.su-sechead { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0 2px 12px; }
+.su-sech { font: 500 19px "Newsreader", serif; letter-spacing: -.01em; margin: 0; color: var(--ink); }
+.su-hint { font-size: 12.5px; color: var(--faint); max-width: 52ch; }
+.su-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 10px 26px rgba(70,55,25,.045); overflow: hidden; }
+.su-tblwrap { overflow-x: auto; }
+.su-tbl { width: 100%; border-collapse: collapse; }
+.su-tbl th { text-align: left; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 700; padding: 14px 16px 12px; background: #fbf9f4; border-bottom: 1px solid var(--hair); }
+.su-tbl th.num, .su-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.su-tbl td { padding: 12px 16px; border-top: 1px solid var(--hair); font-size: 14px; vertical-align: middle; }
+.su-tbl tr:first-child td { border-top: none; }
+.su-tbl td.nm { font-weight: 600; }
+.su-in { border: 1px solid #E1D9C8; border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; background: #fff; width: 100%; color: var(--ink); }
+.su-in:focus { outline: none; border-color: var(--teal); }
+.su-in.short { max-width: 96px; }
+.su-sel { border: 1px solid #E1D9C8; border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; background: #fff; width: 100%; color: var(--ink); }
+.su-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.su-save { background: #fff; color: var(--indigo); border: 1px solid var(--indigo); border-radius: 8px; padding: 7px 14px; font: 600 12.5px "Open Sans"; cursor: pointer; }
+.su-save:hover { background: #eef4f3; }
+.su-del { background: transparent; border: none; color: var(--muted); font: 600 12.5px "Open Sans"; cursor: pointer; }
+.su-del:hover { color: var(--neg); }
+.su-add { border: 1px dashed #cfc4ad; color: var(--teal-deep); background: #fbf9f4; border-radius: 8px; padding: 8px 14px; font: 600 12.5px "Open Sans"; cursor: pointer; margin: 12px 16px; }
+.su-note { font-size: 12px; color: var(--faint); line-height: 1.6; margin: 10px 4px 0; }
+.su-tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-deep); background: #e6f0ef; border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+.su-two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.su-comm { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding: 22px 24px; }
+.su-comm .who { display: flex; align-items: center; gap: 12px; }
+.su-comm .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--indigo)); color: #fff; font: 500 16px "Newsreader", serif; display: flex; align-items: center; justify-content: center; }
+.su-comm .nm { font-weight: 700; font-size: 15px; }
+.su-comm .rl { font-size: 12.5px; color: var(--faint); margin-top: 2px; }
+.su-comm .rate { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.su-comm .ratebox { display: flex; align-items: center; gap: 4px; border: 1px solid #E1D9C8; border-radius: 10px; padding: 8px 12px; background: #fff; }
+.su-comm .ratebox input { border: none; background: transparent; font: 500 22px "Newsreader", serif; width: 46px; text-align: right; color: var(--ink); }
+.su-comm .ratebox input:focus { outline: none; }
+.su-comm .pct { font: 500 20px "Newsreader", serif; color: var(--muted); }
+.su-comm .basis { font-size: 12px; color: var(--faint); margin-top: 4px; }
+.su-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+@media (max-width: 900px) { .su-two { grid-template-columns: 1fr; } }

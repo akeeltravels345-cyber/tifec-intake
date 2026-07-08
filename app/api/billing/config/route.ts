@@ -5,7 +5,8 @@ import {
   upsertInsurer, deleteInsurer,
   upsertCptCode, deleteCptCode,
   upsertClinicianSettings,
-  type CopayType,
+  savePracticeConfig,
+  type CopayType, type RunningExpense,
 } from "@/lib/billing";
 
 const n = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
@@ -51,7 +52,21 @@ export async function POST(req: Request) {
       }
       const code = String(body.code ?? "").trim();
       if (!code) return NextResponse.json({ error: "A CPT code is required." }, { status: 400 });
-      await upsertCptCode({ code, description: String(body.description ?? "").trim(), active: body.active !== false });
+      await upsertCptCode({ code, description: String(body.description ?? "").trim(), active: body.active !== false, fee: n(body.fee), hrs: n(body.hrs) });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (entity === "practice") {
+      const expenses = Array.isArray(body.runningExpenses)
+        ? (body.runningExpenses as Record<string, unknown>[]).map((e, i) => ({
+            id: String(e.id || `exp-${i}`),
+            name: String(e.name ?? "").trim() || "Expense",
+            detail: String(e.detail ?? "").trim(),
+            amount: n(e.amount),
+            breakdown: Array.isArray(e.breakdown) ? (e.breakdown as Record<string, unknown>[]).map((b) => ({ label: String(b.label ?? ""), amount: n(b.amount) })) : undefined,
+          })) as RunningExpense[]
+        : [];
+      await savePracticeConfig({ billerCommissionPct: n(body.billerCommissionPct), runningExpenses: expenses });
       return NextResponse.json({ ok: true });
     }
 

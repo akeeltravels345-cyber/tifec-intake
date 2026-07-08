@@ -1,28 +1,30 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, canConfigure } from "@/lib/billingRole";
-import { listInsurers, listCptCodes, listClinicianSettings } from "@/lib/billing";
+import { listInsurers, listCptCodes, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
-import ConfigClient from "@/components/billing/ConfigClient";
+import SetupClient from "@/components/billing/SetupClient";
 
 export const dynamic = "force-dynamic";
+const initials = (name: string) => { const p = name.replace(/^(Dr\.?|Mrs\.?|Mr\.?|Ms\.?|Miss)\s+/i, "").trim().split(/\s+/); return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase(); };
 
-export default async function ConfigPage() {
+export default async function SetupPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/config");
   if (!canConfigure(user.role)) redirect("/billing/me");
 
-  const [insurers, cptCodes, settings] = await Promise.all([listInsurers(), listCptCodes(), listClinicianSettings()]);
-  const clinicians = CLINICIANS.map((c) => ({ id: c.id, name: c.name }));
+  const [insurers, cptCodes, settings, cfg] = await Promise.all([listInsurers(), listCptCodes(), listClinicianSettings(), getPracticeConfig()]);
+  const biller = CLINICIANS.find((c) => c.billing === "biller") ?? CLINICIANS[0];
 
   return (
-    <div>
-      <div className="ov-headrow">
-        <div>
-          <h2 className="ov-title">Setup</h2>
-          <p className="ov-sub">Insurers &amp; co-pay rules, service codes, and each clinician&apos;s split (40% company retention by default). Owner only.</p>
-        </div>
-      </div>
-      <ConfigClient insurers={insurers} cptCodes={cptCodes} clinicians={clinicians} settings={settings} />
-    </div>
+    <SetupClient
+      insurers={insurers}
+      cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, active: c.active }))}
+      clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
+      settings={settings}
+      billerPct={cfg.billerCommissionPct}
+      expenses={cfg.runningExpenses}
+      billerName={biller.name}
+      billerInitials={initials(biller.name)}
+    />
   );
 }
