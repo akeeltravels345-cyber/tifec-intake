@@ -314,7 +314,9 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
 async function loadStored(): Promise<StoredSession[]> {
   if (usePostgres) {
     const sql = await pg();
-    const rows = (await sql`SELECT * FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    // Cast DATE columns to text so they arrive as "YYYY-MM-DD" (the driver otherwise
+    // returns JS Date objects, which String().slice() mangled — breaking month filters).
+    const rows = (await sql`SELECT id, clinician_id, client_enc, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
     const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
     const byId: Record<string, string[]> = {};
     for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
