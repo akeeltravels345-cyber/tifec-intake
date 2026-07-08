@@ -61,7 +61,7 @@ export default async function SubmissionView({
   // oversight role and are intentionally NOT granted access to client answers.
   if (!row || row.clinician_id !== me.id) {
     return (
-      <div className="container">
+      <div className="container rec">
         <div className="card">
           <h2 className="section-title">Submission not available</h2>
           <p className="muted">
@@ -147,7 +147,7 @@ export default async function SubmissionView({
   }
 
   return (
-    <div className="container">
+    <div className="container rec">
       <IdleLogout />
       <Tour mount="record" />
       <div className="detail-topbar no-print">

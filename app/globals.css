@@ -39,9 +39,9 @@ body::before {
   content: "";
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 4px;
+  height: 3px;
   z-index: 50;
-  background: linear-gradient(90deg, var(--teal) 0%, var(--brand) 55%, var(--gold) 100%);
+  background: linear-gradient(90deg, #2F8E93 0%, #2E3192 55%, #E7C350 100%);
 }
 
 a { color: var(--brand); }
@@ -482,6 +482,7 @@ input[type=search]:focus { outline: none; border-color: var(--brand); box-shadow
 
 /* ============================ Login / auth screen ============================ */
 body:has(.auth-wrap) .brandbar { display: none; }
+body:has(.auth-wrap) { background: radial-gradient(1100px 460px at 92% -12%, rgba(47,142,147,.13), transparent 58%), #F8F9F8; }
 
 .auth-wrap {
   min-height: 100vh;
@@ -496,10 +497,10 @@ body:has(.auth-wrap) .brandbar { display: none; }
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 20px;
+  border: 1px solid #E6E7E2;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 28px 70px rgba(45, 45, 42, 0.18), 0 6px 16px rgba(45, 45, 42, 0.06);
+  box-shadow: 0 1px 2px rgba(70,55,25,.04), 0 24px 60px rgba(70,55,25,.14);
   animation: riseIn 0.5s ease both;
 }
 
@@ -511,7 +512,7 @@ body:has(.auth-wrap) .brandbar { display: none; }
   align-items: center;
   padding: 48px 40px;
   color: #fff;
-  background: linear-gradient(150deg, var(--teal) 0%, #4a83ac 48%, var(--brand) 100%);
+  background: linear-gradient(150deg, #2F8E93 0%, #35509f 52%, #2E3192 100%);
 }
 .auth-brand::before,
 .auth-brand::after {
@@ -540,8 +541,8 @@ body:has(.auth-wrap) .brandbar { display: none; }
 /* Right form panel */
 .auth-panel { padding: 48px 44px; display: flex; flex-direction: column; justify-content: center; }
 .auth-form-inner { width: 100%; }
-.auth-heading { font-size: 25px; margin: 0 0 6px; letter-spacing: -0.01em; }
-.auth-subtle { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+.auth-heading { font-family: "Newsreader", serif; font-weight: 500; font-size: 27px; color: #22283A; margin: 0 0 6px; letter-spacing: -0.01em; }
+.auth-subtle { color: #6B7580; font-size: 14px; margin: 0 0 24px; }
 .auth-error {
   background: #fdecea; border: 1px solid #f3c0bb; color: #9b1c1c;
   border-radius: 9px; padding: 10px 13px; font-size: 13px; margin-bottom: 16px;
@@ -1818,3 +1819,21 @@ body:has(.biz) { background: var(--paper, #FBF9F4); }
 .su-comm .basis { font-size: 12px; color: var(--faint); margin-top: 4px; }
 .su-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
 @media (max-width: 900px) { .su-two { grid-template-columns: 1fr; } }
+
+/* ============ Record / submission detail — harmonized to the billing family ======= */
+body:has(.rec) .brandbar { display: none; }
+body:has(.rec) { background: radial-gradient(1100px 460px at 92% -12%, rgba(47,142,147,.13), transparent 58%), #F8F9F8; }
+.rec { color: #22283A; }
+.rec .section-title { font-family: "Newsreader", serif; font-weight: 500; letter-spacing: -.01em; color: #22283A; }
+.rec .section-desc, .rec .muted { color: #6B7580; }
+.rec .card { background: #fff; border: 1px solid #E6E7E2; border-radius: 16px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
+.rec .back-link { color: #256E72; font-weight: 600; text-decoration: none; }
+.rec .back-link:hover { color: #2E3192; }
+.rec .sub-name { font-family: "Newsreader", serif; font-weight: 500; color: #22283A; }
+.rec .sub-meta { color: #9AA0A6; }
+.rec .snapshot { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.rec .snap-item { background: #F8F9F8; border: 1px solid #EDEEE9; border-radius: 12px; padding: 13px 15px; }
+.rec .snap-label { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #9AA0A6; font-weight: 700; }
+.rec .snap-value { font-family: "Newsreader", serif; font-weight: 500; font-size: 18px; color: #22283A; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.rec .type-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #2E3192; background: #eceef7; border-radius: 999px; padding: 4px 12px; }
+.rec .detail-topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
