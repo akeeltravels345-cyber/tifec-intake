@@ -1404,14 +1404,15 @@ a.ov-crow:hover .ov-crow-go { color: var(--brand); }
    Design handoff: Newsreader + Open Sans, paper background, left sidebar.
    ===================================================================== */
 body:has(.biz)::before, body:has(.biz) > .brandbar { display: none; }
-body:has(.biz) { background: var(--paper, #FBF9F4); }
+body:has(.biz) { background: #F8F9F8; }
 .biz {
   --indigo: #2E3192; --indigo-soft: #4B4FA6; --teal: #2F8E93; --teal-deep: #256E72;
   --ink: #22283A; --muted: #6B7580; --faint: #9AA0A6;
-  --paper: #FBF9F4; --panel: #F3F6F7; --edge: #ECE6DA; --hair: #F0EADE;
+  --paper: #F8F9F8; --panel: #F3F6F7; --edge: #ECE6DA; --hair: #F0EADE;
   --amber: #BE8127; --amber-bg: #F6ECD9; --amber-line: #ECD9B8;
   --neg: #a5432f; --pos: #2c7a55; --green: #2c7a55;
-  display: flex; min-height: 100vh; background: var(--paper);
+  display: flex; min-height: 100vh;
+  background: radial-gradient(1100px 460px at 92% -12%, rgba(47,142,147,.13), transparent 58%), var(--paper);
   font-family: "Open Sans", system-ui, -apple-system, sans-serif; color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
