@@ -1,23 +1,42 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, devMode } from "@/lib/billingRole";
-import { CLINICIANS } from "@/lib/clinicians";
-import BillingNav from "@/components/billing/BillingNav";
-import DevBar from "@/components/billing/DevBar";
+import { listSessions } from "@/lib/billing";
+import BillingSidebar from "@/components/billing/BillingSidebar";
 import IdleLogout from "@/components/IdleLogout";
 
 export const dynamic = "force-dynamic";
 
+function initialsOf(name: string): string {
+  const parts = name.replace(/^(Dr\.?|Mrs\.?|Mr\.?|Ms\.?|Miss)\s+/i, "").trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
 export default async function BillingLayout({ children }: { children: React.ReactNode }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing");
-  const dev = devMode();
-  const ownerId = CLINICIANS.find((c) => c.admin)?.id ?? CLINICIANS[0]?.id ?? "";
+
+  const sessions = await listSessions();
+  const queueCount = sessions.filter((s) => s.insurerId && !s.insurancePaid).length;
+
+  const roleLabel =
+    user.role === "owner" ? "Owner"
+    : user.role === "biller" ? "Biller · 3% of collected"
+    : user.clinician.credentials;
+
   return (
-    <div>
-      {!dev && <IdleLogout />}
-      {dev && <DevBar role={user.role} meId={user.clinician.id} clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))} ownerId={ownerId} />}
-      <BillingNav role={user.role} />
-      <div className="container">{children}</div>
+    <div className="biz">
+      {!devMode() && <IdleLogout />}
+      <BillingSidebar
+        role={user.role}
+        name={user.clinician.name}
+        initials={initialsOf(user.clinician.name)}
+        roleLabel={roleLabel}
+        queueCount={queueCount}
+        isDev={devMode()}
+      />
+      <main className="bo-main">{children}</main>
     </div>
   );
 }

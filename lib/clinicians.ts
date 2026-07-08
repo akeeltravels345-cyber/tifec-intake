@@ -178,6 +178,7 @@ export const CLINICIANS: Clinician[] = [
       "sev-ptsd",
     ],
     extraSections: [],
+    billing: "biller", // handles insurer remittances; earns 3% of insurance collected
   },
   // TEST / ADMIN account - remove or rename before go-live.
   {
