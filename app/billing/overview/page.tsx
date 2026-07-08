@@ -1,30 +1,15 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings } from "@/lib/billing";
-import { computeClinicianMonth, computeBusinessMonth, insurancePortion } from "@/lib/billingCalc";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotal } from "@/lib/billing";
+import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
-import MonthPicker from "@/components/billing/MonthPicker";
+import OverviewClient, { type OverviewData, type ClinRow } from "@/components/billing/OverviewClient";
 
 export const dynamic = "force-dynamic";
 
-const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const pctWidth = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
-
-// Two-segment donut: payout (indigo) vs company net (teal), as a share of collected.
-function Donut({ payoutFrac }: { payoutFrac: number }) {
-  const size = 116, stroke = 18, r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  const payoutLen = Math.max(0, Math.min(1, payoutFrac)) * c;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }} aria-hidden="true">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#319A9F" strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2E3192" strokeWidth={stroke}
-        strokeDasharray={`${payoutLen} ${c - payoutLen}`} strokeLinecap="butt" />
-    </svg>
-  );
-}
+const SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 export default async function OwnerOverview({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
@@ -37,167 +22,66 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const month = Number(sp.m) || now.getUTCMonth() + 1;
   const prevY = month === 1 ? year - 1 : year;
   const prevM = month === 1 ? 12 : month - 1;
+  const today = now.toISOString().slice(0, 10);
 
-  const [allSessions, insurers] = await Promise.all([listSessions(), listInsurers()]);
+  const [allSessions, insurerList, cfg] = await Promise.all([listSessions(), listInsurers(), getPracticeConfig()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
   const settingsMap = new Map(CLINICIANS.map((c, i) => [c.id, settingsList[i]]));
   const bizFor = (y: number, m: number) =>
-    computeBusinessMonth(
-      CLINICIANS.map((c) => computeClinicianMonth(allSessions.filter((s) => s.clinicianId === c.id), settingsMap.get(c.id)!, y, m)),
-      y, m
-    );
+    computeBusinessMonth(CLINICIANS.map((c) => computeClinicianMonth(allSessions.filter((s) => s.clinicianId === c.id), settingsMap.get(c.id)!, y, m)), y, m);
+
   const biz = bizFor(year, month);
   const prev = bizFor(prevY, prevM);
+  const expensesTotal = runningExpensesTotal(cfg);
+  const bottom = computeBottomLine(biz, cfg.billerCommissionPct, expensesTotal);
 
-  const nameOf = (id: string) => CLINICIANS.find((c) => c.id === id)?.name ?? id;
-  const rows = biz.perClinician
-    .map((c) => ({ c, name: nameOf(c.clinicianId) }))
-    .filter(({ c }) => c.appointments > 0 || c.collected > 0 || c.outstanding > 0)
-    .sort((a, b) => b.c.collected - a.c.collected);
-
-  const payoutFrac = biz.collected > 0 ? biz.totalPayout / biz.collected : 0;
-  // The owner leads with revenue earned this month, split into collected vs still-outstanding.
-  // These reconcile: collected + outstanding = revenue earned (this month's work).
-  const revenue = biz.revenueGenerated;
-  const thisMonthOutstanding = biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0);
-  const collectedOfRevenue = Math.max(0, Math.round((revenue - thisMonthOutstanding) * 100) / 100);
-  const revenueDelta = prev.revenueGenerated > 0 ? ((revenue - prev.revenueGenerated) / prev.revenueGenerated) * 100 : null;
-  // Rollover collected: insurance received THIS month for appointments from an EARLIER month.
+  const earned = biz.revenueGenerated;
+  const thisMonthOutstanding = r2(biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0));
+  const earnedCollected = r2(earned - thisMonthOutstanding);
   const mKey = `${year}-${String(month).padStart(2, "0")}`;
-  const rolloverCollected = Math.round(
-    allSessions
-      .filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && !s.dateOfService?.startsWith(mKey))
-      .reduce((t, s) => t + insurancePortion(s), 0) * 100
-  ) / 100;
-  // Insurance collected from THIS month's appointments only (excludes rollover, so the
-  // strip parts don't double-count): total collected − co-pays = this-month insurance.
-  const insuranceCollectedThisMonth = Math.round((collectedOfRevenue - biz.copays) * 100) / 100;
+  const cashRollover = r2(allSessions.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && !s.dateOfService?.startsWith(mKey)).reduce((t, s) => t + insurancePortion(s), 0));
 
-  // Outstanding grouped by insurer (running, all months) — the cashflow lever.
-  const insName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? "Other";
-  const outMap = new Map<string, { name: string; amount: number; count: number }>();
+  // 6-month cash-collected trend
+  const trend = Array.from({ length: 6 }, (_, k) => {
+    let m = month - 5 + k, y = year;
+    while (m <= 0) { m += 12; y -= 1; }
+    return { label: SHORT[m - 1], value: bizFor(y, m).collected, current: m === month && y === year };
+  });
+
+  // outstanding by insurer, with aging
+  const insName = (id: string | null) => insurerList.find((i) => i.id === id)?.name ?? "—";
+  const map = new Map<string, { name: string; count: number; amount: number; oldestDays: number }>();
   for (const s of allSessions) {
     if (!s.insurerId || s.insurancePaid) continue;
     const amt = insurancePortion(s);
     if (amt <= 0) continue;
-    const cur = outMap.get(s.insurerId) ?? { name: insName(s.insurerId), amount: 0, count: 0 };
-    cur.amount = Math.round((cur.amount + amt) * 100) / 100;
-    cur.count += 1;
-    outMap.set(s.insurerId, cur);
+    const cur = map.get(s.insurerId) ?? { name: insName(s.insurerId), count: 0, amount: 0, oldestDays: 0 };
+    cur.count += 1; cur.amount = r2(cur.amount + amt); cur.oldestDays = Math.max(cur.oldestDays, ageDays(s.dateOfService, today));
+    map.set(s.insurerId, cur);
   }
-  const outByInsurer = [...outMap.values()].sort((a, b) => b.amount - a.amount);
-  const outMax = Math.max(1, ...outByInsurer.map((x) => x.amount));
+  const insurers = [...map.values()].sort((a, b) => b.amount - a.amount);
+  const insurersTotal = r2(insurers.reduce((t, i) => t + i.amount, 0));
 
-  const deltaChip = (pct: number | null) => {
-    if (pct === null) return null;
-    const up = pct >= 0;
-    return <span className={`ov-delta ${Math.abs(pct) < 0.5 ? "flat" : up ? "up" : "down"}`}>{up ? "▲" : "▼"} {Math.abs(pct).toFixed(0)}% vs {MONTHS[prevM - 1]}</span>;
+  const nameOf = (id: string) => CLINICIANS.find((c) => c.id === id)?.name ?? id;
+  const clinicians: ClinRow[] = biz.perClinician
+    .filter((c) => c.appointments > 0 || c.collected > 0 || c.outstanding > 0)
+    .map((c) => ({
+      id: c.clinicianId, name: nameOf(c.clinicianId), role: "",
+      appts: c.appointments, collected: c.collected, owed: c.outstandingThisMonth, payout: c.payout,
+      revenueGenerated: c.revenueGenerated, billed: c.billedFromThisMonth, outstandingThisMonth: c.outstandingThisMonth, copay: c.copayThisMonth,
+    }));
+
+  const data: OverviewData = {
+    year, month, monthName: MONTHS[month - 1], prevMonthName: MONTHS[prevM - 1],
+    earned, earnedCollected, earnedOwed: thisMonthOutstanding,
+    earnedDelta: prev.revenueGenerated > 0 ? ((earned - prev.revenueGenerated) / prev.revenueGenerated) * 100 : null,
+    cashTotal: biz.collected, cashCopays: biz.copays, cashInsurance: biz.billed, cashRollover,
+    bottom, trend,
+    expenses: cfg.runningExpenses.map((e) => ({ name: e.name, detail: e.detail, amount: e.amount, breakdown: e.breakdown })),
+    expensesTotal,
+    insurers, insurersTotal,
+    clinicians, appointments: biz.appointments,
   };
 
-  return (
-    <div>
-      <div className="ov-headrow">
-        <div>
-          <h2 className="ov-title">Business overview</h2>
-          <p className="ov-sub">The whole practice, at a glance. Amounts in KYD.</p>
-        </div>
-        <MonthPicker year={year} month={month} path="/billing/overview" />
-      </div>
-
-      <div className="ov-hero">
-        <div className="ov-card">
-          <span className="ov-eyebrow">Revenue earned · {MONTHS[month - 1]} {year}</span>
-          <div className="ov-big">{money(revenue)}{deltaChip(revenueDelta)}</div>
-          <div className="ov-bar" role="img" aria-label={`${money(collectedOfRevenue)} collected, ${money(thisMonthOutstanding)} outstanding`}>
-            <span className="seg-c" style={{ width: `${pctWidth(collectedOfRevenue, revenue)}%` }} />
-            <span className="seg-o" style={{ width: `${pctWidth(thisMonthOutstanding, revenue)}%` }} />
-          </div>
-          <div className="ov-legend">
-            <span className="k"><span className="ov-dot c" />Total collected&nbsp;<b>{money0(collectedOfRevenue)}</b></span>
-            <span className="k"><span className="ov-dot o" />Outstanding&nbsp;<b>{money0(thisMonthOutstanding)}</b></span>
-          </div>
-        </div>
-
-        <div className="ov-card">
-          <span className="ov-eyebrow">Where the money goes</span>
-          <div className="ov-split">
-            <div className="ov-donut">
-              <Donut payoutFrac={payoutFrac} />
-              <div className="ov-donut-center">
-                <span className="n">{money0(biz.companyNet)}</span>
-                <span className="l">net profit</span>
-              </div>
-            </div>
-            <div className="ov-split-legend">
-              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#2E3192" }} />Payout to clinicians</span><div className="v">{money(biz.totalPayout)}</div></div>
-              <div className="ov-li"><span className="k"><span className="ov-dot" style={{ background: "#319A9F" }} />Company net profit</span><div className="v">{money(biz.companyNet)}</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="ov-strip">
-        <div className="ov-stat"><div className="k">Appointments</div><div className="v">{biz.appointments}</div></div>
-        <div className="ov-stat"><div className="k">Insurance collected</div><div className="v">{money0(insuranceCollectedThisMonth)}</div></div>
-        <div className="ov-stat"><div className="k">Co-pays collected</div><div className="v">{money0(biz.copays)}</div></div>
-        <div className="ov-stat"><div className="k">Insurance rollover collected</div><div className="v">{money0(rolloverCollected)}</div></div>
-      </div>
-
-      {outByInsurer.length > 0 && (
-        <div className="ov-card ov-ins-card">
-          <div className="ov-clin-head2" style={{ margin: "0 0 16px" }}>
-            <span className="ov-eyebrow">Waiting on insurance</span>
-            <span className="help" style={{ margin: 0 }}>Where your outstanding money is sitting today</span>
-          </div>
-          <div className="ov-ins">
-            {outByInsurer.map((i) => (
-              <div className="ov-ins-row" key={i.name}>
-                <div className="ov-ins-name">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"}</small></div>
-                <div className="ov-ins-track"><span style={{ width: `${(i.amount / outMax) * 100}%` }} /></div>
-                <div className="ov-ins-amt">{money0(i.amount)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="ov-clin-head2">
-        <h3 className="bz-sec" style={{ margin: 0 }}>By clinician</h3>
-        <span className="help" style={{ margin: 0 }}>Tap to see appointments, billed vs outstanding, and payout</span>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="card bz-empty">No billing activity for {MONTHS[month - 1]} {year}.</div>
-      ) : (
-        <div className="ov-clin">
-          {rows.map(({ c, name }) => {
-            const total = c.collected + c.outstanding;
-            return (
-              <Link key={c.clinicianId} href={`/billing/clinician/${c.clinicianId}?y=${year}&m=${month}`} className="ov-crow">
-                <div className="ov-crow-name">
-                  {name}{c.clinicianId === user.clinician.id && <span className="ov-youtag">you</span>}
-                  <small>{c.appointments} appointment{c.appointments === 1 ? "" : "s"}</small>
-                </div>
-                <div className="ov-crow-barwrap">
-                  <div className="ov-crow-track" role="img" aria-label={`${money(c.collected)} collected, ${money(c.outstanding)} outstanding`}>
-                    <span className="c" style={{ width: `${pctWidth(c.collected, total)}%` }} />
-                    <span className="o" style={{ width: `${pctWidth(c.outstanding, total)}%` }} />
-                  </div>
-                  <div className="cap">
-                    <span>{money0(c.collected)} collected</span>
-                    <span>{c.outstanding > 0 ? `${money0(c.outstanding)} outstanding` : "all collected"}</span>
-                  </div>
-                </div>
-                <div className="ov-crow-amt">
-                  <div className="p">{money(c.payout)}</div>
-                  <div className="s">payout</div>
-                </div>
-                <span className="ov-crow-go" aria-hidden="true">›</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  return <OverviewClient data={data} />;
 }

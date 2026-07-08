@@ -141,6 +141,55 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
   };
 }
 
+// ---- The bottom line: collected → −payouts − biller 3% − expenses = net ----------
+export interface BottomLine {
+  cashCollected: number;
+  payouts: number;
+  billerCommission: number;
+  billerCommissionPct: number;
+  runningExpenses: number;
+  net: number;
+  outstanding: number;
+  projectedNet: number; // net + what the practice keeps once outstanding lands (~37%)
+}
+
+export function computeBottomLine(biz: BusinessMonth, billerCommissionPct: number, runningExpensesTotal: number): BottomLine {
+  const billerCommission = round2((biz.billed * billerCommissionPct) / 100);
+  const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal);
+  // Once an outstanding claim is paid: 60% goes to the clinician, biller% off insurance,
+  // the rest (~37%) stays with the practice. Show the owner the swing.
+  const keepRate = Math.max(0, 100 - 60 - billerCommissionPct) / 100;
+  return {
+    cashCollected: biz.collected,
+    payouts: biz.totalPayout,
+    billerCommission,
+    billerCommissionPct,
+    runningExpenses: runningExpensesTotal,
+    net,
+    outstanding: biz.outstanding,
+    projectedNet: round2(net + biz.outstanding * keepRate),
+  };
+}
+
+// ---- Claim aging (days since the visit) ------------------------------------------
+export function ageDays(dateOfService: string, todayISO: string): number {
+  const a = Date.parse(dateOfService + "T00:00:00Z");
+  const b = Date.parse(todayISO + "T00:00:00Z");
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+
+export const AGING_BUCKETS = [
+  { key: "0-14", label: "0–14 days", min: 0, max: 14 },
+  { key: "15-30", label: "15–30 days", min: 15, max: 30 },
+  { key: "31-60", label: "31–60 days", min: 31, max: 60 },
+  { key: "60+", label: "60+ days", min: 61, max: Infinity },
+] as const;
+
+export function agingBucketIndex(days: number): number {
+  return AGING_BUCKETS.findIndex((b) => days >= b.min && days <= b.max);
+}
+
 /** Auto-suggest the co-pay for a session from the insurer's rule. Editable by the clinician. */
 export function suggestCopay(insurer: { copayType: "none" | "fixed" | "percentage"; copayRate: number } | null | undefined, totalCost: number): number {
   if (!insurer) return 0;

@@ -23,7 +23,34 @@ export interface CptCode {
   code: string;
   description: string;
   active: boolean;
+  fee?: number;   // default service fee for this code (KYD)
+  hrs?: number;   // duration in hours
 }
+
+// Practice-wide money rules the owner controls in Setup.
+export interface RunningExpense {
+  id: string;
+  name: string;
+  detail: string;   // who / what
+  amount: number;   // monthly KYD
+  breakdown?: { label: string; amount: number }[];
+}
+export interface PracticeConfig {
+  billerCommissionPct: number; // % of insurance collected paid to the biller
+  runningExpenses: RunningExpense[];
+}
+export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
+  billerCommissionPct: 3,
+  runningExpenses: [
+    { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [
+      { label: "Social media", amount: 500 }, { label: "Web support", amount: 500 }, { label: "Ads", amount: 300 } ] },
+    { id: "rent", name: "Office rent", detail: "Grand Cayman suite", amount: 750 },
+    { id: "power", name: "Power & internet", detail: "Utilities", amount: 150 },
+    { id: "ehr", name: "EHR & billing software", detail: "Clinical records", amount: 110 },
+    { id: "workspace", name: "Google Workspace", detail: "Email & docs", amount: 40 },
+    { id: "books", name: "Bookkeeping", detail: "Monthly accounts", amount: 30 },
+  ],
+};
 
 export interface ClinicianBillingSettings {
   clinicianId: string;
@@ -87,6 +114,7 @@ const INS_FILE = "billing-insurers.local.json";
 const CPT_FILE = "billing-cpt.local.json";
 const SET_FILE = "billing-settings.local.json";
 const SESS_FILE = "billing-sessions.local.json";
+const CFG_FILE = "billing-config.local.json";
 
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 
@@ -132,19 +160,19 @@ export async function listCptCodes(): Promise<CptCode[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_cpt_codes ORDER BY code`) as Record<string, unknown>[];
-    return rows.map((r) => ({ code: r.code as string, description: (r.description as string) || "", active: !!r.active }));
+    return rows.map((r) => ({ code: r.code as string, description: (r.description as string) || "", active: !!r.active, fee: r.fee == null ? undefined : num(r.fee), hrs: r.hrs == null ? undefined : num(r.hrs) }));
   }
   return readJson<CptCode[]>(CPT_FILE, []);
 }
 
 export async function upsertCptCode(c: CptCode): Promise<CptCode> {
-  const row: CptCode = { code: c.code, description: c.description || "", active: c.active ?? true };
+  const row: CptCode = { code: c.code, description: c.description || "", active: c.active ?? true, fee: c.fee, hrs: c.hrs };
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_cpt_codes (code, description, active)
-      VALUES (${row.code}, ${row.description}, ${row.active})
-      ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active`;
+      INSERT INTO billing_cpt_codes (code, description, active, fee, hrs)
+      VALUES (${row.code}, ${row.description}, ${row.active}, ${row.fee ?? null}, ${row.hrs ?? null})
+      ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active, fee = EXCLUDED.fee, hrs = EXCLUDED.hrs`;
     return row;
   }
   const all = readJson<CptCode[]>(CPT_FILE, []);
@@ -198,6 +226,35 @@ export async function upsertClinicianSettings(s: ClinicianBillingSettings): Prom
   writeJson(SET_FILE, all);
   return s;
 }
+
+// ===================== Practice config (biller %, expenses) =================
+export async function getPracticeConfig(): Promise<PracticeConfig> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT value FROM billing_config WHERE key = 'practice'`) as { value: unknown }[];
+    if (rows.length && rows[0].value) {
+      const v = (typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value) as PracticeConfig;
+      return { ...DEFAULT_PRACTICE_CONFIG, ...v };
+    }
+    return DEFAULT_PRACTICE_CONFIG;
+  }
+  return readJson<PracticeConfig>(CFG_FILE, DEFAULT_PRACTICE_CONFIG);
+}
+
+export async function savePracticeConfig(cfg: PracticeConfig): Promise<PracticeConfig> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`
+      INSERT INTO billing_config (key, value) VALUES ('practice', ${JSON.stringify(cfg)}::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`;
+    return cfg;
+  }
+  writeJson(CFG_FILE, cfg);
+  return cfg;
+}
+
+export const runningExpensesTotal = (cfg: PracticeConfig): number =>
+  Math.round(cfg.runningExpenses.reduce((t, e) => t + (e.amount || 0), 0) * 100) / 100;
 
 // ============================ Sessions ======================================
 interface StoredSession {
