@@ -42,6 +42,7 @@ export default function BillingSidebar({
   const sectionLabel = role === "biller" ? "Billing" : "Practice";
 
   return (
+    <>
     <aside className="bo-side">
       <div className="bo-brand">
         <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
@@ -80,5 +81,18 @@ export default function BillingSidebar({
         </div>
       </div>
     </aside>
+
+    <nav className="bo-mobtabs">
+      {nav.map((n) => {
+        const Icon = n.icon;
+        return (
+          <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
+            <Icon />{n.label.split(" ")[0]}
+            {n.badge ? <span className="bdg">{n.badge}</span> : null}
+          </Link>
+        );
+      })}
+    </nav>
+    </>
   );
 }
