@@ -32,6 +32,7 @@ export default async function BillingLayout({ children }: { children: React.Reac
       {!devMode() && <IdleLogout />}
       <BillingSidebar
         role={user.role}
+        meId={user.clinician.id}
         name={user.clinician.name}
         initials={initialsOf(user.clinician.name)}
         roleLabel={roleLabel}

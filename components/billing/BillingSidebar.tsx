@@ -6,6 +6,7 @@ import type { BillingRole } from "@/lib/billingRole";
 
 const IconOverview = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z" /></svg>);
 const IconClin = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" /></svg>);
+const IconUser = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" /></svg>);
 const IconQueue = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4M4 6v12a2 2 0 0 0 2 2h14v-4" /></svg>);
 const IconSetup = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1" /></svg>);
 const IconLog = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>);
@@ -13,9 +14,10 @@ const IconLog = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="non
 interface NavItem { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; }
 
 export default function BillingSidebar({
-  role, name, initials, roleLabel, queueCount, isDev,
-}: { role: BillingRole; name: string; initials: string; roleLabel: string; queueCount: number; isDev: boolean; }) {
+  role, meId, name, initials, roleLabel, queueCount, isDev,
+}: { role: BillingRole; meId: string; name: string; initials: string; roleLabel: string; queueCount: number; isDev: boolean; }) {
   const path = usePathname();
+  const myDetail = `/billing/clinician/${meId}`;
 
   const nav: NavItem[] =
     role === "biller"
@@ -27,7 +29,8 @@ export default function BillingSidebar({
           ]
         : [
             { href: "/billing/overview", label: "Overview", icon: IconOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
-            { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") },
+            { href: "/billing/me", label: "My clients", icon: IconUser, match: (p) => p === "/billing/me" || p.startsWith(myDetail) },
+            { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p === "/billing/clinicians" || (p.startsWith("/billing/clinician/") && !p.startsWith(myDetail)) },
             { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
           ];
