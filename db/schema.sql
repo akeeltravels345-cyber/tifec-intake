@@ -41,8 +41,10 @@ CREATE INDEX IF NOT EXISTS access_log_clinician_idx ON access_log (clinician_id)
 CREATE TABLE IF NOT EXISTS clinician_users (
   clinician_id  TEXT PRIMARY KEY,          -- matches an id in lib/clinicians.ts
   password_hash TEXT NOT NULL,             -- scrypt "salt:hash" (see lib/auth.ts)
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  tour_seen     BOOLEAN NOT NULL DEFAULT false  -- first-login walkthrough shown once
 );
+-- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS tour_seen BOOLEAN NOT NULL DEFAULT false;
 
 -- Clinician-submitted issue reports ("Report an issue").
 CREATE TABLE IF NOT EXISTS feedback (

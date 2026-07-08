@@ -29,14 +29,17 @@ const STEPS: Step[] = [
 
 interface Box { top: number; left: number; width: number; height: number }
 
-export default function Tour({ mount, tourToken }: { mount: Mount; tourToken?: string }) {
+export default function Tour({ mount, tourToken, autoStart }: { mount: Mount; tourToken?: string; autoStart?: boolean }) {
   const router = useRouter();
   const [active, setActive] = useState(false);
   const [idx, setIdx] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
 
+  // Persist "seen" on the server so the walkthrough only auto-opens on the first
+  // login of each account (localStorage alone is per-browser and easily reset).
+  const markSeen = () => { try { localStorage.setItem(SEEN, "1"); } catch {} fetch("/api/tour-seen", { method: "POST" }).catch(() => {}); };
   const persist = (a: boolean, s: number) => { try { localStorage.setItem(ACTIVE, a ? "1" : "0"); localStorage.setItem(STEP, String(s)); } catch {} };
-  const start = useCallback(() => { persist(true, 0); setActive(true); setIdx(0); }, []);
+  const start = useCallback(() => { markSeen(); persist(true, 0); setActive(true); setIdx(0); }, []);
   const go = useCallback((n: number) => { persist(true, n); setIdx(n); }, []);
   const finish = useCallback(() => { try { localStorage.setItem(SEEN, "1"); localStorage.removeItem(ACTIVE); localStorage.removeItem(STEP); } catch {} setActive(false); }, []);
 
@@ -51,11 +54,11 @@ export default function Tour({ mount, tourToken }: { mount: Mount; tourToken?: s
     const onReplay = () => start();
     window.addEventListener("tifec-tour", onReplay);
     let t: ReturnType<typeof setTimeout> | undefined;
-    if (mount === "dashboard") {
+    if (mount === "dashboard" && autoStart) {
       try { if (!localStorage.getItem(SEEN) && !a) t = setTimeout(start, 600); } catch {}
     }
     return () => { window.removeEventListener("tifec-tour", onReplay); if (t) clearTimeout(t); };
-  }, [mount, start]);
+  }, [mount, start, autoStart]);
 
   // driver: navigate between pages, switch dashboard view, spotlight the target
   useEffect(() => {

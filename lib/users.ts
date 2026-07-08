@@ -14,6 +14,7 @@ export interface UserRow {
   clinician_id: string;
   password_hash: string;
   updated_at: string;
+  tour_seen?: boolean; // the first-login walkthrough only auto-opens until this is set
 }
 
 const usePostgres = !!process.env.DATABASE_URL;
@@ -68,6 +69,37 @@ export async function setUserPassword(clinicianId: string, passwordHash: string)
   } else {
     rows.push({ clinician_id: clinicianId, password_hash: passwordHash, updated_at: now });
   }
+  writeLocal(rows);
+}
+
+/** Has this clinician already seen the first-login walkthrough? */
+export async function getTourSeen(clinicianId: string): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      const res = (await sql`SELECT tour_seen FROM clinician_users WHERE clinician_id = ${clinicianId} LIMIT 1`) as { tour_seen: boolean }[];
+      return !!res[0]?.tour_seen;
+    } catch {
+      return false; // column may not exist yet - treat as not seen
+    }
+  }
+  return !!readLocal().find((u) => u.clinician_id === clinicianId)?.tour_seen;
+}
+
+/** Mark the walkthrough as seen so it never auto-opens again for this account. */
+export async function markTourSeen(clinicianId: string): Promise<void> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    await sql`
+      INSERT INTO clinician_users (clinician_id, password_hash, updated_at, tour_seen)
+      VALUES (${clinicianId}, '', ${new Date().toISOString()}, true)
+      ON CONFLICT (clinician_id) DO UPDATE SET tour_seen = true`;
+    return;
+  }
+  const rows = readLocal();
+  const existing = rows.find((u) => u.clinician_id === clinicianId);
+  if (existing) existing.tour_seen = true;
+  else rows.push({ clinician_id: clinicianId, password_hash: "", updated_at: new Date().toISOString(), tour_seen: true });
   writeLocal(rows);
 }
 

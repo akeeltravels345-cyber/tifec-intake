@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentClinician } from "@/lib/auth";
+import { getTourSeen } from "@/lib/users";
 import { hasBillingBeta } from "@/lib/billingRole";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
@@ -79,7 +80,7 @@ export default async function Dashboard() {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/dashboard");
 
-  const all = await getSubmissionsByClinician(me.id);
+  const [all, tourSeen] = await Promise.all([getSubmissionsByClinician(me.id), getTourSeen(me.id)]);
 
   // Decrypt once, then flag clients whose name or email appears on more than one form.
   const decoded = all.map((r) => ({ r, d: display(r) }));
@@ -202,6 +203,7 @@ export default async function Dashboard() {
       formsSlot={formsSlot}
       tourToken={tourToken}
       billingBeta={hasBillingBeta(me)}
+      autoTour={!tourSeen}
     />
   );
 }

@@ -83,6 +83,7 @@ export default function DashboardShell({
   formsSlot,
   tourToken,
   billingBeta,
+  autoTour,
 }: {
   name: string;
   initials: string;
@@ -92,6 +93,7 @@ export default function DashboardShell({
   formsSlot: React.ReactNode;
   tourToken?: string;
   billingBeta?: boolean;
+  autoTour?: boolean;
 }) {
   const [view, setView] = useState<View>("dashboard");
   const [status, setStatus] = useState<Status>("new");
@@ -150,7 +152,7 @@ export default function DashboardShell({
   return (
     <div className="dm-shell">
       <IdleLogout />
-      <Tour mount="dashboard" tourToken={tourToken} />
+      <Tour mount="dashboard" tourToken={tourToken} autoStart={!!autoTour} />
 
       <aside className="dm-side">
         <div className="dm-brand">
