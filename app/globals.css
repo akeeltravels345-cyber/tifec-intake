@@ -1373,9 +1373,9 @@ a.ov-crow:hover .ov-crow-go { color: var(--brand); }
 .stmt-foot { display: flex; justify-content: space-between; gap: 20px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
 
 @media print {
-  body::before, .brandbar, .bz-bar, .devbar, .stmt-actions, .auth-timeout-note { display: none !important; }
-  body { background: #fff !important; }
-  .container { padding: 0 !important; max-width: none !important; }
+  body::before, .brandbar, .bz-bar, .bo-side, .devbar, .stmt-actions, .auth-timeout-note { display: none !important; }
+  body, body:has(.biz) { background: #fff !important; }
+  .container, .bo-main { padding: 0 !important; max-width: none !important; }
   .stmt-wrap { max-width: none; margin: 0; }
   .stmt { border: none; border-radius: 0; box-shadow: none; padding: 0; }
   .stmt-kpi { background: #f4f6f7 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
