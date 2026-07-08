@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
-interface CptOpt { code: string; description: string; }
+interface CptOpt { code: string; description: string; fee: number; hrs: number; }
 
+const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
   if (!ins) return 0;
@@ -16,13 +17,11 @@ function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
 
 export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerOpt[]; cptCodes: CptOpt[] }) {
   const router = useRouter();
-  const [clientFirst, setClientFirst] = useState("");
-  const [clientLast, setClientLast] = useState("");
-  const [insurerId, setInsurerId] = useState<string>("");
-  const [dateOfService, setDateOfService] = useState("");
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
+  const [dos, setDos] = useState("");
+  const [insurerId, setInsurerId] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
-  const [durationHours, setDurationHours] = useState("1");
-  const [totalCost, setTotalCost] = useState("");
   const [copay, setCopay] = useState("");
   const [copayTouched, setCopayTouched] = useState(false);
   const [notes, setNotes] = useState("");
@@ -30,37 +29,27 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
   const [error, setError] = useState("");
 
   const insurer = useMemo(() => insurers.find((i) => i.id === insurerId), [insurers, insurerId]);
-  const suggested = suggestCopay(insurer, Number(totalCost) || 0);
+  const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.fee || 0), 0)), [codes, cptCodes]);
+  const duration = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes]);
+  const suggested = suggestCopay(insurer, totalCost);
+  const copayValue = copayTouched ? copay : suggested ? String(suggested) : "0";
+  const copayNum = Number(copayValue) || 0;
+  const collectedAtVisit = insurerId ? copayNum : totalCost;
+  const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayNum)) : 0;
 
-  // Keep co-pay in sync with the insurer rule until the user edits it themselves.
-  const copayValue = copayTouched ? copay : suggested ? String(suggested) : "";
-
-  function toggleCode(code: string) {
-    setCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
-  }
+  const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); setCopayTouched(false); };
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!clientFirst.trim() || !clientLast.trim()) return setError("Client first and last name are required.");
-    if (!dateOfService) return setError("Date of service is required.");
-    if (totalCost === "" || isNaN(Number(totalCost))) return setError("Total service cost is required.");
+    if (!first.trim() || !last.trim()) return setError("Client first and last name are required.");
+    if (!dos) return setError("Date of service is required.");
+    if (!codes.length) return setError("Select at least one service code.");
     setBusy(true);
     try {
       const res = await fetch("/api/billing/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientFirst: clientFirst.trim(),
-          clientLast: clientLast.trim(),
-          insurerId: insurerId || null,
-          dateOfService,
-          cptCodes: codes,
-          durationHours: Number(durationHours) || 0,
-          totalCost: Number(totalCost),
-          copayCollected: Number(copayValue) || 0,
-          notes: notes.trim(),
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: copayNum, notes: notes.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -72,72 +61,83 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
     }
   }
 
-  return (
-    <form onSubmit={submit} className="ov-card">
-      {error && <div className="field-required" style={{ marginBottom: 14 }}>{error}</div>}
+  const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
-      <div className="field" style={{ borderTop: "none", paddingTop: 0 }}>
-        <label className="q">Client name <span className="req">*</span></label>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <input style={{ flex: 1, minWidth: 140 }} placeholder="First" value={clientFirst} onChange={(e) => setClientFirst(e.target.value)} />
-          <input style={{ flex: 1, minWidth: 140 }} placeholder="Last" value={clientLast} onChange={(e) => setClientLast(e.target.value)} />
+  return (
+    <form onSubmit={submit} className="ls-grid">
+      <div className="ls-card">
+        <div className="ls-form">
+          <div className="ls-field">
+            <label className="ls-q">Client name <span className="ls-req">*</span></label>
+            <div className="ls-row2">
+              <input className="ls-in" placeholder="First" value={first} onChange={(e) => setFirst(e.target.value)} />
+              <input className="ls-in" placeholder="Last" value={last} onChange={(e) => setLast(e.target.value)} />
+            </div>
+          </div>
+          <div className="ls-field">
+            <label className="ls-q">Date of service <span className="ls-req">*</span></label>
+            <input type="date" className="ls-in" style={{ maxWidth: 220 }} value={dos} onChange={(e) => setDos(e.target.value)} />
+          </div>
+          <div className="ls-field">
+            <label className="ls-q">Insurance provider</label>
+            <select className="ls-sel" value={insurerId} onChange={(e) => { setInsurerId(e.target.value); setCopayTouched(false); }}>
+              <option value="">Self-pay / none</option>
+              {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
+          <div className="ls-field">
+            <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
+            <div className="ls-cpt">
+              {cptCodes.map((c) => (
+                <button type="button" key={c.code} className={`ls-chip ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)} title={c.description}>
+                  {c.code}<small>{money(c.fee)}</small>
+                </button>
+              ))}
+            </div>
+            <p className="ls-help">Total cost and duration fill in automatically from the codes you pick.</p>
+          </div>
+          <div className="ls-field">
+            <div className="ls-row2">
+              <div style={{ flex: 1 }}>
+                <label className="ls-q">Total service cost</label>
+                <div className="ls-money"><span className="cur">$</span><input className="ls-in ls-ro" readOnly value={totalCost ? totalCost.toFixed(2) : "0.00"} /></div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="ls-q">Duration</label>
+                <input className="ls-in ls-ro" readOnly value={`${duration} hr${duration === 1 ? "" : "s"}`} />
+              </div>
+            </div>
+          </div>
+          <div className="ls-field">
+            <label className="ls-q">Co-pay collected at visit</label>
+            <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={copayValue} onChange={(e) => { setCopayTouched(true); setCopay(e.target.value); }} /></div>
+            {insurer && !copayTouched && suggested > 0 && <p className="ls-help">Auto-filled from <b>{insurer.name}</b> ({insurer.copayType === "percentage" ? `${insurer.copayRate}%` : money(insurer.copayRate)}). Editable.</p>}
+          </div>
+          <div className="ls-field">
+            <label className="ls-q">Notes <span className="opt">optional</span></label>
+            <textarea className="ls-in" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+          {error && <div className="ls-err">{error}</div>}
+          <button type="submit" className="ls-save" disabled={busy}>{busy ? "Saving…" : "Save session"}</button>
         </div>
       </div>
 
-      <div className="field">
-        <label className="q">Date of service <span className="req">*</span></label>
-        <input type="date" value={dateOfService} onChange={(e) => setDateOfService(e.target.value)} />
-      </div>
-
-      <div className="field">
-        <label className="q">Insurance provider</label>
-        <select value={insurerId} onChange={(e) => { setInsurerId(e.target.value); setCopayTouched(false); }}>
-          <option value="">Self-pay / none</option>
-          {insurers.map((i) => (
-            <option key={i.id} value={i.id}>{i.name}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field">
-        <label className="q">CPT / service code(s)</label>
-        {cptCodes.length === 0 ? (
-          <p className="help">No CPT codes configured yet. An admin can add them under Setup.</p>
+      <div className="ls-card ls-sum">
+        <span className="lab">This session</span>
+        <div className="fee">{money(totalCost)}</div>
+        <div className="feesub">{codes.length ? `${codes.join(", ")} · ${duration} hr${duration === 1 ? "" : "s"}` : "Pick a service code to begin"}</div>
+        <div className="ls-splitbar">
+          <i style={{ width: `${pct(collectedAtVisit, totalCost)}%`, background: "var(--teal)" }} />
+          <i style={{ width: `${pct(billedToInsurance, totalCost)}%`, background: "var(--indigo)" }} />
+        </div>
+        <div className="ls-sline"><span className="k"><span className="ls-dot" style={{ background: "var(--teal)" }} />Collected at visit</span><span className="v">{money(collectedAtVisit)}</span></div>
+        <div className="ls-sline"><span className="k"><span className="ls-dot" style={{ background: "var(--indigo)" }} />Billed to insurance</span><span className="v">{money(billedToInsurance)}</span></div>
+        {insurerId ? (
+          <div className="ls-status ins"><span className="ic">→</span><span>{money(billedToInsurance)} enters the billing queue for <b>{insurer?.name}</b> once you save.</span></div>
         ) : (
-          <div className="bz-cpt">
-            {cptCodes.map((c) => (
-              <button type="button" key={c.code} className={`bz-cpt-opt ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggleCode(c.code)} title={c.description}>
-                {c.code}{c.description ? ` · ${c.description}` : ""}
-              </button>
-            ))}
-          </div>
+          <div className="ls-status self"><span className="ic">✓</span><span>Self-pay — the full {money(totalCost)} is collected at the visit, nothing goes to insurance.</span></div>
         )}
       </div>
-
-      <div className="field">
-        <label className="q">Duration (hours)</label>
-        <input type="number" step="0.25" min="0" style={{ maxWidth: 160 }} value={durationHours} onChange={(e) => setDurationHours(e.target.value)} />
-      </div>
-
-      <div className="field">
-        <label className="q">Total service cost (KYD) <span className="req">*</span></label>
-        <input type="number" step="0.01" min="0" style={{ maxWidth: 200 }} value={totalCost} onChange={(e) => setTotalCost(e.target.value)} placeholder="0.00" />
-      </div>
-
-      <div className="field">
-        <label className="q">Co-pay collected (KYD)</label>
-        <input type="number" step="0.01" min="0" style={{ maxWidth: 200 }} value={copayValue} onChange={(e) => { setCopayTouched(true); setCopay(e.target.value); }} placeholder="0.00" />
-        {insurer && !copayTouched && suggested > 0 && (
-          <p className="help">Auto-suggested from {insurer.name} ({insurer.copayType === "percentage" ? `${insurer.copayRate}%` : `$${insurer.copayRate}`}). You can edit it.</p>
-        )}
-      </div>
-
-      <div className="field">
-        <label className="q">Notes (optional)</label>
-        <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </div>
-
-      <button type="submit" className="primary" disabled={busy}>{busy ? "Saving…" : "Save session"}</button>
     </form>
   );
 }

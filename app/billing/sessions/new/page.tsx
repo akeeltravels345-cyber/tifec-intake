@@ -12,18 +12,16 @@ export default async function NewSessionPage() {
 
   const [insurers, cptCodes] = await Promise.all([listInsurers(), listCptCodes()]);
   const activeInsurers = insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, copayType: i.copayType, copayRate: i.copayRate }));
-  const activeCpt = cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description }));
+  const activeCpt = cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1 }));
 
   return (
-    <div className="container-form" style={{ padding: 0 }}>
-      <div className="ov-headrow">
-        <div>
-          <h2 className="ov-title">Log a session</h2>
-          <p className="ov-sub">Logged as {user.clinician.name}. One row per visit.</p>
-        </div>
-        <Link href="/billing/me" className="bz-link">← Back</Link>
+    <>
+      <Link href="/billing/me" className="ls-back">← Back to my payout</Link>
+      <div className="ls-topbar">
+        <h1 className="ls-h1">Log a session</h1>
+        <p className="ls-sub">Logged as {user.clinician.name}. Pick the service code(s) and the money fills in.</p>
       </div>
       <SessionForm insurers={activeInsurers} cptCodes={activeCpt} />
-    </div>
+    </>
   );
 }
