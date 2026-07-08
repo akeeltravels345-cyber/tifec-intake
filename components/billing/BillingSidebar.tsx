@@ -75,7 +75,7 @@ export default function BillingSidebar({
           <>
             <div className="bo-viewas">View as</div>
             <div className="bo-roles">
-              {(["owner", "clinician", "biller"] as const).map((r) => (
+              {(["owner", "biller"] as const).map((r) => (
                 <button key={r} type="button" className={`bo-role ${role === r ? "on" : ""}`} onClick={() => viewAs(r)}>
                   {r[0].toUpperCase() + r.slice(1)}
                 </button>

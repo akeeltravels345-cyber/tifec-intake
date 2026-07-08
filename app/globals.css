@@ -940,6 +940,7 @@ body:has(.dm-shell) { background: #f3f6f7; }
 .dm-nav-item.active { background: #eef7f7; color: #267277; font-weight: 700; }
 .dm-nav-item svg { flex: none; }
 .dm-nav-badge { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #319A9F; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.dm-beta { margin-left: auto; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #b1740f; background: #f6ecd9; border: 1px solid #ecd9b8; border-radius: 999px; padding: 1px 8px; }
 .dm-spacer { flex: 1; min-height: 14px; }
 .dm-promo { background: linear-gradient(140deg, #eef7f7, #eceef7); border: 1px solid #e3ebec; border-radius: 14px; padding: 16px; }
 .dm-promo-title { font-family: "Carlito", sans-serif; font-weight: 700; font-size: 14px; color: #232a3d; }

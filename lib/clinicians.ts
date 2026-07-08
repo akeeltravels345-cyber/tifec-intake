@@ -38,12 +38,16 @@ export interface Clinician {
    *  "biller" = marks insurance payments; "admin" = full billing config + disbursements.
    *  (A practice admin is also a billing admin automatically.) */
   billing?: "biller" | "admin";
+  /** BETA: this account can see + open the billing system inside the intake app.
+   *  Only enrolled accounts get the "Billing (Beta)" entry point and /billing access. */
+  billingBeta?: boolean;
 }
 
 // TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.
 export const CLINICIANS: Clinician[] = [
   {
     id: "shion-oconnor",
+    billingBeta: true, // BETA billing access
     name: "Dr. Shion O'Connor",
     credentials: "Clinical Psychologist & Family Therapist · Founder",
     email: "Therapy@caymanessentialcare.com",
@@ -154,6 +158,7 @@ export const CLINICIANS: Clinician[] = [
   },
   {
     id: "nick-oconnor",
+    billingBeta: true, // BETA billing access
     name: "Nick O'Connor",
     credentials: "Training Clinician (Practicum)",
     email: "tifec.billing@gmail.com",
@@ -183,6 +188,7 @@ export const CLINICIANS: Clinician[] = [
   // TEST / ADMIN account - remove or rename before go-live.
   {
     id: "akeel-test",
+    billingBeta: true, // BETA billing access
     name: "Akeel (Test)",
     credentials: "Practice Administrator",
     email: "admin@caymanessentialcare.com",

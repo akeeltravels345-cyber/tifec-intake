@@ -7,6 +7,9 @@ import type { Clinician } from "./clinicians";
 // A biller marks insurance payments. A clinician sees only their own numbers.
 export type BillingRole = "clinician" | "biller" | "owner";
 
+/** BETA gate: only enrolled accounts can see + open the billing system. */
+export const hasBillingBeta = (c: Clinician): boolean => !!c.billingBeta;
+
 export function billingRoleOf(c: Clinician): BillingRole {
   if (c.admin || c.billing === "admin") return "owner";
   if (c.billing === "biller") return "biller";

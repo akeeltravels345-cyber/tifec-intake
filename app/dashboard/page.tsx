@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentClinician } from "@/lib/auth";
+import { hasBillingBeta } from "@/lib/billingRole";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import { templateLabel } from "@/lib/forms";
@@ -200,6 +201,7 @@ export default async function Dashboard() {
       items={items}
       formsSlot={formsSlot}
       tourToken={tourToken}
+      billingBeta={hasBillingBeta(me)}
     />
   );
 }

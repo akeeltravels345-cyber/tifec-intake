@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getBillingUser, devMode } from "@/lib/billingRole";
+import { getBillingUser, devMode, hasBillingBeta } from "@/lib/billingRole";
 import { listSessions } from "@/lib/billing";
 import BillingSidebar from "@/components/billing/BillingSidebar";
 import IdleLogout from "@/components/IdleLogout";
@@ -16,6 +16,8 @@ function initialsOf(name: string): string {
 export default async function BillingLayout({ children }: { children: React.ReactNode }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing");
+  // BETA: billing is only available to enrolled accounts. Everyone else goes back to intake.
+  if (!hasBillingBeta(user.clinician)) redirect("/dashboard?billing=beta");
 
   const sessions = await listSessions();
   const queueCount = sessions.filter((s) => s.insurerId && !s.insurancePaid).length;

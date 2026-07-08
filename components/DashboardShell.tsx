@@ -82,6 +82,7 @@ export default function DashboardShell({
   items,
   formsSlot,
   tourToken,
+  billingBeta,
 }: {
   name: string;
   initials: string;
@@ -90,6 +91,7 @@ export default function DashboardShell({
   items: DashItem[];
   formsSlot: React.ReactNode;
   tourToken?: string;
+  billingBeta?: boolean;
 }) {
   const [view, setView] = useState<View>("dashboard");
   const [status, setStatus] = useState<Status>("new");
@@ -169,6 +171,12 @@ export default function DashboardShell({
           <button className={`dm-nav-item ${view === "forms" ? "active" : ""}`} onClick={() => setView("forms")}>
             {file(view === "forms")} Forms
           </button>
+          {billingBeta && (
+            <Link className="dm-nav-item" href="/billing">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>
+              Billing <span className="dm-beta">Beta</span>
+            </Link>
+          )}
           {isAdmin && (
             <Link className="dm-nav-item" href="/admin">
               {star(false)} Admin
