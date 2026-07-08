@@ -1419,6 +1419,8 @@ body:has(.biz) { background: var(--paper, #FBF9F4); }
 .bo-logo { width: 36px; height: 36px; border-radius: 10px; background: #fff; border: 1px solid var(--edge); object-fit: contain; padding: 3px; }
 .bo-bt { font-weight: 700; font-size: 15px; line-height: 1.1; }
 .bo-bs { font-size: 11px; color: var(--faint); margin-top: 3px; letter-spacing: .03em; }
+.bo-backlink { display: flex; align-items: center; gap: 8px; margin: -14px 0 14px; padding: 8px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; border: 1px solid var(--edge); background: #fff; }
+.bo-backlink:hover { color: var(--teal-deep); border-color: var(--teal); }
 .bo-navl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #b3aa98; font-weight: 700; padding: 6px 12px 10px; }
 .bo-nav { display: flex; flex-direction: column; gap: 3px; }
 .bo-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 10px; color: #6a6f66; font-size: 14px; font-weight: 600; text-decoration: none; }
