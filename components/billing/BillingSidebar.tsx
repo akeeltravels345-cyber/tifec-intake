@@ -27,7 +27,7 @@ export default function BillingSidebar({
           ]
         : [
             { href: "/billing/overview", label: "Overview", icon: IconOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
-            { href: "/billing/overview#by-clinician", label: "By clinician", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") },
+            { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") },
             { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
           ];
