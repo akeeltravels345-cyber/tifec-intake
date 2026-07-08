@@ -97,30 +97,33 @@ export async function clearSessionCookie() {
 /** Returns the logged-in clinician (verified) or null. Safe to call in server components. */
 export async function getCurrentClinician(): Promise<Clinician | null> {
   const store = await cookies();
-  // LOCAL DEV ONLY: when DEV_AUTOLOGIN is set (never in production), skip the login
-  // entirely and act as the clinician named by the `dev_as` cookie, defaulting to
-  // the DEV_AUTOLOGIN value. This is what the billing "View as" switcher rides on.
+
+  // 1) A real signed-in session always wins — this is how per-person logins work.
+  const token = store.get(COOKIE_NAME)?.value;
+  if (token) {
+    try {
+      const session = verifySessionToken(token);
+      if (session) {
+        const clinician = getClinician(session.cid) ?? null;
+        if (clinician) {
+          let valid = true;
+          // Revocation: a password change bumps updated_at, invalidating older tokens.
+          try { valid = session.pv === (await passwordVersion(session.cid)); } catch { valid = true; }
+          if (valid) return clinician;
+        }
+      }
+    } catch {
+      /* fall through to the dev fallback / logged-out */
+    }
+  }
+
+  // 2) LOCAL DEV ONLY (never in production): when nobody is logged in and DEV_AUTOLOGIN
+  // is set, act as the clinician named by the `dev_as` cookie (the "View as" switcher),
+  // defaulting to DEV_AUTOLOGIN. Step 1 (a real login) always takes precedence.
   if (process.env.NODE_ENV !== "production" && process.env.DEV_AUTOLOGIN) {
     const who = store.get("dev_as")?.value || process.env.DEV_AUTOLOGIN;
     return getClinician(who) ?? getClinician(process.env.DEV_AUTOLOGIN) ?? null;
   }
-  const token = store.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  try {
-    const session = verifySessionToken(token);
-    if (!session) return null;
-    const clinician = getClinician(session.cid) ?? null;
-    if (!clinician) return null;
-    // Revocation: a password change bumps updated_at, invalidating older tokens.
-    // Tolerate read errors so a transient DB blip doesn't log everyone out.
-    try {
-      if (session.pv !== (await passwordVersion(session.cid))) return null;
-    } catch {
-      /* signature + expiry already validated; allow through on lookup failure */
-    }
-    return clinician;
-  } catch {
-    // e.g. SESSION_SECRET not configured - treat as logged out rather than 500.
-    return null;
-  }
+
+  return null;
 }

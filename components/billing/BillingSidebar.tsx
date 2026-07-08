@@ -39,6 +39,14 @@ export default function BillingSidebar({
     window.location.href = r === "owner" ? "/billing/overview" : r === "clinician" ? "/billing/me" : "/billing/payments";
   }
 
+  async function signOut() {
+    // Clear the dev "View as" override too, so sign-out really logs out.
+    document.cookie = "dev_role=; path=/; max-age=0";
+    document.cookie = "dev_as=; path=/; max-age=0";
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login?next=/billing";
+  }
+
   const sectionLabel = role === "biller" ? "Billing" : "Practice";
 
   return (
@@ -77,7 +85,10 @@ export default function BillingSidebar({
         )}
         <div className="bo-usr">
           <div className="bo-uav">{initials}</div>
-          <div><div className="bo-un">{name}</div><div className="bo-ur">{roleLabel}</div></div>
+          <div style={{ minWidth: 0 }}><div className="bo-un">{name}</div><div className="bo-ur">{roleLabel}</div></div>
+          <button type="button" className="bo-signout" onClick={signOut} title="Sign out" aria-label="Sign out">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+          </button>
         </div>
       </div>
     </aside>
