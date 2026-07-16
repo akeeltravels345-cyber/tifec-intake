@@ -109,9 +109,15 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
             </div>
           </div>
           <div className="ls-field">
-            <label className="ls-q">Co-pay collected at visit</label>
+            <label className="ls-q">Co-pay collected at visit <span className="opt">adjust to the client&apos;s plan</span></label>
             <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={copayValue} onChange={(e) => { setCopayTouched(true); setCopay(e.target.value); }} /></div>
-            {insurer && !copayTouched && suggested > 0 && <p className="ls-help">Auto-filled from <b>{insurer.name}</b> ({insurer.copayType === "percentage" ? `${insurer.copayRate}%` : money(insurer.copayRate)}). Editable.</p>}
+            {insurerId && (
+              <p className="ls-help">
+                {!copayTouched && suggested > 0
+                  ? <>Auto-filled from <b>{insurer?.name}</b> ({insurer?.copayType === "percentage" ? `${insurer?.copayRate}%` : money(insurer?.copayRate ?? 0)}) — plans vary, so change it to what this client actually pays.</>
+                  : <>Plans vary from the default — enter what this client actually pays.</>}
+              </p>
+            )}
           </div>
           <div className="ls-field">
             <label className="ls-q">Notes <span className="opt">optional</span></label>
