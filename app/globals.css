@@ -1669,6 +1669,12 @@ body:has(.biz) { background: #F8F9F8; }
 .ls-chip.on { border-color: var(--indigo); background: #eef1f9; color: var(--indigo); }
 .ls-chip small { font-weight: 400; color: var(--faint); margin-left: 5px; }
 .ls-chip.on small { color: var(--indigo); }
+.ls-clients { display: flex; flex-wrap: wrap; gap: 8px; }
+.ls-client { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--edge); border-radius: 999px; padding: 7px 14px; font: 600 13px "Open Sans"; cursor: pointer; background: #fff; color: var(--ink); transition: border-color .12s, background .12s, color .12s; }
+.ls-client::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); flex: none; }
+.ls-client:hover { border-color: var(--teal); background: #f2f8f7; }
+.ls-client.on { border-color: var(--indigo); background: var(--indigo); color: #fff; }
+.ls-client.on::before { background: #fff; }
 .ls-money { position: relative; max-width: 220px; }
 .ls-money .cur { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 15px; }
 .ls-money .ls-in { padding-left: 26px; }

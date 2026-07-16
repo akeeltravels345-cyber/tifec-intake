@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; }
+interface ClientOpt { first: string; last: string; insurerId: string | null; lastVisit: string; }
+const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -15,10 +17,17 @@ function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
   return 0;
 }
 
-export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerOpt[]; cptCodes: CptOpt[] }) {
+export default function SessionForm({ insurers, cptCodes, clients = [] }: { insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[] }) {
   const router = useRouter();
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+  const [picked, setPicked] = useState("");
+
+  function pickClient(c: ClientOpt) {
+    const k = clientKey(c.first, c.last);
+    if (picked === k) { setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setCopayTouched(false); return; }
+    setPicked(k); setFirst(c.first); setLast(c.last); setInsurerId(c.insurerId || ""); setCopayTouched(false);
+  }
   const [dos, setDos] = useState("");
   const [insurerId, setInsurerId] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
@@ -67,11 +76,22 @@ export default function SessionForm({ insurers, cptCodes }: { insurers: InsurerO
     <form onSubmit={submit} className="ls-grid">
       <div className="ls-card">
         <div className="ls-form">
+          {clients.length > 0 && (
+            <div className="ls-field">
+              <label className="ls-q">Returning client? <span className="opt">tap to log another visit</span></label>
+              <div className="ls-clients">
+                {clients.map((c) => {
+                  const k = clientKey(c.first, c.last);
+                  return <button type="button" key={k} className={`ls-client ${picked === k ? "on" : ""}`} onClick={() => pickClient(c)}>{c.first} {c.last}</button>;
+                })}
+              </div>
+            </div>
+          )}
           <div className="ls-field">
             <label className="ls-q">Client name <span className="ls-req">*</span></label>
             <div className="ls-row2">
-              <input className="ls-in" placeholder="First" value={first} onChange={(e) => setFirst(e.target.value)} />
-              <input className="ls-in" placeholder="Last" value={last} onChange={(e) => setLast(e.target.value)} />
+              <input className="ls-in" placeholder="First" value={first} onChange={(e) => { setFirst(e.target.value); setPicked(""); }} />
+              <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
             </div>
           </div>
           <div className="ls-field">
