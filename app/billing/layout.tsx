@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, devMode, hasBillingBeta } from "@/lib/billingRole";
-import { listSessions } from "@/lib/billing";
+import { listSessions, getPracticeConfig } from "@/lib/billing";
 import BillingSidebar from "@/components/billing/BillingSidebar";
 import IdleLogout from "@/components/IdleLogout";
 
@@ -19,12 +19,12 @@ export default async function BillingLayout({ children }: { children: React.Reac
   // BETA: billing is only available to enrolled accounts. Everyone else goes back to intake.
   if (!hasBillingBeta(user.clinician)) redirect("/dashboard?billing=beta");
 
-  const sessions = await listSessions();
+  const [sessions, cfg] = await Promise.all([listSessions(), getPracticeConfig()]);
   const queueCount = sessions.filter((s) => s.insurerId && !s.insurancePaid).length;
 
   const roleLabel =
     user.role === "owner" ? "Owner"
-    : user.role === "biller" ? "Biller · 3% of collected"
+    : user.role === "biller" ? `Biller · ${cfg.billerCommissionPct}% of collected`
     : user.clinician.credentials;
 
   return (

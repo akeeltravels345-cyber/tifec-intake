@@ -8,6 +8,6 @@ export default async function BillingHome() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing");
   if (user.role === "owner") redirect("/billing/overview");
-  if (user.role === "biller") redirect("/billing/payments");
+  if (user.role === "biller") redirect("/billing/biller");
   redirect("/billing/me");
 }

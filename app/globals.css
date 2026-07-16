@@ -1706,7 +1706,11 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-topbar { padding-bottom: 20px; border-bottom: 1.5px solid var(--indigo); margin-bottom: 24px; }
 .bq-h1 { font: 500 26px "Newsreader", serif; letter-spacing: -.01em; margin: 0; color: var(--ink); }
 .bq-sub { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.biz .bl-cta { display: inline-flex; align-items: center; background: var(--indigo); color: #fff; border-radius: 10px; padding: 10px 15px; font: 600 13px "Open Sans"; text-decoration: none; white-space: nowrap; }
+.biz .bl-cta:hover { color: #fff; filter: brightness(1.07); }
+.bl-toyou { font-size: 12px; font-weight: 700; color: #2c7a55; min-width: 46px; text-align: right; }
 .bq-hero { display: grid; grid-template-columns: 1.15fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+@media (max-width: 900px) { .bq-hero { grid-template-columns: 1fr 1fr; } }
 .bq-comm { background: linear-gradient(135deg, #2b2f86, #256e72); color: #fff; border-radius: 16px; padding: 18px 20px; position: relative; overflow: hidden; }
 .bq-comm .cl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.72); font-weight: 700; }
 .bq-comm .cv { font: 400 34px "Newsreader", serif; margin-top: 8px; font-variant-numeric: tabular-nums; }

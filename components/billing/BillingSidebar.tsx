@@ -21,7 +21,10 @@ export default function BillingSidebar({
 
   const nav: NavItem[] =
     role === "biller"
-      ? [{ href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") }]
+      ? [
+          { href: "/billing/biller", label: "Dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
+          { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+        ]
       : role === "clinician"
         ? [
             { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") || p === "/billing/me" },
@@ -39,7 +42,7 @@ export default function BillingSidebar({
     const who = r === "owner" ? "shion-oconnor" : r === "clinician" ? "donnet-oconnor" : "nick-oconnor";
     document.cookie = `dev_role=${r}; path=/; max-age=31536000`;
     document.cookie = `dev_as=${who}; path=/; max-age=31536000`;
-    window.location.href = r === "owner" ? "/billing/overview" : r === "clinician" ? "/billing/me" : "/billing/payments";
+    window.location.href = r === "owner" ? "/billing/overview" : r === "clinician" ? "/billing/me" : "/billing/biller";
   }
 
   async function signOut() {
