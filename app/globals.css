@@ -1507,6 +1507,7 @@ body:has(.biz) { background: #F8F9F8; }
 /* earned (vs owed): teal fill for the biller's per-clinician commission bars */
 .bo-ctrack.teal { background: #E2EDEC; }
 .bo-ctrack.teal i { background: linear-gradient(90deg, #2F8E93, #43A9AE); }
+.bl-out { display: inline-block; margin-left: 7px; padding: 1px 7px; border-radius: 999px; border: 1px solid #E1D9C8; background: #FBF9F4; color: var(--muted); font-weight: 700; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; vertical-align: middle; }
 .bl-rate { display: inline-block; padding: 1px 6px; margin-right: 6px; border-radius: 999px; background: #E2EDEC; color: #256E72; font-weight: 700; font-size: 11px; letter-spacing: .01em; }
 .bo-cright { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .bo-camt { font: 400 18px "Newsreader", serif; font-variant-numeric: tabular-nums; }

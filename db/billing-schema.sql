@@ -42,6 +42,18 @@ CREATE TABLE IF NOT EXISTS billing_clinician_settings (
 );
 -- Existing installs: ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS biller_pct NUMERIC;
 
+-- Clinicians OUTSIDE the practice whose billing the biller handles privately.
+-- No intake login, and deliberately NOT part of TIFEC's revenue or payouts:
+-- the owner's pages map over the lib/clinicians.ts roster, so these are skipped.
+-- The only money they drive is the biller's own commission. Ids are 'ext-...'.
+CREATE TABLE IF NOT EXISTS billing_external_clinicians (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  biller_pct NUMERIC NOT NULL DEFAULT 0,  -- biller's % on this clinician's insurance
+  active     BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- One row per visit. 6 visits = 6 rows, each flips to paid independently.
 -- Client name is AES-encrypted at rest (client_enc = ciphertext of {first,last}).
 CREATE TABLE IF NOT EXISTS billing_sessions (

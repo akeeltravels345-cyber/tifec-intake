@@ -19,6 +19,16 @@ export interface Insurer {
   active: boolean;
 }
 
+// A clinician OUTSIDE the practice whose billing the biller handles privately.
+// They have no intake login and never appear in TIFEC's own revenue or payouts —
+// the only money they drive is the biller's own commission.
+export interface ExternalClinician {
+  id: string;
+  name: string;
+  billerPct: number; // biller's commission % on this clinician's insurance collected
+  active: boolean;
+}
+
 export interface CptCode {
   code: string;
   description: string;
@@ -116,6 +126,7 @@ const CPT_FILE = "billing-cpt.local.json";
 const SET_FILE = "billing-settings.local.json";
 const SESS_FILE = "billing-sessions.local.json";
 const CFG_FILE = "billing-config.local.json";
+const EXT_FILE = "billing-external.local.json";
 
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 
@@ -154,6 +165,54 @@ export async function deleteInsurer(id: string): Promise<void> {
     return;
   }
   writeJson(INS_FILE, readJson<Insurer[]>(INS_FILE, []).filter((x) => x.id !== id));
+}
+
+// --- Outside clinicians (biller's private clients) --------------------------
+// Ids are prefixed so a session's clinician_id can never collide with a real
+// roster id in lib/clinicians.ts, and so the owner's pages (which map over
+// CLINICIANS) naturally skip them.
+export const EXTERNAL_PREFIX = "ext-";
+export const isExternalId = (id: string) => id.startsWith(EXTERNAL_PREFIX);
+
+export async function listExternalClinicians(): Promise<ExternalClinician[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT * FROM billing_external_clinicians ORDER BY name`) as Record<string, unknown>[];
+    return rows.map((r) => ({ id: r.id as string, name: r.name as string, billerPct: num(r.biller_pct), active: !!r.active }));
+  }
+  return readJson<ExternalClinician[]>(EXT_FILE, []);
+}
+
+export async function upsertExternalClinician(c: Omit<ExternalClinician, "id"> & { id?: string }): Promise<ExternalClinician> {
+  const row: ExternalClinician = {
+    id: c.id || EXTERNAL_PREFIX + randomId(),
+    name: c.name,
+    billerPct: c.billerPct,
+    active: c.active ?? true,
+  };
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`
+      INSERT INTO billing_external_clinicians (id, name, biller_pct, active)
+      VALUES (${row.id}, ${row.name}, ${row.billerPct}, ${row.active})
+      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, biller_pct = EXCLUDED.biller_pct, active = EXCLUDED.active`;
+    return row;
+  }
+  const all = readJson<ExternalClinician[]>(EXT_FILE, []);
+  const i = all.findIndex((x) => x.id === row.id);
+  if (i >= 0) all[i] = row;
+  else all.push(row);
+  writeJson(EXT_FILE, all);
+  return row;
+}
+
+export async function deleteExternalClinician(id: string): Promise<void> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM billing_external_clinicians WHERE id = ${id}`;
+    return;
+  }
+  writeJson(EXT_FILE, readJson<ExternalClinician[]>(EXT_FILE, []).filter((x) => x.id !== id));
 }
 
 // ============================ CPT codes =====================================

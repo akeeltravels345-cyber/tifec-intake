@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { insertSession } from "@/lib/billing";
+import { insertSession, listExternalClinicians, isExternalId } from "@/lib/billing";
+import { billingRoleOf, canMarkBilled } from "@/lib/billingRole";
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -24,8 +25,23 @@ export async function POST(req: Request) {
 
   const cptCodes = Array.isArray(body.cptCodes) ? body.cptCodes.map((c) => String(c)).filter(Boolean) : [];
 
+  // A session is logged against yourself, unless the biller is logging one for
+  // an OUTSIDE clinician he bills for. Deliberately narrow: the target must be
+  // an active external id, so this can never attribute work to a real
+  // clinician on the roster.
+  let clinicianId = me.id;
+  const forId = body.clinicianId ? String(body.clinicianId) : "";
+  if (forId && forId !== me.id) {
+    if (!canMarkBilled(billingRoleOf(me)) || !isExternalId(forId)) {
+      return NextResponse.json({ error: "You can only log your own sessions." }, { status: 403 });
+    }
+    const ext = (await listExternalClinicians()).find((c) => c.id === forId && c.active);
+    if (!ext) return NextResponse.json({ error: "Unknown outside clinician." }, { status: 400 });
+    clinicianId = ext.id;
+  }
+
   const session = await insertSession({
-    clinicianId: me.id,
+    clinicianId,
     createdBy: me.id,
     clientFirst,
     clientLast,

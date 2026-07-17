@@ -7,10 +7,12 @@ export interface Claim {
   id: string; dos: string; age: number;
   clinicianId: string; clinicianName: string; clientName: string;
   insurerId: string; insurerName: string; amount: number; paid: boolean; paidDate: string | null;
+  /** The biller's cut of THIS claim, at this clinician's own rate. */
+  commission: number;
 }
 export interface QueueData {
   outstanding: Claim[]; billed: Claim[];
-  commissionPct: number; commissionThisMonth: number; billedThisMonth: number; waitingCommission: number;
+  commissionThisMonth: number; billedThisMonth: number; waitingCommission: number;
   outstandingTotal: number; awaitingCount: number; oldestDays: number;
   buckets: { label: string; color: string; amount: number; count: number }[];
   clinicians: { id: string; name: string }[];
@@ -23,8 +25,9 @@ const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2
 
 export default function BillingQueueClient({ data }: { data: QueueData }) {
   const router = useRouter();
-  const pct = data.commissionPct;
-  const comm = (amt: number) => (amt * pct) / 100;
+  // Rates differ per clinician, so a cut is always summed from the claims
+  // themselves rather than derived from a total.
+  const comm = (claims: Claim[]) => claims.reduce((t, c) => t + c.commission, 0);
   const [tab, setTab] = useState<"outstanding" | "billed">("outstanding");
   const [groupBy, setGroupBy] = useState<"insurer" | "clinician">("insurer");
   const [q, setQ] = useState("");
@@ -83,7 +86,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         <div className="bq-comm">
           <div className="cl">Your commission · this month</div>
           <div className="cv">{money(data.commissionThisMonth)}</div>
-          <div className="cs">{pct}% of {money(data.billedThisMonth)} you&apos;ve marked billed.<br /><b>+{money(data.waitingCommission)}</b> waiting on the {data.awaitingCount} open claims.</div>
+          <div className="cs">Your cut of the {money(data.billedThisMonth)} you&apos;ve marked billed.<br /><b>+{money(data.waitingCommission)}</b> waiting on the {data.awaitingCount} open claims.</div>
         </div>
         <div className="bq-kpi"><div className="k">Outstanding</div><div className="v">{money0(data.outstandingTotal)}</div></div>
         <div className="bq-kpi"><div className="k">Claims awaiting</div><div className="v">{data.awaitingCount}</div></div>
@@ -134,7 +137,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <div className="bq-gname">{g.name}</div>
                       <div className="bq-gmeta">{g.claims.length} claim{g.claims.length === 1 ? "" : "s"} · <span className={`bq-age ${g.oldest >= 15 ? "warn" : ""}`}>oldest {g.oldest}d</span></div>
                     </div>
-                    <div className="bq-gright"><div className="bq-gtot">{money(g.total)}</div><div className="bq-gcomm">+{money(comm(g.total))} to you</div></div>
+                    <div className="bq-gright"><div className="bq-gtot">{money(g.total)}</div><div className="bq-gcomm">+{money(comm(g.claims))} to you</div></div>
                   </div>
                   {g.claims.map((c) => (
                     <div className={`bq-row ${selected.has(c.id) ? "sel" : ""}`} key={c.id}>
@@ -143,7 +146,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
                       <div className="who"><div className="cl">{c.clientName}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
                       <div className="amt">{money(c.amount)}</div>
-                      <div className="comm">+{money(comm(c.amount))}</div>
+                      <div className="comm">+{money(c.commission)}</div>
                     </div>
                   ))}
                 </div>
@@ -160,7 +163,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
               <span>{c.clientName}</span>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>{c.clinicianName}</span>
               <span className="amt">{money(c.amount)}</span>
-              <span className="comm">+{money(comm(c.amount))}</span>
+              <span className="comm">+{money(c.commission)}</span>
               <button className="bq-undo" disabled={busy} onClick={() => mark([c.id], false, null)}>Undo</button>
             </div>
           ))}
@@ -169,7 +172,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
 
       {selected.size > 0 && (
         <div className="bq-bulk">
-          <div><div className="bt">{selected.size} claim{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} insurance · <span className="comm">+{money(comm(selTotal))} to you</span></div></div>
+          <div><div className="bt">{selected.size} claim{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} insurance · <span className="comm">+{money(comm(selClaims))} to you</span></div></div>
           <div className="sp" />
           <label>Paid date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
           <button className="go" disabled={busy} onClick={() => mark([...selected], true, batchDate)}>{busy ? "Marking…" : `Mark ${selected.size} billed`}</button>

@@ -17,11 +17,13 @@ function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
   return 0;
 }
 
-export default function SessionForm({ insurers, cptCodes, clients = [] }: { insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[] }) {
+export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [] }: { insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[]; forClinicians?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [picked, setPicked] = useState("");
+  // Only supplied when the biller is logging a claim for an outside clinician.
+  const [forId, setForId] = useState(forClinicians[0]?.id ?? "");
 
   function pickClient(c: ClientOpt) {
     const k = clientKey(c.first, c.last);
@@ -58,7 +60,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [] }: { insu
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: copayNum, notes: notes.trim() }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: copayNum, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -76,6 +78,14 @@ export default function SessionForm({ insurers, cptCodes, clients = [] }: { insu
     <form onSubmit={submit} className="ls-grid">
       <div className="ls-card">
         <div className="ls-form">
+          {forClinicians.length > 0 && (
+            <div className="ls-field">
+              <label className="ls-q">Which clinician is this claim for? <span className="ls-req">*</span></label>
+              <select className="ls-in" value={forId} onChange={(e) => setForId(e.target.value)}>
+                {forClinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
           {clients.length > 0 && (
             <div className="ls-field">
               <label className="ls-q">Returning client? <span className="opt">tap to log another visit</span></label>

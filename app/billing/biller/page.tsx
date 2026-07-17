@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
-import { listSessions, listInsurers, listClinicianSettings } from "@/lib/billing";
+import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians } from "@/lib/billing";
 import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
@@ -29,11 +29,14 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const mKey = key(year, month);
   const prevY = month === 1 ? year - 1 : year, prevM = month === 1 ? 12 : month - 1;
 
-  const [all, insurerList, settingsList] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings()]);
+  const [all, insurerList, settingsList, external] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings(), listExternalClinicians()]);
   // Biller commission is set PER CLINICIAN (e.g. 10% on the owner's collections, 7% on others).
-  const billerPctOf = (cid: string) => settingsList.find((s) => s.clinicianId === cid)?.billerPct ?? 0;
+  // Outside clinicians carry their own rate on their own record.
+  const billerPctOf = (cid: string) =>
+    external.find((c) => c.id === cid)?.billerPct ?? settingsList.find((s) => s.clinicianId === cid)?.billerPct ?? 0;
   const comm = (s: (typeof all)[number]) => (insurancePortion(s) * billerPctOf(s.clinicianId)) / 100;
   const insName = (id: string | null) => insurerList.find((i) => i.id === id)?.name ?? "—";
+  const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
   const sum = (arr: typeof all, f: (s: (typeof all)[number]) => number) => r2(arr.reduce((t, s) => t + f(s), 0));
 
   const billedThisMonth = all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && insurancePortion(s) > 0);
@@ -63,11 +66,15 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const insMax = Math.max(1, ...byInsurer.map((i) => i.amount));
 
   // where your commission came from — earnings per clinician this month
-  const byClinician = CLINICIANS.map((c) => {
+  const roster = [
+    ...CLINICIANS.filter((c) => !c.intakeHidden).map((c) => ({ id: c.id, name: c.name, external: false })),
+    ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, external: true })),
+  ];
+  const byClinician = roster.map((c) => {
     const billed = billedThisMonth.filter((s) => s.clinicianId === c.id);
     const open = unbilled.filter((s) => s.clinicianId === c.id);
     return {
-      id: c.id, name: c.name, pct: billerPctOf(c.id), claims: billed.length,
+      id: c.id, name: c.name, external: c.external, pct: billerPctOf(c.id), claims: billed.length,
       collected: sum(billed, insurancePortion), cut: sum(billed, comm),
       pending: sum(open, comm), outstanding: sum(open, insurancePortion),
     };
@@ -130,11 +137,12 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
       <div className="bo-card" style={{ marginBottom: 18 }}>
         <div className="bo-secrow" style={{ margin: "0 0 8px" }}>
           <span className="bo-lab">Your commission by clinician · {MONTHS[month - 1]}</span>
-          <span className="bo-hint">where your {money0(commission)} came from · your rate differs per clinician</span>
+          <Link href="/billing/outside" className="bl-cta">Outside clients →</Link>
         </div>
+        <p className="bo-hint" style={{ margin: "0 2px 8px" }}>where your {money0(commission)} came from · your rate differs per clinician</p>
         {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
           <div className="bo-crow" key={c.id}>
-            <div className="ins">{c.name}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
+            <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
             <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
             <div className="bo-cright">
               <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
@@ -194,7 +202,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
                 <tr key={s.id}>
                   <td>{s.paidDate}</td>
                   <td className="nm">{s.clientFirst} {s.clientLast}</td>
-                  <td>{getClinician(s.clinicianId)?.name ?? s.clinicianId}</td>
+                  <td>{clinName(s.clinicianId)}</td>
                   <td>{insName(s.insurerId)}</td>
                   <td className="num">{money(insurancePortion(s))}</td>
                   <td className="num" style={{ color: "#2c7a55", fontWeight: 700 }}>+{money(r2(comm(s)))}</td>

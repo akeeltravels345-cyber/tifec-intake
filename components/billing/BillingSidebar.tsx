@@ -24,6 +24,7 @@ export default function BillingSidebar({
       ? [
           { href: "/billing/biller", label: "Dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
           { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+          { href: "/billing/outside", label: "Outside clients", icon: IconClin, match: (p) => p.startsWith("/billing/outside") },
         ]
       : role === "clinician"
         ? [
