@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { getCurrentClinician } from "@/lib/auth";
 import { getTourSeen } from "@/lib/users";
 import { hasBillingBeta } from "@/lib/billingRole";
+import { unreadCount, listTickets } from "@/lib/comms";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import { templateLabel } from "@/lib/forms";
@@ -112,6 +113,11 @@ export default async function Dashboard() {
   });
 
   const needReview = items.filter((i) => i.status === "new").length;
+
+  // Team area badges: unread messages, and tickets still waiting on this person.
+  const teamUnread = await unreadCount(me.id);
+  const openTickets = (await listTickets()).filter((t) => t.assignee === me.id && t.status !== "resolved").length;
+
   // For the guided tour: open a real record (prefer one with DSM scoring to demo).
   const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;
 
@@ -204,6 +210,8 @@ export default async function Dashboard() {
       tourToken={tourToken}
       billingBeta={hasBillingBeta(me)}
       autoTour={!tourSeen}
+      teamUnread={teamUnread}
+      openTickets={openTickets}
     />
   );
 }

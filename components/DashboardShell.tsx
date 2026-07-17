@@ -84,6 +84,8 @@ export default function DashboardShell({
   tourToken,
   billingBeta,
   autoTour,
+  teamUnread = 0,
+  openTickets = 0,
 }: {
   name: string;
   initials: string;
@@ -94,6 +96,9 @@ export default function DashboardShell({
   tourToken?: string;
   billingBeta?: boolean;
   autoTour?: boolean;
+  /** Unread direct messages, and tickets waiting on this person. */
+  teamUnread?: number;
+  openTickets?: number;
 }) {
   const [view, setView] = useState<View>("dashboard");
   const [status, setStatus] = useState<Status>("new");
@@ -173,6 +178,20 @@ export default function DashboardShell({
           <button className={`dm-nav-item ${view === "forms" ? "active" : ""}`} onClick={() => setView("forms")}>
             {file(view === "forms")} Forms
           </button>
+          <Link className="dm-nav-item" href="/team/notices">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M8 12h8M8 8h8M8 16h5" /><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
+            Notice board
+          </Link>
+          <Link className="dm-nav-item" href="/team/messages">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.1A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /></svg>
+            Messages
+            {teamUnread > 0 && <span className="dm-nav-badge">{teamUnread}</span>}
+          </Link>
+          <Link className="dm-nav-item" href="/team/tickets">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" /><path d="M13 5v14" /></svg>
+            Tickets
+            {openTickets > 0 && <span className="dm-nav-badge">{openTickets}</span>}
+          </Link>
           {billingBeta && (
             <Link className="dm-nav-item" href="/billing">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>

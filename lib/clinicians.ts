@@ -19,6 +19,16 @@
 
 import type { FormSection, FormTemplateKey } from "./forms";
 
+/** Who a clinician can raise a ticket with, or message, in the team area.
+ *  Declared here rather than inferred: the owner and the admin both carry
+ *  `admin: true`, so nothing else distinguishes them. */
+export type ContactRole = "owner" | "biller" | "admin";
+export const CONTACT_LABEL: Record<ContactRole, string> = {
+  owner: "Practice owner",
+  biller: "Biller",
+  admin: "Practice admin",
+};
+
 export interface Clinician {
   id: string;
   name: string;
@@ -41,6 +51,9 @@ export interface Clinician {
   /** BETA: this account can see + open the billing system inside the intake app.
    *  Only enrolled accounts get the "Billing (Beta)" entry point and /billing access. */
   billingBeta?: boolean;
+  /** Reachable in the team area as this contact. Clinicians message and assign
+   *  tickets to a ROLE, so this is what puts a real person behind it. */
+  contact?: ContactRole;
 }
 
 // TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.
@@ -48,6 +61,7 @@ export const CLINICIANS: Clinician[] = [
   {
     id: "shion-oconnor",
     billingBeta: true, // BETA billing access
+    contact: "owner",
     name: "Dr. Shion O'Connor",
     credentials: "Clinical Psychologist & Family Therapist · Founder",
     email: "Therapy@caymanessentialcare.com",
@@ -159,6 +173,7 @@ export const CLINICIANS: Clinician[] = [
   {
     id: "nick-oconnor",
     billingBeta: true, // BETA billing access
+    contact: "biller",
     name: "Nick O'Connor",
     credentials: "Training Clinician (Practicum)",
     email: "tifec.billing@gmail.com",
@@ -189,6 +204,7 @@ export const CLINICIANS: Clinician[] = [
   {
     id: "akeel-test",
     billingBeta: true, // BETA billing access
+    contact: "admin",
     name: "Akeel (Test)",
     credentials: "Practice Administrator",
     email: "admin@caymanessentialcare.com",
@@ -221,6 +237,11 @@ export const CLINICIANS: Clinician[] = [
 export function getClinician(id: string): Clinician | undefined {
   return CLINICIANS.find((c) => c.id === id);
 }
+
+/** The people behind the owner / biller / admin contacts. */
+export const CONTACTS = CLINICIANS.filter((c) => !!c.contact);
+export const contactFor = (role: ContactRole): Clinician | undefined => CLINICIANS.find((c) => c.contact === role);
+export const isContact = (id: string): boolean => CONTACTS.some((c) => c.id === id);
 
 export function getClinicianByEmail(email: string): Clinician | undefined {
   const normalized = email.trim().toLowerCase();
