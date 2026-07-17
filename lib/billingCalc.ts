@@ -55,6 +55,9 @@ export interface ClinicianMonth {
   healthDeduction: number;          // fixed KYD (settings.otherDeductionFixed)
   payout: number;
   companyKeeps: number;
+  // biller commission earned on THIS clinician's insurance collected this month
+  billerPct: number;
+  billerCommission: number;
   // supporting lists
   visitSessions: BillingSession[];
   outstandingSessions: BillingSession[];
@@ -82,6 +85,8 @@ export function computeClinicianMonth(
   const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
   const health = settings.otherDeductionFixed;
   const payout = round2(collected - retentionAmount - otherPctAmount - health);
+  const billerPct = settings.billerPct ?? 0;
+  const billerCommission = round2((insuranceBilledThisMonth * billerPct) / 100);
 
   return {
     clinicianId: settings.clinicianId,
@@ -102,6 +107,8 @@ export function computeClinicianMonth(
     healthDeduction: health,
     payout,
     companyKeeps: round2(retentionAmount + otherPctAmount + health),
+    billerPct,
+    billerCommission,
     visitSessions: visits,
     outstandingSessions: unbilled,
   };
@@ -117,6 +124,7 @@ export interface BusinessMonth {
   copays: number;             // co-pays collected this month
   outstanding: number;        // total not yet paid by insurance (running)
   totalPayout: number;        // sum of clinician payouts
+  billerCommission: number;   // sum of per-clinician biller commission (paid this month)
   companyNet: number;         // collected - payouts (what the business keeps)
   perClinician: ClinicianMonth[];
 }
@@ -136,6 +144,7 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
     copays: s((c) => c.copayThisMonth),
     outstanding: s((c) => c.outstanding),
     totalPayout,
+    billerCommission: s((c) => c.billerCommission),
     companyNet: round2(collected - totalPayout),
     perClinician,
   };
@@ -153,17 +162,18 @@ export interface BottomLine {
   projectedNet: number; // net + what the practice keeps once outstanding lands (~37%)
 }
 
-export function computeBottomLine(biz: BusinessMonth, billerCommissionPct: number, runningExpensesTotal: number): BottomLine {
-  const billerCommission = round2((biz.billed * billerCommissionPct) / 100);
+export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number): BottomLine {
+  const billerCommission = biz.billerCommission; // per-clinician, already summed
   const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal);
-  // Once an outstanding claim is paid: 60% goes to the clinician, biller% off insurance,
-  // the rest (~37%) stays with the practice. Show the owner the swing.
-  const keepRate = Math.max(0, 100 - 60 - billerCommissionPct) / 100;
+  // Blended biller rate (varies by clinician) for the projected-net estimate. Once an
+  // outstanding claim is paid: 60% to the clinician, ~blended% to the biller, rest kept.
+  const effBillerPct = biz.billed > 0 ? (billerCommission / biz.billed) * 100 : 8.5;
+  const keepRate = Math.max(0, 100 - 60 - effBillerPct) / 100;
   return {
     cashCollected: biz.collected,
     payouts: biz.totalPayout,
     billerCommission,
-    billerCommissionPct,
+    billerCommissionPct: Math.round(effBillerPct * 10) / 10,
     runningExpenses: runningExpensesTotal,
     net,
     outstanding: biz.outstanding,

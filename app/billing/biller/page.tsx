@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
-import { listSessions, listInsurers, getPracticeConfig } from "@/lib/billing";
+import { listSessions, listInsurers, listClinicianSettings } from "@/lib/billing";
 import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
 import { getClinician } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
@@ -29,20 +29,22 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const mKey = key(year, month);
   const prevY = month === 1 ? year - 1 : year, prevM = month === 1 ? 12 : month - 1;
 
-  const [all, insurerList, cfg] = await Promise.all([listSessions(), listInsurers(), getPracticeConfig()]);
-  const pct = cfg.billerCommissionPct;
+  const [all, insurerList, settingsList] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings()]);
+  // Biller commission is set PER CLINICIAN (e.g. 10% on the owner's collections, 7% on others).
+  const billerPctOf = (cid: string) => settingsList.find((s) => s.clinicianId === cid)?.billerPct ?? 0;
+  const comm = (s: (typeof all)[number]) => (insurancePortion(s) * billerPctOf(s.clinicianId)) / 100;
   const insName = (id: string | null) => insurerList.find((i) => i.id === id)?.name ?? "—";
   const sum = (arr: typeof all, f: (s: (typeof all)[number]) => number) => r2(arr.reduce((t, s) => t + f(s), 0));
 
   const billedThisMonth = all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && insurancePortion(s) > 0);
   const insuranceCollected = sum(billedThisMonth, insurancePortion);
-  const commission = r2((insuranceCollected * pct) / 100);
+  const commission = sum(billedThisMonth, comm);
   const prevCollected = sum(all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === key(prevY, prevM)), insurancePortion);
   const commDelta = prevCollected > 0 ? ((insuranceCollected - prevCollected) / prevCollected) * 100 : null;
 
   const unbilled = all.filter((s) => s.insurerId && !s.insurancePaid && insurancePortion(s) > 0);
   const outstanding = sum(unbilled, insurancePortion);
-  const pendingCommission = r2((outstanding * pct) / 100);
+  const pendingCommission = sum(unbilled, comm);
   const oldest = unbilled.length ? Math.max(...unbilled.map((s) => ageDays(s.dateOfService, today))) : 0;
 
   // aging buckets of what's outstanding
@@ -50,11 +52,11 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   for (const s of unbilled) { const i = agingBucketIndex(ageDays(s.dateOfService, today)); if (i >= 0) { buckets[i].amount += insurancePortion(s); buckets[i].count++; } }
   buckets.forEach((b) => (b.amount = r2(b.amount)));
 
-  // who owes you — outstanding per insurer
-  const map = new Map<string, { name: string; amount: number; count: number; oldest: number }>();
+  // who owes you — outstanding per insurer (with your commission on it)
+  const map = new Map<string, { name: string; amount: number; count: number; oldest: number; toYou: number }>();
   for (const s of unbilled) {
-    const cur = map.get(s.insurerId!) ?? { name: insName(s.insurerId), amount: 0, count: 0, oldest: 0 };
-    cur.amount = r2(cur.amount + insurancePortion(s)); cur.count++; cur.oldest = Math.max(cur.oldest, ageDays(s.dateOfService, today));
+    const cur = map.get(s.insurerId!) ?? { name: insName(s.insurerId), amount: 0, count: 0, oldest: 0, toYou: 0 };
+    cur.amount = r2(cur.amount + insurancePortion(s)); cur.count++; cur.oldest = Math.max(cur.oldest, ageDays(s.dateOfService, today)); cur.toYou = r2(cur.toYou + comm(s));
     map.set(s.insurerId!, cur);
   }
   const byInsurer = [...map.values()].sort((a, b) => b.amount - a.amount);
@@ -81,7 +83,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
       <div className="bq-topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <div>
           <h1 className="bq-h1">Biller dashboard</h1>
-          <p className="bq-sub">{user.clinician.name} · {MONTHS[month - 1]} {year} · you earn {pct}% of insurance collected · KYD</p>
+          <p className="bq-sub">{user.clinician.name} · {MONTHS[month - 1]} {year} · commission set per clinician · KYD</p>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <MonthNav year={year} month={month} path="/billing/biller" />
@@ -94,7 +96,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         <div className="bq-comm">
           <div className="cl">Your commission · {MONTHS[month - 1]}</div>
           <div className="cv">{money(commission)}</div>
-          <div className="cs">{pct}% of <b>{money0(insuranceCollected)}</b> you&apos;ve marked billed. <b>+{money0(pendingCommission)}</b> waiting on the {byInsurer.reduce((t, i) => t + i.count, 0)} open claims.</div>
+          <div className="cs">Your cut of the <b>{money0(insuranceCollected)}</b> you&apos;ve marked billed. <b>+{money0(pendingCommission)}</b> waiting on the {byInsurer.reduce((t, i) => t + i.count, 0)} open claims.</div>
         </div>
         <div className="bq-kpi"><div className="k">Insurance collected</div><div className="v">{money0(insuranceCollected)}{commDelta !== null && <span className="bo-delta" style={{ fontSize: 11, marginLeft: 8 }}>{commDelta >= 0 ? "▲" : "▼"} {Math.abs(commDelta).toFixed(0)}%</span>}</div></div>
         <div className="bq-kpi"><div className="k">Claims billed</div><div className="v">{billedThisMonth.length}</div></div>
@@ -126,7 +128,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
               <div className="bo-cright">
                 <span className={`bo-age ${i.oldest >= 15 ? "warn" : ""}`}>oldest {i.oldest}d</span>
                 <span className="bo-camt">{money(i.amount)}</span>
-                <span className="bl-toyou">+{money0((i.amount * pct) / 100)}</span>
+                <span className="bl-toyou">+{money0(i.toYou)}</span>
               </div>
             </div>
           ))}
@@ -152,7 +154,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
       <div className="bo-card" style={{ padding: "8px 16px" }}>
         {recent.length === 0 ? <div className="bq-empty">Nothing billed yet this period.</div> : (
           <div className="cd-tblwrap"><table className="cd-tbl">
-            <thead><tr><th>Paid</th><th>Client</th><th>Clinician</th><th>Insurer</th><th className="num">Amount</th><th className="num">+{pct}%</th></tr></thead>
+            <thead><tr><th>Paid</th><th>Client</th><th>Clinician</th><th>Insurer</th><th className="num">Amount</th><th className="num">Your cut</th></tr></thead>
             <tbody>
               {recent.map((s) => (
                 <tr key={s.id}>
@@ -161,7 +163,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
                   <td>{getClinician(s.clinicianId)?.name ?? s.clinicianId}</td>
                   <td>{insName(s.insurerId)}</td>
                   <td className="num">{money(insurancePortion(s))}</td>
-                  <td className="num" style={{ color: "#2c7a55", fontWeight: 700 }}>+{money(r2((insurancePortion(s) * pct) / 100))}</td>
+                  <td className="num" style={{ color: "#2c7a55", fontWeight: 700 }}>+{money(r2(comm(s)))}</td>
                 </tr>
               ))}
             </tbody>

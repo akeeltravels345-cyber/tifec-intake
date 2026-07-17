@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; }
 interface Cpt { code: string; description: string; fee: number; hrs: number; active: boolean; }
-interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; }
+interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; billerPct: number; }
 interface Expense { id: string; name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[]; }
 interface ClinRef { id: string; name: string; }
 
@@ -36,7 +36,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
   const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", fee: 0, hrs: 1, active: true });
-  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => [c.id, setIn.find((s) => s.clinicianId === c.id) ?? { clinicianId: c.id, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0 }])));
+  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, billerPct: f?.billerPct ?? 0 }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
 
@@ -135,9 +135,9 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
 
       {/* Clinician splits */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">Company retention and any fixed health deduction per clinician. Payout = collected − these.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">Retention, health deduction, and the biller&apos;s % on each clinician&apos;s insurance collected. Payout = collected − retention − deductions.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th></th></tr></thead>
+          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Biller %</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
               <tr key={c.id}>
@@ -145,7 +145,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td className="num"><input className="su-in short" type="number" step="0.5" value={s.retentionPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, retentionPct: Number(e.target.value) } })} /></td>
                 <td className="num"><input className="su-in short" type="number" step="0.5" value={s.otherDeductionPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, otherDeductionPct: Number(e.target.value) } })} /></td>
                 <td className="num"><input className="su-in short" type="number" step="1" value={s.otherDeductionFixed} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: Number(e.target.value) } })} /></td>
-                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed }, "Saved")}>Save</button></div></td>
+                <td className="num"><input className="su-in short" type="number" step="0.5" value={s.billerPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, billerPct: Number(e.target.value) } })} /></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, billerPct: s.billerPct }, "Saved")}>Save</button></div></td>
               </tr>
             ); })}
           </tbody>

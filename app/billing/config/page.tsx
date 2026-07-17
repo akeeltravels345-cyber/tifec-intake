@@ -20,7 +20,7 @@ export default async function SetupPage() {
       insurers={insurers}
       cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, active: c.active }))}
       clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
-      settings={settings}
+      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, billerPct: s.billerPct ?? 0 }))}
       billerPct={cfg.billerCommissionPct}
       expenses={cfg.runningExpenses}
       billerName={biller.name}

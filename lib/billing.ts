@@ -57,6 +57,7 @@ export interface ClinicianBillingSettings {
   retentionPct: number; // % company keeps
   otherDeductionPct: number; // additional %
   otherDeductionFixed: number; // flat amount per payout
+  billerPct?: number; // biller commission % on THIS clinician's insurance collected
 }
 
 export interface SessionInput {
@@ -200,7 +201,7 @@ export async function listClinicianSettings(): Promise<ClinicianBillingSettings[
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_clinician_settings`) as Record<string, unknown>[];
-    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed) }));
+    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed), billerPct: r.biller_pct == null ? undefined : num(r.biller_pct) }));
   }
   return readJson<ClinicianBillingSettings[]>(SET_FILE, []);
 }
@@ -214,9 +215,9 @@ export async function upsertClinicianSettings(s: ClinicianBillingSettings): Prom
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, updated_at)
-      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, now())
-      ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, updated_at = now()`;
+      INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, biller_pct, updated_at)
+      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.billerPct ?? null}, now())
+      ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, biller_pct = EXCLUDED.biller_pct, updated_at = now()`;
     return s;
   }
   const all = readJson<ClinicianBillingSettings[]>(SET_FILE, []);

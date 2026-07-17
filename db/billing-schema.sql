@@ -37,8 +37,10 @@ CREATE TABLE IF NOT EXISTS billing_clinician_settings (
   retention_pct         NUMERIC NOT NULL DEFAULT 0, -- % of revenue the company keeps
   other_deduction_pct   NUMERIC NOT NULL DEFAULT 0, -- additional % deduction
   other_deduction_fixed NUMERIC NOT NULL DEFAULT 0, -- flat deduction per payout
+  biller_pct            NUMERIC,                   -- biller commission % on this clinician's insurance
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Existing installs: ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS biller_pct NUMERIC;
 
 -- One row per visit. 6 visits = 6 rows, each flips to paid independently.
 -- Client name is AES-encrypted at rest (client_enc = ciphertext of {first,last}).

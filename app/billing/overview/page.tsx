@@ -33,7 +33,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const biz = bizFor(year, month);
   const prev = bizFor(prevY, prevM);
   const expensesTotal = runningExpensesTotal(cfg);
-  const bottom = computeBottomLine(biz, cfg.billerCommissionPct, expensesTotal);
+  const bottom = computeBottomLine(biz, expensesTotal);
 
   const earned = biz.revenueGenerated;
   const thisMonthOutstanding = r2(biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0));

@@ -124,7 +124,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
           <div className="bo-wf">
             <div className="bo-wfl"><span className="k">Cash collected</span><span className="v">{money(data.bottom.cashCollected)}</span></div>
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "var(--indigo)" }} />Clinician payouts</span><span className="v">−{money(data.bottom.payouts)}</span></div>
-            <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#8b93b8" }} />Biller commission · {data.bottom.billerCommissionPct}%</span><span className="v">−{money(data.bottom.billerCommission)}</span></div>
+            <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#8b93b8" }} />Biller commission</span><span className="v">−{money(data.bottom.billerCommission)}</span></div>
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Running expenses</span><span className="v">−{money(data.bottom.runningExpenses)}</span></div>
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
           </div>
@@ -235,7 +235,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                 <tbody>
                   <tr><td>Cash collected</td><td className="num">{money(data.bottom.cashCollected)}</td></tr>
                   <tr className="minus"><td>Clinician payouts</td><td className="num">−{money(data.bottom.payouts)}</td></tr>
-                  <tr className="minus"><td>Biller commission · {data.bottom.billerCommissionPct}%</td><td className="num">−{money(data.bottom.billerCommission)}</td></tr>
+                  <tr className="minus"><td>Biller commission</td><td className="num">−{money(data.bottom.billerCommission)}</td></tr>
                   <tr className="minus"><td>Running expenses</td><td className="num">−{money(data.bottom.runningExpenses)}</td></tr>
                   <tr className="tot"><td>Net this month</td><td className="num">{money0(data.bottom.net)}</td></tr>
                 </tbody>
