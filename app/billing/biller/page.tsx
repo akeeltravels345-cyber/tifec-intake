@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listClinicianSettings } from "@/lib/billing";
 import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +62,18 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const byInsurer = [...map.values()].sort((a, b) => b.amount - a.amount);
   const insMax = Math.max(1, ...byInsurer.map((i) => i.amount));
 
+  // where your commission came from — earnings per clinician this month
+  const byClinician = CLINICIANS.map((c) => {
+    const billed = billedThisMonth.filter((s) => s.clinicianId === c.id);
+    const open = unbilled.filter((s) => s.clinicianId === c.id);
+    return {
+      id: c.id, name: c.name, pct: billerPctOf(c.id), claims: billed.length,
+      collected: sum(billed, insurancePortion), cut: sum(billed, comm),
+      pending: sum(open, comm), outstanding: sum(open, insurancePortion),
+    };
+  }).filter((c) => c.collected > 0 || c.outstanding > 0).sort((a, b) => b.cut - a.cut);
+  const cutMax = Math.max(1, ...byClinician.map((c) => c.cut));
+
   // recent claims marked billed (activity log)
   const recent = all.filter((s) => s.insurancePaid && s.paidDate && insurancePortion(s) > 0)
     .sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || "")).slice(0, 8);
@@ -112,6 +124,28 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
             <div className="bc">{b.count} claim{b.count === 1 ? "" : "s"}</div>
           </Link>
         ))}
+      </div>
+
+      {/* where your commission came from */}
+      <div className="bo-card" style={{ marginBottom: 18 }}>
+        <div className="bo-secrow" style={{ margin: "0 0 8px" }}>
+          <span className="bo-lab">Your commission by clinician · {MONTHS[month - 1]}</span>
+          <span className="bo-hint">where your {money0(commission)} came from · your rate differs per clinician</span>
+        </div>
+        {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
+          <div className="bo-crow" key={c.id}>
+            <div className="ins">{c.name}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
+            <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
+            <div className="bo-cright">
+              <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
+              <span className="bo-camt">{money(c.cut)}</span>
+              <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
+            </div>
+          </div>
+        ))}
+        <p className="bo-hint" style={{ margin: "14px 2px 0" }}>
+          Earned = your % of each clinician&apos;s insurance collected this month. &quot;Pending&quot; is what you&apos;ll earn when their open claims are paid.
+        </p>
       </div>
 
       <div className="bo-two">
