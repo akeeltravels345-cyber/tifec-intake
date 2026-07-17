@@ -116,7 +116,7 @@ export default async function Dashboard() {
 
   // Team area badges: unread messages, and tickets still waiting on this person.
   const teamUnread = await unreadCount(me.id);
-  const openTickets = (await listTickets()).filter((t) => t.assignee === me.id && t.status !== "resolved").length;
+  const openTickets = (await listTickets()).filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length;
 
   // For the guided tour: open a real record (prefer one with DSM scoring to demo).
   const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;

@@ -1987,3 +1987,20 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
   .tm-wrap { padding: 16px 14px 48px; }
   .tm-tab { padding: 9px 12px; font-size: 12.5px; }
 }
+
+/* Multi-assignee picker: a ticket can need more than one person on it. */
+.tm-fs { border: none; padding: 0; margin: 0 0 4px; }
+.tm-fs .tm-l { margin-top: 0; }
+.tm-picks { display: flex; gap: 8px; flex-wrap: wrap; }
+.tm-pick {
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  border: 1px solid #d9e1e5; border-radius: 10px; padding: 9px 13px; background: #fff; flex: 1 1 190px;
+}
+.tm-pick:hover { border-color: #b9c6cb; }
+.tm-pick.on { border-color: var(--teal); background: #EDF5F5; box-shadow: 0 0 0 2px rgba(49,154,159,.1); }
+.tm-pick input { accent-color: var(--teal); width: 15px; height: 15px; flex-shrink: 0; }
+.tm-pick span { display: flex; flex-direction: column; min-width: 0; }
+.tm-pickname { font: 600 13px "Open Sans"; color: var(--ink); }
+.tm-picklabel { font-size: 11.5px; color: var(--muted); }
+.tm-manage .tm-picks { grid-column: auto; }
+@media (max-width: 760px) { .tm-pick { flex: 1 1 100%; } }

@@ -16,7 +16,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
 
   // Yours if you raised it or it's assigned to you; the owner and admin oversee all.
   const seesAll = me.contact === "admin" || me.contact === "owner";
-  if (!seesAll && t.createdBy !== me.id && t.assignee !== me.id) redirect("/team/tickets");
+  if (!seesAll && t.createdBy !== me.id && !t.assignees.includes(me.id)) redirect("/team/tickets");
 
   const threadId = ticketThreadId(t.id);
   const replies = await listMessages(threadId);
@@ -25,14 +25,13 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   return (
     <TicketDetail
       threadId={threadId}
-      canManage={t.assignee === me.id || seesAll}
+      canManage={t.assignees.includes(me.id) || seesAll}
       contacts={CONTACTS.map((c) => ({ id: c.id, name: c.name, label: CONTACT_LABEL[c.contact!] }))}
       ticket={{
         id: t.id, ref: t.ref, subject: t.subject, area: t.area, body: t.body, status: t.status,
         createdAt: t.createdAt,
         raisedBy: getClinician(t.createdBy)?.name ?? t.createdBy,
-        assigneeId: t.assignee,
-        assignee: getClinician(t.assignee)?.name ?? t.assignee,
+        assignees: t.assignees.map((id) => ({ id, name: getClinician(id)?.name ?? id })),
       }}
       replies={replies.map((m) => ({
         id: m.id, body: m.body, at: m.createdAt,

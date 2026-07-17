@@ -54,7 +54,9 @@ export interface Ticket {
   id: string;
   ref: number; // short human reference, e.g. #7
   createdBy: string;
-  assignee: string; // clinician id
+  /** One or more contacts. A billing question can need the biller AND the
+   *  admin, so a ticket is never limited to a single owner. Always non-empty. */
+  assignees: string[];
   area: TicketArea;
   subject: string;
   body: string;
@@ -206,20 +208,34 @@ export async function unreadCount(me: string): Promise<number> {
 // ============================ Tickets =======================================
 interface StoredTicket extends Omit<Ticket, "body" | "subject"> { bodyEnc: string; subjectEnc: string }
 
+/** Read an assignee list back. Postgres hands JSONB back already parsed, but a
+ *  driver or an older single-assignee row may give a plain string, so cope with
+ *  both rather than crashing a whole ticket list. */
+function toIds(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(String).filter(Boolean);
+  if (typeof v === "string" && v.trim()) {
+    try {
+      const p = JSON.parse(v);
+      return Array.isArray(p) ? p.map(String).filter(Boolean) : [v];
+    } catch { return [v]; } // pre-JSONB row: one bare clinician id
+  }
+  return [];
+}
+
 export async function listTickets(): Promise<Ticket[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`
-      SELECT id, ref, created_by, assignee, area, subject_enc, body_enc, status, created_at, updated_at
+      SELECT id, ref, created_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at
       FROM comms_tickets ORDER BY created_at DESC`) as Record<string, unknown>[];
     return rows.map((r) => ({
-      id: str(r.id), ref: Number(r.ref), createdBy: str(r.created_by), assignee: str(r.assignee),
+      id: str(r.id), ref: Number(r.ref), createdBy: str(r.created_by), assignees: toIds(r.assignees),
       area: str(r.area) as TicketArea, subject: safeDecrypt(r.subject_enc), body: safeDecrypt(r.body_enc),
       status: str(r.status) as TicketStatus, createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
     }));
   }
   return readJson<StoredTicket[]>(TIC_FILE, [])
-    .map((t) => ({ ...t, subject: safeDecrypt(t.subjectEnc), body: safeDecrypt(t.bodyEnc) }))
+    .map((t) => ({ ...t, assignees: toIds(t.assignees), subject: safeDecrypt(t.subjectEnc), body: safeDecrypt(t.bodyEnc) }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -228,21 +244,22 @@ export async function getTicket(id: string): Promise<Ticket | undefined> {
 }
 
 export async function createTicket(input: {
-  createdBy: string; assignee: string; area: TicketArea; subject: string; body: string;
+  createdBy: string; assignees: string[]; area: TicketArea; subject: string; body: string;
 }): Promise<Ticket> {
   const now = new Date().toISOString();
   const existing = await listTickets();
   const ref = existing.reduce((m, t) => Math.max(m, t.ref), 0) + 1;
+  const assignees = [...new Set(input.assignees)];
   const row: StoredTicket = {
-    id: randomId(), ref, createdBy: input.createdBy, assignee: input.assignee,
+    id: randomId(), ref, createdBy: input.createdBy, assignees,
     area: input.area, subjectEnc: encrypt(input.subject), bodyEnc: encrypt(input.body),
     status: "open", createdAt: now, updatedAt: now,
   };
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO comms_tickets (id, ref, created_by, assignee, area, subject_enc, body_enc, status, created_at, updated_at)
-      VALUES (${row.id}, ${ref}, ${row.createdBy}, ${row.assignee}, ${row.area}, ${row.subjectEnc}, ${row.bodyEnc}, ${row.status}, ${now}, ${now})`;
+      INSERT INTO comms_tickets (id, ref, created_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at)
+      VALUES (${row.id}, ${ref}, ${row.createdBy}, ${JSON.stringify(assignees)}::jsonb, ${row.area}, ${row.subjectEnc}, ${row.bodyEnc}, ${row.status}, ${now}, ${now})`;
   } else {
     const all = readJson<StoredTicket[]>(TIC_FILE, []);
     all.push(row);
@@ -251,18 +268,19 @@ export async function createTicket(input: {
   return { ...row, subject: input.subject, body: input.body };
 }
 
-export async function updateTicket(id: string, patch: { status?: TicketStatus; assignee?: string }): Promise<void> {
+export async function updateTicket(id: string, patch: { status?: TicketStatus; assignees?: string[] }): Promise<void> {
   const now = new Date().toISOString();
+  const assignees = patch.assignees ? [...new Set(patch.assignees)] : undefined;
   if (usePostgres) {
     const sql = await pg();
     if (patch.status) await sql`UPDATE comms_tickets SET status = ${patch.status}, updated_at = ${now} WHERE id = ${id}`;
-    if (patch.assignee) await sql`UPDATE comms_tickets SET assignee = ${patch.assignee}, updated_at = ${now} WHERE id = ${id}`;
+    if (assignees) await sql`UPDATE comms_tickets SET assignees = ${JSON.stringify(assignees)}::jsonb, updated_at = ${now} WHERE id = ${id}`;
     return;
   }
   const all = readJson<StoredTicket[]>(TIC_FILE, []);
   const i = all.findIndex((t) => t.id === id);
   if (i < 0) return;
-  all[i] = { ...all[i], ...patch, updatedAt: now };
+  all[i] = { ...all[i], ...(patch.status ? { status: patch.status } : {}), ...(assignees ? { assignees } : {}), updatedAt: now };
   writeJson(TIC_FILE, all);
 }
 

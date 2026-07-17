@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS comms_tickets (
   id         TEXT PRIMARY KEY,
   ref        INTEGER NOT NULL,       -- short human reference (#7)
   created_by TEXT NOT NULL,
-  assignee   TEXT NOT NULL,          -- clinician id
+  assignees  JSONB NOT NULL DEFAULT '[]',  -- one or more clinician ids: a ticket can need the biller AND the admin
   area       TEXT NOT NULL,          -- subject area
   subject_enc TEXT NOT NULL,       -- encrypted: a subject line will name a client sooner or later
   body_enc   TEXT NOT NULL,
@@ -39,7 +39,12 @@ CREATE TABLE IF NOT EXISTS comms_tickets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS comms_tickets_assignee_idx ON comms_tickets (assignee, status);
+CREATE INDEX IF NOT EXISTS comms_tickets_status_idx ON comms_tickets (status);
+-- Existing installs (if you ran an earlier version of this file):
+--   ALTER TABLE comms_tickets ADD COLUMN IF NOT EXISTS assignees JSONB NOT NULL DEFAULT '[]';
+--   UPDATE comms_tickets SET assignees = to_jsonb(ARRAY[assignee]) WHERE assignees = '[]'::jsonb AND assignee IS NOT NULL;
+--   ALTER TABLE comms_tickets DROP COLUMN IF EXISTS assignee;
+--   DROP INDEX IF EXISTS comms_tickets_assignee_idx;
 
 -- Practice-wide notices (meetings, announcements). Everyone sees these.
 CREATE TABLE IF NOT EXISTS comms_notices (

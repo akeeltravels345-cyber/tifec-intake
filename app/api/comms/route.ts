@@ -10,6 +10,17 @@ import {
 
 const MAX_BODY = 5000;
 
+/** Validate an assignee list: one or more real contacts (owner / biller /
+ *  admin), deduped. Returns null if it isn't usable, so a ticket can never end
+ *  up with nobody responsible for it or assigned to someone arbitrary. */
+function readAssignees(raw: unknown): string[] | null {
+  const list = (Array.isArray(raw) ? raw : [raw]).map((x) => String(x ?? "")).filter(Boolean);
+  const unique = [...new Set(list)];
+  if (unique.length === 0) return null;
+  if (!unique.every((id) => isContact(id))) return null;
+  return unique;
+}
+
 /** Can this person post into this thread? DMs: only the two people in it.
  *  Tickets: whoever raised it, or whoever it's assigned to. */
 async function canPost(threadId: string, me: string): Promise<boolean> {
@@ -19,7 +30,7 @@ async function canPost(threadId: string, me: string): Promise<boolean> {
   }
   if (threadId.startsWith("ticket:")) {
     const t = await getTicket(threadId.slice("ticket:".length));
-    return !!t && (t.createdBy === me || t.assignee === me);
+    return !!t && (t.createdBy === me || t.assignees.includes(me));
   }
   return false;
 }
@@ -57,9 +68,8 @@ export async function POST(req: Request) {
 
     // ---- tickets ------------------------------------------------------------
     if (action === "ticket:create") {
-      const assignee = String(body.assignee ?? "");
-      // Tickets go to a contact (owner / biller / admin), not to anyone at all.
-      if (!isContact(assignee)) return NextResponse.json({ error: "Pick who this is for." }, { status: 400 });
+      const assignees = readAssignees(body.assignees);
+      if (!assignees) return NextResponse.json({ error: "Pick at least one person this is for." }, { status: 400 });
       const subject = String(body.subject ?? "").trim();
       if (!subject) return NextResponse.json({ error: "A subject is required." }, { status: 400 });
       const area = String(body.area ?? "");
@@ -68,7 +78,7 @@ export async function POST(req: Request) {
       if (!text) return NextResponse.json({ error: "Describe the issue." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
 
-      const t = await createTicket({ createdBy: me.id, assignee, area: area as TicketArea, subject, body: text });
+      const t = await createTicket({ createdBy: me.id, assignees, area: area as TicketArea, subject, body: text });
       return NextResponse.json({ ok: true, id: t.id, ref: t.ref });
     }
 
@@ -76,19 +86,19 @@ export async function POST(req: Request) {
       const id = String(body.id ?? "");
       const t = await getTicket(id);
       if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
-      // The person it's assigned to owns its state; the raiser may close their own.
-      if (t.assignee !== me.id && t.createdBy !== me.id) return NextResponse.json({ error: "Not your ticket." }, { status: 403 });
+      // Anyone it's assigned to owns its state; the raiser may close their own.
+      if (!t.assignees.includes(me.id) && t.createdBy !== me.id) return NextResponse.json({ error: "Not your ticket." }, { status: 403 });
 
-      const patch: { status?: TicketStatus; assignee?: string } = {};
+      const patch: { status?: TicketStatus; assignees?: string[] } = {};
       if (body.status) {
         const s = String(body.status);
         if (!["open", "in_progress", "resolved"].includes(s)) return NextResponse.json({ error: "Unknown status." }, { status: 400 });
         patch.status = s as TicketStatus;
       }
-      if (body.assignee) {
-        const a = String(body.assignee);
-        if (!isContact(a)) return NextResponse.json({ error: "Can only reassign to the owner, biller or admin." }, { status: 400 });
-        patch.assignee = a;
+      if (body.assignees !== undefined) {
+        const a = readAssignees(body.assignees);
+        if (!a) return NextResponse.json({ error: "A ticket needs at least one of the owner, biller or admin." }, { status: 400 });
+        patch.assignees = a;
       }
       await updateTicket(id, patch);
       return NextResponse.json({ ok: true });

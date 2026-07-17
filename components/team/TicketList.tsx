@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation";
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
-  createdAt: string; updatedAt: string; raisedBy: string; assignee: string; mine: boolean;
+  createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean;
 }
 interface Contact { id: string; name: string; label: string }
 
 const STATUS: Record<string, string> = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
 const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+/** "Nick", "Nick and Akeel", "Shion, Nick and Akeel" */
+const nameList = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 export default function TicketList({ tickets, contacts, areas, seesAll }: {
   tickets: T[]; contacts: Contact[]; areas: string[]; seesAll: boolean;
@@ -19,7 +22,9 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"live" | "all">("live");
-  const [assignee, setAssignee] = useState(contacts[0]?.id ?? "");
+  const [assignees, setAssignees] = useState<string[]>(contacts[0] ? [contacts[0].id] : []);
+  const toggle = (id: string) =>
+    setAssignees((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
   const [area, setArea] = useState(areas[0] ?? "");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -35,7 +40,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
     try {
       const res = await fetch("/api/comms", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ticket:create", assignee, area, subject, body }),
+        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Failed");
@@ -58,20 +63,25 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
 
       {open && (
         <form className="tm-card tm-form" onSubmit={submit}>
-          <div className="tm-row">
-            <div style={{ flex: 1 }}>
-              <label className="tm-l" htmlFor="ta">Who's this for?</label>
-              <select id="ta" className="tm-in" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                {contacts.map((c) => <option key={c.id} value={c.id}>{c.label} · {c.name}</option>)}
-              </select>
+          <fieldset className="tm-fs">
+            <legend className="tm-l">Who&apos;s this for? <span className="tm-opt">pick one or more</span></legend>
+            <div className="tm-picks">
+              {contacts.map((c) => (
+                <label key={c.id} className={`tm-pick ${assignees.includes(c.id) ? "on" : ""}`}>
+                  <input type="checkbox" checked={assignees.includes(c.id)} onChange={() => toggle(c.id)} />
+                  <span>
+                    <span className="tm-pickname">{c.name}</span>
+                    <span className="tm-picklabel">{c.label}</span>
+                  </span>
+                </label>
+              ))}
             </div>
-            <div style={{ flex: 1 }}>
-              <label className="tm-l" htmlFor="tar">Subject area</label>
-              <select id="tar" className="tm-in" value={area} onChange={(e) => setArea(e.target.value)}>
-                {areas.map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-          </div>
+          </fieldset>
+
+          <label className="tm-l" htmlFor="tar">Subject area</label>
+          <select id="tar" className="tm-in" value={area} onChange={(e) => setArea(e.target.value)}>
+            {areas.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
 
           <label className="tm-l" htmlFor="ts">Subject</label>
           <input id="ts" className="tm-in" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Short summary of the issue" />
@@ -82,7 +92,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
 
           {error && <p className="tm-err">{error}</p>}
           <div className="tm-actions">
-            <button className="tm-cta" type="submit" disabled={busy || !subject.trim() || !body.trim()}>{busy ? "Sending..." : "Raise ticket"}</button>
+            <button className="tm-cta" type="submit" disabled={busy || !subject.trim() || !body.trim() || assignees.length === 0}>{busy ? "Sending..." : "Raise ticket"}</button>
           </div>
         </form>
       )}
@@ -105,7 +115,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
                 <div className="tm-tsub"><span className="tm-ref">#{t.ref}</span>{t.subject}</div>
                 <div className="tm-tmeta">
                   <span className="tm-area">{t.area}</span>
-                  {t.mine ? <>for <b>{t.assignee}</b></> : <>from <b>{t.raisedBy}</b></>}
+                  {t.mine ? <>for <b>{nameList(t.assignees)}</b></> : <>from <b>{t.raisedBy}</b></>}
                   · {when(t.createdAt)}
                 </div>
               </div>

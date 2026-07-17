@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 
 interface Ticket {
   id: string; ref: number; subject: string; area: string; body: string; status: string;
-  createdAt: string; raisedBy: string; assignee: string; assigneeId: string;
+  createdAt: string; raisedBy: string; assignees: { id: string; name: string }[];
 }
 interface Reply { id: string; body: string; at: string; who: string; mine: boolean }
 interface Contact { id: string; name: string; label: string }
 
 const STATUS: Record<string, string> = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
+const nameList = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 const stamp = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 async function post(body: Record<string, unknown>) {
@@ -26,6 +28,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const ids = ticket.assignees.map((a) => a.id);
 
   async function reply(e: React.FormEvent) {
     e.preventDefault();
@@ -52,6 +55,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
           <h1 className="tm-h1"><span className="tm-ref">#{ticket.ref}</span>{ticket.subject}</h1>
           <p className="tm-sub">
             <span className="tm-area">{ticket.area}</span> raised by {ticket.raisedBy} · {stamp(ticket.createdAt)}
+            <br />for {nameList(ticket.assignees.map((a) => a.name))}
           </p>
         </div>
         <span className={`tm-status ${ticket.status}`}>{STATUS[ticket.status]}</span>
@@ -63,10 +67,29 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
           <select id="st" className="tm-in" value={ticket.status} onChange={(e) => set({ status: e.target.value })}>
             {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label className="tm-l" htmlFor="as">Assigned to</label>
-          <select id="as" className="tm-in" value={ticket.assigneeId} onChange={(e) => set({ assignee: e.target.value })}>
-            {contacts.map((c) => <option key={c.id} value={c.id}>{c.label} · {c.name}</option>)}
-          </select>
+          <span className="tm-l">Assigned to</span>
+          <div className="tm-picks">
+            {contacts.map((c) => {
+              const on = ids.includes(c.id);
+              return (
+                <label key={c.id} className={`tm-pick ${on ? "on" : ""}`}>
+                  <input
+                    type="checkbox" checked={on}
+                    onChange={() => {
+                      const next = on ? ids.filter((x) => x !== c.id) : [...ids, c.id];
+                      // A ticket with nobody on it would just get lost.
+                      if (next.length === 0) { setError("A ticket needs at least one person on it."); return; }
+                      set({ assignees: next });
+                    }}
+                  />
+                  <span>
+                    <span className="tm-pickname">{c.name}</span>
+                    <span className="tm-picklabel">{c.label}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
         </div>
       )}
 

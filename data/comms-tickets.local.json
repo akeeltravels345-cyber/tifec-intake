@@ -1,14 +1,16 @@
 [
   {
-    "id": "de1a3514c08a81b8bac419a180c46e9f",
+    "id": "3aa8d2c41393a1a511adcdd9c0af7bad",
     "ref": 1,
     "createdBy": "donnet-oconnor",
-    "assignee": "nick-oconnor",
-    "area": "Insurance",
-    "subjectEnc": "eFCI/YjWPI0Ecp3S:zoyXOyJBT2Xl3oT2VvvKzw==:hgibqvFV1lRBqSxApJ4cDrBAlzinu2FGc9bV4l/drPS5lXbYUBQ=",
-    "bodyEnc": "CbPOuWNeYas1zy07:m5AbuBVyOn4TbHUW/Pl1+A==:a8PE3OqF1EhrtEz6IM/I08RsGwMvw9Ybz6pOaqsaCPHnPXz9HnBbmPerxGRFUdeQcpTbW/VsN6qqqZ0LKX8lZCZbNtIJQVVETAz0SRXcQMVbW+i9PthQct+RcQd8amugFAGKlRJNUMIkeSAi9kB31MZOCsgWoHLIzFE/DXPK0FMLQIsAD4DZSg==",
+    "assignees": [
+      "nick-oconnor"
+    ],
+    "area": "Billing & claims",
+    "subjectEnc": "U4OK+QejiCyTzoEY:1R/v2kH7uNtGWi5JUgz+/Q==:lIFbeHkmFVLZJBEa1gSuRCDrIR+DonAO8vcVyHLbA5rHQOLh",
+    "bodyEnc": "1P8/bdWGjFqgkHcd:UdTl9i7PEGhVAfJLAErZKA==:L0WpwvKYnVaWIg5IC9Xke/WFGct2keAFziVmXK/HFw9vxXPDDSyQoBbLLjTQ7gqBGSNrdnYAnM+9sclUi5qpEsWjWNu4H6PHVD+ykmybbTkz+mkjd9MQ6jD5KTiewV+KdlOlf+MdflJrS+TgHIRZaGDOJkj0ZP43eFlf8o2iEret85xSMq6PbfPz/pBwcJhcCoEXBac69FE=",
     "status": "open",
-    "createdAt": "2026-07-17T13:42:47.442Z",
-    "updatedAt": "2026-07-17T13:42:47.442Z"
+    "createdAt": "2026-07-17T13:52:45.931Z",
+    "updatedAt": "2026-07-17T13:55:41.774Z"
   }
 ]
