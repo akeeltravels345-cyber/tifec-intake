@@ -41,7 +41,6 @@ export default async function BillingQueuePage() {
 
   const outstandingTotal = r2(outstanding.reduce((t, c) => t + c.amount, 0));
   const billedThisMonthClaims = billed.filter((c) => c.paidDate?.slice(0, 7) === mKey);
-  const billedThisMonth = r2(billedThisMonthClaims.reduce((t, c) => t + c.amount, 0));
   const buckets = AGING_BUCKETS.map((b, i) => {
     const inB = outstanding.filter((c) => agingBucketIndex(c.age) === i);
     return { label: b.label, color: BUCKET_COLORS[i], amount: r2(inB.reduce((t, c) => t + c.amount, 0)), count: inB.length };
@@ -50,7 +49,6 @@ export default async function BillingQueuePage() {
   const data: QueueData = {
     outstanding, billed,
     commissionThisMonth: r2(billedThisMonthClaims.reduce((t, c) => t + c.commission, 0)),
-    billedThisMonth,
     waitingCommission: r2(outstanding.reduce((t, c) => t + c.commission, 0)),
     outstandingTotal,
     awaitingCount: outstanding.length,

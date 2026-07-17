@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians } from "@/lib/billing";
-import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
+import { insurancePortion, ageDays } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 
@@ -13,7 +13,6 @@ const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const r2 = (n: number) => Math.round(n * 100) / 100;
-const BUCKET_DOT = ["#2c7a55", "#D9A441", "#C98A2B", "#a5432f"];
 
 export default async function BillerHome({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
@@ -48,12 +47,9 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const unbilled = all.filter((s) => s.insurerId && !s.insurancePaid && insurancePortion(s) > 0);
   const outstanding = sum(unbilled, insurancePortion);
   const pendingCommission = sum(unbilled, comm);
-  const oldest = unbilled.length ? Math.max(...unbilled.map((s) => ageDays(s.dateOfService, today))) : 0;
-
-  // aging buckets of what's outstanding
-  const buckets = AGING_BUCKETS.map((b) => ({ label: b.label, amount: 0, count: 0 }));
-  for (const s of unbilled) { const i = agingBucketIndex(ageDays(s.dateOfService, today)); if (i >= 0) { buckets[i].amount += insurancePortion(s); buckets[i].count++; } }
-  buckets.forEach((b) => (b.amount = r2(b.amount)));
+  // Rates differ per clinician, so the headline rate is what the mix actually
+  // worked out to this month, not a number anyone configured.
+  const blendedRate = `${(insuranceCollected > 0 ? (commission / insuranceCollected) * 100 : 0).toFixed(1)}%`;
 
   // who owes you — outstanding per insurer (with your commission on it)
   const map = new Map<string, { name: string; amount: number; count: number; oldest: number; toYou: number }>();
@@ -63,7 +59,6 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     map.set(s.insurerId!, cur);
   }
   const byInsurer = [...map.values()].sort((a, b) => b.amount - a.amount);
-  const insMax = Math.max(1, ...byInsurer.map((i) => i.amount));
 
   // where your commission came from — earnings per clinician this month
   const roster = [
@@ -90,10 +85,13 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     let m = month - 5 + k, y = year; while (m <= 0) { m += 12; y -= 1; }
     return { label: SHORT[m - 1], value: sum(all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === key(y, m)), insurancePortion), current: m === month && y === year };
   });
-  const tMax = Math.max(1, ...trend.map((p) => p.value)), tMin = Math.min(...trend.map((p) => p.value)) * 0.85;
-  const TW = 460, TH = 96, x = (i: number) => 6 + (i * (TW - 12)) / 5, ty = (v: number) => TH - 6 - ((v - tMin) / Math.max(1, tMax - tMin)) * (TH - 12);
-  const line = trend.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${ty(p.value).toFixed(1)}`).join(" ");
-  const cur = trend.map((p, i) => ({ p, i })).find((o) => o.p.current);
+  // Sparkline, sized to sit in the hero's third zone.
+  const tMax = Math.max(1, ...trend.map((p) => p.value)), tMin = Math.min(...trend.map((p) => p.value)) * 0.82;
+  const SW = 220, SH = 52;
+  const sx = (i: number) => Number((4 + (i * (SW - 8)) / 5).toFixed(1));
+  const sy = (v: number) => Number((SH - 5 - ((v - tMin) / Math.max(1, tMax - tMin)) * (SH - 12)).toFixed(1));
+  const sparkLine = trend.map((p, i) => `${i === 0 ? "M" : "L"}${sx(i)},${sy(p.value)}`).join(" ");
+  const sparkArea = `${sparkLine} L${sx(5)},${SH - 5} L${sx(0)},${SH - 5} Z`;
 
   const pctW = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
 
@@ -101,8 +99,8 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     <>
       <div className="bq-topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 className="bq-h1">Biller dashboard</h1>
-          <p className="bq-sub">{user.clinician.name} · {MONTHS[month - 1]} {year} · commission set per clinician · KYD</p>
+          <h1 className="bq-h1">Your month</h1>
+          <p className="bq-sub">{user.clinician.name} · what you&apos;ve earned and what&apos;s still owed · {MONTHS[month - 1]} {year} · KYD</p>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <MonthNav year={year} month={month} path="/billing/biller" />
@@ -110,84 +108,71 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      {/* earnings hero */}
-      <div className="bq-hero">
-        <div className="bq-comm">
-          <div className="cl">Your commission · {MONTHS[month - 1]}</div>
-          <div className="cv">{money(commission)}</div>
-          <div className="cs">Your cut of the <b>{money0(insuranceCollected)}</b> you&apos;ve marked billed. <b>+{money0(pendingCommission)}</b> waiting on the {byInsurer.reduce((t, i) => t + i.count, 0)} open claims.</div>
+      {/* Commission statement: the figure, the ledger behind it, and the trend. */}
+      <div className="dh-hero">
+        <div className="dh-main">
+          <div className="dh-lab">Your commission · {MONTHS[month - 1]}</div>
+          <div className="dh-big">{money(commission)}</div>
+          <p className="dh-cap">
+            Your cut of <b>{money0(insuranceCollected)}</b> collected across {billedThisMonth.length} claim{billedThisMonth.length === 1 ? "" : "s"}.
+            {pendingCommission > 0 && <> <b>+{money0(pendingCommission)}</b> is still to come once the open claims are paid.</>}
+          </p>
         </div>
-        <div className="bq-kpi"><div className="k">Insurance collected</div><div className="v">{money0(insuranceCollected)}{commDelta !== null && <span className="bo-delta" style={{ fontSize: 11, marginLeft: 8 }}>{commDelta >= 0 ? "▲" : "▼"} {Math.abs(commDelta).toFixed(0)}%</span>}</div></div>
-        <div className="bq-kpi"><div className="k">Claims billed</div><div className="v">{billedThisMonth.length}</div></div>
-        <div className="bq-kpi"><div className="k">Oldest open claim</div><div className={`v ${oldest >= 15 ? "warn" : ""}`}>{oldest} days</div></div>
-      </div>
-
-      {/* aging buckets */}
-      <div className="bq-buckets">
-        {buckets.map((b, i) => (
-          <Link key={b.label} href="/billing/payments" className="bq-bucket">
-            <div className="bk"><span className="bkd" style={{ background: BUCKET_DOT[i] }} />{b.label}</div>
-            <div className="bv">{money0(b.amount)}</div>
-            <div className="bc">{b.count} claim{b.count === 1 ? "" : "s"}</div>
-          </Link>
-        ))}
-      </div>
-
-      {/* where your commission came from */}
-      <div className="bo-card" style={{ marginBottom: 18 }}>
-        <div className="bo-secrow" style={{ margin: "0 0 8px" }}>
-          <span className="bo-lab">Your commission by clinician · {MONTHS[month - 1]}</span>
-          <Link href="/billing/outside" className="bl-cta">Outside clients →</Link>
-        </div>
-        <p className="bo-hint" style={{ margin: "0 2px 8px" }}>where your {money0(commission)} came from · your rate differs per clinician</p>
-        {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
-          <div className="bo-crow" key={c.id}>
-            <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
-            <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
-            <div className="bo-cright">
-              <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
-              <span className="bo-camt">{money(c.cut)}</span>
-              <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
-            </div>
+        <div className="dh-ledger">
+          <div className="dh-row">
+            <span className="rl">Insurance collected</span>
+            <span className="rv">{money0(insuranceCollected)}
+              {commDelta !== null && <em style={{ color: commDelta >= 0 ? "#8fe0c4" : "#f0b8a8" }}>{commDelta >= 0 ? "▲" : "▼"} {Math.abs(commDelta).toFixed(0)}%</em>}
+            </span>
           </div>
-        ))}
-        <p className="bo-hint" style={{ margin: "14px 2px 0" }}>
-          Earned = your % of each clinician&apos;s insurance collected this month. &quot;Pending&quot; is what you&apos;ll earn when their open claims are paid.
-        </p>
+          <div className="dh-row"><span className="rl">Pending · {unbilled.length} open</span><span className="rv">+{money0(pendingCommission)}</span></div>
+          <div className="dh-row"><span className="rl">Blended rate</span><span className="rv">{blendedRate}</span></div>
+        </div>
+        <div className="dh-spark">
+          <div className="dh-sparklab">6-month trend</div>
+          <svg viewBox={`0 0 ${SW} ${SH}`} width="100%" preserveAspectRatio="none" style={{ height: 52, overflow: "visible" }} aria-hidden="true">
+            <path d={sparkArea} fill="rgba(255,255,255,.14)" />
+            <path d={sparkLine} fill="none" stroke="#8fe0c4" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={sx(5)} cy={sy(insuranceCollected)} r="4.5" fill="#fff" stroke="#8fe0c4" strokeWidth="3" />
+          </svg>
+          <div className="dh-sparkx"><span>{trend[0].label}</span><span>{trend[5].label}</span></div>
+        </div>
       </div>
 
-      <div className="bo-two">
-        {/* who owes you */}
+      <div className="bo-split">
+        {/* where your commission came from */}
         <div className="bo-card">
-          <div className="bo-secrow" style={{ margin: "0 0 8px" }}>
-            <span className="bo-lab">Who owes you</span>
-            <span className="bo-hint">{money0(outstanding)} outstanding · chase the oldest first</span>
+          <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
+            <span className="bo-lab">Where your cut came from</span>
+            <Link href="/billing/outside" className="bl-ghost">Outside clients →</Link>
           </div>
-          {byInsurer.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>Nothing outstanding — all caught up. 🎉</p> : byInsurer.map((i) => (
-            <div className="bo-crow" key={i.name}>
-              <div className="ins">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"}</small></div>
-              <div className="bo-ctrack"><i style={{ width: `${pctW(i.amount, insMax)}%` }} /></div>
+          <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · your rate differs per clinician</p>
+          {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
+            <div className="bo-crow" key={c.id}>
+              <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
+              <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
               <div className="bo-cright">
-                <span className={`bo-age ${i.oldest >= 15 ? "warn" : ""}`}>oldest {i.oldest}d</span>
-                <span className="bo-camt">{money(i.amount)}</span>
-                <span className="bl-toyou">+{money0(i.toYou)}</span>
+                <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
+                <span className="bo-camt">{money(c.cut)}</span>
+                <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
               </div>
             </div>
           ))}
         </div>
 
-        {/* trend */}
-        <div className="bo-card bo-trend">
-          <div className="thead">
-            <span className="bo-lab">Insurance collected · last 6 months</span>
-            <div style={{ textAlign: "right" }}><div className="tv">{money0(insuranceCollected)}</div><div className="tl">{MONTHS[month - 1]}</div></div>
+        {/* who owes you */}
+        <div className="bo-card">
+          <div className="bo-secrow" style={{ margin: "0 0 8px" }}><span className="bo-lab">Who owes you</span></div>
+          <p className="bo-hint" style={{ margin: "0 2px 8px" }}>{money0(outstanding)} outstanding · chase the oldest first</p>
+          {byInsurer.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>Nothing outstanding — all caught up.</p> : byInsurer.map((i) => (
+            <div className="bo-crow" key={i.name} style={{ gridTemplateColumns: "1fr auto" }}>
+              <div className="ins">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"} · <span className={`bq-age ${i.oldest >= 15 ? "warn" : ""}`}>oldest {i.oldest}d</span></small></div>
+              <div className="bo-cright"><span className="bo-camt">{money(i.amount)}</span><span className="bl-toyou">+{money0(i.toYou)}</span></div>
+            </div>
+          ))}
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--hair)" }}>
+            <Link href="/billing/payments" className="bl-ghost">Reconcile in the billing queue →</Link>
           </div>
-          <svg viewBox={`0 0 ${TW} ${TH}`} width="100%" preserveAspectRatio="none" style={{ height: 96, overflow: "visible", marginTop: 12 }} aria-hidden="true">
-            <path d={`${line} L${x(5).toFixed(1)},${TH - 6} L${x(0).toFixed(1)},${TH - 6} Z`} fill="rgba(47,142,147,.13)" />
-            <path d={line} fill="none" stroke="#2F8E93" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            {cur && <circle cx={x(cur.i)} cy={ty(cur.p.value)} r="5" fill="#fff" stroke="#2E3192" strokeWidth="3" />}
-          </svg>
-          <div className="xr">{trend.map((p) => <span key={p.label}>{p.label}</span>)}</div>
         </div>
       </div>
 

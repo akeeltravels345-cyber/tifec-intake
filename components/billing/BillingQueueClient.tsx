@@ -12,7 +12,7 @@ export interface Claim {
 }
 export interface QueueData {
   outstanding: Claim[]; billed: Claim[];
-  commissionThisMonth: number; billedThisMonth: number; waitingCommission: number;
+  commissionThisMonth: number; waitingCommission: number;
   outstandingTotal: number; awaitingCount: number; oldestDays: number;
   buckets: { label: string; color: string; amount: number; count: number }[];
   clinicians: { id: string; name: string }[];
@@ -82,23 +82,28 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         <p className="bq-sub">Reconcile an insurer&apos;s remittance: tick the claims it covers, set the paid date, mark them together · amounts in KYD</p>
       </div>
 
-      <div className="bq-hero">
-        <div className="bq-comm">
-          <div className="cl">Your commission · this month</div>
-          <div className="cv">{money(data.commissionThisMonth)}</div>
-          <div className="cs">Your cut of the {money(data.billedThisMonth)} you&apos;ve marked billed.<br /><b>+{money(data.waitingCommission)}</b> waiting on the {data.awaitingCount} open claims.</div>
+      {/* Work-status ribbon: the queue is the operational surface, so it leads
+          with what's left to do — not the commission figure (that lives on the
+          dashboard). Your cut is kept, but muted and to the side. */}
+      <div className="bq-workbar">
+        <div className="bq-wstat"><span className="bq-wk">To reconcile</span><span className="bq-wv mono">{data.awaitingCount} <small>claim{data.awaitingCount === 1 ? "" : "s"}</small></span></div>
+        <div className="bq-wstat"><span className="bq-wk">Outstanding</span><span className="bq-wv mono">{money0(data.outstandingTotal)}</span></div>
+        <div className="bq-wstat"><span className="bq-wk">Oldest claim</span><span className={`bq-wv mono ${data.oldestDays >= 15 ? "warn" : ""}`}>{data.oldestDays} day{data.oldestDays === 1 ? "" : "s"}</span></div>
+        <span className="bq-wspace" />
+        <div className="bq-wcut">
+          <div className="c">Your cut so far <b>{money(data.commissionThisMonth)}</b></div>
+          <div className="c">+{money(data.waitingCommission)} pending on open</div>
         </div>
-        <div className="bq-kpi"><div className="k">Outstanding</div><div className="v">{money0(data.outstandingTotal)}</div></div>
-        <div className="bq-kpi"><div className="k">Claims awaiting</div><div className="v">{data.awaitingCount}</div></div>
-        <div className="bq-kpi"><div className="k">Oldest claim</div><div className="v warn">{data.oldestDays} days</div></div>
       </div>
 
-      <div className="bq-buckets">
+      {/* Aging filter chips — slim pills that drive the list filter. */}
+      <div className="bq-chips">
+        <button className={`bq-chip ${bucket === null ? "on" : ""}`} onClick={() => setBucket(null)}>
+          All ages<span className="cc">{data.awaitingCount}</span>
+        </button>
         {data.buckets.map((b, i) => (
-          <button key={b.label} className={`bq-bucket ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
-            <div className="bk"><span className="bkd" style={{ background: b.color }} />{b.label}</div>
-            <div className="bv">{money0(b.amount)}</div>
-            <div className="bc">{b.count} claim{b.count === 1 ? "" : "s"}</div>
+          <button key={b.label} className={`bq-chip ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
+            <span className="cd" style={{ background: b.color }} />{b.label}<span className="cc">{b.count}</span>
           </button>
         ))}
       </div>

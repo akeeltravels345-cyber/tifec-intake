@@ -2004,3 +2004,73 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-picklabel { font-size: 11.5px; color: var(--muted); }
 .tm-manage .tm-picks { grid-column: auto; }
 @media (max-width: 760px) { .tm-pick { flex: 1 1 100%; } }
+
+/* =============================================================================
+   Biller dashboard: the commission statement hero.
+   Per the redesign handoff, the dashboard is the reflective EARNINGS surface
+   and the queue is the operational WORK surface, so only this screen carries
+   the gradient commission band. It also folds in what used to be a separate
+   6-month trend card.
+   ============================================================================= */
+.biz .dh-hero {
+  display: grid; grid-template-columns: 1.25fr 1fr 1.1fr;
+  background: linear-gradient(135deg, #2b2f86, #256e72); color: #fff;
+  border-radius: 18px; overflow: hidden; margin-bottom: 22px;
+  box-shadow: 0 18px 40px rgba(37, 45, 120, .22);
+}
+.biz .dh-hero > div { padding: 24px 28px; }
+.biz .dh-lab { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.72); font-weight: 700; }
+.biz .dh-big { font: 400 48px "Newsreader", serif; margin-top: 10px; line-height: 1; font-variant-numeric: tabular-nums; }
+.biz .dh-cap { font-size: 12.5px; color: rgba(255,255,255,.82); margin: 14px 0 0; line-height: 1.55; max-width: 32ch; }
+.biz .dh-cap b { color: #fff; font-weight: 700; }
+.biz .dh-ledger { border-left: 1px solid rgba(255,255,255,.16); display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+.biz .dh-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.biz .dh-row .rl { font-size: 12px; color: rgba(255,255,255,.72); }
+.biz .dh-row .rv { font: 400 19px "Newsreader", serif; font-variant-numeric: tabular-nums; }
+.biz .dh-row .rv em { font-style: normal; font-size: 11.5px; font-weight: 700; margin-left: 7px; }
+.biz .dh-spark { border-left: 1px solid rgba(255,255,255,.16); display: flex; flex-direction: column; justify-content: center; }
+.biz .dh-sparklab { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.72); font-weight: 700; margin-bottom: 12px; }
+.biz .dh-sparkx { display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(255,255,255,.62); margin-top: 8px; }
+
+/* attribution beside who-owes-you */
+.biz .bo-split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-bottom: 18px; align-items: start; }
+
+/* quiet inline link (sits inside a card header, unlike the solid .bl-cta) */
+.biz .bl-ghost { display: inline-flex; align-items: center; gap: 5px; color: var(--teal-deep); font: 600 12.5px "Open Sans"; text-decoration: none; }
+.biz .bl-ghost:hover { color: var(--indigo); }
+
+@media (max-width: 900px) {
+  .biz .dh-hero { grid-template-columns: 1fr; }
+  .biz .dh-ledger, .biz .dh-spark { border-left: none; border-top: 1px solid rgba(255,255,255,.16); }
+  .biz .bo-split { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   Billing queue: the work surface.
+   Per the redesign, the gradient commission hero moves to the dashboard so the
+   queue doesn't repeat it. In its place: a light work-status ribbon and slim
+   aging filter chips (replacing the old big bucket cards).
+   ============================================================================= */
+.biz .bq-workbar { display: flex; align-items: center; background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 4px 6px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 8px 22px rgba(70,55,25,.04); flex-wrap: wrap; }
+.biz .bq-wstat { display: flex; flex-direction: column; padding: 12px 24px; position: relative; }
+.biz .bq-wstat + .bq-wstat::before { content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 1px; background: var(--hair); }
+.biz .bq-wk { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.biz .bq-wv { font: 400 25px "Newsreader", serif; margin-top: 5px; font-variant-numeric: tabular-nums; line-height: 1; }
+.biz .bq-wv.warn { color: var(--amber); }
+.biz .bq-wv small { font: 600 13px "Open Sans"; color: var(--muted); }
+.biz .bq-wspace { flex: 1; }
+.biz .bq-wcut { padding: 10px 22px; text-align: right; }
+.biz .bq-wcut .c { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.biz .bq-wcut .c b { color: var(--teal-deep); font-weight: 700; }
+
+.biz .bq-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.biz .bq-chip { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 15px; font: 600 13px "Open Sans"; color: var(--muted); cursor: pointer; transition: border-color .14s, background .14s; }
+.biz .bq-chip:hover { border-color: var(--teal); }
+.biz .bq-chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.biz .bq-chip .cd { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.biz .bq-chip .cc { font-weight: 700; opacity: .55; }
+.biz .bq-chip.on .cc { opacity: .85; }
+
+@media (max-width: 900px) {
+  .biz .bq-wcut { text-align: left; padding: 10px 22px 12px; }
+}

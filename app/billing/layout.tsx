@@ -24,7 +24,7 @@ export default async function BillingLayout({ children }: { children: React.Reac
 
   const roleLabel =
     user.role === "owner" ? "Owner"
-    : user.role === "biller" ? "Biller · commission on collections"
+    : user.role === "biller" ? "Biller · rate per clinician"
     : user.clinician.credentials;
 
   return (
