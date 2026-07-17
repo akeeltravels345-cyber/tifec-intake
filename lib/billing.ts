@@ -82,6 +82,10 @@ export interface SessionInput {
   copayCollected: number;
   notes?: string;
   createdBy: string;
+  /** Normally a new session starts unbilled. Imported history may already be
+   *  billed, so the import can carry that state in. */
+  insurancePaid?: boolean;
+  paidDate?: string | null;
 }
 
 export interface BillingSession {
@@ -355,6 +359,8 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
   const clientEnc = encrypt(JSON.stringify({ first: input.clientFirst, last: input.clientLast }));
   const id = randomId();
   const createdAt = new Date().toISOString();
+  const paid = input.insurancePaid ?? false;
+  const paidDate = paid ? (input.paidDate ?? null) : null;
   if (usePostgres) {
     const sql = await pg();
     await sql`
@@ -365,10 +371,10 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
     }
   } else {
     const all = readJson<StoredSession[]>(SESS_FILE, []);
-    all.push({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: false, paidDate: null, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
+    all.push({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
     writeJson(SESS_FILE, all);
   }
-  return decryptSession({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: false, paidDate: null, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
+  return decryptSession({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
 }
 
 async function loadStored(): Promise<StoredSession[]> {

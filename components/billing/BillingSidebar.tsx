@@ -25,6 +25,7 @@ export default function BillingSidebar({
           { href: "/billing/biller", label: "Dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
           { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
           { href: "/billing/outside", label: "Outside clients", icon: IconClin, match: (p) => p.startsWith("/billing/outside") },
+          { href: "/billing/import", label: "Import", icon: IconLog, match: (p) => p.startsWith("/billing/import") },
         ]
       : role === "clinician"
         ? [
@@ -35,7 +36,9 @@ export default function BillingSidebar({
             { href: "/billing/overview", label: "Overview", icon: IconOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
             { href: "/billing/me", label: "My clients", icon: IconUser, match: (p) => p === "/billing/me" || p.startsWith(myDetail) },
             { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p === "/billing/clinicians" || (p.startsWith("/billing/clinician/") && !p.startsWith(myDetail)) },
-            { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+            // The claim-by-claim queue is the biller's day job, not the owner's
+            // snapshot, so it stays off his nav. The route still works if he
+            // wants it (e.g. while the biller is away).
             { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
           ];
 

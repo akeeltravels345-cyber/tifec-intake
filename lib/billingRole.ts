@@ -43,6 +43,10 @@ export function devMode(): boolean {
 // only owners configure the practice. Every signed-in person sees their own clients.
 export const isOwner = (r: BillingRole) => r === "owner";
 export const canMarkBilled = (r: BillingRole) => r === "biller" || r === "owner";
+/** The biller's own workspace: his outside clients and his imports. The owner
+ *  wants a snapshot of the practice, not the biller's private book, so these
+ *  are his alone. */
+export const isBiller = (r: BillingRole) => r === "biller";
 export const canConfigure = (r: BillingRole) => r === "owner";
 export const canSeeBusiness = (r: BillingRole) => r === "owner";
 

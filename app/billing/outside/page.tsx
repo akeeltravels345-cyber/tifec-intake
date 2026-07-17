@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
+import { getBillingUser, isBiller } from "@/lib/billingRole";
 import { listExternalClinicians, listInsurers, listCptCodes, listSessions } from "@/lib/billing";
 import { insurancePortion } from "@/lib/billingCalc";
 import OutsideClient from "@/components/billing/OutsideClient";
@@ -15,7 +15,8 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 export default async function OutsidePage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/outside");
-  if (!canMarkBilled(user.role)) redirect("/billing/me");
+  // The biller's private book, not the practice's. Not the owner's business.
+  if (!isBiller(user.role)) redirect("/billing/me");
 
   const [ext, all, insurers, cptCodes] = await Promise.all([
     listExternalClinicians(), listSessions(), listInsurers(), listCptCodes(),

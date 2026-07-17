@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { insertSession, listExternalClinicians, isExternalId } from "@/lib/billing";
-import { billingRoleOf, canMarkBilled } from "@/lib/billingRole";
+import { billingRoleOf, isBiller } from "@/lib/billingRole";
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   let clinicianId = me.id;
   const forId = body.clinicianId ? String(body.clinicianId) : "";
   if (forId && forId !== me.id) {
-    if (!canMarkBilled(billingRoleOf(me)) || !isExternalId(forId)) {
+    if (!isBiller(billingRoleOf(me)) || !isExternalId(forId)) {
       return NextResponse.json({ error: "You can only log your own sessions." }, { status: 403 });
     }
     const ext = (await listExternalClinicians()).find((c) => c.id === forId && c.active);

@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { billingRoleOf, canMarkBilled } from "@/lib/billingRole";
+import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { upsertExternalClinician, deleteExternalClinician } from "@/lib/billing";
 
-// Outside clinicians are the biller's own private clients, so the biller (and
-// the owner) may manage them. They never touch TIFEC's books.
+// Outside clinicians are the biller's own private clients: his to manage, and
+// deliberately not the owner's business. They never touch TIFEC's books.
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  if (!canMarkBilled(billingRoleOf(me))) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
+  if (!isBiller(billingRoleOf(me))) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
