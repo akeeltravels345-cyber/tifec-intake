@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician, isContact } from "@/lib/clinicians";
+import { getClinician, isContact, CLINICIANS } from "@/lib/clinicians";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
-  createNotice, deleteNotice,
-  TICKET_AREAS, type TicketArea, type TicketStatus,
+  createNotice, deleteNotice, notify, listNotifications, markNotificationsRead,
+  TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
 const MAX_BODY = 5000;
@@ -56,6 +56,18 @@ export async function POST(req: Request) {
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 400 });
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       const m = await sendMessage(threadId, me.id, text);
+
+      // Tell the other side. Never quote the message itself — see notify().
+      if (threadId.startsWith("dm:")) {
+        const partner = dmPartner(threadId, me.id);
+        if (partner) await notify([partner], "message", `${me.name} sent you a message`, `/team/messages?to=${me.id}`);
+      } else {
+        const t = await getTicket(threadId.slice("ticket:".length));
+        if (t) {
+          const others = [t.createdBy, ...t.assignees].filter((u) => u !== me.id);
+          await notify(others, "ticket_reply", `${me.name} replied on ticket #${t.ref}`, `/team/tickets/${t.id}`);
+        }
+      }
       return NextResponse.json({ ok: true, id: m.id });
     }
 
@@ -79,6 +91,8 @@ export async function POST(req: Request) {
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
 
       const t = await createTicket({ createdBy: me.id, assignees, area: area as TicketArea, subject, body: text });
+      await notify(assignees.filter((a) => a !== me.id), "ticket_new",
+        `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
       return NextResponse.json({ ok: true, id: t.id, ref: t.ref });
     }
 
@@ -101,14 +115,25 @@ export async function POST(req: Request) {
         patch.assignees = a;
       }
       await updateTicket(id, patch);
+
+      if (patch.status && patch.status !== t.status) {
+        const watchers = [t.createdBy, ...t.assignees].filter((u) => u !== me.id);
+        await notify(watchers, "ticket_status",
+          `${me.name} marked ticket #${t.ref} ${TICKET_STATUS_LABEL[patch.status].toLowerCase()}`, `/team/tickets/${t.id}`);
+      }
+      if (patch.assignees) {
+        // Only tell people newly put on it.
+        const added = patch.assignees.filter((a) => !t.assignees.includes(a) && a !== me.id);
+        await notify(added, "ticket_new", `${me.name} assigned ticket #${t.ref} to you`, `/team/tickets/${t.id}`);
+      }
       return NextResponse.json({ ok: true });
     }
 
     // ---- notices ------------------------------------------------------------
     if (action === "notice:create") {
-      // Company-wide announcements: the owner and the admin only.
-      if (me.contact !== "owner" && me.contact !== "admin") {
-        return NextResponse.json({ error: "Only the owner or admin can post a notice." }, { status: 403 });
+      // Company-wide announcements: the owner, the biller and the admin.
+      if (!isContact(me.id)) {
+        return NextResponse.json({ error: "Not allowed to post notices." }, { status: 403 });
       }
       const title = String(body.title ?? "").trim();
       if (!title) return NextResponse.json({ error: "A title is required." }, { status: 400 });
@@ -119,14 +144,21 @@ export async function POST(req: Request) {
       if (eventAtRaw && !eventAt) return NextResponse.json({ error: "That date didn't make sense." }, { status: 400 });
 
       const n = await createNotice({ authorId: me.id, title, body: text, eventAt, pinned: body.pinned === true });
+      await notify(CLINICIANS.filter((c) => c.id !== me.id).map((c) => c.id), "notice",
+        `${me.name} posted a notice`, "/team/notices");
       return NextResponse.json({ ok: true, id: n.id });
     }
 
     if (action === "notice:delete") {
-      if (me.contact !== "owner" && me.contact !== "admin") {
+      if (!isContact(me.id)) {
         return NextResponse.json({ error: "Not allowed." }, { status: 403 });
       }
       await deleteNotice(String(body.id ?? ""));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "notifications:read") {
+      await markNotificationsRead(me.id);
       return NextResponse.json({ ok: true });
     }
 
@@ -140,7 +172,13 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  const threadId = new URL(req.url).searchParams.get("thread") ?? "";
+
+  const url = new URL(req.url);
+  if (url.searchParams.get("notifications")) {
+    return NextResponse.json({ ok: true, notifications: await listNotifications(me.id) });
+  }
+
+  const threadId = url.searchParams.get("thread") ?? "";
   if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
   const { listMessages } = await import("@/lib/comms");
   const msgs = await listMessages(threadId);

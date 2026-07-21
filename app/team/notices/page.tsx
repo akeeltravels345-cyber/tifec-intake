@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, isContact } from "@/lib/clinicians";
 import { listNotices } from "@/lib/comms";
 import NoticeBoard from "@/components/team/NoticeBoard";
 
@@ -11,7 +11,8 @@ export default async function NoticesPage() {
   if (!me) redirect("/login?next=/team/notices");
 
   const notices = await listNotices();
-  const canPost = me.contact === "owner" || me.contact === "admin";
+  // The owner, the biller and the admin can post to the whole practice.
+  const canPost = isContact(me.id);
 
   return (
     <NoticeBoard

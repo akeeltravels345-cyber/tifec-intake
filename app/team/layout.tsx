@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { unreadCount } from "@/lib/comms";
+import { unreadCount, unreadNotifications } from "@/lib/comms";
 import TeamTabs from "@/components/team/TeamTabs";
+import NotificationBell from "@/components/team/NotificationBell";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function TeamLayout({ children }: { children: React.ReactNode }) {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/team/notices");
-  const unread = await unreadCount(me.id);
+  const [unread, noteCount] = await Promise.all([unreadCount(me.id), unreadNotifications(me.id)]);
 
   return (
     <div className="tm">
@@ -19,7 +20,10 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
       <div className="tm-wrap">
         <div className="tm-top">
           <Link href="/dashboard" className="tm-back">← Dashboard</Link>
-          <div className="tm-me">{me.name}</div>
+          <div className="tm-topright">
+            <NotificationBell initialUnread={noteCount} />
+            <span className="tm-me">{me.name}</span>
+          </div>
         </div>
         <TeamTabs unread={unread} />
         <main className="tm-main">{children}</main>

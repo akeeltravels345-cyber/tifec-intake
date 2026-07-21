@@ -56,3 +56,18 @@ CREATE TABLE IF NOT EXISTS comms_notices (
   pinned     BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- In-app notifications: new message, ticket raised, reply, status change, notice.
+-- `body` is written by the server and deliberately carries NO ticket subject,
+-- notice title or message text — those can name a client, and a notification is
+-- the thing people glance at with someone stood beside them.
+CREATE TABLE IF NOT EXISTS comms_notifications (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL,          -- who should see it
+  kind       TEXT NOT NULL,          -- message | ticket_new | ticket_reply | ticket_status | notice
+  body       TEXT NOT NULL,
+  href       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS comms_notifications_user_idx ON comms_notifications (user_id, read_at, created_at DESC);

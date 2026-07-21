@@ -65,6 +65,18 @@ export interface Ticket {
   updatedAt: string;
 }
 
+export type NotifyKind = "message" | "ticket_new" | "ticket_reply" | "ticket_status" | "notice";
+
+export interface Notification {
+  id: string;
+  userId: string;      // who should see it
+  kind: NotifyKind;
+  body: string;        // deliberately free of client detail — see notify()
+  href: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
 export interface Notice {
   id: string;
   authorId: string;
@@ -93,6 +105,7 @@ const MSG_FILE = "comms-messages.local.json";
 const TIC_FILE = "comms-tickets.local.json";
 const NOT_FILE = "comms-notices.local.json";
 const READ_FILE = "comms-reads.local.json";
+const NOTIF_FILE = "comms-notifications.local.json";
 
 const str = (v: unknown) => (v == null ? "" : String(v));
 const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : str(v));
@@ -321,6 +334,69 @@ export async function createNotice(input: {
     writeJson(NOT_FILE, all);
   }
   return { ...row, title: input.title, body: input.body };
+}
+
+// ============================ Notifications =================================
+// Bodies are written by the server and never contain a ticket subject, a notice
+// title or a message body — those can name a client, and a notification is the
+// one thing people glance at with someone else looking over their shoulder.
+
+export async function notify(userIds: string[], kind: NotifyKind, body: string, href: string): Promise<void> {
+  const targets = [...new Set(userIds)].filter(Boolean);
+  if (targets.length === 0) return;
+  const now = new Date().toISOString();
+  const rows = targets.map((userId) => ({ id: randomId(), userId, kind, body, href, createdAt: now }));
+
+  if (usePostgres) {
+    const sql = await pg();
+    for (const r of rows) {
+      await sql`
+        INSERT INTO comms_notifications (id, user_id, kind, body, href, created_at)
+        VALUES (${r.id}, ${r.userId}, ${r.kind}, ${r.body}, ${r.href}, ${r.createdAt})`;
+    }
+    return;
+  }
+  const all = readJson<(typeof rows[number] & { readAt: string | null })[]>(NOTIF_FILE, []);
+  all.push(...rows.map((r) => ({ ...r, readAt: null })));
+  writeJson(NOTIF_FILE, all);
+}
+
+export async function listNotifications(userId: string, limit = 25): Promise<Notification[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`
+      SELECT id, user_id, kind, body, href, created_at, read_at
+      FROM comms_notifications WHERE user_id = ${userId}
+      ORDER BY created_at DESC LIMIT ${limit}`) as Record<string, unknown>[];
+    return rows.map((r) => ({
+      id: str(r.id), userId: str(r.user_id), kind: str(r.kind) as NotifyKind, body: str(r.body),
+      href: str(r.href), createdAt: iso(r.created_at), readAt: r.read_at ? iso(r.read_at) : null,
+    }));
+  }
+  return readJson<Notification[]>(NOTIF_FILE, [])
+    .filter((n) => n.userId === userId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
+export async function unreadNotifications(userId: string): Promise<number> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT count(*)::int AS n FROM comms_notifications WHERE user_id = ${userId} AND read_at IS NULL`) as Record<string, unknown>[];
+    return Number(rows[0]?.n ?? 0);
+  }
+  return readJson<Notification[]>(NOTIF_FILE, []).filter((n) => n.userId === userId && !n.readAt).length;
+}
+
+export async function markNotificationsRead(userId: string): Promise<void> {
+  const now = new Date().toISOString();
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`UPDATE comms_notifications SET read_at = ${now} WHERE user_id = ${userId} AND read_at IS NULL`;
+    return;
+  }
+  const all = readJson<Notification[]>(NOTIF_FILE, []);
+  writeJson(NOTIF_FILE, all.map((n) => (n.userId === userId && !n.readAt ? { ...n, readAt: now } : n)));
 }
 
 export async function deleteNotice(id: string): Promise<void> {

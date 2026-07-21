@@ -11,12 +11,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   if (!me) redirect("/login?next=/team/messages");
   const sp = await searchParams;
 
-  // Clinicians message the owner, biller or admin. Those three can reach anyone,
-  // so they get the full roster. Contacts stay listed even when they're hidden
-  // from the client-facing picker: the admin account is intakeHidden, and must
-  // still be reachable here.
-  const iAmContact = isContact(me.id);
-  const people = (iAmContact ? CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)) : CONTACTS)
+  // Everyone can message everyone. Contacts stay listed even when hidden from
+  // the client-facing picker — the admin account is intakeHidden but must still
+  // be reachable here.
+  const people = CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id))
     .filter((c) => c.id !== me.id)
     .map((c) => ({
       id: c.id, name: c.name,

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "578cc4f703b987c1a44ec1fec1a24031",
+    "userId": "joan-latty",
+    "kind": "message",
+    "body": "Dr. Donnet O'Connor sent you a message",
+    "href": "/team/messages?to=donnet-oconnor",
+    "createdAt": "2026-07-21T17:46:58.709Z",
+    "readAt": "2026-07-21T17:48:28.565Z"
+  },
+  {
+    "id": "f8d24584a891c6ad032066ab84388684",
+    "userId": "shion-oconnor",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T17:46:59.602Z",
+    "readAt": null
+  },
+  {
+    "id": "d411c34b613643db4d5623ef5e5fd40b",
+    "userId": "donnet-oconnor",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T17:46:59.602Z",
+    "readAt": null
+  },
+  {
+    "id": "15868d891dd3871c8b6da82904dbc83b",
+    "userId": "joan-latty",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T17:46:59.602Z",
+    "readAt": "2026-07-21T17:48:28.565Z"
+  },
+  {
+    "id": "c76f3bdfdbe745994200b6002284b13e",
+    "userId": "sofia-hamilton",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T17:46:59.602Z",
+    "readAt": "2026-07-21T17:49:22.365Z"
+  },
+  {
+    "id": "3cf7f3e40976880bb8bd9d11b340775c",
+    "userId": "akeel-test",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T17:46:59.602Z",
+    "readAt": null
+  },
+  {
+    "id": "d603ac0e13a63b0cd2c23280e8b47582",
+    "userId": "nick-oconnor",
+    "kind": "ticket_new",
+    "body": "Dr. Joan Latty raised ticket #2 (Pay & payouts) for you",
+    "href": "/team/tickets/a3c26298ada2c8e2fd82b0048295ee6a",
+    "createdAt": "2026-07-21T17:47:47.602Z",
+    "readAt": null
+  },
+  {
+    "id": "a47fcd2850c1be6742a5a9a5ee7c5238",
+    "userId": "joan-latty",
+    "kind": "ticket_status",
+    "body": "Nick O'Connor marked ticket #2 in progress",
+    "href": "/team/tickets/a3c26298ada2c8e2fd82b0048295ee6a",
+    "createdAt": "2026-07-21T17:47:48.616Z",
+    "readAt": "2026-07-21T17:48:28.565Z"
+  },
+  {
+    "id": "1061e31ce8d596d13677c3ccdec932fb",
+    "userId": "joan-latty",
+    "kind": "ticket_reply",
+    "body": "Nick O'Connor replied on ticket #2",
+    "href": "/team/tickets/a3c26298ada2c8e2fd82b0048295ee6a",
+    "createdAt": "2026-07-21T17:47:48.623Z",
+    "readAt": "2026-07-21T17:48:28.565Z"
+  },
+  {
+    "id": "41d2c31d67b8709c46916578ec7fbda5",
+    "userId": "joan-latty",
+    "kind": "ticket_status",
+    "body": "Nick O'Connor marked ticket #2 resolved",
+    "href": "/team/tickets/a3c26298ada2c8e2fd82b0048295ee6a",
+    "createdAt": "2026-07-21T17:47:48.630Z",
+    "readAt": "2026-07-21T17:48:28.565Z"
+  }
+]

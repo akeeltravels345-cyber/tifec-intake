@@ -12,5 +12,19 @@
     "status": "open",
     "createdAt": "2026-07-17T13:52:45.931Z",
     "updatedAt": "2026-07-17T13:55:41.774Z"
+  },
+  {
+    "id": "a3c26298ada2c8e2fd82b0048295ee6a",
+    "ref": 2,
+    "createdBy": "joan-latty",
+    "assignees": [
+      "nick-oconnor"
+    ],
+    "area": "Pay & payouts",
+    "subjectEnc": "s1L57XMOpmBTiyIq:uFhUQOObvp/+MrqA87twdQ==:uWVy+XTHqpZOQXFYdNMou9vme3ZkxIEr6hOpXvs=",
+    "bodyEnc": "cxrJ3ZcVWR4dfl7s:CYtuaDkfOnAzcaMfqePOFw==:52aUkYNPOXRD1ojs3SgQ7OTeB/j2VheMwZnuGN61gYa3hzmQrGaXzC/z0yxA53GmvMK1yGDAB0BOSvwTN26sBfA+fV4NYGbAQQw=",
+    "status": "resolved",
+    "createdAt": "2026-07-21T17:47:47.600Z",
+    "updatedAt": "2026-07-21T17:47:48.630Z"
   }
 ]
