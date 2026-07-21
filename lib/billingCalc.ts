@@ -88,13 +88,17 @@ export function computeClinicianMonth(
   const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
   const health = settings.otherDeductionFixed;
   const payout = round2(collected - retentionAmount - otherPctAmount - health);
-  // The biller earns a share of what the COMPANY keeps, not of what the
-  // clinician collects — so it can never come out of a clinician's payout.
-  // Based on the retention attributable to insurance money (what the biller
-  // actually chases); co-pays are taken at the visit by the clinician.
+  // The biller is paid TWO ways, and both come out of the company's share —
+  // never a clinician's payout:
+  //   1. a practice-wide % of the COMPANY RETENTION on this clinician, and
+  //   2. an individual % agreed for this clinician.
+  // Both are charged on insurance money collected (what the biller chases);
+  // co-pays are taken at the visit by the clinician.
   const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
-  const billerPct = billerCommissionPct;
-  const billerCommission = round2((insuranceRetention * billerPct) / 100);
+  const billerFromCompany = round2((insuranceRetention * billerCommissionPct) / 100);
+  const billerPct = settings.billerPct ?? 0;
+  const billerFromClinician = round2((insuranceBilledThisMonth * billerPct) / 100);
+  const billerCommission = round2(billerFromCompany + billerFromClinician);
 
   return {
     clinicianId: settings.clinicianId,

@@ -52,7 +52,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           <div className="rate">
             <div>
               <div className="ratebox"><input type="number" step="0.5" min="0" value={billerPct} onChange={(e) => setBillerPct(e.target.value)} onBlur={() => savePractice(billerPct, expenses, "Commission saved")} /><span className="pct">%</span></div>
-              <div className="basis">of the company retention on each clinician</div>
+              <div className="basis">of the company retention, on top of each clinician&apos;s own rate below</div>
             </div>
             <button className="su-save" onClick={() => savePractice(billerPct, expenses, "Commission saved")}>Save</button>
           </div>
@@ -135,9 +135,9 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
 
       {/* Clinician splits */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. The biller&apos;s share comes out of the retention above, not out of these payouts.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected — on top of the practice rate above. Both come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th></th></tr></thead>
+          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Biller %</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
               <tr key={c.id}>
@@ -145,7 +145,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td className="num"><input className="su-in short" type="number" step="0.5" value={s.retentionPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, retentionPct: Number(e.target.value) } })} /></td>
                 <td className="num"><input className="su-in short" type="number" step="0.5" value={s.otherDeductionPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, otherDeductionPct: Number(e.target.value) } })} /></td>
                 <td className="num"><input className="su-in short" type="number" step="1" value={s.otherDeductionFixed} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: Number(e.target.value) } })} /></td>
-                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed }, "Saved")}>Save</button></div></td>
+                <td className="num"><input className="su-in short" type="number" step="0.5" min="0" max="100" value={s.billerPct} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, billerPct: Number(e.target.value) } })} /></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, billerPct: s.billerPct }, "Saved")}>Save</button></div></td>
               </tr>
             ); })}
           </tbody>

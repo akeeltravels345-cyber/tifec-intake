@@ -30,8 +30,10 @@ export default async function BillingQueuePage() {
     const e = external.find((c) => c.id === clinicianId);
     if (e) return (insurance * e.billerPct) / 100;
     if (!CLINICIANS.some((c) => c.id === clinicianId && !c.intakeHidden)) return 0;
-    const ret = settingsList.find((s) => s.clinicianId === clinicianId)?.retentionPct ?? 0;
-    return (insurance * (ret / 100) * cfg.billerCommissionPct) / 100;
+    const st = settingsList.find((s) => s.clinicianId === clinicianId);
+    const fromCompany = (insurance * ((st?.retentionPct ?? 0) / 100) * cfg.billerCommissionPct) / 100;
+    const fromClinician = (insurance * (st?.billerPct ?? 0)) / 100;
+    return fromCompany + fromClinician;
   };
 
   const toClaim = (s: (typeof sessions)[number]): Claim => ({
