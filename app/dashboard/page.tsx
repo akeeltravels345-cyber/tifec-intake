@@ -128,10 +128,13 @@ export default async function Dashboard() {
   // Forms view (rendered inside the shell when the Forms tab is active).
   // Grouped into clear families: intake, Level 1 screeners, Level 2 follow-ups,
   // and shareable tools - so the long list is easy to scan.
-  const intakeForms = me.forms.filter((k) => k === "individual" || k === "couples");
   const level1Forms = me.forms.filter((k) => k.startsWith("dsm5-level1"));
   const level2Forms = me.forms.filter((k) => k.startsWith("l2-"));
   const severityForms = me.forms.filter((k) => k.startsWith("sev-"));
+  // Catch-all so a new form key can never silently vanish from the Forms tab:
+  // anything that isn't a screener or follow-up measure is an intake form.
+  const measured = new Set([...level1Forms, ...level2Forms, ...severityForms]);
+  const intakeForms = me.forms.filter((k) => !measured.has(k));
 
   const formCard = (key: string) => {
     const meta = FORM_META[key];
