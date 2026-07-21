@@ -2238,3 +2238,46 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-bellrow .tx { display: flex; flex-direction: column; min-width: 0; }
 .tm-bellrow .bd { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
 .tm-bellrow .wh { font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+/* Announcement banner: slides down, settles, then a single soft pulse so it
+   catches the eye without becoming a flashing distraction. Respects
+   prefers-reduced-motion. */
+.tm-banner {
+  position: fixed; top: 14px; left: 50%; z-index: 60;
+  display: flex; align-items: center; gap: 12px;
+  width: min(620px, calc(100vw - 28px));
+  background: linear-gradient(135deg, #2b2f86, #256e72); color: #fff;
+  border-radius: 14px; padding: 13px 16px;
+  box-shadow: 0 14px 36px rgba(37,45,120,.3);
+  animation: tm-banner-in .42s cubic-bezier(.22,1,.36,1) both, tm-banner-pulse 1.5s ease-out .5s 1;
+}
+.tm-banner .ic { font-size: 17px; flex: none; }
+.tm-banner .tx { flex: 1; font-size: 13.5px; line-height: 1.45; min-width: 0; }
+.tm-banner .tx b { font-weight: 700; }
+.tm-banner .go {
+  flex: none; background: rgba(255,255,255,.16); color: #fff; text-decoration: none;
+  border-radius: 8px; padding: 7px 13px; font: 600 12.5px "Open Sans", system-ui, sans-serif;
+}
+.tm-banner .go:hover { background: rgba(255,255,255,.26); color: #fff; }
+.tm-banner .x { flex: none; background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+.tm-banner .x:hover { color: #fff; }
+
+@keyframes tm-banner-in {
+  from { opacity: 0; transform: translate(-50%, -18px) scale(.97); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+@keyframes tm-banner-pulse {
+  0%, 100% { box-shadow: 0 14px 36px rgba(37,45,120,.3); }
+  35%      { box-shadow: 0 14px 36px rgba(37,45,120,.3), 0 0 0 8px rgba(47,142,147,.16); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-banner { animation: none; transform: translate(-50%, 0); }
+}
+
+/* Sound toggle inside the notifications panel. */
+.tm-bellhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tm-bellhead .snd {
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  font: 600 10.5px "Open Sans", system-ui, sans-serif; letter-spacing: 0; text-transform: none; color: var(--muted);
+}
+.tm-bellhead .snd:hover { color: var(--ink); }
