@@ -16,7 +16,7 @@ export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
   earned: number; earnedCollected: number; earnedOwed: number; earnedDelta: number | null;
   cashTotal: number; cashCopays: number; cashInsurance: number; cashRollover: number;
-  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number };
+  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number };
   trend: { label: string; value: number; current: boolean }[];
   expenses: { name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[] }[];
   expensesTotal: number;
@@ -125,6 +125,12 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <div className="bo-wfl"><span className="k">Cash collected</span><span className="v">{money(data.bottom.cashCollected)}</span></div>
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "var(--indigo)" }} />Clinician payouts</span><span className="v">−{money(data.bottom.payouts)}</span></div>
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#8b93b8" }} />Biller commission</span><span className="v">−{money(data.bottom.billerCommission)}</span></div>
+            {data.bottom.billerFromClinicians > 0 && (
+              <div className="bo-wfl bo-wfl-sub"><span className="k">↳ withheld from clinician payouts</span><span className="v">{money(data.bottom.billerFromClinicians)}</span></div>
+            )}
+            {data.bottom.billerFromCompany > 0 && (
+              <div className="bo-wfl bo-wfl-sub"><span className="k">↳ the practice&apos;s own agreement</span><span className="v">{money(data.bottom.billerFromCompany)}</span></div>
+            )}
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Running expenses</span><span className="v">−{money(data.bottom.runningExpenses)}</span></div>
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
           </div>

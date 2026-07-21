@@ -2100,3 +2100,8 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .cd-flowline.sub { padding: 7px 0 9px 18px; border-bottom: 1px solid var(--hair); font-size: 12.5px; }
 .biz .cd-flowline.sub .lbl { color: var(--faint); }
 .biz .cd-flowline.sub .amt { color: var(--faint); font-weight: 600; }
+
+/* The biller has two separate agreements — one with each clinician, one with
+   the practice. Break the single cash-out line into both. */
+.biz .bo-wfl.bo-wfl-sub { padding: 6px 0 6px 20px; font-size: 12.5px; }
+.biz .bo-wfl.bo-wfl-sub .k, .biz .bo-wfl.bo-wfl-sub .v { color: var(--faint); font-weight: 500; }

@@ -35,8 +35,8 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const isSelf = id === user.clinician.id;
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
   const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction;
-  // Shown as a component OF the company retention, never as its own deduction —
-  // the biller is paid out of the company's share, not the clinician's payout.
+  // The clinician's own agreement with the biller — settled from their share,
+  // so it is a genuine deduction here (the company's separate 3% is not).
   const biller = CLINICIANS.find((x) => x.billing === "biller");
 
   // What's still with the insurers. This is the clinician's future pay — payout
@@ -84,14 +84,15 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           <div className="cd-flowbar">
             <i style={{ width: `${w(c.payout, c.collected)}%`, background: "var(--indigo)" }} />
             <i style={{ width: `${w(c.retentionAmount, c.collected)}%`, background: "#8b93b8" }} />
+            <i style={{ width: `${w(c.billerFromClinician, c.collected)}%`, background: "#43A9AE" }} />
             <i style={{ width: `${w(otherDeductions, c.collected)}%`, background: "#D9A441" }} />
           </div>
           <div className="cd-flowline"><span className="lbl"><span className="cd-keydot" style={{ background: "#EEE7DB" }} />Collected this month</span><span className="amt">{money(c.collected)}</span></div>
           <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
-          {c.billerCommission > 0 && (
-            <div className="cd-flowline sub">
-              <span className="lbl">↳ of which billing{biller ? ` (${biller.name})` : ""}</span>
-              <span className="amt">{money(c.billerCommission)}</span>
+          {c.billerFromClinician > 0 && (
+            <div className="cd-flowline minus">
+              <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</span>
+              <span className="amt">−{money(c.billerFromClinician)}</span>
             </div>
           )}
           {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
@@ -99,7 +100,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
           <p className="cd-note">
             Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
-            {c.billerCommission > 0 && <> Billing comes out of the company&apos;s share above — it does not reduce your payout.</>}
+            {c.billerFromClinician > 0 && <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on the {money0(c.insuranceBilledThisMonth)} of insurance collected for you.</>}
           </p>
           <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="cd-stmt">🧾 View payout statement →</Link>
         </div>

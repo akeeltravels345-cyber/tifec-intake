@@ -55,9 +55,11 @@ export interface ClinicianMonth {
   healthDeduction: number;          // fixed KYD (settings.otherDeductionFixed)
   payout: number;
   companyKeeps: number;
-  // biller commission earned on THIS clinician's insurance collected this month
-  billerPct: number;
-  billerCommission: number;
+  // The biller has TWO separate agreements, paid by two different parties:
+  billerPct: number;              // the clinician's own rate with the biller
+  billerFromClinician: number;    // deducted from THIS clinician's payout
+  billerFromCompany: number;      // paid by the practice out of its retention
+  billerCommission: number;       // both together — what the biller earns here
   // supporting lists
   visitSessions: BillingSession[];
   outstandingSessions: BillingSession[];
@@ -87,18 +89,21 @@ export function computeClinicianMonth(
   const retentionAmount = round2((collected * pct) / 100);
   const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
   const health = settings.otherDeductionFixed;
-  const payout = round2(collected - retentionAmount - otherPctAmount - health);
-  // The biller is paid TWO ways, and both come out of the company's share —
-  // never a clinician's payout:
-  //   1. a practice-wide % of the COMPANY RETENTION on this clinician, and
-  //   2. an individual % agreed for this clinician.
-  // Both are charged on insurance money collected (what the biller chases);
-  // co-pays are taken at the visit by the clinician.
-  const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
-  const billerFromCompany = round2((insuranceRetention * billerCommissionPct) / 100);
+  // The biller has two SEPARATE agreements, and they are paid by different
+  // parties — this is the whole point, so keep them apart:
+  //   1. with the clinician — their own rate, out of their share, and
+  //   2. with the practice — a % of the company retention, out of the company's.
+  // Both are charged on insurance collected (what the biller chases); co-pays
+  // are taken at the visit by the clinician.
   const billerPct = settings.billerPct ?? 0;
   const billerFromClinician = round2((insuranceBilledThisMonth * billerPct) / 100);
+  const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
+  const billerFromCompany = round2((insuranceRetention * billerCommissionPct) / 100);
   const billerCommission = round2(billerFromCompany + billerFromClinician);
+
+  // The clinician's own agreement is settled out of their share, so it reduces
+  // their payout. The company's agreement never does.
+  const payout = round2(collected - retentionAmount - otherPctAmount - health - billerFromClinician);
 
   return {
     clinicianId: settings.clinicianId,
@@ -120,6 +125,8 @@ export function computeClinicianMonth(
     payout,
     companyKeeps: round2(retentionAmount + otherPctAmount + health),
     billerPct,
+    billerFromClinician,
+    billerFromCompany,
     billerCommission,
     visitSessions: visits,
     outstandingSessions: unbilled,
@@ -136,7 +143,9 @@ export interface BusinessMonth {
   copays: number;             // co-pays collected this month
   outstanding: number;        // total not yet paid by insurance (running)
   totalPayout: number;        // sum of clinician payouts
-  billerCommission: number;   // sum of per-clinician biller commission (paid this month)
+  billerCommission: number;   // total the biller earns across the practice
+  billerFromClinicians: number; // withheld from clinician payouts and passed on
+  billerFromCompany: number;    // the practice's own agreement with the biller
   companyNet: number;         // collected - payouts (what the business keeps)
   perClinician: ClinicianMonth[];
 }
@@ -157,6 +166,8 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
     outstanding: s((c) => c.outstanding),
     totalPayout,
     billerCommission: s((c) => c.billerCommission),
+    billerFromClinicians: s((c) => c.billerFromClinician),
+    billerFromCompany: s((c) => c.billerFromCompany),
     companyNet: round2(collected - totalPayout),
     perClinician,
   };
@@ -167,6 +178,8 @@ export interface BottomLine {
   cashCollected: number;
   payouts: number;
   billerCommission: number;
+  billerFromClinicians: number;
+  billerFromCompany: number;
   billerCommissionPct: number;
   runningExpenses: number;
   net: number;
@@ -185,6 +198,8 @@ export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: numb
     cashCollected: biz.collected,
     payouts: biz.totalPayout,
     billerCommission,
+    billerFromClinicians: biz.billerFromClinicians,
+    billerFromCompany: biz.billerFromCompany,
     billerCommissionPct: Math.round(effBillerPct * 10) / 10,
     runningExpenses: runningExpensesTotal,
     net,
