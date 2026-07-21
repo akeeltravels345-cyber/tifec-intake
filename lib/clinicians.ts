@@ -243,6 +243,12 @@ export const CONTACTS = CLINICIANS.filter((c) => !!c.contact);
 export const contactFor = (role: ContactRole): Clinician | undefined => CLINICIANS.find((c) => c.contact === role);
 export const isContact = (id: string): boolean => CONTACTS.some((c) => c.id === id);
 
+/** The notice board and tickets are run by the practice, so only the owner,
+ *  biller and admin see them. Practising clinicians get Messages only — they
+ *  reach the office by messaging a contact directly. */
+export const canUseNotices = (id: string): boolean => isContact(id);
+export const canUseTickets = (id: string): boolean => isContact(id);
+
 export function getClinicianByEmail(email: string): Clinician | undefined {
   const normalized = email.trim().toLowerCase();
   return CLINICIANS.find((c) => c.email.toLowerCase() === normalized);

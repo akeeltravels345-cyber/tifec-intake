@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { CONTACTS, CONTACT_LABEL, getClinician } from "@/lib/clinicians";
+import { CONTACTS, CONTACT_LABEL, getClinician, canUseTickets } from "@/lib/clinicians";
 import { listTickets, TICKET_AREAS } from "@/lib/comms";
 import TicketList from "@/components/team/TicketList";
 
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TicketsPage() {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/team/tickets");
+  if (!canUseTickets(me.id)) redirect("/team/messages");
 
   const all = await listTickets();
   // You see what you raised and what's assigned to you. The admin and owner
