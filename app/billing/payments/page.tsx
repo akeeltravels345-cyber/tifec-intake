@@ -18,7 +18,8 @@ export default async function BillingQueuePage() {
   const today = now.toISOString().slice(0, 10);
   const mKey = today.slice(0, 7);
   const [sessions, insurers, external, settingsList, cfg] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings(), getPracticeConfig()]);
-  const insName = (id: string | null) => insurers.find((i) => i.id === id)?.name ?? "—";
+  const insName = (id: string | null) =>
+    insurers.find((i) => i.id === id)?.name ?? (id ? "Unknown insurer" : "Self-pay");
   // Outside clinicians aren't on the roster, so resolve their names too.
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
   // Same rule as the biller dashboard: a % of the company retention for TIFEC

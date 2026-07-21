@@ -55,7 +55,8 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     const e = externalOf(cid);
     return e ? e.billerPct : Math.round((retentionPctOf(cid) / 100) * billerRate * 100) / 100;
   };
-  const insName = (id: string | null) => insurerList.find((i) => i.id === id)?.name ?? "—";
+  const insName = (id: string | null) =>
+    insurerList.find((i) => i.id === id)?.name ?? (id ? "Unknown insurer" : "Self-pay");
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
   const sum = (arr: typeof all, f: (s: (typeof all)[number]) => number) => r2(arr.reduce((t, s) => t + f(s), 0));
 

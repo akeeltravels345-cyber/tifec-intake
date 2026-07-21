@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
-import { computeClinicianMonth, insurancePortion } from "@/lib/billingCalc";
+import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { getClinician } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 
@@ -30,10 +30,26 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
   const [all, insurers, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
-  const insurerName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? (iid ? "—" : "Self-pay");
+  const insurerName = (iid: string | null) =>
+    insurers.find((i) => i.id === iid)?.name ?? (iid ? "Unknown insurer" : "Self-pay");
   const isSelf = id === user.clinician.id;
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
   const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction;
+
+  // What's still with the insurers. This is the clinician's future pay — payout
+  // follows cash, so this is the "when do I get the rest" question answered.
+  const today = new Date().toISOString().slice(0, 10);
+  const owedMap = new Map<string, { name: string; amount: number; count: number; oldest: number }>();
+  for (const s of c.outstandingSessions) {
+    const k = s.insurerId ?? "self";
+    const cur = owedMap.get(k) ?? { name: insurerName(s.insurerId), amount: 0, count: 0, oldest: 0 };
+    cur.amount += insurancePortion(s);
+    cur.count += 1;
+    cur.oldest = Math.max(cur.oldest, ageDays(s.dateOfService, today));
+    owedMap.set(k, cur);
+  }
+  const owed = [...owedMap.values()].sort((a, b) => b.amount - a.amount);
+  const owedMax = Math.max(1, ...owed.map((o) => o.amount));
 
   return (
     <>
@@ -81,6 +97,29 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           <div className="cd-flowline"><span className="lbl">Already billed</span><span className="amt">{money(c.billedFromThisMonth)}</span></div>
           <div className="cd-flowline"><span className="lbl">Still outstanding</span><span className="amt">{money(c.outstandingThisMonth)}</span></div>
           <div className="cd-flowline"><span className="lbl">Collected at visit</span><span className="amt">{money(c.copayThisMonth)}</span></div>
+
+          <div className="cd-owed">
+            <div className="cd-owedhead">
+              <span className="cd-lab">Still to come</span>
+              <span className="cd-hint">{owed.length > 0 ? `${money0(c.outstanding)} with insurers` : "nothing outstanding"}</span>
+            </div>
+            {owed.length === 0 ? (
+              <p className="cd-note" style={{ margin: 0 }}>Every appointment you&apos;ve logged has been paid. Nothing is waiting on an insurer.</p>
+            ) : (
+              <>
+                {owed.slice(0, 4).map((o) => (
+                  <div className="cd-owedrow" key={o.name}>
+                    <span className="nm">{o.name}<small>{o.count} claim{o.count === 1 ? "" : "s"}</small></span>
+                    <span className="tr"><i style={{ width: `${w(o.amount, owedMax)}%` }} /></span>
+                    <span className={`cd-age ${o.oldest >= 30 ? "warn" : ""}`}>{o.oldest}d</span>
+                    <span className="amt">{money0(o.amount)}</span>
+                  </div>
+                ))}
+                {owed.length > 4 && <p className="cd-hint" style={{ margin: "8px 2px 0" }}>+{owed.length - 4} more insurer{owed.length - 4 === 1 ? "" : "s"}</p>}
+                <p className="cd-note" style={{ marginTop: 12 }}>These pay out in the month the insurer settles them, not the month of the appointment.</p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

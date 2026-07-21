@@ -1614,14 +1614,15 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
 .cd-flowbar { height: 12px; border-radius: 999px; overflow: hidden; display: flex; background: #EEE7DB; margin: 14px 0 18px; }
 .cd-flowbar i { display: block; height: 100%; }
-.cd-flowline { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--hair); font-size: 14.5px; }
-.cd-flowline .lbl { color: var(--muted); display: inline-flex; align-items: center; gap: 9px; }
-.cd-flowline .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+.cd-flowline { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--hair); font-size: 14.5px; }
+.cd-flowline .lbl { color: var(--muted); display: inline-flex; align-items: baseline; gap: 9px; min-width: 0; }
+/* Money must never wrap — a stranded minus sign reads as a different number. */
+.cd-flowline .amt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
 .cd-flowline.minus .amt { color: var(--neg); }
 .cd-keydot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex: none; }
 .cd-rtotal { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; padding-top: 16px; border-top: 1.5px solid #E7DEC9; }
 .cd-rtotal .k { font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 9px; }
-.cd-rtotal .v { font: 400 34px "Newsreader", serif; color: var(--indigo); font-variant-numeric: tabular-nums; }
+.cd-rtotal .v { white-space: nowrap; font: 400 34px "Newsreader", serif; color: var(--indigo); font-variant-numeric: tabular-nums; }
 .cd-note { font-size: 12.5px; color: var(--faint); line-height: 1.6; margin: 14px 0 0; }
 .cd-stmt { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; padding: 9px 15px; border: 1px solid var(--indigo); border-radius: 10px; color: var(--indigo); font-weight: 600; font-size: 13.5px; cursor: pointer; background: #fff; text-decoration: none; }
 .cd-stmt:hover { background: #eef4f3; }
@@ -2074,3 +2075,18 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 @media (max-width: 900px) {
   .biz .bq-wcut { text-align: left; padding: 10px 22px 12px; }
 }
+
+/* Clinician payout view: "Still to come" — the outstanding money that becomes
+   this clinician's pay once the insurer settles. Sits in the work card so the
+   two columns balance and the dead space carries something useful. */
+.biz .cd-owed { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hair); }
+.biz .cd-owedhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.biz .cd-owedrow { display: grid; grid-template-columns: minmax(96px, 1.2fr) minmax(40px, 1fr) auto auto; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--hair); }
+.biz .cd-owedrow:first-of-type { border-top: none; }
+.biz .cd-owedrow .nm { font-weight: 600; font-size: 13.5px; min-width: 0; }
+.biz .cd-owedrow .nm small { display: block; font-weight: 400; color: var(--faint); font-size: 11.5px; margin-top: 1px; }
+.biz .cd-owedrow .tr { height: 8px; border-radius: 999px; background: #EEE7DB; overflow: hidden; }
+.biz .cd-owedrow .tr i { display: block; height: 100%; background: linear-gradient(90deg, #D9A441, #C98A2B); }
+.biz .cd-owedrow .amt { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; text-align: right; }
+.biz .cd-age { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: #edf3f2; color: var(--teal-deep); white-space: nowrap; }
+.biz .cd-age.warn { background: var(--amber-bg); color: var(--amber); }
