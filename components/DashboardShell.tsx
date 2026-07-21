@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
-import FeedbackButton from "@/components/FeedbackButton";
 import Tour from "@/components/Tour";
 
 export interface DashItem {
@@ -206,8 +205,6 @@ export default function DashboardShell({
         </nav>
 
         <div className="dm-spacer" />
-
-        <FeedbackButton />
 
         <div className="dm-account">
           <div className="dm-user">
