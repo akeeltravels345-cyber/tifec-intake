@@ -18,18 +18,23 @@ function ynClass(v: string): string {
 export default function DsmChild({
   answers,
   labels,
+  prefix = "cq",
+  selfReport = false,
 }: {
   answers: Record<string, string>;
   labels: Record<string, string>;
+  /** "cq" = parent/guardian-rated, "sq" = child self-report. */
+  prefix?: "cq" | "sq";
+  selfReport?: boolean;
 }) {
-  const scores = scoreDsmChild(answers);
+  const scores = scoreDsmChild(answers, prefix);
   const flagged = scores.filter((s) => s.flagged);
   const suicidal = scores.find((s) => s.domain.id === "suicidal");
 
   return (
     <>
       <div className="card">
-        <h2 className="section-title">Symptom screen summary (child 6-17)</h2>
+        <h2 className="section-title">{selfReport ? "Symptom screen summary (self-report, age 11-17)" : "Symptom screen summary (child 6-17)"}</h2>
         <p className="section-desc">
           Highest score per domain (parent/guardian rated). Per APA guidance, <strong>Mild (2)+</strong> - or
           <strong> Slight (1)+</strong> for Inattention and Psychosis, and any <strong>Yes / Don&apos;t Know</strong> for
@@ -75,7 +80,7 @@ export default function DsmChild({
                 <span className="dsm2-roman">{d.roman}.</span> {d.name}
               </div>
               {d.items.map((n) => {
-                const raw = answers[`cq${n}`];
+                const raw = answers[`${prefix}${n}`];
                 let cls = "sev-na";
                 let text = "N/A";
                 if (raw != null && raw !== "") {
@@ -92,7 +97,7 @@ export default function DsmChild({
                 }
                 return (
                   <div className="dsm2-row" key={n}>
-                    <span className="dsm2-q">{labels[`cq${n}`] || `Question ${n}`}</span>
+                    <span className="dsm2-q">{labels[`${prefix}${n}`] || `Question ${n}`}</span>
                     <span className={`sev ${cls}`}>{text}</span>
                   </div>
                 );

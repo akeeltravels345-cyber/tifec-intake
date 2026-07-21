@@ -37,9 +37,10 @@ export interface ChildScore {
   flagged: boolean;
 }
 
-export function scoreDsmChild(answers: Record<string, string>): ChildScore[] {
+/** `prefix` selects the field naming: "cq" = parent/guardian-rated, "sq" = child self-report. */
+export function scoreDsmChild(answers: Record<string, string>, prefix: "cq" | "sq" = "cq"): ChildScore[] {
   return DSM_CHILD_DOMAINS.map((domain) => {
-    const raw = domain.items.map((n) => answers[`cq${n}`]).filter((v) => v != null && v !== "");
+    const raw = domain.items.map((n) => answers[`${prefix}${n}`]).filter((v) => v != null && v !== "");
     if (domain.yesno) {
       const norm = raw.map((v) => v.trim().toLowerCase());
       const yes = norm.some((v) => v === "yes");
@@ -62,4 +63,9 @@ export function scoreDsmChild(answers: Record<string, string>): ChildScore[] {
 
 export function isDsmChildForm(formKey: string): boolean {
   return formKey === "dsm5-level1-child";
+}
+
+/** The 11-17 version the young person completes about themselves (fields sq1..sq25). */
+export function isDsmChildSelfForm(formKey: string): boolean {
+  return formKey === "dsm5-level1-child-self";
 }

@@ -70,6 +70,8 @@ export type FormTemplateKey =
   | "couples"
   | "dsm5-level1-adult"
   | "dsm5-level1-child"
+  | "dsm5-level1-child-self"
+  | "psychoed-intake"
   | "l2-depression"
   | "l2-anxiety"
   | "l2-anger"
@@ -604,6 +606,66 @@ function childYesNo(n: number, text: string): FormField {
   return { name: `cq${n}`, label: `${n}. ${text}`, type: "radio", options: YES_NO_DK, required: true };
 }
 
+// ---- DSM-5-TR Self-Rated Level 1, Child Age 11-17 (completed by the young person) ----
+// © 2013 American Psychiatric Association. Reproduced for clinician use with their
+// patients; the 25 items and scales are verbatim and MUST NOT be modified.
+const SELF_YES_NO = ["Yes", "No"];
+function selfItem(n: number, text: string): FormField {
+  return { name: `sq${n}`, label: `${n}. ${text}`, type: "radio", options: DSM_SCALE, required: true, stack: true };
+}
+function selfYesNo(n: number, text: string): FormField {
+  return { name: `sq${n}`, label: `${n}. ${text}`, type: "radio", options: SELF_YES_NO, required: true };
+}
+
+export const DSM_CHILD_SELF: FormSection[] = [
+  {
+    id: "childself-info",
+    title: "Your Information",
+    fields: [
+      { name: "full_name", label: "Your name", type: "text", required: true },
+      { name: "dob", label: "Your date of birth", type: "date", required: true },
+      { name: "email", label: "Email (yours or a parent's)", type: "email", required: true },
+    ],
+  },
+  {
+    id: "childself-symptoms",
+    title: "During the past TWO (2) WEEKS, how much (or how often) have you…",
+    titleBelowIntro: true,
+    intro: [
+      "The questions below ask about things that might have bothered you. For each question, choose the answer that best describes how much (or how often) you have been bothered by each problem during the past TWO (2) WEEKS.",
+      "If you are thinking about hurting yourself, please tell an adult you trust, call 911, or go to your nearest emergency room. This form is not monitored in real time.",
+    ],
+    fields: [
+      selfItem(1, "Been bothered by stomachaches, headaches, or other aches and pains?"),
+      selfItem(2, "Worried about your health or about getting sick?"),
+      selfItem(3, "Been bothered by not being able to fall asleep or stay asleep, or by waking up too early?"),
+      selfItem(4, "Been bothered by not being able to pay attention when you were in class or doing homework or reading a book or playing a game?"),
+      selfItem(5, "Had less fun doing things than you used to?"),
+      selfItem(6, "Felt sad or depressed for several hours?"),
+      selfItem(7, "Felt more irritated or easily annoyed than usual?"),
+      selfItem(8, "Felt angry or lost your temper?"),
+      selfItem(9, "Started lots more projects than usual or done more risky things than usual?"),
+      selfItem(10, "Slept less than usual but still had a lot of energy?"),
+      selfItem(11, "Felt nervous, anxious, or scared?"),
+      selfItem(12, "Not been able to stop worrying?"),
+      selfItem(13, "Not been able to do things you wanted to or should have done, because they made you feel nervous?"),
+      selfItem(14, "Heard voices - when there was no one there - speaking about you or telling you what to do or saying bad things to you?"),
+      selfItem(15, "Had visions when you were completely awake - that is, seen something or someone that no one else could see?"),
+      selfItem(16, "Had thoughts that kept coming into your mind that you would do something bad or that something bad would happen to you or to someone else?"),
+      selfItem(17, "Felt the need to check on certain things over and over again, like whether a door was locked or whether the stove was turned off?"),
+      selfItem(18, "Worried a lot about things you touched being dirty or having germs or being poisoned?"),
+      selfItem(19, "Felt you had to do things in a certain way, like counting or saying special things, to keep something bad from happening?"),
+      { name: "sq_gap", label: "In the past TWO (2) WEEKS, have you…", type: "statement" },
+      selfYesNo(20, "Had an alcoholic beverage (beer, wine, liquor, etc.)?"),
+      selfYesNo(21, "Smoked a cigarette, a cigar, or pipe, or used snuff or chewing tobacco?"),
+      selfYesNo(22, "Used drugs like marijuana, cocaine or crack, club drugs (like Ecstasy), hallucinogens (like LSD), heroin, inhalants or solvents (like glue), or methamphetamine (like speed)?"),
+      selfYesNo(23, "Used any medicine without a doctor's prescription to get high or change the way you feel (e.g., painkillers [like Vicodin], stimulants [like Ritalin or Adderall], sedatives or tranquilizers [like sleeping pills or Valium], or steroids)?"),
+      selfYesNo(24, "In the last 2 weeks, have you thought about killing yourself or committing suicide?"),
+      selfYesNo(25, "Have you EVER tried to kill yourself?"),
+    ],
+  },
+];
+
 export const DSM_CHILD_LEVEL1: FormSection[] = [
   {
     id: "child-info",
@@ -661,6 +723,252 @@ export const DSM_CHILD_LEVEL1: FormSection[] = [
 // the key to the relevant clinicians' `forms` list in lib/clinicians.ts.
 // `appendInsurance` / `appendConsent` control the shared trailing sections.
 // =============================================================================
+// =============================================================================
+// Psychoeducational Assessment Intake (child / teen, completed by a parent or
+// guardian). Digitized from the practice's paper "Intake Form".
+// =============================================================================
+const MARITAL_PE = ["Married", "Married before", "Never Married", "Separated", "Domestic Partnership", "Widowed"];
+const HEALTH_PE = ["Very good", "Good", "Satisfactory", "Unsatisfactory", "Poor"];
+
+/** Guardian block, generated for mother and father so the two stay identical. */
+function guardianSection(who: "mother" | "father"): FormSection {
+  const p = who;
+  const Title = who === "mother" ? "Mother / Legal Guardian" : "Father / Legal Guardian";
+  return {
+    id: `psychoed-${p}`,
+    title: Title,
+    fields: [
+      { name: `${p}_name`, label: `Name of ${who} / legal guardian`, type: "text" },
+      { name: `${p}_address`, label: "Home address", type: "textarea" },
+      { name: `${p}_dob`, label: "Date of birth", type: "date" },
+      { name: `${p}_email`, label: "Email", type: "email" },
+      { name: `${p}_home_phone`, label: "Telephone (home/cell)", type: "tel" },
+      { name: `${p}_work_phone`, label: "Telephone (work/cell)", type: "tel" },
+      { name: `${p}_marital_status`, label: "Marital status", type: "radio", options: MARITAL_PE },
+      {
+        name: `${p}_marital_detail`,
+        label: "If separated, in a domestic partnership, or widowed: how many years? If married before: how many times?",
+        type: "text",
+      },
+      { name: `${p}_employer`, label: "Employer", type: "text" },
+      { name: `${p}_work_address`, label: "Work address", type: "textarea" },
+      { name: `${p}_occupation`, label: "Occupation", type: "text" },
+      { name: `${p}_employed_length`, label: "How long employed?", type: "text" },
+      { name: `${p}_num_children`, label: "Number of children", type: "number" },
+      { name: `${p}_birth_position`, label: "Birth position of client", type: "text" },
+    ],
+  };
+}
+
+export const PSYCHOED_INTAKE: FormSection[] = [
+  {
+    id: "psychoed-client",
+    title: "Identifying Information",
+    intro: [
+      "Kindly share your identifying information, family history and current events. This will provide useful information for the client's psychological assessment and treatment.",
+    ],
+    fields: [
+      { name: "full_name", label: "Full name of client", type: "text", required: true },
+      { name: "address", label: "Home address", type: "textarea" },
+      { name: "dob", label: "Date of birth", type: "date", required: true },
+      { name: "gender", label: "Gender", type: "text" },
+      { name: "home_phone", label: "Telephone (home/cell)", type: "tel" },
+      { name: "work_phone", label: "Telephone (work/cell)", type: "tel" },
+      { name: "email", label: "Email", type: "email", required: true },
+      { name: "language_home", label: "Language spoken at home", type: "text" },
+      { name: "school_work", label: "School / work", type: "text" },
+      { name: "grade", label: "Grade", type: "text" },
+      { name: "teacher_child_ratio", label: "Teacher/child ratio", type: "text" },
+      {
+        name: "referred_by",
+        label: "Who referred you for a psychoeducational assessment?",
+        type: "text",
+        help: "Please specify name, address, and relationship.",
+      },
+      { name: "referral_reason", label: "Reason for referral", type: "textarea" },
+    ],
+  },
+  guardianSection("mother"),
+  guardianSection("father"),
+  {
+    id: "psychoed-siblings",
+    title: "Siblings",
+    fields: [
+      { name: "siblings_total", label: "Total number of siblings", type: "number" },
+      { name: "sibling_1", label: "Sibling 1 (name, age, school/work)", type: "text" },
+      { name: "sibling_2", label: "Sibling 2 (name, age, school/work)", type: "text" },
+      { name: "sibling_3", label: "Sibling 3 (name, age, school/work)", type: "text" },
+      { name: "sibling_4", label: "Sibling 4 (name, age, school/work)", type: "text" },
+      { name: "sibling_5", label: "Sibling 5 (name, age, school/work)", type: "text" },
+      { name: "sibling_6", label: "Sibling 6 (name, age, school/work)", type: "text" },
+    ],
+  },
+  {
+    id: "psychoed-medical",
+    title: "Medical History",
+    fields: [
+      { name: "height", label: "Client's height", type: "text", placeholder: "e.g. 5 ft 2 in" },
+      { name: "weight", label: "Client's weight (lbs)", type: "text" },
+      { name: "hand_preference", label: "Hand preference", type: "radio", options: ["Left", "Right"] },
+      { name: "mh_treated", label: "Is the client currently being treated for (or have a history of) a mental health challenge?", type: "radio", options: YES_NO },
+      { name: "mh_detail", label: "If yes, please describe", type: "text", showIf: { field: "mh_treated", equals: "Yes" } },
+      { name: "previous_therapist", label: "Who was the previous therapist/clinician?", type: "text", showIf: { field: "mh_treated", equals: "Yes" } },
+      { name: "prior_psychoed", label: "Has the client previously done a psychoeducational assessment?", type: "radio", options: YES_NO },
+      { name: "previous_diagnosis", label: "Previous diagnosis", type: "text", showIf: { field: "prior_psychoed", equals: "Yes" } },
+      { name: "previous_psychologist", label: "Who was the previous psychologist/clinician?", type: "text", showIf: { field: "prior_psychoed", equals: "Yes" } },
+      { name: "current_diagnosis", label: "Current diagnosis (if applicable)", type: "text" },
+      { name: "current_meds", label: "Is the client currently taking any medications?", type: "radio", options: YES_NO },
+      { name: "current_meds_list", label: "If yes, please list", type: "textarea", showIf: { field: "current_meds", equals: "Yes" } },
+      { name: "physician_name", label: "Name of physician", type: "text" },
+      { name: "short_term_meds", label: "Has the client been treated with any short-term medication, over-the-counter medication, or supplements?", type: "radio", options: YES_NO },
+      { name: "short_term_meds_list", label: "If yes, please list", type: "textarea", showIf: { field: "short_term_meds", equals: "Yes" } },
+      { name: "medication_reason", label: "Reason for medication", type: "text" },
+      { name: "substance_history", label: "Does the client have a history of alcohol use, recreational drug use or drug dependency?", type: "radio", options: YES_NO },
+      { name: "substance_list", label: "If yes, please list what has recently been used or is currently being used", type: "text", showIf: { field: "substance_history", equals: "Yes" } },
+      { name: "smoking", label: "Does the client currently smoke cigarettes, use tobacco products, or vape?", type: "radio", options: YES_NO },
+      { name: "smoking_amount", label: "If yes, how many packs per day, or vape pods daily?", type: "text", showIf: { field: "smoking", equals: "Yes" } },
+      { name: "physical_health_rating", label: "How would you rate the client's current physical health?", type: "radio", options: HEALTH_PE },
+      {
+        name: "conditions",
+        label: "Does the client have any of the following conditions?",
+        type: "checkboxgroup",
+        options: [
+          "Allergies",
+          "Respiratory problems (asthma etc.)",
+          "Constant headache",
+          "Low energy / tiredness",
+          "High energy",
+          "Behavioural challenge",
+          "High / Low blood pressure",
+          "Heart problems",
+          "Diabetes",
+          "Under / Over active thyroid",
+          "Other",
+        ],
+      },
+      { name: "conditions_other", label: "If other, please describe", type: "text", showIf: { field: "conditions", includes: "Other" } },
+    ],
+  },
+  {
+    id: "psychoed-life-events",
+    title: "Current Life Events",
+    fields: [
+      {
+        name: "life_events",
+        label: "Have there been any recent changes in the client's life?",
+        type: "checkboxgroup",
+        options: [
+          "Divorce (parents)",
+          "Remarriage (parents)",
+          "Loss of family member",
+          "Loss of pet",
+          "Court / family services",
+          "Change or loss of teacher, or member of school family",
+          "Other",
+        ],
+      },
+      { name: "life_events_other", label: "If other, please list", type: "text", showIf: { field: "life_events", includes: "Other" } },
+    ],
+  },
+  {
+    id: "psychoed-behaviour",
+    title: "Description of the Client's Behaviour",
+    intro: ["Task-oriented behaviour. Tick every description that applies to your child or teen."],
+    fields: [
+      {
+        name: "behaviour_strengths",
+        label: "Task-oriented behaviour (strengths)",
+        type: "checkboxgroup",
+        options: [
+          "Active: always busy with something",
+          "Ambitious: strongly wants to succeed",
+          "Cautious: being very careful",
+          "Conscientious: taking time to do things right",
+          "Creative: can make up things easily or think of new things",
+          "Curious: always wanting to know things",
+          "Logical: using clear and sound reasoning",
+          "Organized: dealing with one's affairs efficiently",
+          "Perfectionist: wants everything to be done right and perfectly",
+          "Precise: careful and with great attention to detail",
+        ],
+      },
+      {
+        name: "behaviour_challenges",
+        label: "Task-oriented behaviour (challenges)",
+        type: "checkboxgroup",
+        options: [
+          "Anxious: worried, uneasy, or nervous",
+          "Careless: not being careful; rushing into things",
+          "Impatient: quickly irritated and easily provoked",
+          "Lazy: unwilling to work or showing a lack of effort",
+          "Rigid: unwilling to change one's outlook, belief, or response",
+          "Scatterbrained: inattentive and forgetful",
+          "Slapdash: performing work quickly and carelessly",
+          "Sober: serious, sensible, or solemn",
+          "Undisciplined: lacking in discipline",
+          "Volatile: changing moods very quickly",
+        ],
+      },
+    ],
+  },
+  {
+    id: "psychoed-relationships",
+    title: "Description of the Client's Relationships",
+    fields: [
+      {
+        name: "relationships_strengths",
+        label: "Relationships (strengths)",
+        type: "checkboxgroup",
+        options: [
+          "Altruistic: shows selfless concern for others",
+          "Caring: desires to help people",
+          "Compassionate: feels or shows sympathy or concern for others",
+          "Considerate: thinks of others",
+          "Faithful: being loyal",
+          "Impartial: treats all persons equally; fair and just",
+          "Kind: thoughtful, caring",
+          "Pleasant: polite",
+          "Polite: exhibiting good manners",
+          "Sincere: being totally honest",
+        ],
+      },
+      {
+        name: "relationships_challenges",
+        label: "Relationships (challenges)",
+        type: "checkboxgroup",
+        options: [
+          "Aggressive: verbally or physically threatening",
+          "Argumentative: often arguing with people",
+          "Bossy: always telling people what to do",
+          "Deceitful: doing or saying anything to get people to do what you want",
+          "Domineering: constantly trying to control others",
+          "Flaky: unstable and unreliable",
+          "Inconsiderate: not caring about others or their feelings",
+          "Manipulative: always trying to influence other people",
+          "Rude: treating people badly; breaking social rules",
+          "Spiteful: seeking revenge; hurting others because you didn't get what you want",
+        ],
+      },
+      { name: "relationship_example", label: "Give an example of behaviour in relationships (peers / adults)", type: "textarea" },
+    ],
+  },
+  {
+    id: "psychoed-school",
+    title: "School History",
+    fields: [
+      { name: "current_school", label: "Current school", type: "text" },
+      { name: "current_class", label: "Current class", type: "text" },
+      { name: "date_started", label: "Date started / attended", type: "text" },
+      { name: "previous_school", label: "Previous school", type: "text" },
+      { name: "previous_school_time", label: "Time there", type: "text" },
+      { name: "challenges_current", label: "Challenges in the current learning environment", type: "textarea" },
+      { name: "challenges_previous", label: "Challenges in the previous learning environment", type: "textarea" },
+      { name: "interventions", label: "Interventions used (if known)", type: "textarea" },
+      { name: "observation_notes", label: "Observation notes", type: "textarea" },
+    ],
+  },
+];
+
 export interface FormTemplate {
   key: FormTemplateKey;
   /** Internal name — what clinicians/admin see (dashboard, submissions, oversight). */
@@ -718,6 +1026,20 @@ export const FORM_TEMPLATES = {
     clientLabel: "Child Wellbeing Screening",
     body: DSM_CHILD_LEVEL1,
     // Parent/guardian-rated screening measure - no consent re-sign, no insurance.
+  },
+  "dsm5-level1-child-self": {
+    key: "dsm5-level1-child-self",
+    label: "DSM-5-TR Level 1 (Child Self-Report, 11-17)",
+    clientLabel: "Wellbeing Check-In",
+    body: DSM_CHILD_SELF,
+    // Self-rated screening measure - no consent re-sign, no insurance.
+  },
+  "psychoed-intake": {
+    key: "psychoed-intake",
+    label: "Psychoeducational Assessment Intake",
+    clientLabel: "Psychoeducational Assessment Intake Form",
+    body: PSYCHOED_INTAKE,
+    appendConsent: true,
   },
   ...L2_TEMPLATES,
 } as Record<FormTemplateKey, FormTemplate>;

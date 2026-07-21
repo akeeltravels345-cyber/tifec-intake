@@ -120,6 +120,8 @@ const KEY_TO_SYMBOL: Record<string, string> = {
   couples: "users",
   "dsm5-level1-adult": "clipboard",
   "dsm5-level1-child": "child",
+  "dsm5-level1-child-self": "child",
+  "psychoed-intake": "clipboard",
   "l2-depression": "rain",
   "l2-anxiety": "pulse",
   "l2-anger": "flame",

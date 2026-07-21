@@ -6,7 +6,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { ageFromDob, buildSections, labelMap, templateLabel, type FormTemplateKey } from "@/lib/forms";
 import { decrypt, randomId } from "@/lib/crypto";
 import { isDsmForm } from "@/lib/dsm";
-import { isDsmChildForm } from "@/lib/dsmChild";
+import { isDsmChildForm, isDsmChildSelfForm } from "@/lib/dsmChild";
 import { isLevel2Form } from "@/lib/level2";
 import StatusControl from "@/components/StatusControl";
 import LogoutButton from "@/components/LogoutButton";
@@ -237,6 +237,7 @@ export default async function SubmissionView({
         <>
           {isDsmForm(formKey) && <DsmSummary answers={answers} />}
           {isDsmChildForm(formKey) && <DsmChild answers={answers} labels={labels} />}
+          {isDsmChildSelfForm(formKey) && <DsmChild answers={answers} labels={labels} prefix="sq" selfReport />}
           {isLevel2Form(formKey) && <Level2Score formKey={formKey} answers={answers} />}
 
           <div className="card tour-notes">
@@ -250,6 +251,7 @@ export default async function SubmissionView({
             }
             // Child measure responses are rendered by DsmChild above.
             if (isDsmChildForm(formKey) && section.id === "child-symptoms") return null;
+            if (isDsmChildSelfForm(formKey) && section.id === "childself-symptoms") return null;
             // Level 2 item responses are rendered by Level2Score above.
             if (isLevel2Form(formKey) && section.id.endsWith("-items")) return null;
             const rows = section.fields.filter((f) => answers[f.name] !== undefined && answers[f.name] !== "");
