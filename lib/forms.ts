@@ -72,6 +72,9 @@ export type FormTemplateKey =
   | "dsm5-level1-child"
   | "dsm5-level1-child-self"
   | "psychoed-intake"
+  | "child-behaviour-self"
+  | "parent-behaviour-assessment"
+  | "ei-camp-agreement"
   | "l2-depression"
   | "l2-anxiety"
   | "l2-anger"
@@ -969,6 +972,175 @@ export const PSYCHOED_INTAKE: FormSection[] = [
   },
 ];
 
+// =============================================================================
+// Educational psychology forms (Mrs. Sofia Hamilton). The practice's own
+// material, digitized from her documents.
+// =============================================================================
+const PARENT_FREQ = ["0 - Never", "1 - Sometimes", "2 - Often", "3 - Always"];
+
+function selfChoice(n: number, question: string, options: string[]): FormField {
+  return { name: `cb${n}`, label: `${n}. ${question}`, type: "radio", options, required: true, stack: true };
+}
+
+export const CHILD_BEHAVIOUR_SELF: FormSection[] = [
+  {
+    id: "cbsa-info",
+    title: "About You",
+    fields: [
+      { name: "full_name", label: "Your name", type: "text", required: true },
+      { name: "dob", label: "Your date of birth", type: "date", required: true },
+      { name: "email", label: "Email (yours or a parent's)", type: "email", required: true },
+    ],
+  },
+  {
+    id: "cbsa-questions",
+    title: "How do you feel about…",
+    titleBelowIntro: true,
+    intro: [
+      "We want to learn more about how you feel about your behaviour and actions. Please answer the following questions honestly. Your responses will help us understand how you are doing and how we can support you better.",
+      "Read each statement carefully and choose the answer that fits you best. Be honest, there are no right or wrong answers.",
+    ],
+    fields: [
+      selfChoice(1, "How do you feel about following instructions from adults (like your parents, teachers, or caregivers)?", [
+        "I always try my best to follow instructions.",
+        "I usually follow instructions, but sometimes I forget.",
+        "Sometimes I follow instructions, but other times I need reminders.",
+        "I have trouble following instructions most of the time.",
+      ]),
+      selfChoice(2, "How do you feel about finishing your tasks (like homework, chores, or projects)?", [
+        "I usually finish my tasks on time.",
+        "I finish most of my tasks, but sometimes I need extra time.",
+        "I have trouble finishing my tasks on time.",
+        "I often struggle to finish my tasks.",
+      ]),
+      selfChoice(3, "How do you feel about talking to others (like your friends, family, or classmates)?", [
+        "I enjoy talking to others and making new friends.",
+        "I like talking to others, but sometimes I feel shy.",
+        "I feel nervous or shy when talking to others.",
+        "I find it hard to talk to others or make friends.",
+      ]),
+      selfChoice(4, "How do you feel about listening during class or group activities?", [
+        "I usually listen well and participate in class.",
+        "I try to listen, but sometimes I get distracted.",
+        "I have trouble paying attention and listening.",
+        "I often get distracted and have trouble focusing.",
+      ]),
+      selfChoice(5, "How do you feel about controlling your emotions when you are upset or angry?", [
+        "I can usually control my emotions and calm down.",
+        "I try to control my emotions, but sometimes it is hard.",
+        "I have trouble controlling my emotions when I am upset.",
+        "I often have trouble calming down when I am upset or angry.",
+      ]),
+      selfChoice(6, "How do you feel about trying new things or facing challenges?", [
+        "I enjoy trying new things and facing challenges.",
+        "I am willing to try new things, but sometimes I feel nervous.",
+        "I feel nervous or scared when facing challenges.",
+        "I often avoid trying new things or facing challenges.",
+      ]),
+      selfChoice(7, "How do you feel about apologizing when you have made a mistake?", [
+        "I am comfortable apologizing and making things right.",
+        "I try to apologize when I have made a mistake.",
+        "I find it hard to apologize when I have made a mistake.",
+        "I struggle to apologize or admit when I have made a mistake.",
+      ]),
+      selfChoice(8, "How do you feel about helping others when they need it?", [
+        "I enjoy helping others and being kind.",
+        "I try to help others when I can.",
+        "Sometimes I am not sure how to help others.",
+        "I have trouble helping others or being kind.",
+      ]),
+      {
+        name: "anything_else",
+        label: "Is there anything else you would like to tell us about how you are feeling, or how we can help you?",
+        type: "textarea",
+      },
+    ],
+  },
+];
+
+export const PARENT_BEHAVIOUR_ASSESSMENT: FormSection[] = [
+  {
+    id: "pba-info",
+    title: "Child's Information",
+    fields: [
+      { name: "full_name", label: "Child's name", type: "text", required: true },
+      { name: "dob", label: "Child's date of birth", type: "date", required: true },
+      { name: "respondent_relationship", label: "Your relationship to the child", type: "text", required: true },
+      { name: "email", label: "Your email", type: "email", required: true },
+    ],
+  },
+  {
+    id: "pba-items",
+    title: "How often does each statement apply to your child?",
+    titleBelowIntro: true,
+    intro: ["Please rate each statement based on how often it applies to your child."],
+    fields: [
+      { name: "pb1", label: "1. Following instructions: my child follows instructions well from other adults (like teachers or caregivers).", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb2", label: "2. Task completion: my child completes tasks (like assigned work, homework, chores) on time.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb3", label: "3. Respectful communication: my child uses respectful language and tone when communicating with others (adults and peers).", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb4", label: "4. Focus and attention: my child maintains focus and attention during activities (like assigned work, homework or chores).", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb5", label: "5. Emotional regulation: my child can control their emotions when they get upset or angry.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb6", label: "6. Social skills: my child gets along well with their peers and other adults.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb7", label: "7. Problem-solving: my child tries to solve problems on their own before asking for help.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb8", label: "8. Empathy and kindness: my child shows empathy and kindness towards others.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb9", label: "9. Independence: my child can do things on their own without always needing help.", type: "radio", options: PARENT_FREQ, required: true },
+      { name: "pb10", label: "10. Self-control: my child can control their impulses and actions.", type: "radio", options: PARENT_FREQ, required: true },
+      {
+        name: "additional_comments",
+        label: "Additional comments: is there anything else you would like to share about your child's behaviour or feelings?",
+        type: "textarea",
+      },
+    ],
+  },
+];
+
+export const EI_CAMP_AGREEMENT: FormSection[] = [
+  {
+    id: "eic-info",
+    title: "Participant Details",
+    fields: [
+      { name: "full_name", label: "Name of participant", type: "text", required: true },
+      { name: "dob", label: "Participant's date of birth", type: "date", required: true },
+      { name: "email", label: "Email (participant's or parent's)", type: "email", required: true },
+    ],
+  },
+  {
+    id: "eic-rules",
+    title: "Agreement to Abide by Camp Guidelines & Rules",
+    titleBelowIntro: true,
+    intro: [
+      "Welcome to the Emotional Intelligence Camp. To ensure a safe, respectful, and productive environment for everyone, we have established the following rules of conduct. It is important that all participants adhere to these rules to create a positive experience for all attendees.",
+      "1. RESPECT FOR OTHERS - Always respect the personal space and boundaries of others. Bullying, teasing, or making fun of others will not be tolerated. Listen attentively when someone else is speaking and do not interrupt.",
+      "2. RESPECT FOR THE ENVIRONMENT - Keep your surroundings clean and tidy, and dispose of trash properly. Treat camp facilities, equipment, and materials with care; do not damage or deface any property.",
+      "3. PARTICIPATION - Full participation in all camp activities is crucial for personal growth and for fostering a supportive environment. I will actively participate in all scheduled activities, including discussions, art and craft projects, and team-building games. I will engage respectfully and thoughtfully with facilitators and fellow participants, and maintain a positive attitude even when activities are challenging or outside my comfort zone. I will respect the camp rules and follow the guidance of the facilitators.",
+      "4. COMMUNICATION - Use respectful and appropriate language at all times, avoiding profanity and hurtful comments. Express emotions constructively, using “I” statements to share feelings (for example, “I feel upset when...”).",
+      "5. COOPERATION AND TEAMWORK - Work cooperatively with other participants and support each other. Share materials and resources, take turns, and be considerate. Resolve conflicts peacefully and seek help from a facilitator if needed.",
+      "6. SAFETY - Engage in safe behaviour and follow all safety guidelines provided by facilitators. Create an emotionally safe environment by being supportive and non-judgmental.",
+      "7. ATTENDANCE AND PUNCTUALITY - Arrive on time for all activities. Late arrivals can disrupt the group and cause delays.",
+      "8. DRESS CODE - Tops should be long enough to cover the mid-section, with no exposed skin through holes in shirts or jeans. Shirts or blouses should be hip length when wearing leggings or tights. Shorts or skirts should be no more than 2 inches above the knee. For field trips, the Cayman T-shirt should be worn with jeans and tennis shoes.",
+      "9. CONFIDENTIALITY AGREEMENT - Personal experiences, feelings and thoughts shared during discussions, personal information about other campers and facilitators, and anything explicitly stated as confidential must remain private. I agree to keep all shared information confidential and will not disclose it outside the camp without explicit permission from the person who shared it. If I become aware of any situation where a participant is at risk of harm to themselves or others, I will immediately inform a camp facilitator or counsellor, who is mandated to report such occurrences.",
+      "10. CONSEQUENCES FOR MISCONDUCT - Minor infractions receive a warning and a reminder of the rules. Repeated or serious infractions may result in a time-out period for reflection. Continued misconduct may result in a call to parents or guardians. Severe or ongoing misconduct may lead to dismissal from the camp without refund of payments made.",
+    ],
+    fields: [
+      {
+        name: "agree_rules",
+        label:
+          "I understand and agree to the above terms regarding confidentiality and participation. I acknowledge that my commitment to these terms is essential for creating a safe and supportive environment for everyone at the Emotional Intelligence Camp.",
+        type: "checkbox",
+        required: true,
+      },
+      { name: "participant_signature", label: "Participant's full name as an electronic signature", type: "text", required: true },
+      {
+        name: "guardian_signature",
+        label: "Parent or guardian's full name as an electronic signature",
+        type: "text",
+        help: "Required if the participant is under 18.",
+        showIf: { field: "dob", ageUnder: 18 },
+      },
+    ],
+  },
+];
+
 export interface FormTemplate {
   key: FormTemplateKey;
   /** Internal name — what clinicians/admin see (dashboard, submissions, oversight). */
@@ -1040,6 +1212,24 @@ export const FORM_TEMPLATES = {
     clientLabel: "Psychoeducational Assessment Intake Form",
     body: PSYCHOED_INTAKE,
     appendConsent: true,
+  },
+  "child-behaviour-self": {
+    key: "child-behaviour-self",
+    label: "Child Behaviour Self-Assessment",
+    clientLabel: "How Are You Doing?",
+    body: CHILD_BEHAVIOUR_SELF,
+  },
+  "parent-behaviour-assessment": {
+    key: "parent-behaviour-assessment",
+    label: "Parent Assessment of Child's Behaviour",
+    clientLabel: "Parent Assessment of Your Child's Behaviour",
+    body: PARENT_BEHAVIOUR_ASSESSMENT,
+  },
+  "ei-camp-agreement": {
+    key: "ei-camp-agreement",
+    label: "Emotional Intelligence Camp Rules & Agreement",
+    clientLabel: "Emotional Intelligence Camp Agreement",
+    body: EI_CAMP_AGREEMENT,
   },
   ...L2_TEMPLATES,
 } as Record<FormTemplateKey, FormTemplate>;

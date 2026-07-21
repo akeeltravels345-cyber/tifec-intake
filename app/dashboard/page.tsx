@@ -30,6 +30,9 @@ const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
   "dsm5-level1-child": { icon: "🧒", desc: "Parent/guardian screen for a child age 6-17 (25 items).", bg: "#eaf3e4" },
   "dsm5-level1-child-self": { icon: "🧑", desc: "Young person aged 11-17 completes this about themselves (25 items).", bg: "#eaf3e4" },
   "psychoed-intake": { icon: "🎓", desc: "Full psychoeducational assessment intake, completed by a parent or guardian.", bg: "#f6edd6" },
+  "child-behaviour-self": { icon: "🙂", desc: "The child rates their own behaviour in 8 short questions.", bg: "#eaf3e4" },
+  "parent-behaviour-assessment": { icon: "👪", desc: "Parent rates their child's behaviour across 10 areas.", bg: "#eaf3e4" },
+  "ei-camp-agreement": { icon: "🏕️", desc: "Camp rules, confidentiality, and the participant's signed agreement.", bg: "#d9edec" },
   ...Object.fromEntries(
     LEVEL2_MEASURES.map((m) => [
       m.key,
@@ -48,6 +51,9 @@ const SHORT_FORM: Record<string, string> = {
   "dsm5-level1-child": "DSM-5 Child (6-17)",
   "dsm5-level1-child-self": "DSM-5 Self (11-17)",
   "psychoed-intake": "Psychoed Intake",
+  "child-behaviour-self": "Child Behaviour (Self)",
+  "parent-behaviour-assessment": "Parent Behaviour Assessment",
+  "ei-camp-agreement": "EI Camp Agreement",
   ...Object.fromEntries(LEVEL2_MEASURES.map((m) => [m.key, m.short])),
 };
 
