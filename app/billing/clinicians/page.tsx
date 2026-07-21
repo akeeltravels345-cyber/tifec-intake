@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { listSessions, getClinicianSettings } from "@/lib/billing";
+import { listSessions, getClinicianSettings, getPracticeConfig, type BillingSession } from "@/lib/billing";
 import { computeClinicianMonth } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
@@ -23,9 +23,9 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
 
-  const all = await listSessions();
+  const [all, cfg] = await Promise.all([listSessions(), getPracticeConfig()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
-  const rows = CLINICIANS.map((c, i) => ({ c, m: computeClinicianMonth(all.filter((s) => s.clinicianId === c.id), settingsList[i], year, month) }))
+  const rows = CLINICIANS.map((c, i) => ({ c, m: computeClinicianMonth(all.filter((s: BillingSession) => s.clinicianId === c.id), settingsList[i], year, month, c.intakeHidden ? 0 : cfg.billerCommissionPct) }))
     .sort((a, b) => b.m.collected - a.m.collected);
 
   const totalPayout = rows.reduce((t, r) => t + r.m.payout, 0);

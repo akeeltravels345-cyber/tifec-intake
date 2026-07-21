@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion } from "@/lib/billingCalc";
 import { getClinician } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
@@ -28,8 +28,8 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
 
-  const [all, insurers, settings] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id)]);
-  const c = computeClinicianMonth(all, settings, year, month);
+  const [all, insurers, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig()]);
+  const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
   const insurerName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? (iid ? "—" : "Self-pay");
   const isSelf = id === user.clinician.id;
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));

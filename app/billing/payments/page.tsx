@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
-import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings } from "@/lib/billing";
+import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import BillingQueueClient, { type Claim, type QueueData } from "@/components/billing/BillingQueueClient";
@@ -17,14 +17,21 @@ export default async function BillingQueuePage() {
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const mKey = today.slice(0, 7);
-  const [sessions, insurers, external, settingsList] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings()]);
+  const [sessions, insurers, external, settingsList, cfg] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings(), getPracticeConfig()]);
   const insName = (id: string | null) => insurers.find((i) => i.id === id)?.name ?? "—";
   // Outside clinicians aren't on the roster, so resolve their names too.
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
-  // The biller's rate is set PER CLINICIAN, so every cut is computed per claim
-  // rather than by applying one practice-wide percentage to a total.
-  const billerPctOf = (id: string) =>
-    external.find((c) => c.id === id)?.billerPct ?? settingsList.find((s) => s.clinicianId === id)?.billerPct ?? 0;
+  // Same rule as the biller dashboard: a % of the company retention for TIFEC
+  // clinicians, their own rate on collections for outside clients.
+  // Matches the dashboard exactly: real clinicians and outside clients earn
+  // commission; the admin/test account does not.
+  const commissionOn = (clinicianId: string, insurance: number) => {
+    const e = external.find((c) => c.id === clinicianId);
+    if (e) return (insurance * e.billerPct) / 100;
+    if (!CLINICIANS.some((c) => c.id === clinicianId && !c.intakeHidden)) return 0;
+    const ret = settingsList.find((s) => s.clinicianId === clinicianId)?.retentionPct ?? 0;
+    return (insurance * (ret / 100) * cfg.billerCommissionPct) / 100;
+  };
 
   const toClaim = (s: (typeof sessions)[number]): Claim => ({
     id: s.id, dos: s.dateOfService, age: ageDays(s.dateOfService, today),
@@ -32,7 +39,7 @@ export default async function BillingQueuePage() {
     clientName: `${s.clientFirst} ${s.clientLast}`.trim(),
     insurerId: s.insurerId as string, insurerName: insName(s.insurerId),
     amount: insurancePortion(s), paid: s.insurancePaid, paidDate: s.paidDate,
-    commission: r2((insurancePortion(s) * billerPctOf(s.clinicianId)) / 100),
+    commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
   });
 
   const insured = sessions.filter((s) => s.insurerId && insurancePortion(s) > 0);

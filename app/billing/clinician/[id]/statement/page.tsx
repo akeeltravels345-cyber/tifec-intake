@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion } from "@/lib/billingCalc";
 import { getClinician } from "@/lib/clinicians";
 import PrintButton from "@/components/billing/PrintButton";
@@ -26,8 +26,8 @@ export default async function PayoutStatement({ params, searchParams }: { params
   const month = Number(sp.m) || now.getUTCMonth() + 1;
   const key = `${year}-${String(month).padStart(2, "0")}`;
 
-  const [all, insurers, settings] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id)]);
-  const c = computeClinicianMonth(all, settings, year, month);
+  const [all, insurers, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig()]);
+  const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
   const insurerName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? (iid ? "—" : "Self-pay");
 
   // The insurance payments that actually landed this month (the payout basis, incl. rollover).

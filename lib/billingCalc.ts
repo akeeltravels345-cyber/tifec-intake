@@ -67,7 +67,10 @@ export function computeClinicianMonth(
   sessions: BillingSession[],
   settings: ClinicianBillingSettings,
   year: number,
-  month: number
+  month: number,
+  /** Practice-wide biller rate, taken as a % of the COMPANY RETENTION on this
+   *  clinician (not of their collections, and never out of their payout). */
+  billerCommissionPct = 0
 ): ClinicianMonth {
   const visits = sessions.filter((s) => inMonth(s.dateOfService, year, month));
   const billedThisMonth = sessions.filter((s) => s.insurancePaid && inMonth(s.paidDate, year, month));
@@ -85,8 +88,13 @@ export function computeClinicianMonth(
   const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
   const health = settings.otherDeductionFixed;
   const payout = round2(collected - retentionAmount - otherPctAmount - health);
-  const billerPct = settings.billerPct ?? 0;
-  const billerCommission = round2((insuranceBilledThisMonth * billerPct) / 100);
+  // The biller earns a share of what the COMPANY keeps, not of what the
+  // clinician collects — so it can never come out of a clinician's payout.
+  // Based on the retention attributable to insurance money (what the biller
+  // actually chases); co-pays are taken at the visit by the clinician.
+  const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
+  const billerPct = billerCommissionPct;
+  const billerCommission = round2((insuranceRetention * billerPct) / 100);
 
   return {
     clinicianId: settings.clinicianId,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
-import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians } from "@/lib/billing";
+import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, ageDays } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
@@ -28,12 +28,33 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const mKey = key(year, month);
   const prevY = month === 1 ? year - 1 : year, prevM = month === 1 ? 12 : month - 1;
 
-  const [all, insurerList, settingsList, external] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings(), listExternalClinicians()]);
-  // Biller commission is set PER CLINICIAN (e.g. 10% on the owner's collections, 7% on others).
-  // Outside clinicians carry their own rate on their own record.
-  const billerPctOf = (cid: string) =>
-    external.find((c) => c.id === cid)?.billerPct ?? settingsList.find((s) => s.clinicianId === cid)?.billerPct ?? 0;
-  const comm = (s: (typeof all)[number]) => (insurancePortion(s) * billerPctOf(s.clinicianId)) / 100;
+  const [all, insurerList, settingsList, external, cfg] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings(), listExternalClinicians(), getPracticeConfig()]);
+  // TIFEC clinicians: the biller earns a % of the COMPANY RETENTION on the
+  // insurance he collects, so it never touches a clinician's payout.
+  // Outside clinicians aren't on TIFEC's books, so they keep their own rate
+  // applied straight to what's collected for them.
+  const billerRate = cfg.billerCommissionPct;
+  const retentionPctOf = (cid: string) => settingsList.find((s) => s.clinicianId === cid)?.retentionPct ?? 0;
+  const externalOf = (cid: string) => external.find((c) => c.id === cid);
+  // Commission is earned on real clinicians and outside clients only. The
+  // admin/test account is not a clinician anyone is billed for, and it's hidden
+  // from the breakdown below — so it must not earn either, or the headline
+  // figure would stop matching the rows that explain it.
+  const earnsCommission = (cid: string) =>
+    !!externalOf(cid) || CLINICIANS.some((c) => c.id === cid && !c.intakeHidden);
+  const comm = (s: (typeof all)[number]) => {
+    if (!earnsCommission(s.clinicianId)) return 0;
+    const ins = insurancePortion(s);
+    const e = externalOf(s.clinicianId);
+    if (e) return (ins * e.billerPct) / 100;
+    return (ins * (retentionPctOf(s.clinicianId) / 100) * billerRate) / 100;
+  };
+  /** What the row shows as "the rate": their own % for outside clients, or the
+   *  effective cut of collections for a TIFEC clinician (3% of their 40%). */
+  const effRateOf = (cid: string) => {
+    const e = externalOf(cid);
+    return e ? e.billerPct : Math.round((retentionPctOf(cid) / 100) * billerRate * 100) / 100;
+  };
   const insName = (id: string | null) => insurerList.find((i) => i.id === id)?.name ?? "—";
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
   const sum = (arr: typeof all, f: (s: (typeof all)[number]) => number) => r2(arr.reduce((t, s) => t + f(s), 0));
@@ -69,7 +90,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     const billed = billedThisMonth.filter((s) => s.clinicianId === c.id);
     const open = unbilled.filter((s) => s.clinicianId === c.id);
     return {
-      id: c.id, name: c.name, external: c.external, pct: billerPctOf(c.id), claims: billed.length,
+      id: c.id, name: c.name, external: c.external, pct: effRateOf(c.id), claims: billed.length,
       collected: sum(billed, insurancePortion), cut: sum(billed, comm),
       pending: sum(open, comm), outstanding: sum(open, insurancePortion),
     };
@@ -146,7 +167,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
             <span className="bo-lab">Where your cut came from</span>
             <Link href="/billing/outside" className="bl-ghost">Outside clients →</Link>
           </div>
-          <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · your rate differs per clinician</p>
+          <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · {billerRate}% of what the company retains, plus your own rate on outside clients</p>
           {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
             <div className="bo-crow" key={c.id}>
               <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
