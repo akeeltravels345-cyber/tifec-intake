@@ -70,10 +70,11 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
       <div className="cd-kpis">
         <div className="cd-kpi"><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
-        {/* Money taken at the appointment itself: the co-pay on an insured
-            visit, or the whole fee when the client is self-pay. */}
-        <div className="cd-kpi"><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
+        {/* Money taken at the appointment itself: the co-pay on an insured
+            visit, or the whole fee when the client is self-pay. Sits with the
+            insurance figures, since together they are the cash that arrived. */}
+        <div className="cd-kpi"><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
       </div>
