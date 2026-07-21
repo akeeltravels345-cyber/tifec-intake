@@ -17,7 +17,15 @@ function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
   return 0;
 }
 
-export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [] }: { insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[]; forClinicians?: { id: string; name: string }[] }) {
+export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [], usualCodes = [], alreadyLogged = [], today = "" }: {
+  insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[];
+  forClinicians?: { id: string; name: string }[];
+  /** This clinician's most-used codes, most frequent first. */
+  usualCodes?: string[];
+  /** "clientkey@date" for every session already logged, to catch double entry. */
+  alreadyLogged?: string[];
+  today?: string;
+}) {
   const router = useRouter();
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
@@ -26,6 +34,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // returning clients; nobody is pre-selected, so it can't pick one by accident.
   const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
   const [search, setSearch] = useState("");
+  const [codeSearch, setCodeSearch] = useState("");
+  const [showAllCodes, setShowAllCodes] = useState(false);
+  const [saved, setSaved] = useState("");
   // Whether this visit goes through insurance or is paid in full on the day.
   // Kept separate from the insurer itself: an insured client may still choose
   // to pay upfront for a session, which is common in a psychology practice.
@@ -58,7 +69,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (next === mode) return;
     setMode(next); setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); setSearch("");
   }
-  const [dos, setDos] = useState("");
+  const [dos, setDos] = useState(today);
   const [insurerId, setInsurerId] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
   const [copay, setCopay] = useState("");
@@ -78,9 +89,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
 
   const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); setCopayTouched(false); };
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, andAnother = false) {
     e.preventDefault();
-    setError("");
+    setError(""); setSaved("");
     if (!first.trim() || !last.trim()) {
       return setError(mode === "returning"
         ? "Pick the client this session was for, or switch to \u201cA new client\u201d."
@@ -97,6 +108,17 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
+      if (andAnother) {
+        // A clinician logging a day's work does several in a row, so keep the
+        // date and clear only what changes from one client to the next.
+        setSaved(`Logged ${first.trim()} ${last.trim()} — ${money(totalCost)}.`);
+        setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront");
+        setCodes([]); setCopay(""); setCopayTouched(false); setNotes(""); setSearch("");
+        setMode(clients.length > 0 ? "returning" : "new");
+        setBusy(false);
+        router.refresh();
+        return;
+      }
       router.push("/billing/me");
       router.refresh();
     } catch (err) {
@@ -105,11 +127,34 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     }
   }
 
+  const usual = useMemo(
+    () => usualCodes.map((c) => cptCodes.find((x) => x.code === c)).filter(Boolean) as CptOpt[],
+    [usualCodes, cptCodes]);
+  const otherCodes = useMemo(() => {
+    const q = codeSearch.trim().toLowerCase();
+    const rest = cptCodes.filter((c) => !usualCodes.includes(c.code));
+    if (!q) return rest;
+    return rest.filter((c) => c.code.includes(q) || c.description.toLowerCase().includes(q));
+  }, [cptCodes, usualCodes, codeSearch]);
+
+  // Same client, same day — nearly always a double entry rather than two visits.
+  const duplicate = useMemo(() => {
+    if (!first.trim() || !last.trim() || !dos) return false;
+    return alreadyLogged.includes(`${clientKey(first, last)}@${dos}`);
+  }, [alreadyLogged, first, last, dos]);
+
   const shownClients = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return clients;
     return clients.filter((c) => `${c.first} ${c.last}`.toLowerCase().includes(q));
   }, [clients, search]);
+
+  const yesterday = useMemo(() => {
+    if (!today) return "";
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
 
   const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
@@ -171,7 +216,20 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Date of service <span className="ls-req">*</span></label>
-            <input type="date" className="ls-in" style={{ maxWidth: 220 }} value={dos} onChange={(e) => setDos(e.target.value)} />
+            <div className="ls-dates">
+              <input type="date" className="ls-in" style={{ maxWidth: 190 }} value={dos} onChange={(e) => setDos(e.target.value)} />
+              {today && (
+                <>
+                  <button type="button" className={`ls-day ${dos === today ? "on" : ""}`} onClick={() => setDos(today)}>Today</button>
+                  <button type="button" className={`ls-day ${dos === yesterday ? "on" : ""}`} onClick={() => setDos(yesterday)}>Yesterday</button>
+                </>
+              )}
+            </div>
+            {duplicate && (
+              <p className="ls-dupe">
+                You&apos;ve already logged a session for <b>{first} {last}</b> on this date. Carry on if they really were seen twice.
+              </p>
+            )}
           </div>
           <div className="ls-field">
             <label className="ls-q">How is this session paid? <span className="ls-req">*</span></label>
@@ -192,13 +250,46 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
-            <div className="ls-cpt">
-              {cptCodes.map((c) => (
-                <button type="button" key={c.code} className={`ls-chip ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)} title={c.description}>
-                  {c.code}<small>{money(c.fee)}</small>
-                </button>
-              ))}
-            </div>
+            {usual.length > 0 && (
+              <>
+                <p className="ls-codelab">The ones you use most</p>
+                <div className="ls-cptlist">
+                  {usual.map((c) => (
+                    <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
+                      <span className="cd">{c.code}</span>
+                      <span className="ds">{c.description || "—"}</span>
+                      <span className="fe">{money(c.fee)}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {!showAllCodes ? (
+              <button type="button" className="ls-more" onClick={() => setShowAllCodes(true)}>
+                {usual.length > 0 ? `Another code (${otherCodes.length} more)` : `Choose a code (${otherCodes.length})`}
+              </button>
+            ) : (
+              <>
+                <input
+                  className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
+                  placeholder="Search by code or description…" aria-label="Search service codes"
+                  style={{ margin: "10px 0" }}
+                />
+                <div className="ls-cptlist tall">
+                  {otherCodes.length === 0 ? (
+                    <p className="ls-none">No code matches &ldquo;{codeSearch}&rdquo;.</p>
+                  ) : otherCodes.map((c) => (
+                    <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
+                      <span className="cd">{c.code}</span>
+                      <span className="ds">{c.description || "—"}</span>
+                      <span className="fe">{money(c.fee)}</span>
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="ls-more" onClick={() => { setShowAllCodes(false); setCodeSearch(""); }}>Hide the full list</button>
+              </>
+            )}
             <p className="ls-help">Total cost and duration fill in automatically from the codes you pick.</p>
           </div>
           <div className="ls-field">
@@ -231,7 +322,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             <textarea className="ls-in" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           {error && <div className="ls-err">{error}</div>}
-          <button type="submit" className="ls-save" disabled={busy}>{busy ? "Saving…" : "Save session"}</button>
+          {saved && <div className="ls-saved">{saved} Ready for the next one.</div>}
+          <div className="ls-submit">
+            <button type="submit" className="ls-save" disabled={busy}>{busy ? "Saving…" : "Save session"}</button>
+            <button type="button" className="ls-savemore" disabled={busy} onClick={(e) => submit(e, true)}>
+              Save &amp; log another
+            </button>
+          </div>
         </div>
       </div>
 

@@ -32,6 +32,20 @@ export default async function NewSessionPage() {
   }
   const clients = [...seen.values()];
 
+  // Which codes this clinician actually reaches for. Practice-wide only 5 of the
+  // 39 codes have ever been used, so leading with their own habits beats a wall
+  // of every code in the catalogue.
+  const usage = new Map<string, number>();
+  for (const s of mySessions) for (const c of s.cptCodes ?? []) usage.set(c, (usage.get(c) ?? 0) + 1);
+  const usualCodes = [...usage.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([c]) => c);
+
+  // Lets the form warn before logging a second session for the same client on
+  // the same day — almost always a double-entry rather than a real second visit.
+  const alreadyLogged = mySessions.map((s) =>
+    `${`${s.clientFirst ?? ""}|${s.clientLast ?? ""}`.toLowerCase().trim()}@${s.dateOfService}`);
+
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <>
       <Link href="/billing/me" className="ls-back">← Back to my payout</Link>
@@ -39,7 +53,7 @@ export default async function NewSessionPage() {
         <h1 className="ls-h1">Log a session</h1>
         <p className="ls-sub">Logged as {user.clinician.name}. Pick the service code(s) and the money fills in.</p>
       </div>
-      <SessionForm insurers={activeInsurers} cptCodes={activeCpt} clients={clients} />
+      <SessionForm insurers={activeInsurers} cptCodes={activeCpt} clients={clients} usualCodes={usualCodes} alreadyLogged={alreadyLogged} today={today} />
     </>
   );
 }

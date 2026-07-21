@@ -2149,3 +2149,33 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .ls-picked { font-size: 12.5px; color: var(--teal-deep); margin: 10px 2px 0; }
 
 @media (max-width: 620px) { .biz .ls-modes { grid-template-columns: 1fr; } }
+
+/* Log a session: service codes led by the ones this clinician actually uses.
+   Only 5 of 39 codes have ever been used practice-wide, so a flat grid of all
+   39 made the common case as hard as the rare one. */
+.biz .ls-codelab { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 0 2px 8px; }
+.biz .ls-cptlist { display: grid; gap: 6px; }
+.biz .ls-cptlist.tall { max-height: 260px; overflow-y: auto; padding-right: 2px; }
+.biz .ls-code {
+  display: grid; grid-template-columns: 62px 1fr auto; align-items: baseline; gap: 12px; width: 100%;
+  border: 1px solid #E1D9C8; background: #fff; border-radius: 9px; padding: 9px 13px; cursor: pointer; text-align: left;
+}
+.biz .ls-code:hover { border-color: var(--teal); }
+.biz .ls-code.on { border-color: var(--teal); background: #EDF5F5; box-shadow: 0 0 0 2px rgba(47,142,147,.12); }
+.biz .ls-code .cd { font: 700 13px "Open Sans"; color: var(--ink); font-variant-numeric: tabular-nums; }
+.biz .ls-code .ds { font-size: 12.5px; color: var(--muted); min-width: 0; }
+.biz .ls-code .fe { font: 600 13px "Open Sans"; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.biz .ls-more { background: none; border: none; color: var(--teal-deep); font: 600 12.5px "Open Sans"; cursor: pointer; padding: 10px 2px 0; }
+.biz .ls-more:hover { color: var(--indigo); }
+
+.biz .ls-dates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.biz .ls-day { border: 1px solid #E1D9C8; background: #fff; border-radius: 999px; padding: 7px 14px; font: 600 12.5px "Open Sans"; color: var(--muted); cursor: pointer; }
+.biz .ls-day:hover { border-color: var(--teal); }
+.biz .ls-day.on { border-color: var(--teal); background: #EDF5F5; color: var(--teal-deep); }
+.biz .ls-dupe { font-size: 12.5px; color: #8a5d17; background: var(--amber-bg); border-radius: 8px; padding: 9px 12px; margin: 10px 0 0; }
+
+.biz .ls-submit { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.biz .ls-savemore { background: #fff; border: 1px solid var(--indigo); color: var(--indigo); border-radius: 10px; padding: 11px 16px; font: 600 13.5px "Open Sans"; cursor: pointer; }
+.biz .ls-savemore:hover:not(:disabled) { background: #eef4f3; }
+.biz .ls-savemore:disabled { opacity: .5; cursor: not-allowed; }
+.biz .ls-saved { font-size: 13px; color: #2c7a55; background: #e7f3ec; border-radius: 9px; padding: 10px 13px; margin-bottom: 12px; font-weight: 600; }
