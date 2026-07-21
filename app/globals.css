@@ -2122,3 +2122,30 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .cd-detailhead { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
 .biz .cd-subtbl td { border-top: 1px solid #e4ecec; font-size: 13.5px; padding: 9px 10px; }
 .biz .cd-subtbl tr:first-child td { border-top: none; }
+
+/* Log a session: an explicit choice between a returning client and a new one,
+   replacing a wall of name chips that would grow unusable with a real caseload. */
+.biz .ls-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.biz .ls-mode {
+  display: flex; flex-direction: column; gap: 3px; text-align: left; cursor: pointer;
+  border: 1px solid #E1D9C8; background: #fff; border-radius: 11px; padding: 11px 14px;
+  font: 600 13.5px "Open Sans"; color: var(--ink);
+}
+.biz .ls-mode small { font-weight: 400; font-size: 11.5px; color: var(--faint); }
+.biz .ls-mode:hover { border-color: #b9c6cb; }
+.biz .ls-mode.on { border-color: var(--teal); background: #EDF5F5; box-shadow: 0 0 0 2px rgba(47,142,147,.12); }
+.biz .ls-mode.on small { color: var(--teal-deep); }
+
+.biz .ls-clientlist { display: grid; gap: 6px; max-height: 260px; overflow-y: auto; padding-right: 2px; }
+.biz .ls-clientrow {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%;
+  border: 1px solid #E1D9C8; background: #fff; border-radius: 9px; padding: 9px 13px; cursor: pointer; text-align: left;
+}
+.biz .ls-clientrow:hover { border-color: var(--teal); }
+.biz .ls-clientrow.on { border-color: var(--teal); background: #EDF5F5; box-shadow: 0 0 0 2px rgba(47,142,147,.12); }
+.biz .ls-clientrow .nm { font: 600 13.5px "Open Sans"; color: var(--ink); }
+.biz .ls-clientrow .meta { font-size: 11.5px; color: var(--faint); white-space: nowrap; }
+.biz .ls-none { font-size: 12.5px; color: var(--muted); margin: 4px 2px; }
+.biz .ls-picked { font-size: 12.5px; color: var(--teal-deep); margin: 10px 2px 0; }
+
+@media (max-width: 620px) { .biz .ls-modes { grid-template-columns: 1fr; } }

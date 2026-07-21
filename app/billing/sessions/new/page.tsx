@@ -20,12 +20,15 @@ export default async function NewSessionPage() {
 
   // Distinct clients this clinician has seen before, most recent first, with the
   // insurer they last used — so a returning client is one click, not a re-type.
-  const seen = new Map<string, { first: string; last: string; insurerId: string | null; lastVisit: string }>();
+  const seen = new Map<string, { first: string; last: string; insurerId: string | null; lastVisit: string; visits: number }>();
   for (const s of [...mySessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService))) {
     const first = s.clientFirst?.trim() ?? "", last = s.clientLast?.trim() ?? "";
     if (!first && !last) continue;
     const key = `${first}|${last}`.toLowerCase();
-    if (!seen.has(key)) seen.set(key, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService });
+    const prev = seen.get(key);
+    if (prev) prev.visits += 1;
+    // Sorted newest-first, so the first sighting carries their latest insurer.
+    else seen.set(key, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService, visits: 1 });
   }
   const clients = [...seen.values()];
 

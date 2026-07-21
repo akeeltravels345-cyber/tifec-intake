@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; }
-interface ClientOpt { first: string; last: string; insurerId: string | null; lastVisit: string; }
+interface ClientOpt { first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; }
 const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -22,13 +22,25 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [picked, setPicked] = useState("");
+  // Which kind of client this is. Default to "returning" only when there ARE
+  // returning clients; nobody is pre-selected, so it can't pick one by accident.
+  const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
+  const [search, setSearch] = useState("");
   // Only supplied when the biller is logging a claim for an outside clinician.
   const [forId, setForId] = useState(forClinicians[0]?.id ?? "");
 
   function pickClient(c: ClientOpt) {
     const k = clientKey(c.first, c.last);
     if (picked === k) { setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setCopayTouched(false); return; }
+    // Carry their usual insurer over — it's nearly always the same next visit.
     setPicked(k); setFirst(c.first); setLast(c.last); setInsurerId(c.insurerId || ""); setCopayTouched(false);
+  }
+
+  /** Switching mode clears the client, so a half-finished choice can't leak
+   *  across (e.g. picking someone, then typing a different new name). */
+  function switchMode(next: "returning" | "new") {
+    if (next === mode) return;
+    setMode(next); setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setCopayTouched(false); setSearch("");
   }
   const [dos, setDos] = useState("");
   const [insurerId, setInsurerId] = useState("");
@@ -53,7 +65,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!first.trim() || !last.trim()) return setError("Client first and last name are required.");
+    if (!first.trim() || !last.trim()) {
+      return setError(mode === "returning"
+        ? "Pick the client this session was for, or switch to \u201cA new client\u201d."
+        : "Client first and last name are required.");
+    }
     if (!dos) return setError("Date of service is required.");
     if (!codes.length) return setError("Select at least one service code.");
     setBusy(true);
@@ -72,6 +88,12 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     }
   }
 
+  const shownClients = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) => `${c.first} ${c.last}`.toLowerCase().includes(q));
+  }, [clients, search]);
+
   const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
   return (
@@ -86,23 +108,49 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </select>
             </div>
           )}
-          {clients.length > 0 && (
-            <div className="ls-field">
-              <label className="ls-q">Returning client? <span className="opt">tap to log another visit</span></label>
-              <div className="ls-clients">
-                {clients.map((c) => {
-                  const k = clientKey(c.first, c.last);
-                  return <button type="button" key={k} className={`ls-client ${picked === k ? "on" : ""}`} onClick={() => pickClient(c)}>{c.first} {c.last}</button>;
-                })}
-              </div>
-            </div>
-          )}
           <div className="ls-field">
-            <label className="ls-q">Client name <span className="ls-req">*</span></label>
-            <div className="ls-row2">
-              <input className="ls-in" placeholder="First" value={first} onChange={(e) => { setFirst(e.target.value); setPicked(""); }} />
-              <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
-            </div>
+            <label className="ls-q">Who is this session for? <span className="ls-req">*</span></label>
+            {clients.length > 0 && (
+              <div className="ls-modes" role="tablist">
+                <button type="button" role="tab" aria-selected={mode === "returning"} className={`ls-mode ${mode === "returning" ? "on" : ""}`} onClick={() => switchMode("returning")}>
+                  Someone I&apos;ve seen before<small>{clients.length} client{clients.length === 1 ? "" : "s"}</small>
+                </button>
+                <button type="button" role="tab" aria-selected={mode === "new"} className={`ls-mode ${mode === "new" ? "on" : ""}`} onClick={() => switchMode("new")}>
+                  A new client<small>first appointment</small>
+                </button>
+              </div>
+            )}
+
+            {mode === "returning" ? (
+              <>
+                {clients.length > 6 && (
+                  <input
+                    className="ls-in" value={search} onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search your clients…" aria-label="Search your clients"
+                    style={{ marginBottom: 10 }}
+                  />
+                )}
+                <div className="ls-clientlist">
+                  {shownClients.length === 0 ? (
+                    <p className="ls-none">No client matches &ldquo;{search}&rdquo;. Use <b>A new client</b> if this is their first appointment.</p>
+                  ) : shownClients.map((c) => {
+                    const k = clientKey(c.first, c.last);
+                    return (
+                      <button type="button" key={k} className={`ls-clientrow ${picked === k ? "on" : ""}`} onClick={() => pickClient(c)}>
+                        <span className="nm">{c.first} {c.last}</span>
+                        <span className="meta">{c.visits} visit{c.visits === 1 ? "" : "s"} · last {c.lastVisit}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {picked && <p className="ls-picked">Logging another visit for <b>{first} {last}</b>. Their usual insurer is filled in below.</p>}
+              </>
+            ) : (
+              <div className="ls-row2">
+                <input className="ls-in" placeholder="First" value={first} onChange={(e) => { setFirst(e.target.value); setPicked(""); }} />
+                <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
+              </div>
+            )}
           </div>
           <div className="ls-field">
             <label className="ls-q">Date of service <span className="ls-req">*</span></label>

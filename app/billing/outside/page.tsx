@@ -37,12 +37,14 @@ export default async function OutsidePage() {
   const forClinicians = ext.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name }));
 
   // Returning clients across the outside clinicians, so a repeat visit is one click.
-  const seen = new Map<string, { first: string; last: string; insurerId: string | null; lastVisit: string }>();
+  const seen = new Map<string, { first: string; last: string; insurerId: string | null; lastVisit: string; visits: number }>();
   for (const s of all.filter((s) => ext.some((c) => c.id === s.clinicianId)).sort((a, b) => b.dateOfService.localeCompare(a.dateOfService))) {
     const first = s.clientFirst?.trim() ?? "", last = s.clientLast?.trim() ?? "";
     if (!first && !last) continue;
     const k = `${first}|${last}`.toLowerCase();
-    if (!seen.has(k)) seen.set(k, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService });
+    const prev = seen.get(k);
+    if (prev) prev.visits += 1;
+    else seen.set(k, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService, visits: 1 });
   }
 
   return (
