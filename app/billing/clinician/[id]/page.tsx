@@ -5,6 +5,7 @@ import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } f
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
+import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,20 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   // The clinician's own agreement with the biller — settled from their share,
   // so it is a genuine deduction here (the company's separate 3% is not).
   const biller = CLINICIANS.find((x) => x.billing === "biller");
+
+  // Rows for the sessions table. `history` is every appointment this clinician
+  // has logged, so clicking a client can show their whole run of visits — not
+  // just the ones inside the month being viewed.
+  const toRow = (s: (typeof all)[number]): SessionRow => ({
+    id: s.id,
+    date: s.dateOfService,
+    client: `${s.clientFirst} ${s.clientLast}`.trim(),
+    codes: s.cptCodes.join(", "),
+    fee: s.totalCost,
+    copay: s.copayCollected,
+    insurance: insurancePortion(s),
+    status: !s.insurerId ? "self" : s.insurancePaid ? "paid" : "pend",
+  });
 
   // What's still with the insurers. This is the clinician's future pay — payout
   // follows cash, so this is the "when do I get the rest" question answered.
@@ -148,24 +163,11 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         {visits.length === 0 ? (
           <div className="cd-empty">No appointments logged for this month.</div>
         ) : (
-          <div className="cd-tblwrap">
-            <table className="cd-tbl">
-              <thead><tr><th>Date</th><th>Client</th><th>Code</th><th className="num">Fee</th><th className="num">Co-pay</th><th className="num">Insurance</th><th>Status</th></tr></thead>
-              <tbody>
-                {visits.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.dateOfService}</td>
-                    <td className="nm">{s.clientFirst} {s.clientLast}</td>
-                    <td>{s.cptCodes.join(", ") || "—"}</td>
-                    <td className="num">{money(s.totalCost)}</td>
-                    <td className="num">{money(s.copayCollected)}</td>
-                    <td className="num">{money(insurancePortion(s))}</td>
-                    <td>{!s.insurerId ? <span className="cd-pill self">Self-pay</span> : s.insurancePaid ? <span className="cd-pill paid">Billed</span> : <span className="cd-pill pend">Outstanding</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ClinicianSessions
+            month={visits.map(toRow)}
+            history={all.map(toRow)}
+            monthLabel={MONTHS[month - 1]}
+          />
         )}
       </div>
     </>

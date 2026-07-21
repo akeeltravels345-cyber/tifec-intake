@@ -2105,3 +2105,20 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
    the practice. Break the single cash-out line into both. */
 .biz .bo-wfl.bo-wfl-sub { padding: 6px 0 6px 20px; font-size: 12.5px; }
 .biz .bo-wfl.bo-wfl-sub .k, .biz .bo-wfl.bo-wfl-sub .v { color: var(--faint); font-weight: 500; }
+
+/* Click a client to see every appointment logged with them. Expands in place —
+   a client's name is PHI, so it must not travel in a URL. */
+.biz .cd-clientbtn {
+  display: inline-flex; align-items: baseline; gap: 7px; background: none; border: none; padding: 0;
+  font: 600 14px "Open Sans"; color: var(--ink); cursor: pointer; text-align: left;
+}
+.biz .cd-clientbtn:hover { color: var(--teal-deep); }
+.biz .cd-clientbtn .chev { display: inline-block; color: var(--faint); font-size: 15px; transition: transform .16s; }
+.biz .cd-clientbtn.on { color: var(--teal-deep); }
+.biz .cd-clientbtn.on .chev { transform: rotate(90deg); color: var(--teal); }
+.biz tr.cd-row-open > td { background: #F4F8F8; border-top-color: #dfeceb; }
+.biz .cd-detailrow > td { padding: 0 !important; background: #F4F8F8; border-top: none !important; }
+.biz .cd-detail { padding: 4px 14px 18px; }
+.biz .cd-detailhead { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.biz .cd-subtbl td { border-top: 1px solid #e4ecec; font-size: 13.5px; padding: 9px 10px; }
+.biz .cd-subtbl tr:first-child td { border-top: none; }
