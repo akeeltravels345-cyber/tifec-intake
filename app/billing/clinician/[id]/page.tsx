@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,9 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const isSelf = id === user.clinician.id;
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
   const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction;
+  // Shown as a component OF the company retention, never as its own deduction —
+  // the biller is paid out of the company's share, not the clinician's payout.
+  const biller = CLINICIANS.find((x) => x.billing === "biller");
 
   // What's still with the insurers. This is the clinician's future pay — payout
   // follows cash, so this is the "when do I get the rest" question answered.
@@ -85,10 +88,19 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           </div>
           <div className="cd-flowline"><span className="lbl"><span className="cd-keydot" style={{ background: "#EEE7DB" }} />Collected this month</span><span className="amt">{money(c.collected)}</span></div>
           <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
+          {c.billerCommission > 0 && (
+            <div className="cd-flowline sub">
+              <span className="lbl">↳ of which billing{biller ? ` (${biller.name})` : ""}</span>
+              <span className="amt">{money(c.billerCommission)}</span>
+            </div>
+          )}
           {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
           {c.healthDeduction > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Health insurance</span><span className="amt">−{money(c.healthDeduction)}</span></div>}
           <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
-          <p className="cd-note">Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.</p>
+          <p className="cd-note">
+            Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
+            {c.billerCommission > 0 && <> Billing comes out of the company&apos;s share above — it does not reduce your payout.</>}
+          </p>
           <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="cd-stmt">🧾 View payout statement →</Link>
         </div>
 
