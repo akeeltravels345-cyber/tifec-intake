@@ -91,6 +91,7 @@ export const CLINICIANS: Clinician[] = [
   },
   {
     id: "donnet-oconnor",
+    billingBeta: true, // BETA billing access
     name: "Dr. Donnet O'Connor",
     credentials: "Ph.D. · Counselling Psychologist & Therapist",
     email: "donnetoconnor@caymanessentialcare.com",
@@ -118,6 +119,7 @@ export const CLINICIANS: Clinician[] = [
   },
   {
     id: "joan-latty",
+    billingBeta: true, // BETA billing access
     name: "Dr. Joan Latty",
     credentials: "Psy.D. · Clinical Psychologist, Marriage & Family Therapist",
     email: "joanlatty@caymanessentialcare.com",
@@ -145,6 +147,7 @@ export const CLINICIANS: Clinician[] = [
   },
   {
     id: "sofia-hamilton",
+    billingBeta: true, // BETA billing access
     name: "Mrs. Sofia Hamilton",
     credentials: "MSc · Educational Psychologist",
     email: "sofiahamilton@caymanessentialcare.com",
