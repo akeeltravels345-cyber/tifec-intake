@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { CONTACTS, CONTACT_LABEL, getClinician, canUseTickets } from "@/lib/clinicians";
+import { CONTACTS, CONTACT_LABEL, getClinician } from "@/lib/clinicians";
 import { getTicket, listMessages, ticketThreadId, markThreadRead } from "@/lib/comms";
 import TicketDetail from "@/components/team/TicketDetail";
 
@@ -10,7 +10,6 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const me = await getCurrentClinician();
   const { id } = await params;
   if (!me) redirect(`/login?next=/team/tickets/${id}`);
-  if (!canUseTickets(me.id)) redirect("/team/messages");
 
   const t = await getTicket(id);
   if (!t) notFound();

@@ -4,7 +4,6 @@ import { getCurrentClinician } from "@/lib/auth";
 import { getTourSeen } from "@/lib/users";
 import { hasBillingBeta } from "@/lib/billingRole";
 import { unreadCount, listTickets } from "@/lib/comms";
-import { isContact } from "@/lib/clinicians";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import { templateLabel } from "@/lib/forms";
@@ -115,13 +114,9 @@ export default async function Dashboard() {
 
   const needReview = items.filter((i) => i.status === "new").length;
 
-  // Team area badges. Only contacts (owner / biller / admin) get the notice
-  // board and tickets, so don't even query tickets for a clinician.
-  const contact = isContact(me.id);
+  // Team area badges: unread messages, and tickets still waiting on this person.
   const teamUnread = await unreadCount(me.id);
-  const openTickets = contact
-    ? (await listTickets()).filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length
-    : 0;
+  const openTickets = (await listTickets()).filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length;
 
   // For the guided tour: open a real record (prefer one with DSM scoring to demo).
   const tourToken = (items.find((i) => /dsm/i.test(i.formLabel)) ?? items[0])?.token;
@@ -217,7 +212,6 @@ export default async function Dashboard() {
       autoTour={!tourSeen}
       teamUnread={teamUnread}
       openTickets={openTickets}
-      isContact={contact}
     />
   );
 }

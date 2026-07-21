@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician, isContact, canUseTickets } from "@/lib/clinicians";
+import { getClinician, isContact } from "@/lib/clinicians";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
@@ -29,7 +29,6 @@ async function canPost(threadId: string, me: string): Promise<boolean> {
     return !!partner && dmThreadId(me, partner) === threadId && !!getClinician(partner);
   }
   if (threadId.startsWith("ticket:")) {
-    if (!canUseTickets(me)) return false;
     const t = await getTicket(threadId.slice("ticket:".length));
     return !!t && (t.createdBy === me || t.assignees.includes(me));
   }
@@ -69,7 +68,6 @@ export async function POST(req: Request) {
 
     // ---- tickets ------------------------------------------------------------
     if (action === "ticket:create") {
-      if (!canUseTickets(me.id)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
       const assignees = readAssignees(body.assignees);
       if (!assignees) return NextResponse.json({ error: "Pick at least one person this is for." }, { status: 400 });
       const subject = String(body.subject ?? "").trim();
@@ -85,7 +83,6 @@ export async function POST(req: Request) {
     }
 
     if (action === "ticket:update") {
-      if (!canUseTickets(me.id)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
       const id = String(body.id ?? "");
       const t = await getTicket(id);
       if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });

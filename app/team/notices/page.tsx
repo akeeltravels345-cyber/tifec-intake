@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician, canUseNotices } from "@/lib/clinicians";
+import { getClinician } from "@/lib/clinicians";
 import { listNotices } from "@/lib/comms";
 import NoticeBoard from "@/components/team/NoticeBoard";
 
@@ -9,8 +9,6 @@ export const dynamic = "force-dynamic";
 export default async function NoticesPage() {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/team/notices");
-  // Practice-run board: clinicians get Messages only.
-  if (!canUseNotices(me.id)) redirect("/team/messages");
 
   const notices = await listNotices();
   const canPost = me.contact === "owner" || me.contact === "admin";
