@@ -30,6 +30,14 @@ export interface NotifyArgs {
   formLabel?: string; // which form was submitted (e.g. "Individual Client Intake")
 }
 
+/** A notice title is author-written text going into an HTML email, so it must
+ *  be escaped or it becomes markup in someone's inbox. */
+function escapeHtml(v: string): string {
+  return String(v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function transport() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -192,4 +200,92 @@ export async function sendFeedback(args: {
     html,
   });
   return { sent: true };
+}
+
+// =============================================================================
+// Team emails: a notice went up, a ticket was raised for you, yours was
+// resolved. Same rule as the intake notification above — these leave the app
+// and land in inboxes and on phones, so they carry NO ticket subject and no
+// message text. Those fields are encrypted precisely because they can name a
+// client. A notice TITLE is included, because a notice is a broadcast to the
+// whole practice by definition and "someone posted a notice" is useless.
+// =============================================================================
+
+export type TeamEmailKind = "notice" | "ticket_new" | "ticket_resolved";
+
+export interface TeamEmailArgs {
+  to: string;
+  recipientName: string;
+  kind: TeamEmailKind;
+  actorName: string;      // who did it
+  ticketRef?: number;
+  ticketArea?: string;
+  noticeTitle?: string;
+  path: string;           // e.g. /team/tickets/abc
+}
+
+/** Subject + bodies for a team email (exported so it can be previewed/tested). */
+export function buildTeamEmail(args: TeamEmailArgs): { subject: string; text: string; html: string; link: string } {
+  const base = (process.env.APP_URL || "").replace(/\/$/, "");
+  const link = `${base}${args.path}`;
+  const hi = greetingName(args.recipientName);
+
+  let subject: string, headline: string, line: string, cta: string;
+  switch (args.kind) {
+    case "notice":
+      subject = `Notice board: ${args.noticeTitle ?? "a new notice"}`;
+      headline = args.noticeTitle ?? "A new notice";
+      line = `${args.actorName} posted a notice for everyone at ${PRACTICE_NAME}.`;
+      cta = "Read the notice";
+      break;
+    case "ticket_new":
+      subject = `Ticket #${args.ticketRef} raised for you`;
+      headline = `Ticket #${args.ticketRef}`;
+      line = `${args.actorName} raised a ticket for you${args.ticketArea ? ` under ${args.ticketArea}` : ""}. The details are in the app.`;
+      cta = "Open the ticket";
+      break;
+    default:
+      subject = `Ticket #${args.ticketRef} resolved`;
+      headline = `Ticket #${args.ticketRef} resolved`;
+      line = `${args.actorName} marked your ticket resolved.`;
+      cta = "See what changed";
+  }
+
+  const text = `Hi ${hi},\n\n${line}\n\n${cta}: ${link}\n\n— ${PRACTICE_NAME}`;
+  const html = `<div style="margin:0;padding:24px;background:${BRAND_CREAM};font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid ${BRAND_LINE};border-radius:12px;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid ${BRAND_LINE}">
+      <div style="font-size:13px;color:${BRAND_MUTED}">${PRACTICE_NAME}</div>
+      <div style="font-size:18px;font-weight:700;color:${BRAND_CHARCOAL};margin-top:4px">${escapeHtml(headline)}</div>
+    </div>
+    <div style="padding:22px 24px">
+      <p style="margin:0 0 6px;font-size:14px;color:${BRAND_CHARCOAL}">Hi ${escapeHtml(hi)},</p>
+      <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:${BRAND_CHARCOAL}">${escapeHtml(line)}</p>
+      <a href="${link}" style="display:inline-block;background:${BRAND_BLUE};color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-size:14px;font-weight:600">${cta}</a>
+      <p style="margin:18px 0 0;font-size:12px;color:${BRAND_MUTED};line-height:1.6">
+        You're getting this because you work at ${PRACTICE_NAME}. Client details are never included in these emails — sign in to see them.
+      </p>
+    </div>
+  </div>
+</div>`;
+  return { subject, text, html, link };
+}
+
+/** Send a team email. Never throws: a failed email must not fail the action. */
+export async function sendTeamEmail(args: TeamEmailArgs): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    const { subject, text, html, link } = buildTeamEmail(args);
+    if (!process.env.SMTP_HOST) {
+      console.log(`[email:dev] would email ${args.to} — "${subject}" → ${link}`);
+      return { sent: false, reason: "SMTP not configured (dev mode)" };
+    }
+    await transport().sendMail({
+      from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+      to: args.to, subject, text, html,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Team email failed:", err);
+    return { sent: false, reason: "send failed" };
+  }
 }

@@ -88,5 +88,68 @@
     "href": "/team/tickets/a3c26298ada2c8e2fd82b0048295ee6a",
     "createdAt": "2026-07-21T17:47:48.630Z",
     "readAt": "2026-07-21T17:48:28.565Z"
+  },
+  {
+    "id": "55ced92d682c090c80b04afc4f5875c9",
+    "userId": "shion-oconnor",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T18:10:07.990Z",
+    "readAt": null
+  },
+  {
+    "id": "bfbf71049ee88650cbeabbf96cb0d9a7",
+    "userId": "donnet-oconnor",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T18:10:07.990Z",
+    "readAt": null
+  },
+  {
+    "id": "22784d7423d71cf7e003cea7a05da9b1",
+    "userId": "joan-latty",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T18:10:07.990Z",
+    "readAt": null
+  },
+  {
+    "id": "6e839d892ccddaae9e26f2f4a76d797d",
+    "userId": "sofia-hamilton",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T18:10:07.990Z",
+    "readAt": null
+  },
+  {
+    "id": "89bad065a4bc81f55a5f96edc6107e47",
+    "userId": "akeel-test",
+    "kind": "notice",
+    "body": "Nick O'Connor posted a notice",
+    "href": "/team/notices",
+    "createdAt": "2026-07-21T18:10:07.990Z",
+    "readAt": null
+  },
+  {
+    "id": "aa405b36a3b359b543f0b153668a9d08",
+    "userId": "shion-oconnor",
+    "kind": "ticket_new",
+    "body": "Dr. Donnet O'Connor raised ticket #3 (Scheduling) for you",
+    "href": "/team/tickets/2e372257a351d28d01079e8ee9a8f420",
+    "createdAt": "2026-07-21T18:10:08.212Z",
+    "readAt": null
+  },
+  {
+    "id": "98979f5b1a0540974a482c22381c7c3a",
+    "userId": "donnet-oconnor",
+    "kind": "ticket_status",
+    "body": "Dr. Shion O'Connor marked ticket #3 resolved",
+    "href": "/team/tickets/2e372257a351d28d01079e8ee9a8f420",
+    "createdAt": "2026-07-21T18:10:08.433Z",
+    "readAt": null
   }
 ]

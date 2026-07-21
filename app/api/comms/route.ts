@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { getClinician, isContact, CLINICIANS } from "@/lib/clinicians";
+import { sendTeamEmail } from "@/lib/email";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
@@ -9,6 +10,17 @@ import {
 } from "@/lib/comms";
 
 const MAX_BODY = 5000;
+
+/** Email the people an in-app notification just went to. Deliberately fire and
+ *  forget: a mail outage must never fail the action that triggered it. */
+async function emailTeam(userIds: string[], build: (name: string) => Parameters<typeof sendTeamEmail>[0] | null) {
+  await Promise.all([...new Set(userIds)].map(async (id) => {
+    const c = getClinician(id);
+    if (!c?.email) return;
+    const args = build(c.name);
+    if (args) await sendTeamEmail({ ...args, to: c.email, recipientName: c.name });
+  }));
+}
 
 /** Validate an assignee list: one or more real contacts (owner / biller /
  *  admin), deduped. Returns null if it isn't usable, so a ticket can never end
@@ -91,8 +103,13 @@ export async function POST(req: Request) {
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
 
       const t = await createTicket({ createdBy: me.id, assignees, area: area as TicketArea, subject, body: text });
-      await notify(assignees.filter((a) => a !== me.id), "ticket_new",
+      const newFor = assignees.filter((a) => a !== me.id);
+      await notify(newFor, "ticket_new",
         `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
+      await emailTeam(newFor, () => ({
+        to: "", recipientName: "", kind: "ticket_new" as const,
+        actorName: me.name, ticketRef: t.ref, ticketArea: t.area, path: `/team/tickets/${t.id}`,
+      }));
       return NextResponse.json({ ok: true, id: t.id, ref: t.ref });
     }
 
@@ -120,6 +137,13 @@ export async function POST(req: Request) {
         const watchers = [t.createdBy, ...t.assignees].filter((u) => u !== me.id);
         await notify(watchers, "ticket_status",
           `${me.name} marked ticket #${t.ref} ${TICKET_STATUS_LABEL[patch.status].toLowerCase()}`, `/team/tickets/${t.id}`);
+        // Only "resolved" is worth an email — in-progress would just be noise.
+        if (patch.status === "resolved" && t.createdBy !== me.id) {
+          await emailTeam([t.createdBy], () => ({
+            to: "", recipientName: "", kind: "ticket_resolved" as const,
+            actorName: me.name, ticketRef: t.ref, path: `/team/tickets/${t.id}`,
+          }));
+        }
       }
       if (patch.assignees) {
         // Only tell people newly put on it.
@@ -144,8 +168,12 @@ export async function POST(req: Request) {
       if (eventAtRaw && !eventAt) return NextResponse.json({ error: "That date didn't make sense." }, { status: 400 });
 
       const n = await createNotice({ authorId: me.id, title, body: text, eventAt, pinned: body.pinned === true });
-      await notify(CLINICIANS.filter((c) => c.id !== me.id).map((c) => c.id), "notice",
-        `${me.name} posted a notice`, "/team/notices");
+      const others = CLINICIANS.filter((c) => c.id !== me.id).map((c) => c.id);
+      await notify(others, "notice", `${me.name} posted a notice`, "/team/notices");
+      await emailTeam(others, () => ({
+        to: "", recipientName: "", kind: "notice" as const,
+        actorName: me.name, noticeTitle: title, path: "/team/notices",
+      }));
       return NextResponse.json({ ok: true, id: n.id });
     }
 
