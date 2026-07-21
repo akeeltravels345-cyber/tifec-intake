@@ -129,6 +129,7 @@ export default async function AdminPage({
             <p className="who-sub">Submission counts, logins, and activity - no client data</p>
           </div>
           <div className="head-actions">
+            <Link href="/admin/cleanup" className="link-btn">Demo data cleanup</Link>
             <Link href="/dashboard" className="link-btn">My dashboard</Link>
             <LogoutButton />
           </div>
