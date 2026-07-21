@@ -74,8 +74,8 @@ export default async function ClinicianDetail({ params, searchParams }: { params
             visit, or the whole fee when the client is self-pay. */}
         <div className="cd-kpi"><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
-        <div className="cd-kpi"><div className="k">Collected</div><div className="v">{money0(c.collected)}</div></div>
-        <div className="cd-kpi"><div className="k">Outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
+        <div className="cd-kpi"><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
+        <div className="cd-kpi"><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
       </div>
 
       <div className="cd-two">
