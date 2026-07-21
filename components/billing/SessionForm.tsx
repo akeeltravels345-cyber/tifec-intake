@@ -26,21 +26,37 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // returning clients; nobody is pre-selected, so it can't pick one by accident.
   const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
   const [search, setSearch] = useState("");
+  // Whether this visit goes through insurance or is paid in full on the day.
+  // Kept separate from the insurer itself: an insured client may still choose
+  // to pay upfront for a session, which is common in a psychology practice.
+  const [payMode, setPayMode] = useState<"insurance" | "upfront">("upfront");
   // Only supplied when the biller is logging a claim for an outside clinician.
   const [forId, setForId] = useState(forClinicians[0]?.id ?? "");
 
   function pickClient(c: ClientOpt) {
     const k = clientKey(c.first, c.last);
-    if (picked === k) { setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setCopayTouched(false); return; }
-    // Carry their usual insurer over — it's nearly always the same next visit.
-    setPicked(k); setFirst(c.first); setLast(c.last); setInsurerId(c.insurerId || ""); setCopayTouched(false);
+    if (picked === k) { setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); return; }
+    // Carry their usual insurer over — it's nearly always the same next visit,
+    // but they can still switch this visit to paid-upfront.
+    setPicked(k); setFirst(c.first); setLast(c.last);
+    setInsurerId(c.insurerId || ""); setPayMode(c.insurerId ? "insurance" : "upfront");
+    setCopayTouched(false);
+  }
+
+  /** Paying upfront means no insurer at all, so the money model treats the
+   *  whole fee as collected at the visit. */
+  function switchPay(next: "insurance" | "upfront") {
+    if (next === payMode) return;
+    setPayMode(next);
+    if (next === "upfront") setInsurerId("");
+    setCopayTouched(false);
   }
 
   /** Switching mode clears the client, so a half-finished choice can't leak
    *  across (e.g. picking someone, then typing a different new name). */
   function switchMode(next: "returning" | "new") {
     if (next === mode) return;
-    setMode(next); setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setCopayTouched(false); setSearch("");
+    setMode(next); setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); setSearch("");
   }
   const [dos, setDos] = useState("");
   const [insurerId, setInsurerId] = useState("");
@@ -70,13 +86,14 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         ? "Pick the client this session was for, or switch to \u201cA new client\u201d."
         : "Client first and last name are required.");
     }
+    if (payMode === "insurance" && !insurerId) return setError("Choose the insurer, or switch to \u201cPaid in full at the visit\u201d.");
     if (!dos) return setError("Date of service is required.");
     if (!codes.length) return setError("Select at least one service code.");
     setBusy(true);
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: copayNum, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayNum : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -157,11 +174,21 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             <input type="date" className="ls-in" style={{ maxWidth: 220 }} value={dos} onChange={(e) => setDos(e.target.value)} />
           </div>
           <div className="ls-field">
-            <label className="ls-q">Insurance provider</label>
-            <select className="ls-sel" value={insurerId} onChange={(e) => { setInsurerId(e.target.value); setCopayTouched(false); }}>
-              <option value="">Self-pay / none</option>
-              {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
+            <label className="ls-q">How is this session paid? <span className="ls-req">*</span></label>
+            <div className="ls-modes" role="tablist">
+              <button type="button" role="tab" aria-selected={payMode === "upfront"} className={`ls-mode ${payMode === "upfront" ? "on" : ""}`} onClick={() => switchPay("upfront")}>
+                Paid in full at the visit<small>nothing goes to insurance</small>
+              </button>
+              <button type="button" role="tab" aria-selected={payMode === "insurance"} className={`ls-mode ${payMode === "insurance" ? "on" : ""}`} onClick={() => switchPay("insurance")}>
+                Through insurance<small>co-pay now, rest billed</small>
+              </button>
+            </div>
+            {payMode === "insurance" && (
+              <select className="ls-sel" style={{ marginTop: 10 }} value={insurerId} onChange={(e) => { setInsurerId(e.target.value); setCopayTouched(false); }} aria-label="Insurance provider">
+                <option value="">Choose the insurer…</option>
+                {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </select>
+            )}
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
@@ -186,6 +213,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </div>
             </div>
           </div>
+          {payMode === "insurance" && (
           <div className="ls-field">
             <label className="ls-q">Co-pay collected at visit <span className="opt">adjust to the client&apos;s plan</span></label>
             <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={copayValue} onChange={(e) => { setCopayTouched(true); setCopay(e.target.value); }} /></div>
@@ -197,6 +225,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </p>
             )}
           </div>
+          )}
           <div className="ls-field">
             <label className="ls-q">Notes <span className="opt">optional</span></label>
             <textarea className="ls-in" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
