@@ -1606,7 +1606,7 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-mbtn.on { background: #eef4f3; color: var(--teal-deep); }
 .cd-lab { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--teal-deep); font-weight: 700; }
 .cd-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 24px 26px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
-.cd-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.cd-kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 20px; }
 .cd-kpi { background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 15px 18px; }
 .cd-kpi .k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
 .cd-kpi .v { font: 400 27px "Newsreader", serif; margin-top: 8px; font-variant-numeric: tabular-nums; color: var(--ink); }
@@ -1647,6 +1647,10 @@ body:has(.biz) { background: #F8F9F8; }
   .cd-two { grid-template-columns: 1fr; }
   .cd-kpis { grid-template-columns: repeat(2,1fr); }
   .cd-tbl { min-width: 560px; }
+}
+/* Five KPIs get cramped before the mobile breakpoint, so step down to three. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .cd-kpis { grid-template-columns: repeat(3,1fr); }
 }
 
 /* ---- Log a Session (design handoff) ---- */
