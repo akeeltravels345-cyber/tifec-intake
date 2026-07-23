@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
 import Tour from "@/components/Tour";
+import NotificationBell from "@/components/team/NotificationBell";
 
 export interface DashItem {
   token: string;
@@ -85,6 +86,7 @@ export default function DashboardShell({
   autoTour,
   teamUnread = 0,
   openTickets = 0,
+  noteCount = 0,
 }: {
   name: string;
   initials: string;
@@ -98,6 +100,8 @@ export default function DashboardShell({
   /** Unread direct messages, and tickets waiting on this person. */
   teamUnread?: number;
   openTickets?: number;
+  /** Unread notifications, so the bell works here too — not only in /team. */
+  noteCount?: number;
 }) {
   const [view, setView] = useState<View>("dashboard");
   const [status, setStatus] = useState<Status>("new");
@@ -251,6 +255,7 @@ export default function DashboardShell({
                   aria-label="Search submissions"
                 />
               </div>
+              <NotificationBell initialUnread={noteCount} />
               <div className="dm-avatar-sq">{initials}</div>
             </div>
 
@@ -349,6 +354,7 @@ export default function DashboardShell({
                 </div>
               </div>
               <div className="dm-pill-note">{shield} Consent included in every form</div>
+              <NotificationBell initialUnread={noteCount} />
               <div className="dm-avatar-sq">{initials}</div>
             </div>
             <div className="dm-content">{formsSlot}</div>

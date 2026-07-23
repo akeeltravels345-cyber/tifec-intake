@@ -48,6 +48,15 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
 
   useEffect(() => setMuted(!soundOn()), []);
 
+  // The banner is fixed to the top, so make room for it rather than letting it
+  // sit over a page header (the intake dashboard has one at the very top).
+  useEffect(() => {
+    const el = document.documentElement;
+    if (banner) el.classList.add("tm-banner-open");
+    else el.classList.remove("tm-banner-open");
+    return () => el.classList.remove("tm-banner-open");
+  }, [banner]);
+
   const pull = useCallback(async (): Promise<Note[] | null> => {
     try {
       const r = await fetch("/api/comms?notifications=1");

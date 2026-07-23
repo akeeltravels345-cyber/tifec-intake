@@ -38,6 +38,15 @@ function escapeHtml(v: string): string {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+/** "Dr. Joan Latty" -> "Joan". Internal mail between colleagues; the formal
+ *  title stays on client-facing email. */
+function firstNameOnly(name: string): string {
+  const cleaned = name.replace(/\(.*?\)/g, "").trim();
+  const tokens = cleaned.split(/\s+/).filter(Boolean)
+    .filter((w) => !/^(dr|mrs|mr|ms|miss|prof)\.?$/i.test(w));
+  return tokens[0] || cleaned || name;
+}
+
 function transport() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -226,48 +235,80 @@ export interface TeamEmailArgs {
 
 /** Subject + bodies for a team email (exported so it can be previewed/tested). */
 export function buildTeamEmail(args: TeamEmailArgs): { subject: string; text: string; html: string; link: string } {
-  const base = (process.env.APP_URL || "").replace(/\/$/, "");
-  const link = `${base}${args.path}`;
-  const hi = greetingName(args.recipientName);
+  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
+  const link = `${appUrl}${args.path}`;
+  // Warmer than the client-facing intake mail: this is a colleague writing to a
+  // colleague, so first name only.
+  const hi = firstNameOnly(args.recipientName);
 
-  let subject: string, headline: string, line: string, cta: string;
+  // Each kind gets its own colour and mark, so the inbox tells them apart at a
+  // glance: teal for news, amber for something waiting on you, green for done.
+  const look = {
+    notice:          { accent: "#2F8E93", tint: "#E4F0EF", mark: "📣", band: "linear-gradient(90deg,#2E3192,#2F8E93)" },
+    ticket_new:      { accent: "#BE8127", tint: "#F8EEDC", mark: "🎫", band: "linear-gradient(90deg,#BE8127,#D9A441)" },
+    ticket_resolved: { accent: "#2c7a55", tint: "#DFF0E5", mark: "✅", band: "linear-gradient(90deg,#2c7a55,#43a9ae)" },
+  }[args.kind];
+
+  let subject: string, eyebrow: string, headline: string, line: string, cta: string;
   switch (args.kind) {
     case "notice":
-      subject = `Notice board: ${args.noticeTitle ?? "a new notice"}`;
+      subject = `📣 ${args.noticeTitle ?? "A new notice"}`;
+      eyebrow = "Notice board";
       headline = args.noticeTitle ?? "A new notice";
-      line = `${args.actorName} posted a notice for everyone at ${PRACTICE_NAME}.`;
+      line = `${args.actorName} just posted this for everyone at the practice.`;
       cta = "Read the notice";
       break;
     case "ticket_new":
-      subject = `Ticket #${args.ticketRef} raised for you`;
-      headline = `Ticket #${args.ticketRef}`;
-      line = `${args.actorName} raised a ticket for you${args.ticketArea ? ` under ${args.ticketArea}` : ""}. The details are in the app.`;
+      subject = `Ticket #${args.ticketRef} is yours — ${args.ticketArea ?? "new"}`;
+      eyebrow = `Ticket #${args.ticketRef}`;
+      headline = "Something needs you";
+      line = `${args.actorName} raised a ticket for you${args.ticketArea ? ` under ${args.ticketArea}` : ""}. The details are waiting in the app.`;
       cta = "Open the ticket";
       break;
     default:
-      subject = `Ticket #${args.ticketRef} resolved`;
-      headline = `Ticket #${args.ticketRef} resolved`;
+      subject = `✅ Ticket #${args.ticketRef} sorted`;
+      eyebrow = `Ticket #${args.ticketRef}`;
+      headline = "That's sorted";
       line = `${args.actorName} marked your ticket resolved.`;
       cta = "See what changed";
   }
 
   const text = `Hi ${hi},\n\n${line}\n\n${cta}: ${link}\n\n— ${PRACTICE_NAME}`;
-  const html = `<div style="margin:0;padding:24px;background:${BRAND_CREAM};font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid ${BRAND_LINE};border-radius:12px;overflow:hidden">
-    <div style="padding:20px 24px;border-bottom:1px solid ${BRAND_LINE}">
-      <div style="font-size:13px;color:${BRAND_MUTED}">${PRACTICE_NAME}</div>
-      <div style="font-size:18px;font-weight:700;color:${BRAND_CHARCOAL};margin-top:4px">${escapeHtml(headline)}</div>
-    </div>
-    <div style="padding:22px 24px">
-      <p style="margin:0 0 6px;font-size:14px;color:${BRAND_CHARCOAL}">Hi ${escapeHtml(hi)},</p>
-      <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:${BRAND_CHARCOAL}">${escapeHtml(line)}</p>
-      <a href="${link}" style="display:inline-block;background:${BRAND_BLUE};color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-size:14px;font-weight:600">${cta}</a>
-      <p style="margin:18px 0 0;font-size:12px;color:${BRAND_MUTED};line-height:1.6">
-        You're getting this because you work at ${PRACTICE_NAME}. Client details are never included in these emails — sign in to see them.
-      </p>
-    </div>
-  </div>
-</div>`;
+
+  const html = `
+  <div style="margin:0;padding:28px 12px;background:${BRAND_CREAM};font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:${BRAND_CHARCOAL}">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden">
+      <tr><td style="height:6px;background:${look.accent};background-image:${look.band};font-size:0;line-height:0">&nbsp;</td></tr>
+
+      <tr><td style="padding:26px 36px 0;text-align:center">
+        <img src="${appUrl}/tifec-logo.png" alt="${PRACTICE_NAME}" style="height:52px;width:auto" />
+      </td></tr>
+
+      <tr><td style="padding:22px 36px 0;text-align:center">
+        <div style="display:inline-block;width:56px;height:56px;line-height:56px;border-radius:50%;background:${look.tint};font-size:26px">${look.mark}</div>
+        <div style="margin-top:14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:${look.accent}">${escapeHtml(eyebrow)}</div>
+        <h1 style="font-size:23px;line-height:1.3;font-weight:700;margin:8px 0 0;color:${BRAND_CHARCOAL}">${escapeHtml(headline)}</h1>
+      </td></tr>
+
+      <tr><td style="padding:16px 36px 0;text-align:center">
+        <p style="font-size:15px;line-height:1.65;margin:0;color:${BRAND_MUTED}">Hi ${escapeHtml(hi)} — ${escapeHtml(line)}</p>
+      </td></tr>
+
+      <tr><td style="padding:24px 36px 4px;text-align:center">
+        <a href="${link}" style="display:inline-block;background:${look.accent};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:10px;font-size:15px;font-weight:700">${cta} →</a>
+      </td></tr>
+
+      <tr><td style="padding:22px 36px 26px">
+        <div style="border-top:1px solid ${BRAND_LINE};padding-top:14px;text-align:center">
+          <p style="font-size:12px;line-height:1.6;margin:0;color:${BRAND_MUTED}">
+            You're getting this because you work at ${PRACTICE_NAME}.<br />
+            Client details are never included in these emails — sign in to see them.
+          </p>
+        </div>
+      </td></tr>
+    </table>
+  </div>`;
+
   return { subject, text, html, link };
 }
 
