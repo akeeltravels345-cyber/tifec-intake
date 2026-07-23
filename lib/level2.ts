@@ -27,7 +27,17 @@ export interface L2Item {
   scale?: L2Option[]; // overrides the measure default scale (Sleep, ASRM, FOCI)
   optional?: boolean; // e.g. PHQ-15 "women only" item
 }
-export type L2ScoringKind = "promis" | "phq" | "asrm" | "foci" | "substance" | "phq9" | "average";
+export type L2ScoringKind =
+  | "promis"
+  | "phq"
+  | "asrm"
+  | "foci"
+  | "substance"
+  | "phq9"
+  | "average"
+  | "ari" // Affective Reactivity Index: sum of the first six items (0-12)
+  | "snap" // SNAP-IV inattention: sum + average, flag at average >= 1.78
+  | "rawsum"; // plain total with a stated maximum (no published T-score)
 
 export interface L2Measure {
   key: string;
@@ -42,8 +52,10 @@ export interface L2Measure {
   stackItems: boolean; // render options stacked (long anchors) vs. inline
   items: L2Item[];
   scoring: { kind: L2ScoringKind; table?: Record<number, number> };
-  /** "level2" = cross-cutting follow-up (default). "severity" = disorder-specific severity measure. */
-  tier?: "level2" | "severity";
+  /** "level2" = adult cross-cutting follow-up (default). "severity" = disorder-specific
+   *  severity measure. "l2-parent" / "l2-child" = the child Level 2 follow-ups, rated by
+   *  a parent/guardian of a child 6-17, or by the young person themselves (11-17). */
+  tier?: "level2" | "severity" | "l2-parent" | "l2-child";
   /** Extra client-info fields (e.g. the traumatic-event fields on the stress measures). */
   extraInfo?: FormField[];
   /** Optional extra context paragraph shown above the items (e.g. defining "social situations"). */
@@ -109,6 +121,49 @@ const T_ANX: Record<number, number> = { 7: 36.3, 8: 42.1, 9: 44.7, 10: 46.7, 11:
 const T_DEP: Record<number, number> = { 8: 37.1, 9: 43.3, 10: 46.2, 11: 48.2, 12: 49.8, 13: 51.2, 14: 52.3, 15: 53.4, 16: 54.3, 17: 55.3, 18: 56.2, 19: 57.1, 20: 57.9, 21: 58.8, 22: 59.7, 23: 60.7, 24: 61.6, 25: 62.5, 26: 63.5, 27: 64.4, 28: 65.4, 29: 66.4, 30: 67.4, 31: 68.3, 32: 69.3, 33: 70.4, 34: 71.4, 35: 72.5, 36: 73.6, 37: 74.8, 38: 76.2, 39: 77.9, 40: 81.1 };
 const T_ANG: Record<number, number> = { 5: 32.9, 6: 38.1, 7: 41.3, 8: 44.0, 9: 46.3, 10: 48.4, 11: 50.5, 12: 52.6, 13: 54.7, 14: 56.7, 15: 58.8, 16: 60.8, 17: 62.9, 18: 65.0, 19: 67.2, 20: 69.4, 21: 71.7, 22: 74.1, 23: 76.8, 24: 79.7, 25: 83.3 };
 const T_SLP: Record<number, number> = { 8: 28.9, 9: 33.1, 10: 35.9, 11: 38.0, 12: 39.8, 13: 41.4, 14: 42.9, 15: 44.2, 16: 45.5, 17: 46.7, 18: 47.9, 19: 49.0, 20: 50.1, 21: 51.2, 22: 52.2, 23: 53.3, 24: 54.3, 25: 55.3, 26: 56.3, 27: 57.3, 28: 58.3, 29: 59.4, 30: 60.4, 31: 61.5, 32: 62.6, 33: 63.7, 34: 64.9, 35: 66.1, 36: 67.5, 37: 69.0, 38: 70.8, 39: 73.0, 40: 76.5 };
+
+// ---- scales used by the child / parent Level 2 measures ---------------------
+/** PROMIS pediatric frequency scale (1-5). */
+const NEVER_ALWAYS: L2Option[] = [
+  { label: "Never", value: 1 },
+  { label: "Almost never", value: 2 },
+  { label: "Sometimes", value: 3 },
+  { label: "Often", value: 4 },
+  { label: "Almost always", value: 5 },
+];
+/** Affective Reactivity Index (0-2). */
+const ARI_SCALE: L2Option[] = [
+  { label: "Not true", value: 0 },
+  { label: "Somewhat true", value: 1 },
+  { label: "Certainly true", value: 2 },
+];
+/** SNAP-IV inattention (0-3). */
+const SNAP_SCALE: L2Option[] = [
+  { label: "Not at all", value: 0 },
+  { label: "Just a little", value: 1 },
+  { label: "Quite a bit", value: 2 },
+  { label: "Very much", value: 3 },
+];
+/** NIDA-modified ASSIST frequency for the child/parent versions (0-4). */
+const SUBST_CHILD: L2Option[] = [
+  { label: "Not at all", value: 0 },
+  { label: "Less than a day or two", value: 1 },
+  { label: "Several days", value: 2 },
+  { label: "More than half the days", value: 3 },
+  { label: "Nearly every day", value: 4 },
+];
+/** Sleep uses three label sets; items 2/3/7/8 are reverse-scored (as in the adult form). */
+const SLEEP_A = ["Not at all", "A little bit", "Somewhat", "Quite a bit", "Very much"];
+const SLEEP_N = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+const SLEEP_Q = ["Very poor", "Poor", "Fair", "Good", "Very good"];
+
+// ---- PROMIS pediatric raw -> T conversion tables (from the APA PDFs) --------
+const T_C_ANGER: Record<number, number> = { 6: 31.1, 7: 35.9, 8: 39.0, 9: 41.7, 10: 44.2, 11: 46.4, 12: 48.5, 13: 50.5, 14: 52.4, 15: 54.2, 16: 56.0, 17: 57.7, 18: 59.5, 19: 61.2, 20: 62.9, 21: 64.6, 22: 66.3, 23: 68.0, 24: 69.8, 25: 71.6, 26: 73.4, 27: 75.4, 28: 77.5, 29: 79.8, 30: 82.7 };
+const T_P_ANGER: Record<number, number> = { 5: 29.0, 6: 34.4, 7: 38.1, 8: 41.3, 9: 44.2, 10: 47.1, 11: 49.9, 12: 52.7, 13: 55.4, 14: 58.0, 15: 60.8, 16: 63.5, 17: 66.0, 18: 68.3, 19: 70.5, 20: 72.7, 21: 74.9, 22: 77.2, 23: 79.6, 24: 82.1, 25: 85.2 };
+const T_C_ANX: Record<number, number> = { 13: 32.3, 14: 36.6, 15: 38.9, 16: 41.1, 17: 42.8, 18: 44.3, 19: 45.7, 20: 47.0, 21: 48.2, 22: 49.4, 23: 50.4, 24: 51.4, 25: 52.4, 26: 53.3, 27: 54.2, 28: 55.1, 29: 56.0, 30: 56.8, 31: 57.6, 32: 58.4, 33: 59.2, 34: 60.0, 35: 60.8, 36: 61.6, 37: 62.3, 38: 63.1, 39: 63.8, 40: 64.5, 41: 65.3, 42: 66.0, 43: 66.8, 44: 67.5, 45: 68.2, 46: 69.0, 47: 69.7, 48: 70.5, 49: 71.3, 50: 72.0, 51: 72.8, 52: 73.6, 53: 74.4, 54: 75.3, 55: 76.1, 56: 77.0, 57: 77.9, 58: 78.9, 59: 79.9, 60: 81.0, 61: 82.1, 62: 83.3, 63: 84.7, 64: 86.1, 65: 88.0 };
+const T_P_ANX: Record<number, number> = { 10: 34.4, 11: 39.4, 12: 42.3, 13: 44.6, 14: 46.5, 15: 48.2, 16: 49.7, 17: 51.1, 18: 52.4, 19: 53.6, 20: 54.8, 21: 55.9, 22: 57.1, 23: 58.2, 24: 59.3, 25: 60.4, 26: 61.5, 27: 62.6, 28: 63.7, 29: 64.8, 30: 65.8, 31: 66.9, 32: 67.9, 33: 68.9, 34: 70.0, 35: 71.0, 36: 72.0, 37: 73.0, 38: 73.9, 39: 74.9, 40: 75.9, 41: 76.9, 42: 77.9, 43: 79.0, 44: 80.0, 45: 81.2, 46: 82.4, 47: 83.6, 48: 85.0, 49: 86.6, 50: 88.8 };
+const T_C_DEP: Record<number, number> = { 14: 31.7, 15: 35.2, 16: 36.9, 17: 39.1, 18: 40.6, 19: 42.4, 20: 43.8, 21: 45.2, 22: 46.5, 23: 47.6, 24: 48.7, 25: 49.7, 26: 50.6, 27: 51.5, 28: 52.4, 29: 53.2, 30: 54.0, 31: 54.8, 32: 55.6, 33: 56.3, 34: 57.0, 35: 57.7, 36: 58.4, 37: 59.1, 38: 59.8, 39: 60.4, 40: 61.1, 41: 61.8, 42: 62.4, 43: 63.1, 44: 63.8, 45: 64.4, 46: 65.1, 47: 65.7, 48: 66.4, 49: 67.0, 50: 67.7, 51: 68.4, 52: 69.0, 53: 69.7, 54: 70.4, 55: 71.1, 56: 71.8, 57: 72.6, 58: 73.3, 59: 74.1, 60: 74.9, 61: 75.7, 62: 76.6, 63: 77.5, 64: 78.4, 65: 79.4, 66: 80.6, 67: 81.7, 68: 83.1, 69: 84.6, 70: 86.6 };
+const T_P_DEP: Record<number, number> = { 11: 32.1, 12: 36.0, 13: 38.6, 14: 41.1, 15: 43.2, 16: 45.1, 17: 46.7, 18: 48.2, 19: 49.6, 20: 50.9, 21: 52.2, 22: 53.5, 23: 54.6, 24: 55.8, 25: 57.0, 26: 58.1, 27: 59.2, 28: 60.3, 29: 61.3, 30: 62.4, 31: 63.5, 32: 64.5, 33: 65.6, 34: 66.6, 35: 67.7, 36: 68.7, 37: 69.7, 38: 70.7, 39: 71.7, 40: 72.7, 41: 73.8, 42: 74.8, 43: 75.8, 44: 76.9, 45: 78.0, 46: 79.1, 47: 80.2, 48: 81.4, 49: 82.6, 50: 83.8, 51: 85.2, 52: 86.5, 53: 87.9, 54: 89.3, 55: 90.5 };
 
 // ---- the eight measures -----------------------------------------------------
 export const LEVEL2_MEASURES: L2Measure[] = [
@@ -553,6 +608,381 @@ export const LEVEL2_MEASURES: L2Measure[] = [
     ],
     scoring: { kind: "average" },
   },
+
+  // ================= Level 2, Parent/Guardian of Child 6-17 =================
+  {
+    key: "l2p-depression", label: "Level 2 - Depression (Parent of Child 6-17)", short: "L2 Depression (parent)",
+    icon: "\U0001F327️", instrument: "PROMIS Emotional Distress - Depression - Parent Item Bank",
+    domain: "Depression", window: "past 7 days", tier: "l2-parent",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true of your child?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "Could not stop feeling sad." }, { text: "Felt alone." },
+      { text: "Felt like he/she couldn't do anything right." }, { text: "Felt lonely." },
+      { text: "Felt sad." }, { text: "Felt unhappy." }, { text: "Thought that his/her life was bad." },
+      { text: "Didn't care about anything." }, { text: "Felt stressed." },
+      { text: "Felt too sad to eat." }, { text: "Wanted to be by himself/herself." },
+    ],
+    scoring: { kind: "promis", table: T_P_DEP },
+  },
+  {
+    key: "l2p-anxiety", label: "Level 2 - Anxiety (Parent of Child 6-17)", short: "L2 Anxiety (parent)",
+    icon: "\U0001F630", instrument: "PROMIS Emotional Distress - Anxiety - Parent Item Bank",
+    domain: "Anxiety", window: "past 7 days", tier: "l2-parent",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true of your child?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "Felt like something awful might happen." }, { text: "Felt nervous." },
+      { text: "Felt scared." }, { text: "Felt worried." },
+      { text: "Worried about what could happen to him/her." },
+      { text: "Worried when he/she went to bed at night." }, { text: "Got scared really easy." },
+      { text: "Was afraid of going to school." }, { text: "Worried when he/she was at home." },
+      { text: "Worried when he/she was away from home." },
+    ],
+    scoring: { kind: "promis", table: T_P_ANX },
+  },
+  {
+    key: "l2p-anger", label: "Level 2 - Anger (Parent of Child 6-17)", short: "L2 Anger (parent)",
+    icon: "\U0001F525", instrument: "PROMIS Emotional Distress - Calibrated Anger Measure - Parent",
+    domain: "Anger", window: "past 7 days", tier: "l2-parent",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true of your child?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "My child felt mad." },
+      { text: "My child was so angry he/she felt like yelling at somebody." },
+      { text: "My child was so angry he/she felt like throwing something." },
+      { text: "My child felt upset." },
+      { text: "When my child got mad, he/she stayed mad." },
+    ],
+    scoring: { kind: "promis", table: T_P_ANGER },
+  },
+  {
+    key: "l2p-irritability", label: "Level 2 - Irritability (Parent of Child 6-17)", short: "L2 Irritability (parent)",
+    icon: "⚡", instrument: "Affective Reactivity Index (ARI)",
+    domain: "Irritability", window: "past 7 days", tier: "l2-parent",
+    instructions: "In the last SEVEN (7) DAYS, and compared to others of the same age, how well does each statement describe your child's behaviour or feelings?",
+    scale: ARI_SCALE, stackItems: false,
+    items: [
+      { text: "Is easily annoyed by others." }, { text: "Often loses his/her temper." },
+      { text: "Stays angry for a long time." }, { text: "Is angry most of the time." },
+      { text: "Gets angry frequently." }, { text: "Loses temper easily." },
+      { text: "Overall irritability causes him/her problems." },
+    ],
+    scoring: { kind: "ari" },
+  },
+  {
+    key: "l2p-mania", label: "Level 2 - Mania (Parent of Child 6-17)", short: "L2 Mania (parent)",
+    icon: "⚡", instrument: "Altman Self-Rating Mania Scale (ASRM), parent-rated",
+    domain: "Mania", window: "past week", tier: "l2-parent",
+    instructions: "Choose the one statement in each group that best describes the way your child has been feeling for the past week.",
+    scale: NEVER_ALWAYS, stackItems: true,
+    items: [
+      { text: "Cheerfulness", scale: opts([
+        "He/she does not feel happier or more cheerful than usual.",
+        "He/she occasionally feels happier or more cheerful than usual.",
+        "He/she often feels happier or more cheerful than usual.",
+        "He/she feels happier or more cheerful than usual most of the time.",
+        "He/she feels happier or more cheerful than usual all of the time.",
+      ]) },
+      { text: "Self-confidence", scale: opts([
+        "He/she does not feel more self-confident than usual.",
+        "He/she occasionally feels more self-confident than usual.",
+        "He/she often feels more self-confident than usual.",
+        "He/she frequently feels more self-confident than usual.",
+        "He/she feels extremely self-confident all of the time.",
+      ]) },
+      { text: "Need for sleep", scale: opts([
+        "He/she does not need less sleep than usual.",
+        "He/she occasionally needs less sleep than usual.",
+        "He/she often needs less sleep than usual.",
+        "He/she frequently needs less sleep than usual.",
+        "He/she can go all day and all night without any sleep and still not feel tired.",
+      ]) },
+      { text: "Talkativeness", scale: opts([
+        "He/she does not talk more than usual.",
+        "He/she occasionally talks more than usual.",
+        "He/she often talks more than usual.",
+        "He/she frequently talks more than usual.",
+        "He/she talks constantly and cannot be interrupted.",
+      ]) },
+      { text: "Activity level", scale: opts([
+        "He/she has not been more active (either socially, sexually, at work, home, or school) than usual.",
+        "He/she has occasionally been more active than usual.",
+        "He/she has often been more active than usual.",
+        "He/she has frequently been more active than usual.",
+        "He/she is constantly more active or on the go all the time.",
+      ]) },
+    ],
+    scoring: { kind: "asrm" },
+  },
+  {
+    key: "l2p-inattention", label: "Level 2 - Inattention (Parent of Child 6-17)", short: "L2 Inattention (parent)",
+    icon: "\U0001F9E0", instrument: "Swanson, Nolan, and Pelham, version IV (SNAP-IV)",
+    domain: "Inattention", window: "past 7 days", tier: "l2-parent",
+    instructions: "For each item, choose the response which best describes your child in the last SEVEN (7) DAYS.",
+    scale: SNAP_SCALE, stackItems: false,
+    items: [
+      { text: "Often fails to give close attention to details or makes careless mistakes in schoolwork, work, or other activities." },
+      { text: "Often has difficulty sustaining attention in tasks or play activities." },
+      { text: "Often does not seem to listen when spoken to directly." },
+      { text: "Often does not follow through on instructions and fails to finish schoolwork, chores, or duties." },
+      { text: "Often has difficulty organizing tasks and activities." },
+      { text: "Often avoids, dislikes, or is reluctant to engage in tasks that require sustained mental effort (e.g., schoolwork or homework)." },
+      { text: "Often loses things necessary for tasks or activities (e.g., toys, school assignments, pencils, books, or tools)." },
+      { text: "Often is distracted by extraneous stimuli." },
+    ],
+    scoring: { kind: "snap" },
+  },
+  {
+    key: "l2p-sleep", label: "Level 2 - Sleep Disturbance (Parent of Child 6-17)", short: "L2 Sleep (parent)",
+    icon: "\U0001F319", instrument: "PROMIS - Sleep Disturbance - Short Form",
+    domain: "Sleep problems", window: "past 7 days", tier: "l2-parent",
+    instructions: "The questions below ask about your child's sleep during the past SEVEN (7) DAYS.",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "His/her sleep was restless.", scale: fwd(SLEEP_A) },
+      { text: "He/she was satisfied with his/her sleep.", scale: rev(SLEEP_A) },
+      { text: "His/her sleep was refreshing.", scale: rev(SLEEP_A) },
+      { text: "He/she had difficulty falling asleep.", scale: fwd(SLEEP_A) },
+      { text: "He/she had trouble staying asleep.", scale: fwd(SLEEP_N) },
+      { text: "He/she had trouble sleeping.", scale: fwd(SLEEP_N) },
+      { text: "He/she got enough sleep.", scale: rev(SLEEP_N) },
+      { text: "His/her sleep quality was...", scale: rev(SLEEP_Q) },
+    ],
+    scoring: { kind: "rawsum" },
+  },
+  {
+    key: "l2p-somatic", label: "Level 2 - Somatic Symptom (Parent of Child 6-17)", short: "L2 Somatic (parent)",
+    icon: "\U0001FA7A", instrument: "Patient Health Questionnaire - Physical Symptoms (PHQ-15), adapted",
+    domain: "Somatic symptoms", window: "past 7 days", tier: "l2-parent",
+    instructions: "During the past SEVEN (7) DAYS, how much has your child been bothered by any of the following problems?",
+    scale: PHQ, stackItems: false,
+    items: [
+      { text: "Stomach pain" }, { text: "Back pain" },
+      { text: "Pain in his/her arms, legs, or joints (knees, hips, etc.)" },
+      { text: "Headaches" }, { text: "Chest pain" }, { text: "Dizziness" },
+      { text: "Fainting spells" }, { text: "Feeling his/her heart pound or race" },
+      { text: "Shortness of breath" }, { text: "Constipation, loose bowels, or diarrhea" },
+      { text: "Nausea, gas, or indigestion" }, { text: "Feeling tired or having low energy" },
+      { text: "Trouble sleeping" },
+    ],
+    scoring: { kind: "phq" },
+  },
+  {
+    key: "l2p-substance", label: "Level 2 - Substance Use (Parent of Child 6-17)", short: "L2 Substance (parent)",
+    icon: "\U0001F48A", instrument: "Adapted NIDA-Modified ASSIST",
+    domain: "Substance use", window: "past 2 weeks", tier: "l2-parent",
+    instructions: "During the past TWO (2) WEEKS, about how often did your child use any of the following? Medicines count when taken on their own, that is, without a doctor's prescription, in greater amounts, or longer than prescribed.",
+    scale: SUBST_CHILD, stackItems: false,
+    items: [
+      { text: "Have an alcoholic beverage (beer, wine, liquor, etc.)?" },
+      { text: "Have 4 or more drinks in a single day?" },
+      { text: "Smoke a cigarette, a cigar, or pipe, or use snuff or chewing tobacco?" },
+      { text: "Painkillers (like Vicodin)" }, { text: "Stimulants (like Ritalin, Adderall)" },
+      { text: "Sedatives or tranquilizers (like sleeping pills or Valium)" },
+      { text: "Steroids" }, { text: "Other medicines" }, { text: "Marijuana" },
+      { text: "Cocaine or crack" }, { text: "Club drugs (like ecstasy)" },
+      { text: "Hallucinogens (like LSD)" }, { text: "Heroin" },
+      { text: "Inhalants or solvents (like glue)" }, { text: "Methamphetamine (like speed)" },
+    ],
+    scoring: { kind: "substance" },
+  },
+
+  // ================= Level 2, Child Age 11-17 (self-rated) =================
+  {
+    key: "l2c-depression", label: "Level 2 - Depression (Child 11-17)", short: "L2 Depression (child)",
+    icon: "\U0001F327️", instrument: "PROMIS Emotional Distress - Depression - Pediatric Item Bank",
+    domain: "Depression", window: "past 7 days", tier: "l2-child",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true for you?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "I could not stop feeling sad." }, { text: "I felt alone." },
+      { text: "I felt everything in my life went wrong." },
+      { text: "I felt like I couldn't do anything right." }, { text: "I felt lonely." },
+      { text: "I felt sad." }, { text: "I felt unhappy." },
+      { text: "I thought that my life was bad." },
+      { text: "Being sad made it hard for me to do things with my friends." },
+      { text: "I didn't care about anything." }, { text: "I felt stressed." },
+      { text: "I felt too sad to eat." }, { text: "I wanted to be by myself." },
+      { text: "It was hard for me to have fun." },
+    ],
+    scoring: { kind: "promis", table: T_C_DEP },
+  },
+  {
+    key: "l2c-anxiety", label: "Level 2 - Anxiety (Child 11-17)", short: "L2 Anxiety (child)",
+    icon: "\U0001F630", instrument: "PROMIS Emotional Distress - Anxiety - Pediatric Item Bank",
+    domain: "Anxiety", window: "past 7 days", tier: "l2-child",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true for you?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "I felt like something awful might happen." }, { text: "I felt nervous." },
+      { text: "I felt scared." }, { text: "I felt worried." },
+      { text: "I worried about what could happen to me." },
+      { text: "I worried when I went to bed at night." }, { text: "I got scared really easy." },
+      { text: "I was afraid of going to school." }, { text: "I was worried I might die." },
+      { text: "I woke up at night scared." }, { text: "I worried when I was at home." },
+      { text: "I worried when I was away from home." }, { text: "It was hard for me to relax." },
+    ],
+    scoring: { kind: "promis", table: T_C_ANX },
+  },
+  {
+    key: "l2c-anger", label: "Level 2 - Anger (Child 11-17)", short: "L2 Anger (child)",
+    icon: "\U0001F525", instrument: "PROMIS Emotional Distress - Calibrated Anger Measure - Pediatric",
+    domain: "Anger", window: "past 7 days", tier: "l2-child",
+    instructions: "In the past SEVEN (7) DAYS, how often was each of these true for you?",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "I felt mad." }, { text: "I was so angry I felt like throwing something." },
+      { text: "I was so angry I felt like yelling at somebody." },
+      { text: "When I got mad, I stayed mad." }, { text: "I felt fed up." }, { text: "I felt upset." },
+    ],
+    scoring: { kind: "promis", table: T_C_ANGER },
+  },
+  {
+    key: "l2c-irritability", label: "Level 2 - Irritability (Child 11-17)", short: "L2 Irritability (child)",
+    icon: "⚡", instrument: "Affective Reactivity Index (ARI)",
+    domain: "Irritability", window: "past 7 days", tier: "l2-child",
+    instructions: "In the last SEVEN (7) DAYS, and compared to others of the same age, how well does each statement describe your behaviour or feelings?",
+    scale: ARI_SCALE, stackItems: false,
+    items: [
+      { text: "Am easily annoyed by others." }, { text: "Often lose my temper." },
+      { text: "Stay angry for a long time." }, { text: "Am angry most of the time." },
+      { text: "Get angry frequently." }, { text: "Lose temper easily." },
+      { text: "Overall irritability causes me problems." },
+    ],
+    scoring: { kind: "ari" },
+  },
+  {
+    key: "l2c-mania", label: "Level 2 - Mania (Child 11-17)", short: "L2 Mania (child)",
+    icon: "⚡", instrument: "Altman Self-Rating Mania Scale (ASRM)",
+    domain: "Mania", window: "past week", tier: "l2-child",
+    instructions: "Choose the one statement in each group that best describes the way you have been feeling for the past week.",
+    scale: NEVER_ALWAYS, stackItems: true,
+    items: [
+      { text: "Cheerfulness", scale: opts([
+        "I do not feel happier or more cheerful than usual.",
+        "I occasionally feel happier or more cheerful than usual.",
+        "I often feel happier or more cheerful than usual.",
+        "I feel happier or more cheerful than usual most of the time.",
+        "I feel happier or more cheerful than usual all of the time.",
+      ]) },
+      { text: "Self-confidence", scale: opts([
+        "I do not feel more self-confident than usual.",
+        "I occasionally feel more self-confident than usual.",
+        "I often feel more self-confident than usual.",
+        "I frequently feel more self-confident than usual.",
+        "I feel extremely self-confident all of the time.",
+      ]) },
+      { text: "Need for sleep", scale: opts([
+        "I do not need less sleep than usual.",
+        "I occasionally need less sleep than usual.",
+        "I often need less sleep than usual.",
+        "I frequently need less sleep than usual.",
+        "I can go all day and all night without any sleep and still not feel tired.",
+      ]) },
+      { text: "Talkativeness", scale: opts([
+        "I do not talk more than usual.",
+        "I occasionally talk more than usual.",
+        "I often talk more than usual.",
+        "I frequently talk more than usual.",
+        "I talk constantly and cannot be interrupted.",
+      ]) },
+      { text: "Activity level", scale: opts([
+        "I have not been more active (either socially, sexually, at work, home, or school) than usual.",
+        "I have occasionally been more active than usual.",
+        "I have often been more active than usual.",
+        "I have frequently been more active than usual.",
+        "I am constantly more active or on the go all the time.",
+      ]) },
+    ],
+    scoring: { kind: "asrm" },
+  },
+  {
+    key: "l2c-sleep", label: "Level 2 - Sleep Disturbance (Child 11-17)", short: "L2 Sleep (child)",
+    icon: "\U0001F319", instrument: "PROMIS - Sleep Disturbance - Short Form",
+    domain: "Sleep problems", window: "past 7 days", tier: "l2-child",
+    instructions: "The questions below ask about your sleep during the past SEVEN (7) DAYS.",
+    scale: NEVER_ALWAYS, stackItems: false,
+    items: [
+      { text: "My sleep was restless.", scale: fwd(SLEEP_A) },
+      { text: "I was satisfied with my sleep.", scale: rev(SLEEP_A) },
+      { text: "My sleep was refreshing.", scale: rev(SLEEP_A) },
+      { text: "I had difficulty falling asleep.", scale: fwd(SLEEP_A) },
+      { text: "I had trouble staying asleep.", scale: fwd(SLEEP_N) },
+      { text: "I had trouble sleeping.", scale: fwd(SLEEP_N) },
+      { text: "I got enough sleep.", scale: rev(SLEEP_N) },
+      { text: "My sleep quality was...", scale: rev(SLEEP_Q) },
+    ],
+    scoring: { kind: "rawsum" },
+  },
+  {
+    key: "l2c-somatic", label: "Level 2 - Somatic Symptom (Child 11-17)", short: "L2 Somatic (child)",
+    icon: "\U0001FA7A", instrument: "Patient Health Questionnaire - Physical Symptoms (PHQ-15), adapted",
+    domain: "Somatic symptoms", window: "past 7 days", tier: "l2-child",
+    instructions: "During the past SEVEN (7) DAYS, how much have you been bothered by any of the following problems?",
+    scale: PHQ, stackItems: false,
+    items: [
+      { text: "Stomach pain" }, { text: "Back pain" },
+      { text: "Pain in your arms, legs, or joints (knees, hips, etc.)" },
+      { text: "Headaches" }, { text: "Chest pain" }, { text: "Dizziness" },
+      { text: "Fainting spells" }, { text: "Feeling your heart pound or race" },
+      { text: "Shortness of breath" }, { text: "Constipation, loose bowels, or diarrhea" },
+      { text: "Nausea, gas, or indigestion" }, { text: "Feeling tired or having low energy" },
+      { text: "Trouble sleeping" },
+    ],
+    scoring: { kind: "phq" },
+  },
+  {
+    key: "l2c-repetitive", label: "Level 2 - Repetitive Thoughts & Behaviors (Child 11-17)", short: "L2 Repetitive (child)",
+    icon: "\U0001F501", instrument: "Children's Florida Obsessive-Compulsive Inventory (C-FOCI) Severity Scale",
+    domain: "Repetitive thoughts and behaviors", window: "past 7 days", tier: "l2-child",
+    instructions: "These questions ask about unwanted repeated thoughts, images, or urges, and behaviours you feel you have to do over and over, during the past SEVEN (7) DAYS.",
+    scale: NEVER_ALWAYS, stackItems: true,
+    items: [
+      { text: "On average, how much time is occupied by these thoughts or behaviors each day?", scale: opts([
+        "None", "Mild (less than an hour a day)", "Moderate (1 to 3 hours a day)",
+        "Severe (3 to 8 hours a day)", "Extreme (more than 8 hours a day)",
+      ]) },
+      { text: "How much do they bother you?", scale: opts([
+        "None", "Mild (slightly upsetting)", "Moderate (upsetting but still manageable)",
+        "Severe (very upsetting)", "Extreme (overwhelming)",
+      ]) },
+      { text: "How hard is it for you to control these thoughts or behaviors?", scale: opts([
+        "Complete control", "Much control (usually able to control them)",
+        "Moderate control (sometimes able to control them)",
+        "Little control (infrequently able to control them)", "No control (unable to control them)",
+      ]) },
+      { text: "How much do these thoughts or behaviors make you avoid doing anything, going anyplace, or being with anyone?", scale: opts([
+        "No avoidance", "Mild (occasional avoidance)", "Moderate (regularly avoid doing these things)",
+        "Severe (frequent and a lot of avoidance)", "Extreme (nearly total avoidance; housebound)",
+      ]) },
+      { text: "How much do these thoughts or behaviors get in the way of school, or your social or family life?", scale: opts([
+        "None", "Mild (slightly get in the way)",
+        "Moderate (definitely get in the way, but still manageable)",
+        "Severe (a lot of interference)", "Extreme (nearly total interference; unable to cope)",
+      ]) },
+    ],
+    scoring: { kind: "foci" },
+  },
+  {
+    key: "l2c-substance", label: "Level 2 - Substance Use (Child 11-17)", short: "L2 Substance (child)",
+    icon: "\U0001F48A", instrument: "Adapted NIDA-Modified ASSIST",
+    domain: "Substance use", window: "past 2 weeks", tier: "l2-child",
+    instructions: "During the past TWO (2) WEEKS, about how often did you use any of the following? Medicines count when taken ON YOUR OWN, that is, without a doctor's prescription, in greater amounts, or longer than prescribed.",
+    scale: SUBST_CHILD, stackItems: false,
+    items: [
+      { text: "Have an alcoholic beverage (beer, wine, liquor, etc.)?" },
+      { text: "Have 4 or more drinks in a single day?" },
+      { text: "Smoke a cigarette, a cigar, or pipe, or use snuff or chewing tobacco?" },
+      { text: "Painkillers (like Vicodin)" }, { text: "Stimulants (like Ritalin, Adderall)" },
+      { text: "Sedatives or tranquilizers (like sleeping pills or Valium)" },
+      { text: "Steroids" }, { text: "Other medicines" }, { text: "Marijuana" },
+      { text: "Cocaine or crack" }, { text: "Club drugs (like ecstasy)" },
+      { text: "Hallucinogens (like LSD)" }, { text: "Heroin" },
+      { text: "Inhalants or solvents (like glue)" }, { text: "Methamphetamine (like speed)" },
+    ],
+    scoring: { kind: "substance" },
+  },
 ];
 
 const BY_KEY: Record<string, L2Measure> = Object.fromEntries(LEVEL2_MEASURES.map((m) => [m.key, m]));
@@ -663,6 +1093,47 @@ export function scoreLevel2(formKey: string, answers: Record<string, string>): L
     const avgLabel = ["None", "Mild", "Moderate", "Severe", "Extreme"][Math.round(avg)];
     const flagged = raw >= 8;
     return { measure: m, items, answered, total, raw, band: `Average: ${avgLabel}`, sev: Math.round(avg), flagged, note: `Raw ${raw} of 20 (average ${avg.toFixed(1)} = ${avgLabel}).${flagged ? " A score of 8 or higher may warrant a more detailed assessment for obsessive-compulsive disorder." : ""}` };
+  }
+
+  if (m.scoring.kind === "ari") {
+    // ARI: only the first six items are summed (0-12). Item 7 rates overall impairment.
+    const six = items.slice(0, 6).filter((r) => r.value !== null);
+    const total = six.reduce((s, r) => s + (r.value as number), 0);
+    const avg = six.length ? total / six.length : 0;
+    const impair = items[6]?.value ?? null;
+    const flagged = total >= 3;
+    return {
+      measure: m, items, answered, total: 6, raw: total,
+      band: flagged ? "Elevated irritability" : "Low irritability",
+      sev: total >= 7 ? 4 : total >= 3 ? 2 : 0, flagged,
+      note: `Raw ${total} of 12 (average ${avg.toFixed(1)}). Higher scores indicate greater irritability.${impair !== null && impair > 0 ? " Overall irritability is also reported to cause problems." : ""}`,
+    };
+  }
+
+  if (m.scoring.kind === "snap") {
+    // SNAP-IV inattention: average of the 9 (here 8) items; >= 1.78 is the published cut-off.
+    const avg = answered ? raw / answered : 0;
+    const flagged = avg >= 1.78;
+    return {
+      measure: m, items, answered, total, raw,
+      band: flagged ? "Above cut-off" : "Below cut-off",
+      sev: flagged ? 4 : avg >= 1 ? 2 : 0, flagged,
+      note: `Raw ${raw} of 24 (average ${avg.toFixed(2)}). An average of 1.78 or above is the published threshold that may warrant a more detailed assessment for inattention.`,
+    };
+  }
+
+  if (m.scoring.kind === "rawsum") {
+    // PROMIS pediatric sleep: the APA publishes no T-score for children because the
+    // measure was not validated in this age group, so report the raw total only.
+    const maxRaw = m.items.reduce((s, it) => s + Math.max(...(it.scale ?? m.scale).map((o) => o.value)), 0);
+    const pct = maxRaw ? raw / maxRaw : 0;
+    return {
+      measure: m, items, answered, total, raw,
+      band: pct >= 0.75 ? "High" : pct >= 0.5 ? "Moderate" : "Low",
+      sev: pct >= 0.75 ? 4 : pct >= 0.5 ? 3 : pct >= 0.3 ? 2 : 0,
+      flagged: pct >= 0.5,
+      note: `Raw ${raw} of ${maxRaw}; higher scores indicate greater severity. T-scores are not published for this age group because the measure was not validated in children, so the total is reported on its own.`,
+    };
   }
 
   if (m.scoring.kind === "phq9") {

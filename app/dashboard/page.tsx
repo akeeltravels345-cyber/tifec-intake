@@ -137,9 +137,11 @@ export default async function Dashboard() {
   const level1Forms = me.forms.filter((k) => k.startsWith("dsm5-level1"));
   const level2Forms = me.forms.filter((k) => k.startsWith("l2-"));
   const severityForms = me.forms.filter((k) => k.startsWith("sev-"));
+  const l2ParentForms = me.forms.filter((k) => k.startsWith("l2p-"));
+  const l2ChildForms = me.forms.filter((k) => k.startsWith("l2c-"));
   // Catch-all so a new form key can never silently vanish from the Forms tab:
   // anything that isn't a screener or follow-up measure is an intake form.
-  const measured = new Set([...level1Forms, ...level2Forms, ...severityForms]);
+  const measured = new Set([...level1Forms, ...level2Forms, ...severityForms, ...l2ParentForms, ...l2ChildForms]);
   const intakeForms = me.forms.filter((k) => !measured.has(k));
 
   const formCard = (key: string) => {
@@ -199,9 +201,19 @@ export default async function Dashboard() {
         level1Forms
       )}
       {group(
-        "Level 2 follow-up measures",
+        "Level 2 follow-up measures (adult)",
         "Send one when a Level 1 domain flags - a deeper, scored look at a single area.",
         level2Forms
+      )}
+      {group(
+        "Level 2 follow-up measures (parent of child 6-17)",
+        "A parent or guardian rates the child on the domain that flagged.",
+        l2ParentForms
+      )}
+      {group(
+        "Level 2 follow-up measures (child 11-17)",
+        "The young person rates themselves on the domain that flagged.",
+        l2ChildForms
       )}
       {group(
         "Disorder severity measures",
