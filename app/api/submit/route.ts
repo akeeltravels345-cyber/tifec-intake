@@ -26,10 +26,16 @@ export async function POST(req: Request) {
   }
 
   // Resolve which form was filled; it must be one this clinician offers.
-  const formKey =
-    payload.formKey && clinician.forms.includes(payload.formKey as (typeof clinician.forms)[number])
-      ? (payload.formKey as (typeof clinician.forms)[number])
-      : clinician.forms[0];
+  // A key we don't recognise is rejected rather than silently coerced: falling
+  // back to the clinician's first form would file the client's answers against
+  // the wrong template, so the record would render with mismatched questions.
+  const isOffered = (k: unknown): k is (typeof clinician.forms)[number] =>
+    typeof k === "string" && (clinician.forms as readonly string[]).includes(k);
+
+  if (payload.formKey !== undefined && !isOffered(payload.formKey)) {
+    return NextResponse.json({ error: "Unknown form for this clinician." }, { status: 400 });
+  }
+  const formKey = isOffered(payload.formKey) ? payload.formKey : clinician.forms[0];
 
   // Server-side validation of required fields (never trust the client).
   const sections = buildSections(formKey, clinician.extraSections);
