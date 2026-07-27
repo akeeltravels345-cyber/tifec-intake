@@ -36,6 +36,14 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [rnpi, setRnpi] = useState<Record<string, string>>((provIn ?? {}).renderingNpi ?? {});
   const setP = (k: keyof Provider, v: string) => setProv((p) => ({ ...p, [k]: v }));
   const saveProvider = () => run({ entity: "provider", provider: { ...prov, renderingNpi: rnpi } }, "Practice details saved");
+  const seedSamples = async (method: "POST" | "DELETE") => {
+    try {
+      const res = await fetch("/api/billing/seed-samples", { method });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Failed");
+      flash(method === "DELETE" ? `Removed ${j.removedClients} sample client(s)` : `Added ${j.created} sample clients`);
+    } catch (e) { setToast(e instanceof Error ? e.message : "Error"); setTimeout(() => setToast(""), 2200); }
+  };
 
   // practice config (biller % + expenses) held together
   const [billerPct, setBillerPct] = useState(String(pctIn));
@@ -197,6 +205,15 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
             ); })}
           </tbody>
         </table></div></div>
+      </div>
+
+      {/* Sample data */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Sample data</h2><span className="su-hint">Add a handful of clearly-fake clients (spread across clinicians, with claims at each stage) so the billing screens can be seen populated. Remove them anytime — real clients are never touched.</span></div>
+        <div className="su-card" style={{ padding: 16, display: "flex", gap: 10 }}>
+          <button className="su-save" onClick={() => seedSamples("POST")}>Add sample clients</button>
+          <button className="su-del" onClick={() => seedSamples("DELETE")}>Remove sample clients</button>
+        </div>
       </div>
 
       {toast && <div className="su-toast">{toast}</div>}

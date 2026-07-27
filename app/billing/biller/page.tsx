@@ -89,11 +89,9 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   }
   const byInsurer = [...map.values()].sort((a, b) => b.amount - a.amount);
 
-  // where your commission came from — earnings per clinician this month
-  const roster = [
-    ...CLINICIANS.filter((c) => !c.intakeHidden).map((c) => ({ id: c.id, name: c.name, external: false })),
-    ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name, external: true })),
-  ];
+  // where your commission came from — earnings per clinician this month.
+  // Outside clients are disabled for now, so only the practice's own clinicians.
+  const roster = CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name, external: false }));
   const byClinician = roster.map((c) => {
     const billed = billedThisMonth.filter((s) => s.clinicianId === c.id);
     const open = unbilled.filter((s) => s.clinicianId === c.id);
@@ -173,7 +171,6 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         <div className="bo-card">
           <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
             <span className="bo-lab">Where your cut came from</span>
-            <Link href="/billing/outside" className="bl-ghost">Outside clients →</Link>
           </div>
           <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · each clinician&apos;s own rate plus {billerRate}% of what the company retains</p>
           {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (

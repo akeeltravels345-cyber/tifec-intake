@@ -39,6 +39,7 @@ export interface ClientProfile {
     insuredDob?: string;        // box 11a
   };
   diagnosis?: string[];         // ICD-10 codes (box 21) — the client's standing dx
+  sample?: boolean;             // seeded demo client, so it can be bulk-removed
 }
 
 export interface Client {
@@ -296,6 +297,23 @@ export async function addClients(
     else duplicates++;
   }
   return { added, linked, duplicates, ids };
+}
+
+/** Remove a client record and its clinician links (used to clear demo data). */
+export async function deleteClient(id: string): Promise<void> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM billing_client_clinicians WHERE client_id = ${id}`;
+    await sql`DELETE FROM billing_clients WHERE id = ${id}`;
+    return;
+  }
+  writeJson(FILE, readJson<StoredClient[]>(FILE, []).filter((c) => c.id !== id));
+  writeJson(LINK_FILE, readJson<StoredLink[]>(LINK_FILE, []).filter((l) => l.clientId !== id));
+}
+
+/** Every seeded demo client (profile.sample), for bulk cleanup. */
+export async function listSampleClients(): Promise<Client[]> {
+  return (await listAllClients()).filter((c) => c.profile.sample);
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */

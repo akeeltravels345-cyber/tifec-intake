@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isBiller } from "@/lib/billingRole";
-import { listInsurers, listExternalClinicians } from "@/lib/billing";
+import { listInsurers } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
 import ImportClient from "@/components/billing/ImportClient";
 import ClientImport from "@/components/billing/ClientImport";
@@ -15,11 +15,9 @@ export default async function ImportPage() {
   if (!user) redirect("/login?next=/billing/import");
   if (!isBiller(user.role)) redirect("/billing/me");
 
-  const [insurers, external] = await Promise.all([listInsurers(), listExternalClinicians()]);
-  const clinicians = [
-    ...CLINICIANS.filter((c) => !c.intakeHidden).map((c) => ({ id: c.id, name: c.name })),
-    ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name })),
-  ];
+  const insurers = await listInsurers();
+  // Outside clinicians are disabled for now — only the practice's own clinicians.
+  const clinicians = CLINICIANS.filter((c) => !c.intakeHidden).map((c) => ({ id: c.id, name: c.name }));
   // Roster import is per practising clinician — never the biller or hidden admin.
   const rosterClinicians = CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name }));
 

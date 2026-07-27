@@ -47,11 +47,10 @@ export default async function BillingQueuePage() {
 
   // Whose claims the biller reconciles: practising clinicians only. Not the
   // biller himself (you don't bill for the biller) and not the hidden admin/
-  // test account. Active outside clinicians count too.
-  const billForIds = new Set([
-    ...CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => c.id),
-    ...external.filter((c) => c.active).map((c) => c.id),
-  ]);
+  // test account. Outside clinicians are disabled for now, so they're excluded.
+  const billForIds = new Set(
+    CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => c.id),
+  );
 
   // A claim moves through three stages, each its own tab:
   //   to bill  = logged, not yet submitted to the insurer (no billed_date)
@@ -83,12 +82,9 @@ export default async function BillingQueuePage() {
     awaitingCount: awaiting.length,
     oldestDays: open.length ? Math.max(...open.map((c) => c.age)) : 0,
     buckets,
-    // Every clinician the biller bills for — listed even with no claims yet, so
-    // Sofia is selectable before her first one.
-    clinicians: [
-      ...CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name })),
-      ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name })),
-    ],
+    // Every practising clinician the biller bills for — listed even with no
+    // claims yet, so Sofia is selectable before her first one.
+    clinicians: CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name })),
     today,
   };
 
