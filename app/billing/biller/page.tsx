@@ -212,7 +212,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
               {recent.map((s) => (
                 <tr key={s.id}>
                   <td>{s.paidDate}</td>
-                  <td className="nm">{s.clientFirst} {s.clientLast}</td>
+                  <td className="nm">{s.clientId ? <Link href={`/billing/clients/${s.clientId}`} className="bq-clientlink">{s.clientFirst} {s.clientLast}</Link> : `${s.clientFirst} ${s.clientLast}`}</td>
                   <td>{clinName(s.clinicianId)}</td>
                   <td>{insName(s.insurerId)}</td>
                   <td className="num">{money(insurancePortion(s))}</td>

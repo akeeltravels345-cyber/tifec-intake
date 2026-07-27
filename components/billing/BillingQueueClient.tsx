@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+/** A client's name that links to their record when we know the client id. */
+function ClientName({ id, name }: { id: string | null; name: string }) {
+  return id ? <Link href={`/billing/clients/${id}`} className="bq-clientlink">{name}</Link> : <>{name}</>;
+}
 
 export interface Claim {
   id: string; dos: string; age: number;
-  clinicianId: string; clinicianName: string; clientName: string;
+  clinicianId: string; clinicianName: string; clientId: string | null; clientName: string;
   insurerId: string; insurerName: string; amount: number;
   billedDate: string | null; paid: boolean; paidDate: string | null;
   /** The biller's cut of THIS claim, at this clinician's own rate. */
@@ -177,7 +183,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className="dos">{c.dos}</div>
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
-                      <div className="who"><div className="cl">{c.clientName}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
+                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} /></div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
                       <div className="amt">{money(c.amount)}</div>
                       <div className="comm">+{money(c.commission)}</div>
                       {tab === "awaiting" && <button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button>}
@@ -194,7 +200,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           {data.paid.length === 0 ? <div className="bq-empty"><div className="big">No payments recorded yet</div></div> : data.paid.map((c) => (
             <div className="bq-brow" key={c.id}>
               <span className="pill">✓ {c.paidDate}</span>
-              <span>{c.clientName}</span>
+              <span><ClientName id={c.clientId} name={c.clientName} /></span>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>{c.clinicianName}</span>
               <span className="amt">{money(c.amount)}</span>
               <span className="comm">+{money(c.commission)}</span>

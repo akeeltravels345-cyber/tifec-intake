@@ -46,6 +46,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const toRow = (s: (typeof all)[number]): SessionRow => ({
     id: s.id,
     date: s.dateOfService,
+    clientId: s.clientId,
     client: `${s.clientFirst} ${s.clientLast}`.trim(),
     codes: s.cptCodes.join(", "),
     fee: s.totalCost,
@@ -163,11 +164,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         {visits.length === 0 ? (
           <div className="cd-empty">No appointments logged for this month.</div>
         ) : (
-          <ClinicianSessions
-            month={visits.map(toRow)}
-            history={all.map(toRow)}
-            monthLabel={MONTHS[month - 1]}
-          />
+          <ClinicianSessions month={visits.map(toRow)} />
         )}
       </div>
     </>

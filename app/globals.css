@@ -1829,6 +1829,9 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-stage.paid { background: #e7f3ec; color: #1f6b52; }
 .cd-selbar { display: flex; align-items: center; gap: 12px; background: #eef4f3; border: 1px solid #cfe3dc; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; font-size: 13.5px; color: var(--ink, #1c2330); }
 .cd-selrow { background: #eef4f3; }
+/* Client name → record link, used anywhere a client is named. */
+.bq-clientlink { color: inherit; text-decoration: none; cursor: pointer; border-bottom: 1px dotted var(--faint, #b8bec9); }
+.bq-clientlink:hover { color: var(--teal-deep, #1f6b52); border-bottom-color: currentColor; }
 @media (max-width: 640px) { .cd-grid { grid-template-columns: 1fr; } .cd-save, .hcfa-cell.wide { grid-column: span 1; } }
 .bq-bulk { position: fixed; left: 282px; right: 40px; bottom: 22px; display: flex; align-items: center; gap: 16px; background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 20px; box-shadow: 0 18px 44px rgba(20,20,30,.32); z-index: 20; }
 .bq-bulk .bt { font-weight: 700; font-size: 14px; }

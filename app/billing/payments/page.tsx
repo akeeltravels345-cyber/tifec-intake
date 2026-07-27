@@ -39,6 +39,7 @@ export default async function BillingQueuePage() {
   const toClaim = (s: (typeof sessions)[number]): Claim => ({
     id: s.id, dos: s.dateOfService, age: ageDays(s.dateOfService, today),
     clinicianId: s.clinicianId, clinicianName: clinName(s.clinicianId),
+    clientId: s.clientId,
     clientName: `${s.clientFirst} ${s.clientLast}`.trim(),
     insurerId: s.insurerId as string, insurerName: insName(s.insurerId),
     amount: insurancePortion(s), billedDate: s.billedDate, paid: s.insurancePaid, paidDate: s.paidDate,

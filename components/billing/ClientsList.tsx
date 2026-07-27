@@ -47,7 +47,7 @@ export default function ClientsList({ rows, seesAll }: { rows: ClientRow[]; sees
                 {rows.map((c) => (
                   <tr key={c.id}>
                     <td><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} disabled={c.billable === 0} title={c.billable === 0 ? "No insured sessions to claim" : undefined} aria-label={`Select ${c.first} ${c.last}`} /></td>
-                    <td className="nm">{c.last}, {c.first}</td>
+                    <td className="nm"><Link href={`/billing/clients/${c.id}`} className="bq-clientlink">{c.last}, {c.first}</Link></td>
                     <td>{c.dob ? <>{c.dob}{c.age != null && <span className="su-hint"> · {c.age}y</span>}</> : <span className="su-hint">—</span>}</td>
                     <td>{c.insurer}</td>
                     {seesAll && <td className="su-hint">{c.seenBy || "—"}</td>}
