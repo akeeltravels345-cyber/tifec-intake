@@ -6,6 +6,8 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
 import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
+import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
+import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +38,7 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
 
   return (
     <div className="hcfa-page">
-      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_CSS }} />
       <div className="hcfa-bar hcfa-noprint">
         <Link href={`/billing/clients/${id}`} className="ls-back">← Back to client</Link>
         <div style={{ flex: 1 }} />
@@ -52,7 +54,12 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
 
       {forms.length === 0 ? (
         <div className="hcfa-warn hcfa-noprint">This client has no insured sessions to claim. Self-pay visits don&apos;t go on a CMS-1500.</div>
-      ) : forms.map((f) => <Cms1500Form key={f.key} f={f} provider={prov} />)}
+      ) : (
+        <Cms1500Toggle
+          official={forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />)}
+          sheet={forms.map((f) => <Cms1500Form key={f.key} f={f} provider={prov} />)}
+        />
+      )}
     </div>
   );
 }

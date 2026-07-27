@@ -6,6 +6,8 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
 import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
+import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
+import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +83,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
 
   return (
     <div className="hcfa-page">
-      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_CSS }} />
       <div className="hcfa-bar hcfa-noprint">
         <Link href="/billing/clients" className="ls-back">← All clients</Link>
         <div style={{ flex: 1 }} />
@@ -103,12 +105,17 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
 
       {blocks.length === 0 ? (
         <div className="hcfa-warn hcfa-noprint">Nothing to claim for the selected clients.</div>
-      ) : blocks.map((b) => (
-        <div key={b.name}>
-          <div className="hcfa-clientlab">{b.name}</div>
-          {b.forms.map((f) => <Cms1500Form key={f.key} f={f} provider={prov} />)}
-        </div>
-      ))}
+      ) : (
+        <Cms1500Toggle
+          official={blocks.map((b) => b.forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />))}
+          sheet={blocks.map((b) => (
+            <div key={b.name}>
+              <div className="hcfa-clientlab">{b.name}</div>
+              {b.forms.map((f) => <Cms1500Form key={f.key} f={f} provider={prov} />)}
+            </div>
+          ))}
+        />
+      )}
     </div>
   );
 }
