@@ -103,7 +103,7 @@ export default async function PayoutStatement({ params, searchParams }: { params
                   <tr key={s.id}>
                     <td>{s.paidDate}</td>
                     <td>{s.dateOfService}</td>
-                    <td>{s.clientFirst} {s.clientLast}</td>
+                    <td>{s.clientId ? <Link href={`/billing/clients/${s.clientId}`} className="bq-clientlink">{s.clientFirst} {s.clientLast}</Link> : `${s.clientFirst} ${s.clientLast}`}</td>
                     <td>{insurerName(s.insurerId)}</td>
                     <td className="num">{money(insurancePortion(s))}</td>
                   </tr>
