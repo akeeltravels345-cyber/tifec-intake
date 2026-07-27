@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { billingRoleOf, canConfigure } from "@/lib/billingRole";
+import { billingRoleOf, canConfigure, canConfigureBilling } from "@/lib/billingRole";
 import {
   upsertInsurer, deleteInsurer,
   upsertCptCode, deleteCptCode,
@@ -15,7 +15,12 @@ const t = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefi
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  if (!canConfigure(billingRoleOf(me))) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
+  const role = billingRoleOf(me);
+  // Biller may manage its own billing config (insurers, codes, provider details);
+  // the owner's money rules (practice = commission/expenses, settings = splits)
+  // stay owner-only, enforced per entity below.
+  if (!canConfigureBilling(role)) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
+  const ownerOnly = (entity: string) => (entity === "practice" || entity === "settings") && !canConfigure(role);
 
   let body: Record<string, unknown>;
   try {
@@ -26,6 +31,7 @@ export async function POST(req: Request) {
 
   const entity = String(body.entity ?? "");
   const action = String(body.action ?? "save");
+  if (ownerOnly(entity)) return NextResponse.json({ error: "Only the owner can change the practice's money rules." }, { status: 403 });
 
   try {
     if (entity === "insurer") {

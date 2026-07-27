@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { billingRoleOf, isOwner } from "@/lib/billingRole";
+import { billingRoleOf, canConfigureBilling } from "@/lib/billingRole";
 import { insertSession, listSessions, deleteSession } from "@/lib/billing";
 import { resolveClient, listSampleClients, deleteClient } from "@/lib/clients";
 
@@ -30,7 +30,7 @@ const SAMPLES: Sample[] = [
 export async function POST() {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  if (!isOwner(billingRoleOf(me))) return NextResponse.json({ error: "Only the owner can add sample data." }, { status: 403 });
+  if (!canConfigureBilling(billingRoleOf(me))) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
 
   const now = new Date();
   let created = 0;
@@ -56,7 +56,7 @@ export async function POST() {
 export async function DELETE() {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  if (!isOwner(billingRoleOf(me))) return NextResponse.json({ error: "Only the owner can remove sample data." }, { status: 403 });
+  if (!canConfigureBilling(billingRoleOf(me))) return NextResponse.json({ error: "Not allowed." }, { status: 403 });
 
   const samples = await listSampleClients();
   const ids = new Set(samples.map((c) => c.id));

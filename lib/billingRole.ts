@@ -48,6 +48,10 @@ export const canMarkBilled = (r: BillingRole) => r === "biller" || r === "owner"
  *  are his alone. */
 export const isBiller = (r: BillingRole) => r === "biller";
 export const canConfigure = (r: BillingRole) => r === "owner";
+/** Billing-operational config (insurers, claim codes, service codes, provider
+ *  details, sample data) — the biller's own area. The owner's money rules
+ *  (commission, expenses, clinician splits) stay behind canConfigure. */
+export const canConfigureBilling = (r: BillingRole) => r === "biller" || r === "owner";
 export const canSeeBusiness = (r: BillingRole) => r === "owner";
 
 // Backwards-compatible alias (old name).

@@ -21,10 +21,12 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, provider: provIn, renderingClinicians = [], billerName, billerInitials }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
   billerPct: number; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
   billerName: string; billerInitials: string;
+  /** Owner-only sections (commission, expenses, clinician splits) show only when true. */
+  canManageMoney?: boolean;
 }) {
   const router = useRouter();
   const [toast, setToast] = useState("");
@@ -62,7 +64,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
 
   return (
     <>
-      <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits.</p></div>
+      <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">{canManageMoney ? "The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits." : "Insurers, claim codes, service fees, and the practice details that print on your CMS-1500 claims."}</p></div>
 
       {/* Practice / provider details for CMS-1500 */}
       <div className="su-sec">
@@ -96,7 +98,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         </div>
       </div>
 
-      {/* Biller commission */}
+      {/* Biller commission — owner only */}
+      {canManageMoney && (<>
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Biller commission</h2><span className="su-hint">A share of what the company retains on each clinician’s collections. Comes out of the practice’s retained share, never a clinician’s payout.</span></div>
         <div className="su-card su-comm">
@@ -132,6 +135,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           <div style={{ padding: "0 16px 16px", display: "flex", justifyContent: "flex-end" }}><button className="su-save" onClick={() => savePractice(billerPct, expenses, "Expenses saved")}>Save expenses</button></div>
         </div>
       </div>
+      </>)}
 
       <div className="su-two">
         {/* Insurers */}
@@ -187,7 +191,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         </div>
       </div>
 
-      {/* Clinician splits */}
+      {/* Clinician splits — owner only */}
+      {canManageMoney && (
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected — on top of the practice rate above. Both come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
@@ -206,6 +211,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           </tbody>
         </table></div></div>
       </div>
+      )}
 
       {/* Sample data */}
       <div className="su-sec">

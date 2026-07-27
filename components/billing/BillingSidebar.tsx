@@ -28,6 +28,7 @@ export default function BillingSidebar({
           // "Outside clients" temporarily disabled — the biller only handles the
           // practice's own clinicians for now.
           { href: "/billing/import", label: "Import", icon: IconLog, match: (p) => p.startsWith("/billing/import") },
+          { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
         ]
       : role === "clinician"
         ? [
