@@ -101,6 +101,7 @@ export interface SessionInput {
   durationHours: number;
   totalCost: number;
   copayCollected: number;
+  copayDue?: number; // co-pay that should have been collected (defaults to collected)
   notes?: string;
   createdBy: string;
   /** A session moves logged -> billed (submitted) -> paid (collected). Normally
@@ -122,6 +123,7 @@ export interface BillingSession {
   durationHours: number;
   totalCost: number;
   copayCollected: number;
+  copayDue: number;            // co-pay that should have been collected
   billedDate: string | null;   // submitted to insurer (null = not yet billed)
   insurancePaid: boolean;      // insurer has settled (= collected)
   paidDate: string | null;
@@ -356,6 +358,7 @@ interface StoredSession {
   durationHours: number;
   totalCost: number;
   copayCollected: number;
+  copayDue?: number;
   billedDate: string | null;
   insurancePaid: boolean;
   paidDate: string | null;
@@ -376,7 +379,7 @@ function decryptSession(s: StoredSession): BillingSession {
   return {
     id: s.id, clinicianId: s.clinicianId, clientFirst: first, clientLast: last, clientId: s.clientId ?? null, insurerId: s.insurerId,
     dateOfService: s.dateOfService, cptCodes: s.cptCodes || [], durationHours: num(s.durationHours), totalCost: num(s.totalCost),
-    copayCollected: num(s.copayCollected), billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
+    copayCollected: num(s.copayCollected), copayDue: s.copayDue == null ? num(s.copayCollected) : num(s.copayDue), billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -391,12 +394,13 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
   // date if the caller didn't supply one, so the lifecycle stays consistent.
   const billedDate = input.billedDate ?? (paid ? paidDate : null);
   const clientId = input.clientId ?? null;
-  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
+  const copayDue = input.copayDue == null ? input.copayCollected : input.copayDue;
+  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, copayDue, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
-      VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
+      INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
+      VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${copayDue}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
     for (const code of input.cptCodes) {
       await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
     }

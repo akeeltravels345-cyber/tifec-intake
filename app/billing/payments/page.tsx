@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
+import { listAllClients } from "@/lib/clients";
+import { chargeAfterReferral } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import BillingQueueClient, { type Claim, type QueueData } from "@/components/billing/BillingQueueClient";
 
@@ -17,7 +19,9 @@ export default async function BillingQueuePage() {
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const mKey = today.slice(0, 7);
-  const [sessions, insurers, external, settingsList, cfg] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings(), getPracticeConfig()]);
+  const [sessions, insurers, external, settingsList, cfg, allClients] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings(), getPracticeConfig(), listAllClients()]);
+  // client_id → referral end date, to flag claims dated after a referral ended.
+  const referralEndOf = new Map(allClients.map((c) => [c.id, c.profile.referral?.endDate]));
   const insName = (id: string | null) =>
     insurers.find((i) => i.id === id)?.name ?? (id ? "Unknown insurer" : "Self-pay");
   // Outside clinicians aren't on the roster, so resolve their names too.
@@ -44,6 +48,7 @@ export default async function BillingQueuePage() {
     insurerId: s.insurerId as string, insurerName: insName(s.insurerId),
     amount: insurancePortion(s), billedDate: s.billedDate, paid: s.insurancePaid, paidDate: s.paidDate,
     commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
+    afterReferral: s.clientId ? chargeAfterReferral(s.dateOfService, referralEndOf.get(s.clientId)) : false,
   });
 
   // Whose claims the biller reconciles: practising clinicians only. Not the

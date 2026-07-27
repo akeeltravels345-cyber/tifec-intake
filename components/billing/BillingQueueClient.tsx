@@ -16,6 +16,8 @@ export interface Claim {
   billedDate: string | null; paid: boolean; paidDate: string | null;
   /** The biller's cut of THIS claim, at this clinician's own rate. */
   commission: number;
+  /** Date of service is after the client's referral end — insurer won't pay. */
+  afterReferral?: boolean;
 }
 export interface QueueData {
   toBill: Claim[]; awaiting: Claim[]; paid: Claim[];
@@ -183,7 +185,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className="dos">{c.dos}</div>
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
-                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} /></div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
+                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
                       <div className="amt">{money(c.amount)}</div>
                       <div className="comm">+{money(c.commission)}</div>
                       {tab === "awaiting" && <button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button>}

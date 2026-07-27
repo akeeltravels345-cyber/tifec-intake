@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
+import { listClients } from "@/lib/clients";
+import { referralStatus } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
@@ -29,8 +31,14 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
 
-  const [all, insurers, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig()]);
+  const [all, insurers, settings, cfg, myClients] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig(), listClients(id)]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
+  // Referrals that need attention: expired, or expiring within 30 days.
+  const todayISO = now.toISOString().slice(0, 10);
+  const referralAlerts = myClients
+    .map((cl) => ({ cl, st: referralStatus(cl.profile.referral?.endDate, todayISO) }))
+    .filter((x) => x.st.state === "expired" || x.st.state === "expiring")
+    .sort((a, b) => (a.cl.profile.referral?.endDate ?? "").localeCompare(b.cl.profile.referral?.endDate ?? ""));
   const insurerName = (iid: string | null) =>
     insurers.find((i) => i.id === iid)?.name ?? (iid ? "Unknown insurer" : "Self-pay");
   const isSelf = id === user.clinician.id;
@@ -93,7 +101,26 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         <div className="cd-kpi"><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
         <div className="cd-kpi"><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
+        {/* Co-pays that were due at this month's visits but not collected — money
+            missed. Highlighted so it can't be ignored. */}
+        <div className="cd-kpi"><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div></div>
       </div>
+      {c.uncollectedCopay > 0 && (
+        <div className="cd-missnote">You didn&apos;t collect <b>{money(c.uncollectedCopay)}</b> in co-pays that were due this month. That&apos;s money owed to you at the visit — worth chasing.</div>
+      )}
+      {referralAlerts.length > 0 && (
+        <div className="cd-refalert">
+          <div className="cd-refalert-h">⚠ Referrals to renew — you can&apos;t bill past the end date</div>
+          <div className="cd-refalert-list">
+            {referralAlerts.map(({ cl, st }) => (
+              <Link key={cl.id} href={`/billing/clients/${cl.id}`} className="cd-refalert-item">
+                <span className="nm">{cl.first} {cl.last}</span>
+                <span className={`tag ${st.state}`}>{st.state === "expired" ? `expired ${cl.profile.referral?.endDate}` : `ends ${cl.profile.referral?.endDate} · ${st.daysLeft}d`}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="cd-two">
         <div className="cd-card">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; }
-interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; }
+interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; referralEnd?: string | null; }
 const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -31,6 +31,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [last, setLast] = useState("");
   const [dob, setDob] = useState("");        // new client's date of birth (for the 1500)
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [pickedReferralEnd, setPickedReferralEnd] = useState<string | null>(null);
   const [picked, setPicked] = useState("");
   // Which kind of client this is. Default to "returning" only when there ARE
   // returning clients; nobody is pre-selected, so it can't pick one by accident.
@@ -48,12 +49,12 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
 
   function pickClient(c: ClientOpt) {
     const k = clientKey(c.first, c.last);
-    if (picked === k) { setPicked(""); setPickedId(null); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); return; }
+    if (picked === k) { setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); resetCopay(); return; }
     // Carry their usual insurer over — it's nearly always the same next visit,
     // but they can still switch this visit to paid-upfront.
-    setPicked(k); setPickedId(c.id ?? null); setFirst(c.first); setLast(c.last);
+    setPicked(k); setPickedId(c.id ?? null); setPickedReferralEnd(c.referralEnd ?? null); setFirst(c.first); setLast(c.last);
     setInsurerId(c.insurerId || ""); setPayMode(c.insurerId ? "insurance" : "upfront");
-    setCopayTouched(false);
+    resetCopay();
   }
 
   /** Paying upfront means no insurer at all, so the money model treats the
@@ -62,20 +63,26 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (next === payMode) return;
     setPayMode(next);
     if (next === "upfront") setInsurerId("");
-    setCopayTouched(false);
+    resetCopay();
   }
 
   /** Switching mode clears the client, so a half-finished choice can't leak
    *  across (e.g. picking someone, then typing a different new name). */
   function switchMode(next: "returning" | "new") {
     if (next === mode) return;
-    setMode(next); setPicked(""); setPickedId(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); setSearch("");
+    setMode(next); setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront"); resetCopay(); setSearch("");
   }
   const [dos, setDos] = useState(today);
   const [insurerId, setInsurerId] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
-  const [copay, setCopay] = useState("");
-  const [copayTouched, setCopayTouched] = useState(false);
+  // Co-pay has TWO numbers: what was DUE (the insurer's rule) and what was
+  // actually COLLECTED. The gap is a write-off — money not collected that should
+  // have been.
+  const [dueInput, setDueInput] = useState("");
+  const [dueTouched, setDueTouched] = useState(false);
+  const [collectedInput, setCollectedInput] = useState("");
+  const [collectedTouched, setCollectedTouched] = useState(false);
+  const resetCopay = () => { setDueTouched(false); setCollectedTouched(false); setDueInput(""); setCollectedInput(""); };
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -84,12 +91,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.fee || 0), 0)), [codes, cptCodes]);
   const duration = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes]);
   const suggested = suggestCopay(insurer, totalCost);
-  const copayValue = copayTouched ? copay : suggested ? String(suggested) : "0";
-  const copayNum = Number(copayValue) || 0;
-  const collectedAtVisit = insurerId ? copayNum : totalCost;
-  const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayNum)) : 0;
+  const copayDue = round2(dueTouched ? Number(dueInput) || 0 : suggested);
+  const copayCollected = round2(collectedTouched ? Number(collectedInput) || 0 : copayDue);
+  const uncollected = Math.max(0, round2(copayDue - copayCollected));
+  const collectedAtVisit = insurerId ? copayCollected : totalCost;
+  const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayDue)) : 0;
 
-  const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); setCopayTouched(false); };
+  const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); resetCopay(); };
 
   async function submit(e: React.FormEvent, andAnother = false) {
     e.preventDefault();
@@ -106,7 +114,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayNum : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayCollected : 0, copayDue: payMode === "insurance" ? copayDue : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -114,8 +122,8 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         // A clinician logging a day's work does several in a row, so keep the
         // date and clear only what changes from one client to the next.
         setSaved(`Logged ${first.trim()} ${last.trim()} — ${money(totalCost)}.`);
-        setPicked(""); setPickedId(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
-        setCodes([]); setCopay(""); setCopayTouched(false); setNotes(""); setSearch("");
+        setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
+        setCodes([]); resetCopay(); setNotes(""); setSearch("");
         setMode(clients.length > 0 ? "returning" : "new");
         setBusy(false);
         router.refresh();
@@ -144,6 +152,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (!first.trim() || !last.trim() || !dos) return false;
     return alreadyLogged.includes(`${clientKey(first, last)}@${dos}`);
   }, [alreadyLogged, first, last, dos]);
+
+  // The chosen client's referral has ended before this date of service — the
+  // insurer won't pay for it.
+  const pastReferral = !!pickedReferralEnd && !!dos && dos > pickedReferralEnd;
 
   const shownClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -236,6 +248,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                 You&apos;ve already logged a session for <b>{first} {last}</b> on this date. Carry on if they really were seen twice.
               </p>
             )}
+            {pastReferral && (
+              <p className="ls-refwarn">⚠ <b>{first} {last}</b>&apos;s referral ended {pickedReferralEnd}. A session on this date is after the referral and won&apos;t be paid.</p>
+            )}
           </div>
           <div className="ls-field">
             <label className="ls-q">How is this session paid? <span className="ls-req">*</span></label>
@@ -248,7 +263,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </button>
             </div>
             {payMode === "insurance" && (
-              <select className="ls-sel" style={{ marginTop: 10 }} value={insurerId} onChange={(e) => { setInsurerId(e.target.value); setCopayTouched(false); }} aria-label="Insurance provider">
+              <select className="ls-sel" style={{ marginTop: 10 }} value={insurerId} onChange={(e) => { setInsurerId(e.target.value); resetCopay(); }} aria-label="Insurance provider">
                 <option value="">Choose the insurer…</option>
                 {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
@@ -312,14 +327,23 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           {payMode === "insurance" && (
           <div className="ls-field">
-            <label className="ls-q">Co-pay collected at visit <span className="opt">adjust to the client&apos;s plan</span></label>
-            <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={copayValue} onChange={(e) => { setCopayTouched(true); setCopay(e.target.value); }} /></div>
-            {insurerId && (
-              <p className="ls-help">
-                {!copayTouched && suggested > 0
-                  ? <>Auto-filled from <b>{insurer?.name}</b> ({insurer?.copayType === "percentage" ? `${insurer?.copayRate}%` : money(insurer?.copayRate ?? 0)}) — plans vary, so change it to what this client actually pays.</>
-                  : <>Plans vary from the default — enter what this client actually pays.</>}
-              </p>
+            <label className="ls-q">Co-pay <span className="opt">what&apos;s due vs what you collected</span></label>
+            <div className="ls-row2">
+              <div style={{ flex: 1 }}>
+                <span className="ls-sublab">Due</span>
+                <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={dueTouched ? dueInput : (suggested ? String(suggested) : "0")} onChange={(e) => { setDueTouched(true); setDueInput(e.target.value); if (!collectedTouched) { setCollectedTouched(true); setCollectedInput(e.target.value); } }} /></div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <span className="ls-sublab">Collected</span>
+                <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={collectedTouched ? collectedInput : String(copayDue)} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
+              </div>
+              <button type="button" className="ls-writeoff" onClick={() => { setCollectedTouched(true); setCollectedInput("0"); }}>Not collected</button>
+            </div>
+            {uncollected > 0 && (
+              <p className="ls-uncollected">⚠ {money(uncollected)} co-pay not collected — recorded as a write-off. It counts toward your monthly uncollected total.</p>
+            )}
+            {insurerId && uncollected === 0 && !dueTouched && suggested > 0 && (
+              <p className="ls-help">Co-pay due auto-filled from <b>{insurer?.name}</b>. Change &ldquo;Due&rdquo; if this client&apos;s plan differs; lower &ldquo;Collected&rdquo; (or tap <b>Not collected</b>) if you didn&apos;t take it.</p>
             )}
           </div>
           )}

@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     durationHours: Number(body.durationHours) || 0,
     totalCost,
     copayCollected: Number(body.copayCollected) || 0,
+    copayDue: body.copayDue == null ? undefined : Number(body.copayDue) || 0,
     notes: typeof body.notes === "string" ? body.notes : "",
   });
 

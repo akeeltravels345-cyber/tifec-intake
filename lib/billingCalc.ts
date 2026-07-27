@@ -29,6 +29,12 @@ export function collectedAtVisit(s: BillingSession): number {
   if (!s.insurerId) return round2(s.totalCost || 0);
   return round2(s.copayCollected || 0);
 }
+/** Co-pay that was DUE but not collected (written off) — insured visits only. */
+export function uncollectedCopay(s: BillingSession): number {
+  if (!s.insurerId) return 0;
+  const due = s.copayDue == null ? s.copayCollected : s.copayDue;
+  return round2(Math.max(0, (due || 0) - (s.copayCollected || 0)));
+}
 
 const sumBy = (arr: BillingSession[], f: (s: BillingSession) => number) => round2(arr.reduce((t, s) => t + f(s), 0));
 
@@ -42,6 +48,7 @@ export interface ClinicianMonth {
   copayThisMonth: number;        // co-pays collected at those visits
   billedFromThisMonth: number;   // fee of this month's visits already billed (cohort)
   outstandingThisMonth: number;  // insurance portion of this month's visits not yet billed
+  uncollectedCopay: number;      // co-pay that was due at this month's visits but not collected
   // cashflow ("money actually in this month" — drives payout)
   insuranceBilledThisMonth: number; // insurance portions billed this month (any visit month)
   collected: number;                // copayThisMonth + insuranceBilledThisMonth
@@ -114,6 +121,7 @@ export function computeClinicianMonth(
     copayThisMonth,
     billedFromThisMonth: sumBy(visitsBilled, (s) => s.totalCost || 0),
     outstandingThisMonth: sumBy(visitsUnbilled, insurancePortion),
+    uncollectedCopay: sumBy(visits, uncollectedCopay),
     insuranceBilledThisMonth,
     collected,
     outstanding: sumBy(unbilled, insurancePortion),
@@ -141,6 +149,7 @@ export interface BusinessMonth {
   collected: number;          // total money actually in this month
   billed: number;             // insurance confirmed paid this month
   copays: number;             // co-pays collected this month
+  uncollectedCopay: number;   // co-pay due at this month's visits but not collected
   outstanding: number;        // total not yet paid by insurance (running)
   totalPayout: number;        // sum of clinician payouts
   billerCommission: number;   // total the biller earns across the practice
@@ -163,6 +172,7 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
     collected,
     billed: s((c) => c.insuranceBilledThisMonth),
     copays: s((c) => c.copayThisMonth),
+    uncollectedCopay: s((c) => c.uncollectedCopay),
     outstanding: s((c) => c.outstanding),
     totalPayout,
     billerCommission: s((c) => c.billerCommission),
