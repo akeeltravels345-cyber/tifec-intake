@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ClientProfile } from "@/lib/clients";
+import { referralStatus, chargeAfterReferral } from "@/lib/referral";
+
+const randId = () => Math.random().toString(36).slice(2, 10);
 
 export interface Activity {
   id: string; date: string; clinician: string; codes: string[]; codeLabel: string;
@@ -19,12 +22,12 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false,
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "",
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
   insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
-  activity: Activity[]; canEdit: boolean; canDelete?: boolean;
+  activity: Activity[]; canEdit: boolean; canDelete?: boolean; today?: string;
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
@@ -91,10 +94,22 @@ export default function ClientDetail({
   const [insuredLast, setInsuredLast] = useState(profile.insurance?.insuredLast ?? "");
   const [insuredDob, setInsuredDob] = useState(profile.insurance?.insuredDob ?? "");
   const [dx, setDx] = useState((profile.diagnosis ?? []).join(", "));
+  // referral
+  const [refSource, setRefSource] = useState(profile.referral?.source ?? "");
+  const [refAuth, setRefAuth] = useState(profile.referral?.authNumber ?? "");
+  const [refStart, setRefStart] = useState(profile.referral?.startDate ?? "");
+  const [refEnd, setRefEnd] = useState(profile.referral?.endDate ?? "");
+  const [refSessions, setRefSessions] = useState(profile.referral?.sessions ? String(profile.referral.sessions) : "");
+  // documents (edited live; each add/remove PATCHes the whole profile)
+  const [docs, setDocs] = useState(profile.documents ?? []);
+  const [ndName, setNdName] = useState("");
+  const [ndKind, setNdKind] = useState("referral");
+  const [ndUrl, setNdUrl] = useState("");
 
-  async function save() {
-    setBusy(true); setMsg("");
-    const nextProfile: ClientProfile = {
+  // Assemble the WHOLE profile from state — every PATCH must send it complete,
+  // or fields it omits get wiped. `documents` can be overridden (add/remove).
+  function buildProfile(documents = docs): ClientProfile {
+    return {
       dob: dob || undefined,
       sex: (sex || undefined) as ClientProfile["sex"],
       phone: phone || undefined,
@@ -105,17 +120,37 @@ export default function ClientDetail({
         ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
       diagnosis: dx.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
+      referral: (refSource || refAuth || refStart || refEnd || refSessions)
+        ? { source: refSource || undefined, authNumber: refAuth || undefined, startDate: refStart || undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
+        : undefined,
+      documents,
     };
+  }
+  async function patchProfile(nextProfile: ClientProfile, done?: () => void) {
+    setBusy(true); setMsg("");
     try {
       const res = await fetch(`/api/billing/clients/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ insurerId: ins || null, profile: nextProfile }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
-      setMsg("Saved."); setEdit(false); router.refresh();
+      done?.(); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not save."); }
     finally { setBusy(false); }
   }
+  const save = () => patchProfile(buildProfile(), () => { setMsg("Saved."); setEdit(false); });
+  function addDocument() {
+    if (!ndName.trim()) { setMsg("Give the document a name."); return; }
+    const next = [...docs, { id: randId(), name: ndName.trim(), kind: ndKind, url: ndUrl.trim() || undefined, addedAt: today || new Date().toISOString().slice(0, 10) }];
+    setDocs(next); setNdName(""); setNdUrl("");
+    patchProfile(buildProfile(next));
+  }
+  function removeDocument(docId: string) {
+    const next = docs.filter((d) => d.id !== docId);
+    setDocs(next);
+    patchProfile(buildProfile(next));
+  }
+  const referral = referralStatus(profile.referral?.endDate, today);
 
   // Only insured (non self-pay) entries can go on a CMS-1500.
   const billable = activity.filter((a) => a.stage !== "self");
@@ -156,6 +191,23 @@ export default function ClientDetail({
 
       {msg && <div className="ls-saved" style={{ margin: "0 0 14px" }}>{msg}</div>}
 
+      {/* ---- Referral status (payment-critical) ---- */}
+      <div className={`cd-ref ${referral.state}`}>
+        <div className="cd-refrow">
+          <span className="cd-reflab">Referral</span>
+          {referral.state === "none" ? (
+            <span className="cd-refval">No referral on file — add one so claims stay payable.</span>
+          ) : referral.state === "expired" ? (
+            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b> — sessions after this date can&apos;t be billed.</span>
+          ) : (
+            <span className="cd-refval">Valid until <b>{profile.referral?.endDate}</b>
+              {referral.state === "expiring" && referral.daysLeft != null && <> · {referral.daysLeft} day{referral.daysLeft === 1 ? "" : "s"} left</>}</span>
+          )}
+          {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.authNumber ? ` · #${profile.referral.authNumber}` : ""}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
+        </div>
+        {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>{referral.state === "none" ? "Add referral" : "Update"}</button>}
+      </div>
+
       {/* ---- Record ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Client record</h2>
@@ -194,12 +246,52 @@ export default function ClientDetail({
               {field("Insured date of birth", <input type="date" className="ls-in" value={insuredDob} onChange={(e) => setInsuredDob(e.target.value)} />)}
             </>}
             {field("Diagnosis (ICD-10, comma-separated)", <input className="ls-in" placeholder="e.g. F41.1, F32.1" value={dx} onChange={(e) => setDx(e.target.value)} />)}
+            <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in — after the end date they can&apos;t be paid</span></div>
+            {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
+            {field("Referral / auth number", <input className="ls-in" value={refAuth} onChange={(e) => setRefAuth(e.target.value)} />)}
+            {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
+            {field("Valid until (end date)", <input type="date" className="ls-in" value={refEnd} onChange={(e) => setRefEnd(e.target.value)} />)}
+            {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
             <div className="cd-save">
               <button className="ls-save" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</button>
               <button className="su-del" disabled={busy} onClick={() => { setEdit(false); setMsg(""); }}>Cancel</button>
             </div>
           </div>
         )}
+      </div>
+
+      {/* ---- Documents ---- */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Documents</h2>
+          <span className="su-hint">The intake form, the referral letter, and anything else for this client. Add a link to each.</span></div>
+        <div className="su-card" style={{ padding: 16 }}>
+          {docs.length === 0 ? (
+            <p className="su-hint" style={{ margin: "0 0 12px" }}>No documents yet.</p>
+          ) : (
+            <div className="cd-doclist">
+              {docs.map((d) => (
+                <div className="cd-doc" key={d.id}>
+                  <span className={`cd-dockind ${d.kind}`}>{d.kind}</span>
+                  {d.url ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="cd-docname">{d.name}</a> : <span className="cd-docname">{d.name}</span>}
+                  <span className="cd-docdate">{d.addedAt}</span>
+                  {canEdit && <button className="cd-xbtn" title="Remove document" disabled={busy} onClick={() => removeDocument(d.id)}>×</button>}
+                </div>
+              ))}
+            </div>
+          )}
+          {canEdit && (
+            <div className="cd-docadd">
+              <select className="ls-in" value={ndKind} onChange={(e) => setNdKind(e.target.value)}>
+                <option value="referral">Referral</option>
+                <option value="intake">Intake form</option>
+                <option value="other">Other</option>
+              </select>
+              <input className="ls-in" placeholder="Document name" value={ndName} onChange={(e) => setNdName(e.target.value)} />
+              <input className="ls-in" placeholder="Link (URL) — optional" value={ndUrl} onChange={(e) => setNdUrl(e.target.value)} />
+              <button className="su-add" disabled={busy} onClick={addDocument}>{busy ? "Adding…" : "Add document"}</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ---- Activity ---- */}
@@ -231,6 +323,9 @@ export default function ClientDetail({
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
                   <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
                 </div>
+                {chargeAfterReferral(acDate, profile.referral?.endDate) && (
+                  <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}) — it won&apos;t be paid.</p>
+                )}
                 <div className="cd-addbtns">
                   <button className="ls-save" disabled={busy} onClick={addChargeNow}>{busy ? "Adding…" : "Add charge"}</button>
                   <button className="su-del" disabled={busy} onClick={() => { setShowAdd(false); setMsg(""); }}>Cancel</button>
@@ -262,7 +357,10 @@ export default function ClientDetail({
                         <td>{a.codes.join(", ") || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
                         <td>{a.insurer}</td>
                         <td className="num">{money(a.total)}</td>
-                        <td><span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span></td>
+                        <td>
+                          <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
+                          {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date — this won't be paid">⚠ after referral</span>}
+                        </td>
                         {canManageCharges && (
                           <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                             {delCharge === a.id ? (

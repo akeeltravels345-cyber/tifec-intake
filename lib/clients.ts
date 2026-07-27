@@ -40,6 +40,31 @@ export interface ClientProfile {
   };
   diagnosis?: string[];         // ICD-10 codes (box 21) — the client's standing dx
   sample?: boolean;             // seeded demo client, so it can be bulk-removed
+  referral?: ClientReferral;    // insurer referral + its validity window
+  documents?: ClientDocument[]; // referral letter, intake form, other files/links
+}
+
+/** A referral authorises billing for a window of time. Sessions with a date of
+ *  service AFTER endDate can't be paid, so endDate is the number that matters. */
+export interface ClientReferral {
+  source?: string;      // referring provider / doctor
+  authNumber?: string;  // referral / authorization number
+  startDate?: string;   // valid from (YYYY-MM-DD)
+  endDate?: string;     // valid until (YYYY-MM-DD) — after this, claims don't pay
+  sessions?: number;    // sessions authorised (optional)
+  notes?: string;
+}
+
+/** A document attached to a client — the intake form, the referral letter, etc.
+ *  Stored as a reference (name + optional link/note); actual file bytes are not
+ *  held here. */
+export interface ClientDocument {
+  id: string;
+  name: string;
+  kind?: string;        // "referral" | "intake" | "other"
+  url?: string;         // link to the document (e.g. in the EHR / drive)
+  note?: string;
+  addedAt: string;      // YYYY-MM-DD
 }
 
 export interface Client {

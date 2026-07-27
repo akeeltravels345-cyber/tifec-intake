@@ -6,6 +6,35 @@ import { listSessions, deleteSession } from "@/lib/billing";
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
+function parseReferral(v: unknown): ClientProfile["referral"] {
+  if (!v || typeof v !== "object") return undefined;
+  const r = v as Record<string, unknown>;
+  const sessions = Number(r.sessions);
+  const out = {
+    source: s(r.source), authNumber: s(r.authNumber),
+    startDate: isDate(r.startDate) ? String(r.startDate) : undefined,
+    endDate: isDate(r.endDate) ? String(r.endDate) : undefined,
+    sessions: Number.isFinite(sessions) && sessions > 0 ? Math.floor(sessions) : undefined,
+    notes: s(r.notes),
+  };
+  return Object.values(out).some((x) => x !== undefined) ? out : undefined;
+}
+
+function parseDocuments(v: unknown): ClientProfile["documents"] {
+  if (!Array.isArray(v)) return undefined;
+  const out = v.slice(0, 50).map((d) => {
+    const doc = (d ?? {}) as Record<string, unknown>;
+    const name = s(doc.name);
+    if (!name) return null;
+    return {
+      id: s(doc.id) ?? Math.random().toString(36).slice(2),
+      name, kind: s(doc.kind) ?? "other", url: s(doc.url), note: s(doc.note),
+      addedAt: isDate(doc.addedAt) ? String(doc.addedAt) : new Date().toISOString().slice(0, 10),
+    };
+  }).filter(Boolean) as NonNullable<ClientProfile["documents"]>;
+  return out.length ? out : undefined;
+}
+
 // Delete a whole client: their record, their clinician links, AND all of their
 // charges — so nothing is orphaned. Every downstream view recomputes from what's
 // left. Biller/owner only (a client can be shared across clinicians).
@@ -63,6 +92,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
       : undefined,
     diagnosis: Array.isArray(p.diagnosis) ? p.diagnosis.map((x) => String(x).trim().toUpperCase()).filter(Boolean).slice(0, 12) : undefined,
+    referral: parseReferral(p.referral),
+    documents: parseDocuments(p.documents),
   };
 
   const insurerId = body.insurerId ? String(body.insurerId) : null;

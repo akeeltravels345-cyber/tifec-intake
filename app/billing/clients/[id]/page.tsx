@@ -58,6 +58,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         activity={activity}
         canEdit
         canDelete={seesAll}
+        today={new Date().toISOString().slice(0, 10)}
       />
     </>
   );
