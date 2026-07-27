@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type CopayType = "none" | "fixed" | "percentage";
-interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; }
+interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
 interface Cpt { code: string; description: string; fee: number; hrs: number; active: boolean; }
 interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; billerPct: number; }
 interface Expense { id: string; name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[]; }
@@ -130,21 +130,23 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Insurers &amp; co-pay</h2></div>
           <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th>Insurer</th><th>Co-pay</th><th className="num">Rate</th><th></th></tr></thead>
+            <thead><tr><th>Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th></th></tr></thead>
             <tbody>
               {ins.map((x, i) => (
                 <tr key={x.id}>
                   <td className="nm"><input className="su-in" value={x.name} onChange={(e) => setIns(upd(ins, i, { name: e.target.value }))} /></td>
                   <td><select className="su-sel" value={x.copayType} onChange={(e) => setIns(upd(ins, i, { copayType: e.target.value as CopayType }))}><option value="none">None</option><option value="fixed">Fixed $</option><option value="percentage">% of cost</option></select></td>
                   <td className="num"><input className="su-in short" type="number" step="0.01" value={x.copayRate} disabled={x.copayType === "none"} onChange={(e) => setIns(upd(ins, i, { copayRate: Number(e.target.value) }))} /></td>
-                  <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "insurer", id: x.id, name: x.name, copayType: x.copayType, copayRate: x.copayRate, active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "insurer", action: "delete", id: x.id }, "Removed")}>×</button></div></td>
+                  <td><input className="su-in short" placeholder="e.g. 362" value={x.claimCode ?? ""} onChange={(e) => setIns(upd(ins, i, { claimCode: e.target.value }))} /></td>
+                  <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "insurer", id: x.id, name: x.name, copayType: x.copayType, copayRate: x.copayRate, claimCode: x.claimCode ?? "", active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "insurer", action: "delete", id: x.id }, "Removed")}>×</button></div></td>
                 </tr>
               ))}
               <tr>
                 <td><input className="su-in" placeholder="New insurer" value={newIns.name} onChange={(e) => setNewIns({ ...newIns, name: e.target.value })} /></td>
                 <td><select className="su-sel" value={newIns.copayType} onChange={(e) => setNewIns({ ...newIns, copayType: e.target.value as CopayType })}><option value="none">None</option><option value="fixed">Fixed $</option><option value="percentage">% of cost</option></select></td>
                 <td className="num"><input className="su-in short" type="number" step="0.01" value={newIns.copayRate} onChange={(e) => setNewIns({ ...newIns, copayRate: Number(e.target.value) })} /></td>
-                <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
+                <td><input className="su-in short" placeholder="e.g. 362" value={newIns.claimCode ?? ""} onChange={(e) => setNewIns({ ...newIns, claimCode: e.target.value })} /></td>
+                <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, claimCode: newIns.claimCode ?? "", active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
               </tr>
             </tbody>
           </table></div></div>

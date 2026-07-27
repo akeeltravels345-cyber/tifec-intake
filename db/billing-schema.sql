@@ -12,8 +12,10 @@ CREATE TABLE IF NOT EXISTS billing_insurers (
   copay_type  TEXT NOT NULL DEFAULT 'none',   -- 'none' | 'fixed' | 'percentage'
   copay_rate  NUMERIC NOT NULL DEFAULT 0,     -- fixed amount (KYD) or percent (0-100)
   active      BOOLEAN NOT NULL DEFAULT true,
+  claim_code  TEXT,                           -- payer code on CMS-1500 box 10d / header
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Existing installs: ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS claim_code TEXT;
 
 -- CPT / service codes (multi-select per session).
 CREATE TABLE IF NOT EXISTS billing_cpt_codes (

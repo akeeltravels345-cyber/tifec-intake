@@ -17,6 +17,7 @@ export interface Insurer {
   copayType: CopayType;
   copayRate: number; // fixed KYD amount, or percent 0-100
   active: boolean;
+  claimCode?: string; // payer code printed on CMS-1500 box 10d / header (e.g. "362")
 }
 
 // A clinician OUTSIDE the practice whose billing the biller handles privately.
@@ -162,19 +163,19 @@ export async function listInsurers(): Promise<Insurer[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_insurers ORDER BY name`) as Record<string, unknown>[];
-    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active }));
+    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined }));
   }
   return readJson<Insurer[]>(INS_FILE, []);
 }
 
 export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }): Promise<Insurer> {
-  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true };
+  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined };
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active)
-      VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active})
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active`;
+      INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
+      VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null})
+      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code`;
     return row;
   }
   const all = readJson<Insurer[]>(INS_FILE, []);

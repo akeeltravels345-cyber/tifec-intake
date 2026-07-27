@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { listInsurers, listSessions, getPracticeConfig, listExternalClinicians } from "@/lib/billing";
+import { listInsurers, listSessions, getPracticeConfig, listExternalClinicians, listCptCodes } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
@@ -10,18 +10,19 @@ import PrintButton from "@/components/billing/PrintButton";
 
 export const dynamic = "force-dynamic";
 
-export default async function BatchCms1500Page({ searchParams }: { searchParams: Promise<{ ids?: string }> }) {
-  const { ids: idsParam } = await searchParams;
+export default async function BatchCms1500Page({ searchParams }: { searchParams: Promise<{ ids?: string; sessions?: string }> }) {
+  const { ids: idsParam, sessions: sessionsParam } = await searchParams;
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/clients");
 
-  const ids = (idsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
-  if (ids.length === 0) redirect("/billing/clients");
+  const clientIds = (idsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
+  const sessionIds = (sessionsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 800);
+  if (clientIds.length === 0 && sessionIds.length === 0) redirect("/billing/clients");
 
   const seesAll = isBiller(user.role) || isOwner(user.role);
-  const [insurers, cfg, external, allSessions] = await Promise.all([
-    listInsurers(), getPracticeConfig(), listExternalClinicians(),
-    // Load once, then group per client in memory (avoids a query per client).
+  const [insurers, cptCodes, cfg, external, allSessions] = await Promise.all([
+    listInsurers(), listCptCodes(), getPracticeConfig(), listExternalClinicians(),
+    // Load once (scoped to the clinician for isolation), then group in memory.
     seesAll ? listSessions() : listSessions({ clinicianId: user.clinician.id }),
   ]);
   const prov = cfg.provider ?? {};
@@ -29,25 +30,52 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
     insName: (idv: string | null) => insurers.find((i) => i.id === idv)?.name ?? "",
     clinName: (cid: string) => getClinician(cid)?.name ?? external.find((c) => c.id === cid)?.name ?? cid,
     renderingNpi: (cid: string) => prov.renderingNpi?.[cid] ?? "",
+    cptFee: (code: string) => cptCodes.find((c) => c.code === code)?.fee ?? 0,
+    carrierCode: (insurerId: string) => insurers.find((i) => i.id === insurerId)?.claimCode ?? "",
   };
 
+  // Two ways in:
+  //   sessions=…  → claim only those specific sessions (from a queue selection)
+  //   ids=…       → claim ALL of each client's billable sessions (from the roster)
+  // Either way we build a per-client bucket of the sessions to claim.
   const sessionsByClient = new Map<string, typeof allSessions>();
-  for (const s of allSessions) {
-    if (!s.clientId) continue;
-    (sessionsByClient.get(s.clientId) ?? sessionsByClient.set(s.clientId, []).get(s.clientId)!)!.push(s);
+  const order: string[] = [];
+  const bucket = (cid: string) => {
+    let b = sessionsByClient.get(cid);
+    if (!b) { b = []; sessionsByClient.set(cid, b); order.push(cid); }
+    return b;
+  };
+
+  let skipped = 0, noClaims = 0;
+  if (sessionIds.length > 0) {
+    const wanted = new Set(sessionIds);
+    // allSessions is already access-scoped, so a session not in it is simply skipped.
+    for (const s of allSessions) {
+      if (!wanted.has(s.id) || !s.clientId || !s.insurerId) continue;
+      bucket(s.clientId).push(s);
+    }
+  } else {
+    const idSet = new Set(clientIds);
+    for (const id of clientIds) {
+      const ok = seesAll || (await clinicianSeesClient(id, user.clinician.id));
+      if (!ok) { skipped++; continue; }
+      bucket(id); // ensure order + a bucket even if empty, so "no claims" is reported
+    }
+    for (const s of allSessions) {
+      if (!s.clientId || !idSet.has(s.clientId) || !s.insurerId) continue;
+      if (sessionsByClient.has(s.clientId)) sessionsByClient.get(s.clientId)!.push(s);
+    }
   }
 
-  // Resolve each requested client, honouring isolation, then build their forms.
   const blocks: { name: string; forms: ReturnType<typeof buildClaimForms> }[] = [];
-  let skipped = 0, noClaims = 0;
-  for (const id of ids) {
-    const client = await getClient(id);
+  for (const cid of order) {
+    const client = await getClient(cid);
     if (!client) { skipped++; continue; }
-    if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id))) { skipped++; continue; }
-    const forms = buildClaimForms(client, sessionsByClient.get(id) ?? [], resolvers);
+    const forms = buildClaimForms(client, sessionsByClient.get(cid) ?? [], resolvers);
     if (forms.length === 0) { noClaims++; continue; }
     blocks.push({ name: `${client.first} ${client.last}`, forms });
   }
+  blocks.sort((a, b) => a.name.localeCompare(b.name));
 
   const totalForms = blocks.reduce((t, b) => t + b.forms.length, 0);
 

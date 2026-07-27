@@ -1836,6 +1836,8 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-bulk label { font-size: 12px; color: rgba(255,255,255,.72); }
 .bq-bulk input[type=date] { border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.08); color: #fff; border-radius: 8px; padding: 8px 10px; font: 13px "Open Sans"; }
 .bq-bulk .go { background: #fff; color: var(--ink); border: none; border-radius: 9px; padding: 10px 16px; font: 700 13px "Open Sans"; cursor: pointer; }
+.bq-bulk .gen { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.32); border-radius: 9px; padding: 10px 14px; font: 600 13px "Open Sans"; cursor: pointer; }
+.bq-bulk .gen:hover { background: rgba(255,255,255,.22); }
 .bq-bulk .x { background: transparent; border: none; color: rgba(255,255,255,.7); font: 600 13px "Open Sans"; cursor: pointer; }
 .bq-thead { display: grid; grid-template-columns: 96px 1fr 120px 96px 96px 70px; gap: 14px; padding: 12px 20px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; background: #fbf9f4; border-bottom: 1px solid var(--hair); }
 .bq-thead span.r { text-align: right; }

@@ -42,6 +42,7 @@ export async function POST(req: Request) {
         copayType,
         copayRate: n(body.copayRate),
         active: body.active !== false,
+        claimCode: t(body.claimCode),
       });
       return NextResponse.json({ ok: true, id: saved.id });
     }

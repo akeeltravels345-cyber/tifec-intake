@@ -94,6 +94,8 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const markPaid = (ids: string[], date: string) => post(ids, { action: "paid", paid: true, paidDate: date });
   const unbill = (id: string) => post([id], { action: "billed", billed: false });
   const unpay = (id: string) => post([id], { action: "paid", paid: false });
+  // Build CMS-1500 claims for exactly the selected claims (each id is a session).
+  const generateClaims = () => { if (selected.size) router.push(`/billing/clients/batch?sessions=${[...selected].join(",")}`); };
 
   return (
     <>
@@ -206,6 +208,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         <div className="bq-bulk">
           <div><div className="bt">{selected.size} claim{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} insurance · <span className="comm">+{money(comm(selClaims))} to you</span></div></div>
           <div className="sp" />
+          <button className="gen" onClick={generateClaims} title="Build CMS-1500 claims for the selected claims">Generate CMS-1500</button>
           {tab === "tobill" ? (
             <>
               <label>Billed date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>

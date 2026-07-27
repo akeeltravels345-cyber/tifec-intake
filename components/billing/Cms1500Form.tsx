@@ -1,7 +1,6 @@
 import type { ClaimForm } from "@/lib/cms1500";
 
 const money = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const DX_LETTERS = "ABCDEFGHIJKL".split("");
 
 function Cell({ n, label, v, wide }: { n: string; label: string; v?: string | null; wide?: boolean }) {
   return (
@@ -23,7 +22,7 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
     <div className="hcfa">
       <div className="hcfa-title">
         <div className="t">Health Insurance Claim Form</div>
-        <div className="s">CMS-1500 · {f.payerName}{f.pages > 1 ? ` · form ${f.page} of ${f.pages}` : ""}</div>
+        <div className="s">CMS-1500 (08-05) · {f.payerName}{f.carrierCode ? ` (# ${f.carrierCode})` : ""}{f.pages > 1 ? ` · form ${f.page} of ${f.pages}` : ""}</div>
       </div>
 
       <div className="hcfa-grid">
@@ -36,15 +35,23 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
         <Cell n="11a" label="Insured's birth date" v={f.insuredDob} />
         <Cell n="11" label="Insured's group / policy no." v={f.groupNo} />
         <Cell n="5" label="Patient's address" v={f.address} wide />
-        <Cell n="5b" label="Telephone" v={f.phone} wide />
+        <Cell n="5b" label="Telephone" v={f.phone} />
+        <Cell n="10d" label="Reserved for local use" v={f.carrierCode ? `# ${f.carrierCode}` : ""} />
+      </div>
+
+      {/* Standard authorisations — boxes 10a-c, 12/13, 27. */}
+      <div className="hcfa-static">
+        <span><b>10a-c</b> Condition related to employment / auto / other: <b>No</b></span>
+        <span><b>12 &amp; 13</b> Patient / insured signature: <b>Signature on file</b></span>
+        <span><b>27</b> Accept assignment: <b>Yes</b></span>
       </div>
 
       <div className="hcfa-dx">
         <div className="hcfa-boxn">21</div>
-        <div className="hcfa-dxlab">Diagnosis (ICD-10)</div>
+        <div className="hcfa-dxlab">Diagnosis (ICD-10) · pointers 1-4</div>
         <div className="hcfa-dxlist">
           {f.diagnosis.length === 0 ? <span className="muted">— none on file —</span> :
-            f.diagnosis.slice(0, 12).map((d, i) => <span className="hcfa-dxi" key={d}><b>{DX_LETTERS[i]}</b> {d}</span>)}
+            f.diagnosis.slice(0, 4).map((d, i) => <span className="hcfa-dxi" key={d}><b>{i + 1}</b> {d}</span>)}
         </div>
       </div>
 
@@ -71,9 +78,13 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={5} className="r"><b>28 · Total charge</b></td>
+            <td colSpan={4}></td>
+            <td className="r"><b>28 · Total charge</b></td>
             <td className="r"><b>{money(f.total)}</b></td>
-            <td colSpan={2}></td>
+            <td className="r" colSpan={2}>
+              <span className="hcfa-tfnum"><b>29 · Amount paid</b> {money(f.amountPaid)}</span>
+              <span className="hcfa-tfnum"><b>30 · Balance due</b> {money(f.balanceDue)}</span>
+            </td>
           </tr>
         </tfoot>
       </table>
@@ -114,7 +125,11 @@ export const HCFA_CSS = `
 .hcfa-svc th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .02em; color: #7b8393; border-bottom: 1.5px solid #1c2330; padding: 5px 7px; }
 .hcfa-svc td { padding: 6px 7px; border-bottom: 1px solid #e3e7ee; }
 .hcfa-svc .r { text-align: right; }
-.hcfa-svc tfoot td { border-bottom: none; }
+.hcfa-svc tfoot td { border-bottom: none; padding-top: 8px; }
+.hcfa-tfnum { display: inline-block; margin-left: 16px; font-size: 12px; color: #4a5262; }
+.hcfa-tfnum b { color: #7b8393; font-weight: 700; margin-right: 4px; }
+.hcfa-static { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 12px; color: #5b6472; border: 1px dashed #d6dae2; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+.hcfa-static b { color: #3a414e; }
 @media print {
   .hcfa-noprint, .bo-side, .bo-mobtabs, .tm-banner { display: none !important; }
   body, .bo-main { margin: 0 !important; padding: 0 !important; }

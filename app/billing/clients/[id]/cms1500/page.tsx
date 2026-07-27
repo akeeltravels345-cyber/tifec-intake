@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { listInsurers, listSessions, getPracticeConfig, listExternalClinicians } from "@/lib/billing";
+import { listInsurers, listSessions, getPracticeConfig, listExternalClinicians, listCptCodes } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
@@ -21,8 +21,8 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
   const seesAll = isBiller(user.role) || isOwner(user.role);
   if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id))) redirect("/billing/clients");
 
-  const [insurers, cfg, external, sessions] = await Promise.all([
-    listInsurers(), getPracticeConfig(), listExternalClinicians(),
+  const [insurers, cptCodes, cfg, external, sessions] = await Promise.all([
+    listInsurers(), listCptCodes(), getPracticeConfig(), listExternalClinicians(),
     seesAll ? listSessions({ clientId: id }) : listSessions({ clientId: id, clinicianId: user.clinician.id }),
   ]);
   const prov = cfg.provider ?? {};
@@ -30,6 +30,8 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
     insName: (idv) => insurers.find((i) => i.id === idv)?.name ?? "",
     clinName: (cid) => getClinician(cid)?.name ?? external.find((c) => c.id === cid)?.name ?? cid,
     renderingNpi: (cid) => prov.renderingNpi?.[cid] ?? "",
+    cptFee: (code) => cptCodes.find((c) => c.code === code)?.fee ?? 0,
+    carrierCode: (insurerId) => insurers.find((i) => i.id === insurerId)?.claimCode ?? "",
   });
 
   return (

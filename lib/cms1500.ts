@@ -1,8 +1,9 @@
 // =============================================================================
-// CMS-1500 claim building (pure, server-safe). Turns a client + their billable
-// sessions into one or more claim "forms": one per payer, and — because a real
-// CMS-1500 holds only 6 service lines (box 24, rows 1-6) — a fresh continuation
-// form every 6 lines. Each service line carries its own date of service.
+// CMS-1500 (08-05) claim building (pure, server-safe). Turns a client + their
+// billable sessions into one or more claim "forms": one per payer, and — because
+// the form holds only 6 service lines (box 24) — a fresh continuation form every
+// 6 lines. Each CPT code is its own service line with its own charge, matching a
+// real submission.
 // =============================================================================
 
 import type { BillingSession, ProviderConfig } from "./billing";
@@ -10,27 +11,55 @@ import type { ClientProfile } from "./clients";
 
 export const CMS_LINES_PER_FORM = 6;
 
+/** ISO YYYY-MM-DD → MM/DD/YY as the form prints dates. */
+export function mdy(iso?: string): string {
+  if (!iso) return "";
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[2]}/${m[3]}/${m[1].slice(2)}` : iso;
+}
+const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
 export interface ClaimLine {
-  date: string; pos: string; cpt: string; mod: string; dxPointer: string;
+  date: string;                  // MM/DD/YY (box 24A from = to)
+  pos: string; cpt: string; mod: string; dxPointer: string;
   charge: number; units: number; renderingNpi: string; renderingName: string;
 }
 export interface ClaimForm {
   key: string;
   payerName: string;
-  page: number; pages: number;          // "form 1 of 2" when a payer has >6 lines
+  carrierCode: string;           // box 10d / header (e.g. "362")
+  page: number; pages: number;   // "form 1 of 2" when a payer has >6 lines
   patientName: string; insuredName: string;
   dob?: string; sex?: string; relationship: string; insuredDob?: string;
   memberId?: string; groupNo?: string; planName: string;
   address: string; phone?: string;
   diagnosis: string[];
-  lines: ClaimLine[]; total: number;
-  signature: string;                     // box 31 — rendering provider on this form
+  lines: ClaimLine[];
+  total: number; amountPaid: number; balanceDue: number;
+  signature: string;             // box 31 — rendering provider on this form
 }
 
 export interface ClaimResolvers {
   insName: (id: string | null) => string;
   clinName: (id: string) => string;
   renderingNpi: (clinicianId: string) => string;
+  cptFee: (code: string) => number;      // catalogue fee, to charge per code
+  carrierCode?: (insurerId: string) => string; // optional payer code for box 10d
+}
+
+/** Expand a session into one service line per CPT code. A single-code session
+ *  charges the session total exactly; a multi-code one charges each code its
+ *  catalogue fee; a session with no codes (e.g. an imported balance) is one line
+ *  at the session total. */
+function sessionLines(s: BillingSession, r: ClaimResolvers, dxPointer: string): ClaimLine[] {
+  const date = mdy(s.dateOfService);
+  const npi = r.renderingNpi(s.clinicianId), name = r.clinName(s.clinicianId);
+  const units = Math.max(1, Math.round(s.durationHours || 1));
+  const base = { date, pos: "11", mod: "", dxPointer, units, renderingNpi: npi, renderingName: name };
+  const codes = s.cptCodes ?? [];
+  if (codes.length === 0) return [{ ...base, cpt: "", charge: r2(s.totalCost) }];
+  if (codes.length === 1) return [{ ...base, cpt: codes[0], charge: r2(s.totalCost) }];
+  return codes.map((c) => ({ ...base, cpt: c, charge: r2(r.cptFee(c)) }));
 }
 
 /** Build every CMS-1500 form for one client from their billable (insured)
@@ -55,6 +84,7 @@ export function buildClaimForms(
     p.address?.country,
   ].filter(Boolean).join(" · ");
   const dx = p.diagnosis ?? [];
+  const dxPointer = dx.length ? "1" : ""; // 08-05 form uses numeric pointers 1-4
 
   // One payer at a time, in a stable order.
   const byPayer = new Map<string, BillingSession[]>();
@@ -67,28 +97,27 @@ export function buildClaimForms(
   const forms: ClaimForm[] = [];
   for (const [insurerId, group] of byPayer) {
     const sorted = [...group].sort((a, b) => a.dateOfService.localeCompare(b.dateOfService));
-    const pages = Math.max(1, Math.ceil(sorted.length / CMS_LINES_PER_FORM));
+    // Expand every session to its per-code service lines first, THEN paginate by 6.
+    const allLines = sorted.flatMap((s) => sessionLines(s, r, dxPointer));
+    const pages = Math.max(1, Math.ceil(allLines.length / CMS_LINES_PER_FORM));
+    const carrierCode = r.carrierCode?.(insurerId) ?? "";
     for (let page = 0; page < pages; page++) {
-      const slice = sorted.slice(page * CMS_LINES_PER_FORM, (page + 1) * CMS_LINES_PER_FORM);
-      const lines: ClaimLine[] = slice.map((s) => ({
-        date: s.dateOfService, pos: "11", cpt: s.cptCodes.join(", "), mod: "",
-        dxPointer: dx.length ? "A" : "",
-        charge: s.totalCost, units: Math.max(1, Math.round(s.durationHours || 1)),
-        renderingNpi: r.renderingNpi(s.clinicianId), renderingName: r.clinName(s.clinicianId),
-      }));
+      const lines = allLines.slice(page * CMS_LINES_PER_FORM, (page + 1) * CMS_LINES_PER_FORM);
+      const total = r2(lines.reduce((t, l) => t + l.charge, 0));
       forms.push({
         key: `${insurerId}-${page}`,
-        payerName: r.insName(insurerId),
+        payerName: r.insName(insurerId), carrierCode,
         page: page + 1, pages,
         patientName, insuredName,
-        dob: p.dob, sex: p.sex, relationship: p.insurance?.relationship ?? "self",
-        insuredDob: selfInsured ? p.dob : p.insurance?.insuredDob,
+        dob: mdy(p.dob), sex: p.sex, relationship: p.insurance?.relationship ?? "self",
+        insuredDob: mdy(selfInsured ? p.dob : p.insurance?.insuredDob),
         memberId: p.insurance?.memberId, groupNo: p.insurance?.groupNo,
         planName: p.insurance?.planName || r.insName(insurerId),
         address, phone: p.phone,
         diagnosis: dx,
-        lines, total: Math.round(slice.reduce((t, s) => t + s.totalCost, 0) * 100) / 100,
-        signature: slice[0] ? r.clinName(slice[0].clinicianId) : "",
+        lines,
+        total, amountPaid: 0, balanceDue: total,
+        signature: lines[0] ? lines[0].renderingName : "",
       });
     }
   }
