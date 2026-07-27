@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { listInsurers } from "@/lib/billing";
-import { listClients, listAllClients, type Client } from "@/lib/clients";
+import { listInsurers, listSessions, listExternalClinicians } from "@/lib/billing";
+import { listClients, listAllClients } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
-import { listExternalClinicians } from "@/lib/billing";
+import ClientsList, { type ClientRow } from "@/components/billing/ClientsList";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +23,32 @@ export default async function ClientsPage() {
   if (!user) redirect("/login?next=/billing/clients");
 
   const seesAll = isBiller(user.role) || isOwner(user.role);
-  const [clients, insurers, external] = await Promise.all([
+  const [clients, insurers, external, sessions] = await Promise.all([
     seesAll ? listAllClients() : listClients(user.clinician.id),
     listInsurers(),
     listExternalClinicians(),
+    seesAll ? listSessions() : listSessions({ clinicianId: user.clinician.id }),
   ]);
   const insName = (id: string | null) => insurers.find((i) => i.id === id)?.name ?? (id ? "Unknown" : "Self-pay");
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
 
-  const sorted = [...clients].sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`));
+  // How many insured (claimable) sessions each client has — drives whether they
+  // can be picked for a batch claim run.
+  const billableByClient = new Map<string, number>();
+  for (const s of sessions) {
+    if (!s.clientId || !s.insurerId) continue;
+    billableByClient.set(s.clientId, (billableByClient.get(s.clientId) ?? 0) + 1);
+  }
+
+  const rows: ClientRow[] = [...clients]
+    .sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`))
+    .map((c) => ({
+      id: c.id, first: c.first, last: c.last,
+      dob: c.profile.dob ?? null, age: age(c.profile.dob),
+      insurer: insName(c.insurerId),
+      seenBy: seesAll ? c.clinicianIds.map(clinName).join(", ") : "",
+      billable: billableByClient.get(c.id) ?? 0,
+    }));
 
   return (
     <>
@@ -40,46 +56,11 @@ export default async function ClientsPage() {
         <h1 className="su-h1">{seesAll ? "Clients" : "My clients"}</h1>
         <p className="su-sub">
           {seesAll
-            ? "Every client in the practice. Open one to see their details and everything logged with them, and to build a CMS-1500 claim."
-            : "The clients you've seen. Open one to see their details and their whole history with you."}
+            ? "Every client in the practice. Open one for their details and history, or tick several and build their CMS-1500 claims in one run."
+            : "The clients you've seen. Open one for their details and history, or tick several to build their CMS-1500 claims together."}
         </p>
       </div>
-
-      <div className="su-sec">
-        <div className="su-card">
-          {sorted.length === 0 ? (
-            <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients yet</div><div className="small">They&apos;ll appear here once sessions are logged or a roster is imported.</div></div>
-          ) : (
-            <div className="su-tblwrap">
-              <table className="su-tbl" style={{ minWidth: 560 }}>
-                <thead>
-                  <tr>
-                    <th>Client</th>
-                    <th>Date of birth</th>
-                    <th>Usual insurer</th>
-                    {seesAll && <th>Seen by</th>}
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((c: Client) => {
-                    const a = age(c.profile.dob);
-                    return (
-                      <tr key={c.id}>
-                        <td className="nm">{c.last}, {c.first}</td>
-                        <td>{c.profile.dob ? <>{c.profile.dob}{a != null && <span className="su-hint"> · {a}y</span>}</> : <span className="su-hint">—</span>}</td>
-                        <td>{insName(c.insurerId)}</td>
-                        {seesAll && <td className="su-hint">{c.clinicianIds.map(clinName).join(", ") || "—"}</td>}
-                        <td style={{ textAlign: "right" }}><Link className="su-link" href={`/billing/clients/${c.id}`}>Open →</Link></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+      <ClientsList rows={rows} seesAll={seesAll} />
     </>
   );
 }
