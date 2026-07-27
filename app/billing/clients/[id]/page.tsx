@@ -5,6 +5,7 @@ import { listInsurers, listCptCodes, listSessions } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
+import { findIntakeForClient } from "@/lib/intakeLink";
 import ClientDetail, { type Activity } from "@/components/billing/ClientDetail";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +22,15 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   // Isolation: a clinician may only open a client linked to them.
   if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id))) redirect("/billing/clients");
 
-  const [insurers, cptCodes, sessions, external] = await Promise.all([
+  const [insurers, cptCodes, sessions, external, intakeForms] = await Promise.all([
     listInsurers(),
     listCptCodes(),
     // The biller/owner see every visit for this client (across clinicians); a
     // clinician sees only their own visits with them.
     seesAll ? listSessions({ clientId: id }) : listSessions({ clientId: id, clinicianId: user.clinician.id }),
     listExternalClinicians(),
+    // Connect the intake system: find this client's intake form(s) by name + DOB.
+    findIntakeForClient(client.first, client.last, client.profile.dob),
   ]);
   const insName = (idv: string | null) => insurers.find((i) => i.id === idv)?.name ?? (idv ? "Unknown" : "Self-pay");
   const clinName = (cid: string) => getClinician(cid)?.name ?? external.find((c) => c.id === cid)?.name ?? cid;
@@ -59,6 +62,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         canEdit
         canDelete={seesAll}
         today={new Date().toISOString().slice(0, 10)}
+        intakeForms={intakeForms}
+        currentUserId={user.clinician.id}
       />
     </>
   );

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ClientProfile } from "@/lib/clients";
+import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
 
 const randId = () => Math.random().toString(36).slice(2, 10);
@@ -22,12 +24,13 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "",
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "",
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
   insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
   activity: Activity[]; canEdit: boolean; canDelete?: boolean; today?: string;
+  intakeForms?: LinkedIntake[]; currentUserId?: string;
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
@@ -263,7 +266,26 @@ export default function ClientDetail({
       {/* ---- Documents ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Documents</h2>
-          <span className="su-hint">The intake form, the referral letter, and anything else for this client. Add a link to each.</span></div>
+          <span className="su-hint">The intake form (linked from the intake system), the referral letter, and anything else for this client.</span></div>
+
+        {intakeForms.length > 0 && (
+          <div className="su-card" style={{ padding: 16, marginBottom: 12 }}>
+            <div className="cd-fl" style={{ marginBottom: 8 }}>From the intake system</div>
+            <div className="cd-doclist">
+              {intakeForms.map((f) => (
+                <div className="cd-doc" key={f.token}>
+                  <span className="cd-dockind intake">intake</span>
+                  {currentUserId === f.clinicianId
+                    ? <Link href={`/submissions/${f.token}`} className="cd-docname">{f.formLabel}</Link>
+                    : <span className="cd-docname" style={{ color: "var(--ink,#1c2330)" }}>{f.formLabel}</span>}
+                  <span className="su-hint">{f.clinicianName} · {f.status}{currentUserId !== f.clinicianId ? " · clinician only" : ""}</span>
+                  <span className="cd-docdate">{f.createdAt.slice(0, 10)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="su-card" style={{ padding: 16 }}>
           {docs.length === 0 ? (
             <p className="su-hint" style={{ margin: "0 0 12px" }}>No documents yet.</p>
