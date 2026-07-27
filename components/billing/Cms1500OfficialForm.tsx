@@ -70,10 +70,9 @@ export default function Cms1500OfficialForm({ f, provider }: {
         </div>
       </div>
 
-      {/* ---- Row: 9 other insured | 10 condition | 11 insured policy ---- */}
+      {/* ---- Row: 10 condition | 11 insured policy ---- */}
       <div className="cf-row">
-        <div className="cf-c" style={{ flex: "1.55" }}><b>9.</b> OTHER INSURED&apos;S NAME<div className="cf-v" /></div>
-        <div className="cf-c" style={{ flex: ".9" }}><b>10.</b> IS PATIENT&apos;S CONDITION RELATED TO:
+        <div className="cf-c" style={{ flex: "1.55" }}><b>10.</b> IS PATIENT&apos;S CONDITION RELATED TO:
           <div className="cf-v cf-cond">a. EMPLOYMENT? YES <X /> NO <X on /></div>
           <div className="cf-v cf-cond">b. AUTO ACCIDENT? YES <X /> NO <X on /></div>
           <div className="cf-v cf-cond">c. OTHER ACCIDENT? YES <X /> NO <X on /></div>
@@ -92,30 +91,13 @@ export default function Cms1500OfficialForm({ f, provider }: {
         <div className="cf-c" style={{ flex: "1.9" }}><b>13.</b> INSURED&apos;S OR AUTHORIZED PERSON&apos;S SIGNATURE<div className="cf-v cf-sig">SIGNATURE ON FILE</div></div>
       </div>
 
-      {/* ---- Row: 14/15/16 | 17 referring | 18 hospitalization ---- */}
+      {/* ---- Row: 21 diagnosis ---- */}
       <div className="cf-row">
-        <div className="cf-c" style={{ flex: "1.55" }}><b>14.</b> DATE OF CURRENT ILLNESS / INJURY / PREGNANCY<div className="cf-v" /></div>
-        <div className="cf-c" style={{ flex: ".9" }}><b>15.</b> IF PATIENT HAS HAD SAME OR SIMILAR ILLNESS<div className="cf-v" /></div>
-        <div className="cf-c" style={{ flex: "1" }}><b>16.</b> DATES UNABLE TO WORK<div className="cf-v" /></div>
-      </div>
-      <div className="cf-row">
-        <div className="cf-c" style={{ flex: "1.55" }}><b>17.</b> NAME OF REFERRING PROVIDER<div className="cf-v" /><div className="cf-inline"><span><b>17b.</b> NPI</span></div></div>
-        <div className="cf-c" style={{ flex: ".9" }}><b>18.</b> HOSPITALIZATION DATES<div className="cf-v" /></div>
-        <div className="cf-c" style={{ flex: "1" }}><b>20.</b> OUTSIDE LAB? YES <X /> NO <X on /><div className="cf-v" /></div>
-      </div>
-      <div className="cf-row">
-        <div className="cf-c" style={{ flex: "1.55" }}><b>19.</b> RESERVED FOR LOCAL USE<div className="cf-v">{f.carrierCode ? `# ${f.carrierCode}` : ""}</div></div>
-        <div className="cf-c" style={{ flex: "1.9" }}><b>22.</b> MEDICAID RESUBMISSION / ORIGINAL REF. NO.<div className="cf-v" /></div>
-      </div>
-
-      {/* ---- Row: 21 diagnosis | 22 | 23 ---- */}
-      <div className="cf-row">
-        <div className="cf-c" style={{ flex: "2" }}><b>21.</b> DIAGNOSIS OR NATURE OF ILLNESS OR INJURY (Relate to 24E by line)
+        <div className="cf-c" style={{ flex: "1" }}><b>21.</b> DIAGNOSIS OR NATURE OF ILLNESS OR INJURY (Relate to 24E by line)
           <div className="cf-dxgrid">
             {[0, 1, 2, 3].map((i) => <span key={i} className="cf-dx"><i>{i + 1}.</i> {f.diagnosis[i] ?? ""}</span>)}
           </div>
         </div>
-        <div className="cf-c" style={{ flex: "1.45" }}><b>23.</b> PRIOR AUTHORIZATION NUMBER<div className="cf-v" /></div>
       </div>
 
       {/* ---- Box 24 service lines ---- */}
