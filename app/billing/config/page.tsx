@@ -23,6 +23,8 @@ export default async function SetupPage() {
       settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, billerPct: s.billerPct ?? 0 }))}
       billerPct={cfg.billerCommissionPct}
       expenses={cfg.runningExpenses}
+      provider={cfg.provider ?? {}}
+      renderingClinicians={CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name }))}
       billerName={biller.name}
       billerInitials={initials(biller.name)}
     />

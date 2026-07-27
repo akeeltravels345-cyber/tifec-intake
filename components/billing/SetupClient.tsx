@@ -9,6 +9,11 @@ interface Cpt { code: string; description: string; fee: number; hrs: number; act
 interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; billerPct: number; }
 interface Expense { id: string; name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[]; }
 interface ClinRef { id: string; name: string; }
+interface Provider {
+  practiceName?: string; npi?: string; ein?: string; taxonomy?: string;
+  addressLine1?: string; addressLine2?: string; city?: string; region?: string; postal?: string; country?: string; phone?: string;
+  renderingNpi?: Record<string, string>;
+}
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 async function post(body: Record<string, unknown>) {
@@ -16,14 +21,21 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, billerName, billerInitials }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, provider: provIn, renderingClinicians = [], billerName, billerInitials }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
-  billerPct: number; expenses: Expense[]; billerName: string; billerInitials: string;
+  billerPct: number; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
+  billerName: string; billerInitials: string;
 }) {
   const router = useRouter();
   const [toast, setToast] = useState("");
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1800); router.refresh(); };
   const run = async (body: Record<string, unknown>, msg: string) => { try { await post(body); flash(msg); } catch (e) { setToast(e instanceof Error ? e.message : "Error"); setTimeout(() => setToast(""), 2200); } };
+
+  // Practice / provider identifiers for CMS-1500 claims.
+  const [prov, setProv] = useState<Provider>(provIn ?? {});
+  const [rnpi, setRnpi] = useState<Record<string, string>>((provIn ?? {}).renderingNpi ?? {});
+  const setP = (k: keyof Provider, v: string) => setProv((p) => ({ ...p, [k]: v }));
+  const saveProvider = () => run({ entity: "provider", provider: { ...prov, renderingNpi: rnpi } }, "Practice details saved");
 
   // practice config (biller % + expenses) held together
   const [billerPct, setBillerPct] = useState(String(pctIn));
@@ -43,6 +55,38 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   return (
     <>
       <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits.</p></div>
+
+      {/* Practice / provider details for CMS-1500 */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Practice details (for CMS-1500 claims)</h2><span className="su-hint">The billing-provider identifiers that print on every claim (boxes 25, 32, 33) and each clinician&apos;s rendering NPI (box 24J). Fill these once.</span></div>
+        <div className="su-card cd-grid">
+          <div className="cd-f"><span className="cd-fl">Practice name</span><input className="ls-in" value={prov.practiceName ?? ""} onChange={(e) => setP("practiceName", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Phone</span><input className="ls-in" value={prov.phone ?? ""} onChange={(e) => setP("phone", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Billing NPI (box 33a)</span><input className="ls-in" value={prov.npi ?? ""} onChange={(e) => setP("npi", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Federal Tax ID / EIN (box 25)</span><input className="ls-in" value={prov.ein ?? ""} onChange={(e) => setP("ein", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Taxonomy code</span><input className="ls-in" value={prov.taxonomy ?? ""} onChange={(e) => setP("taxonomy", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Address line 1</span><input className="ls-in" value={prov.addressLine1 ?? ""} onChange={(e) => setP("addressLine1", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Address line 2</span><input className="ls-in" value={prov.addressLine2 ?? ""} onChange={(e) => setP("addressLine2", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">City</span><input className="ls-in" value={prov.city ?? ""} onChange={(e) => setP("city", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">District / region</span><input className="ls-in" value={prov.region ?? ""} onChange={(e) => setP("region", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Postal code</span><input className="ls-in" value={prov.postal ?? ""} onChange={(e) => setP("postal", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Country</span><input className="ls-in" value={prov.country ?? ""} onChange={(e) => setP("country", e.target.value)} /></div>
+          {renderingClinicians.length > 0 && (
+            <div className="cd-f" style={{ gridColumn: "span 2" }}>
+              <span className="cd-fl">Rendering NPI per clinician (box 24J)</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
+                {renderingClinicians.map((c) => (
+                  <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                    <span style={{ minWidth: 130, color: "var(--muted)" }}>{c.name}</span>
+                    <input className="ls-in" value={rnpi[c.id] ?? ""} onChange={(e) => setRnpi((m) => ({ ...m, [c.id]: e.target.value }))} placeholder="NPI" />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="cd-save"><button className="su-save" onClick={saveProvider}>Save practice details</button></div>
+        </div>
+      </div>
 
       {/* Biller commission */}
       <div className="su-sec">

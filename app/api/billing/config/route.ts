@@ -5,11 +5,12 @@ import {
   upsertInsurer, deleteInsurer,
   upsertCptCode, deleteCptCode,
   upsertClinicianSettings,
-  savePracticeConfig,
-  type CopayType, type RunningExpense,
+  savePracticeConfig, getPracticeConfig,
+  type CopayType, type RunningExpense, type ProviderConfig,
 } from "@/lib/billing";
 
 const n = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
+const t = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -66,7 +67,25 @@ export async function POST(req: Request) {
             breakdown: Array.isArray(e.breakdown) ? (e.breakdown as Record<string, unknown>[]).map((b) => ({ label: String(b.label ?? ""), amount: n(b.amount) })) : undefined,
           })) as RunningExpense[]
         : [];
-      await savePracticeConfig({ billerCommissionPct: n(body.billerCommissionPct), runningExpenses: expenses });
+      // Preserve the provider block (saved separately) when writing biller % + expenses.
+      const current = await getPracticeConfig();
+      await savePracticeConfig({ ...current, billerCommissionPct: n(body.billerCommissionPct), runningExpenses: expenses });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (entity === "provider") {
+      const p = (body.provider ?? {}) as Record<string, unknown>;
+      const renderingIn = (p.renderingNpi ?? {}) as Record<string, unknown>;
+      const renderingNpi: Record<string, string> = {};
+      for (const [cid, v] of Object.entries(renderingIn)) { const npi = t(v); if (npi) renderingNpi[cid] = npi; }
+      const provider: ProviderConfig = {
+        practiceName: t(p.practiceName), npi: t(p.npi), ein: t(p.ein), taxonomy: t(p.taxonomy),
+        addressLine1: t(p.addressLine1), addressLine2: t(p.addressLine2), city: t(p.city),
+        region: t(p.region), postal: t(p.postal), country: t(p.country), phone: t(p.phone),
+        renderingNpi: Object.keys(renderingNpi).length ? renderingNpi : undefined,
+      };
+      const current = await getPracticeConfig();
+      await savePracticeConfig({ ...current, provider });
       return NextResponse.json({ ok: true });
     }
 
