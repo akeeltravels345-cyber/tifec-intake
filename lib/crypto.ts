@@ -47,3 +47,12 @@ export function secureToken(): string {
 export function randomId(): string {
   return crypto.randomBytes(16).toString("hex");
 }
+
+/** Deterministic keyed hash of a value, for equality matching on encrypted
+ *  data (a "blind index"). Same input → same output, so two records for the
+ *  same client can be matched without ever storing the name in plaintext.
+ *  Uses the encryption key, so it's useless to anyone without it. */
+export function blindIndex(value: string): string {
+  const norm = value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
+  return crypto.createHmac("sha256", getKey()).update(norm).digest("hex");
+}

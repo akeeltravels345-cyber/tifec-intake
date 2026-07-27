@@ -29,6 +29,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // pdf-parse (and its pdfjs dependency) must run as a real Node module, not be
+  // bundled — bundling breaks its worker/module resolution on the server.
+  serverExternalPackages: ["pdf-parse"],
   // Pin the workspace root so Next doesn't get confused by other lockfiles
   // that may exist higher up in the home directory.
   turbopack: {

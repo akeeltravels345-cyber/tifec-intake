@@ -200,7 +200,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                     return (
                       <button type="button" key={k} className={`ls-clientrow ${picked === k ? "on" : ""}`} onClick={() => pickClient(c)}>
                         <span className="nm">{c.first} {c.last}</span>
-                        <span className="meta">{c.visits} visit{c.visits === 1 ? "" : "s"} · last {c.lastVisit}</span>
+                        <span className="meta">{c.visits === 0 ? "from your records · no visit logged yet" : `${c.visits} visit${c.visits === 1 ? "" : "s"} · last ${c.lastVisit}`}</span>
                       </button>
                     );
                   })}

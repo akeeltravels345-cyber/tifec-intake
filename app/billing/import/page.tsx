@@ -4,6 +4,7 @@ import { getBillingUser, isBiller } from "@/lib/billingRole";
 import { listInsurers, listExternalClinicians } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
 import ImportClient from "@/components/billing/ImportClient";
+import ClientImport from "@/components/billing/ClientImport";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export default async function ImportPage() {
     ...CLINICIANS.filter((c) => !c.intakeHidden).map((c) => ({ id: c.id, name: c.name })),
     ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name })),
   ];
+  // Roster import is per practising clinician — never the biller or hidden admin.
+  const rosterClinicians = CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <>
@@ -29,6 +32,7 @@ export default async function ImportPage() {
           Bring in the claims you&apos;re already tracking elsewhere, billed or not. Nothing is saved until you&apos;ve seen the preview and pressed import, and a claim that&apos;s already here won&apos;t be added twice.
         </p>
       </div>
+      <ClientImport clinicians={rosterClinicians} />
       <ImportClient clinicians={clinicians} insurers={insurers.map((i) => ({ id: i.id, name: i.name }))} />
     </>
   );

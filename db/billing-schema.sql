@@ -81,3 +81,18 @@ CREATE TABLE IF NOT EXISTS billing_session_cpt (
   code       TEXT NOT NULL,
   PRIMARY KEY (session_id, code)
 );
+
+-- Persistent client roster per clinician (ADDITIVE). Lets a client be picked
+-- when logging a session even before their first one — e.g. imported from a
+-- practice's existing records. Names are AES-encrypted; name_key is a blind
+-- index (keyed hash) so the same client can be matched for dedup without ever
+-- storing the name in plaintext. Always queried scoped to one clinician.
+CREATE TABLE IF NOT EXISTS billing_clients (
+  id           TEXT PRIMARY KEY,
+  clinician_id TEXT NOT NULL,
+  name_enc     TEXT NOT NULL,              -- AES of {first,last}
+  name_key     TEXT NOT NULL,              -- blind index for dedup
+  insurer_id   TEXT,                       -- usual insurer (null = self-pay)
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS billing_clients_uniq ON billing_clients (clinician_id, name_key);

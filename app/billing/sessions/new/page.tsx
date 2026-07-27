@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listSessions } from "@/lib/billing";
+import { listClients } from "@/lib/clients";
 import SessionForm from "@/components/billing/SessionForm";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +11,11 @@ export default async function NewSessionPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/sessions/new");
 
-  const [insurers, cptCodes, mySessions] = await Promise.all([
+  const [insurers, cptCodes, mySessions, roster] = await Promise.all([
     listInsurers(),
     listCptCodes(),
     listSessions({ clinicianId: user.clinician.id }),
+    listClients(user.clinician.id),
   ]);
   const activeInsurers = insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, copayType: i.copayType, copayRate: i.copayRate }));
   const activeCpt = cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1 }));
@@ -30,7 +32,15 @@ export default async function NewSessionPage() {
     // Sorted newest-first, so the first sighting carries their latest insurer.
     else seen.set(key, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService, visits: 1 });
   }
-  const clients = [...seen.values()];
+  // Fold in imported clients who have no logged session yet, so they're
+  // selectable too. Someone already seen via a session keeps that entry.
+  for (const c of roster) {
+    const first = c.first?.trim() ?? "", last = c.last?.trim() ?? "";
+    if (!first && !last) continue;
+    const key = `${first}|${last}`.toLowerCase();
+    if (!seen.has(key)) seen.set(key, { first, last, insurerId: c.insurerId, lastVisit: "", visits: 0 });
+  }
+  const clients = [...seen.values()].sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`));
 
   // Which codes this clinician actually reaches for. Practice-wide only 5 of the
   // 39 codes have ever been used, so leading with their own habits beats a wall
