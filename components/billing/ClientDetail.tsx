@@ -29,6 +29,7 @@ export default function ClientDetail({
   const [edit, setEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [sel, setSel] = useState<Set<string>>(new Set());
 
   // Flat form state mirrors the nested profile; assembled back on save.
   const [ins, setIns] = useState(insurerId ?? "");
@@ -75,7 +76,12 @@ export default function ClientDetail({
     finally { setBusy(false); }
   }
 
+  // Only insured (non self-pay) entries can go on a CMS-1500.
   const billable = activity.filter((a) => a.stage !== "self");
+  const toggleSel = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allSelected = billable.length > 0 && billable.every((a) => sel.has(a.id));
+  const toggleAll = () => setSel((s) => { if (allSelected) return new Set(); const n = new Set(s); billable.forEach((a) => n.add(a.id)); return n; });
+  const generateSelected = () => { if (sel.size) router.push(`/billing/clients/batch?sessions=${[...sel].join(",")}`); };
   const field = (label: string, node: React.ReactNode) => (
     <div className="cd-f"><span className="cd-fl">{label}</span>{node}</div>
   );
@@ -152,25 +158,42 @@ export default function ClientDetail({
       {/* ---- Activity ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Everything logged with this client</h2>
-          <span className="su-hint">{activity.length} session{activity.length === 1 ? "" : "s"}{billable.length ? ` · ${billable.length} billable` : ""}</span></div>
+          <span className="su-hint">Every appointment logged in the system{activity.length ? ` · ${activity.length} session${activity.length === 1 ? "" : "s"}` : ""}{billable.length ? ` · tick the ones you're claiming, then build the CMS-1500` : ""}</span></div>
+
+        {sel.size > 0 && (
+          <div className="cd-selbar">
+            <span>{sel.size} entr{sel.size === 1 ? "y" : "ies"} selected · {money(billable.filter((a) => sel.has(a.id)).reduce((t, a) => t + a.total, 0))}</span>
+            <div style={{ flex: 1 }} />
+            <button className="bl-cta" onClick={generateSelected}>Generate CMS-1500 from selected</button>
+            <button className="su-del" onClick={() => setSel(new Set())}>Clear</button>
+          </div>
+        )}
+
         <div className="su-card">
           {activity.length === 0 ? (
             <div className="bq-empty" style={{ padding: 24 }}><div className="big">No sessions logged yet</div></div>
           ) : (
             <div className="su-tblwrap">
-              <table className="su-tbl" style={{ minWidth: 620 }}>
-                <thead><tr><th>Date</th><th>Clinician</th><th>Service</th><th>Insurer</th><th className="num">Fee</th><th>Status</th></tr></thead>
+              <table className="su-tbl" style={{ minWidth: 660 }}>
+                <thead><tr>
+                  <th style={{ width: 30 }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all billable entries" /></th>
+                  <th>Date</th><th>Clinician</th><th>Service</th><th>Insurer</th><th className="num">Fee</th><th>Status</th>
+                </tr></thead>
                 <tbody>
-                  {activity.map((a) => (
-                    <tr key={a.id}>
-                      <td className="nm">{a.date}</td>
-                      <td className="su-hint">{a.clinician}</td>
-                      <td>{a.codes.join(", ") || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
-                      <td>{a.insurer}</td>
-                      <td className="num">{money(a.total)}</td>
-                      <td><span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span></td>
-                    </tr>
-                  ))}
+                  {activity.map((a) => {
+                    const claimable = a.stage !== "self";
+                    return (
+                      <tr key={a.id} className={sel.has(a.id) ? "cd-selrow" : ""}>
+                        <td><input type="checkbox" checked={sel.has(a.id)} disabled={!claimable} onChange={() => toggleSel(a.id)} title={claimable ? undefined : "Self-pay visits don't go on a CMS-1500"} aria-label={`Select ${a.date}`} /></td>
+                        <td className="nm">{a.date}</td>
+                        <td className="su-hint">{a.clinician}</td>
+                        <td>{a.codes.join(", ") || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
+                        <td>{a.insurer}</td>
+                        <td className="num">{money(a.total)}</td>
+                        <td><span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

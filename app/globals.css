@@ -1827,6 +1827,8 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-stage.logged { background: #eef4f3; color: #1f6b52; }
 .cd-stage.billed { background: #fdf3e0; color: #9a6a17; }
 .cd-stage.paid { background: #e7f3ec; color: #1f6b52; }
+.cd-selbar { display: flex; align-items: center; gap: 12px; background: #eef4f3; border: 1px solid #cfe3dc; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; font-size: 13.5px; color: var(--ink, #1c2330); }
+.cd-selrow { background: #eef4f3; }
 @media (max-width: 640px) { .cd-grid { grid-template-columns: 1fr; } .cd-save, .hcfa-cell.wide { grid-column: span 1; } }
 .bq-bulk { position: fixed; left: 282px; right: 40px; bottom: 22px; display: flex; align-items: center; gap: 16px; background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 20px; box-shadow: 0 18px 44px rgba(20,20,30,.32); z-index: 20; }
 .bq-bulk .bt { font-weight: 700; font-size: 14px; }
