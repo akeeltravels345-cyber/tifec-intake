@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface N { id: string; title: string; body: string; eventAt: string | null; pinned: boolean; createdAt: string; author: string }
+interface N { id: string; title: string; body: string; eventAt: string | null; pinned: boolean; createdAt: string; authorId: string; author: string }
+
+/** ISO timestamp → the value a <input type="datetime-local"> expects. */
+const toLocalInput = (iso: string | null) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -15,7 +24,7 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed");
 }
 
-export default function NoticeBoard({ notices, canPost }: { notices: N[]; canPost: boolean }) {
+export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = false }: { notices: N[]; canPost: boolean; meId?: string; isAdmin?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -24,6 +33,30 @@ export default function NoticeBoard({ notices, canPost }: { notices: N[]; canPos
   const [pinned, setPinned] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Inline edit of an existing notice.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eTitle, setETitle] = useState("");
+  const [eBody, setEBody] = useState("");
+  const [eEventAt, setEEventAt] = useState("");
+  const [ePinned, setEPinned] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+
+  // Only the person who posted a notice, or an admin, may change it.
+  const canManage = (n: N) => n.authorId === meId || isAdmin;
+
+  function startEdit(n: N) {
+    setEditId(n.id); setETitle(n.title); setEBody(n.body); setEEventAt(toLocalInput(n.eventAt)); setEPinned(n.pinned); setError("");
+  }
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !editId) return;
+    setBusy(true); setError("");
+    try {
+      await post({ action: "notice:edit", id: editId, title: eTitle, body: eBody, eventAt: eEventAt, pinned: ePinned });
+      setEditId(null); router.refresh();
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,11 +117,45 @@ export default function NoticeBoard({ notices, canPost }: { notices: N[]; canPos
         </div>
       ) : (
         <div className="tm-notices">
-          {notices.map((n) => (
+          {notices.map((n) => editId === n.id ? (
+            <form key={n.id} className="tm-card tm-form" onSubmit={saveEdit}>
+              <label className="tm-l">Title</label>
+              <input className="tm-in" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+              <label className="tm-l">Notice</label>
+              <textarea className="tm-in" rows={4} value={eBody} onChange={(e) => setEBody(e.target.value)} />
+              <div className="tm-row">
+                <div style={{ flex: 1 }}>
+                  <label className="tm-l">Meeting date &amp; time <span className="tm-opt">optional</span></label>
+                  <input className="tm-in" type="datetime-local" value={eEventAt} onChange={(e) => setEEventAt(e.target.value)} />
+                </div>
+                <label className="tm-check"><input type="checkbox" checked={ePinned} onChange={(e) => setEPinned(e.target.checked)} /> Pin</label>
+              </div>
+              {error && <p className="tm-err">{error}</p>}
+              <div className="tm-actions">
+                <button className="tm-cta" type="submit" disabled={busy || !eTitle.trim() || !eBody.trim()}>{busy ? "Saving…" : "Save changes"}</button>
+                <button className="tm-ghost" type="button" onClick={() => { setEditId(null); setError(""); }}>Cancel</button>
+              </div>
+            </form>
+          ) : (
             <article key={n.id} className={`tm-card tm-notice ${n.pinned ? "pin" : ""}`}>
               <div className="tm-nhead">
                 <h2 className="tm-nt">{n.pinned && <span className="tm-pin">Pinned</span>}{n.title}</h2>
-                {canPost && <button className="tm-del" onClick={() => remove(n.id)}>Remove</button>}
+                {canManage(n) && (
+                  <div className="tm-nactions">
+                    {confirmDel === n.id ? (
+                      <>
+                        <span className="tm-delq">Delete?</span>
+                        <button className="tm-del" onClick={() => remove(n.id)}>Yes</button>
+                        <button className="tm-ghost" onClick={() => setConfirmDel(null)}>No</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="tm-editlink" onClick={() => startEdit(n)}>Edit</button>
+                        <button className="tm-del" onClick={() => setConfirmDel(n.id)}>Remove</button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               {n.eventAt && <div className="tm-meet">📅 {meetingWhen(n.eventAt)}</div>}
               <p className="tm-nb">{n.body}</p>

@@ -17,9 +17,11 @@ export default async function NoticesPage() {
   return (
     <NoticeBoard
       canPost={canPost}
+      meId={me.id}
+      isAdmin={!!me.admin}
       notices={notices.map((n) => ({
         id: n.id, title: n.title, body: n.body, eventAt: n.eventAt, pinned: n.pinned,
-        createdAt: n.createdAt, author: getClinician(n.authorId)?.name ?? n.authorId,
+        createdAt: n.createdAt, authorId: n.authorId, author: getClinician(n.authorId)?.name ?? n.authorId,
       }))}
     />
   );

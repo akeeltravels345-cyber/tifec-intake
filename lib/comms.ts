@@ -399,6 +399,24 @@ export async function markNotificationsRead(userId: string): Promise<void> {
   writeJson(NOTIF_FILE, all.map((n) => (n.userId === userId && !n.readAt ? { ...n, readAt: now } : n)));
 }
 
+export async function getNotice(id: string): Promise<Notice | undefined> {
+  return (await listNotices()).find((n) => n.id === id);
+}
+
+export async function updateNotice(id: string, input: { title: string; body: string; eventAt: string | null; pinned: boolean }): Promise<void> {
+  const titleEnc = encrypt(input.title), bodyEnc = encrypt(input.body);
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`UPDATE comms_notices SET title_enc = ${titleEnc}, body_enc = ${bodyEnc}, event_at = ${input.eventAt}, pinned = ${input.pinned} WHERE id = ${id}`;
+    return;
+  }
+  const all = readJson<StoredNotice[]>(NOT_FILE, []);
+  const n = all.find((x) => x.id === id);
+  if (!n) return;
+  n.titleEnc = titleEnc; n.bodyEnc = bodyEnc; n.eventAt = input.eventAt; n.pinned = input.pinned;
+  writeJson(NOT_FILE, all);
+}
+
 export async function deleteNotice(id: string): Promise<void> {
   if (usePostgres) {
     const sql = await pg();

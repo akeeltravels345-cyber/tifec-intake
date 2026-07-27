@@ -2029,6 +2029,10 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-notice { padding: 18px 20px; border-left: 3px solid transparent; }
 .tm-notice.pin { border-left-color: #BE8127; background: #FFFDF8; }
 .tm-nhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tm-nactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.tm-editlink { background: none; border: none; color: var(--muted); font: 600 12px "Open Sans"; cursor: pointer; }
+.tm-editlink:hover { color: var(--ink); }
+.tm-delq { font: 600 12px "Open Sans"; color: #a5432f; }
 .tm-nt { font: 500 18px "Newsreader", serif; color: var(--ink); margin: 0; }
 .tm-pin { display: inline-block; font: 700 10px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: #8a5d17; background: #F6ECD9; border-radius: 5px; padding: 2px 7px; margin-right: 8px; vertical-align: middle; }
 .tm-meet { font: 600 13px "Open Sans"; color: var(--teal-dark); background: #E9F3F3; border-radius: 8px; padding: 7px 11px; margin: 10px 0 0; display: inline-block; }

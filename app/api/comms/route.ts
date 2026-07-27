@@ -5,7 +5,7 @@ import { sendTeamEmail } from "@/lib/email";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
-  createNotice, deleteNotice, notify, listNotifications, markNotificationsRead,
+  createNotice, deleteNotice, getNotice, updateNotice, notify, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
@@ -177,11 +177,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, id: n.id });
     }
 
-    if (action === "notice:delete") {
-      if (!isContact(me.id)) {
-        return NextResponse.json({ error: "Not allowed." }, { status: 403 });
+    // Editing/removing a notice: only the person who posted it, or an admin.
+    if (action === "notice:edit" || action === "notice:delete") {
+      const id = String(body.id ?? "");
+      const notice = await getNotice(id);
+      if (!notice) return NextResponse.json({ error: "Notice not found." }, { status: 404 });
+      const isAdmin = !!getClinician(me.id)?.admin;
+      if (notice.authorId !== me.id && !isAdmin) {
+        return NextResponse.json({ error: "You can only edit or remove your own notices." }, { status: 403 });
       }
-      await deleteNotice(String(body.id ?? ""));
+      if (action === "notice:delete") {
+        await deleteNotice(id);
+        return NextResponse.json({ ok: true });
+      }
+      const title = String(body.title ?? "").trim();
+      if (!title) return NextResponse.json({ error: "A title is required." }, { status: 400 });
+      const text = String(body.body ?? "").trim();
+      if (!text) return NextResponse.json({ error: "Write the notice." }, { status: 400 });
+      const eventAtRaw = String(body.eventAt ?? "").trim();
+      const eventAt = eventAtRaw ? new Date(eventAtRaw).toISOString() : null;
+      if (eventAtRaw && (!eventAt || eventAt === "Invalid Date")) return NextResponse.json({ error: "That date didn't make sense." }, { status: 400 });
+      await updateNotice(id, { title, body: text, eventAt, pinned: body.pinned === true });
       return NextResponse.json({ ok: true });
     }
 
