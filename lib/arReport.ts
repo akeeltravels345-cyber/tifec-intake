@@ -15,11 +15,16 @@ export interface ParsedClient {
   last: string;
   raw: string;          // "Last, First" as printed, for display in the preview
   insurerName: string | null;  // null = self-pay
+  dob?: string;         // "Accounts Receivable by Invoice" carries a DOB
+  outstanding?: number; // total due, from the AR report (0 otherwise)
+  invoiceDate?: string; // earliest invoice date (YYYY-MM-DD), for the queue
 }
 
 export interface ParsedReport {
   providerName: string | null;  // e.g. "O'Connor, Donnet"
   clients: ParsedClient[];
+  /** Which report this was, in case the caller wants to treat AR differently. */
+  kind: "ar" | "payments" | "unknown";
 }
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -41,8 +46,14 @@ export function parseArReport(text: string): ParsedReport {
   const provM = text.match(/Provider:\s*([^,]+,\s*[^,]+?)\s*,/);
   const providerName = provM ? norm(provM[1]) : null;
 
-  // Payor may be tab- or space-separated from the "Payor Name:" label depending
-  // on the extractor, so accept either.
+  // Two report shapes come out of the practice's system. Pick the parser by the
+  // report's own title.
+  if (/Accounts Receivable by Invoice/i.test(text)) {
+    return { providerName, kind: "ar", clients: parseArByInvoice(text) };
+  }
+
+  // "Payment Application Report" — payor may be tab- or space-separated from the
+  // "Payor Name:" label depending on the extractor, so accept either.
   const rows = [...text.matchAll(/(.+?)[\t ]+Payor Name:\s*Patient Name:\s*(.+)/g)];
 
   // Dedup by client, preferring an insurer over a self-pay entry (a client who
@@ -68,7 +79,69 @@ export function parseArReport(text: string): ParsedReport {
     }
   }
 
-  return { providerName, clients: [...byClient.values()] };
+  return { providerName, kind: "payments", clients: [...byClient.values()] };
+}
+
+/** "Accounts Receivable by Invoice": each client is a header line carrying an
+ *  optional phone and a DOB, followed by one or more invoice lines whose payor
+ *  sits after a tab, and an aging line. This is the true outstanding report, so
+ *  it also yields the amount owed per client. */
+function parseArByInvoice(text: string): ParsedClient[] {
+  const lines = text.split("\n");
+  const money = (s: string) => Number(s.replace(/[$,]/g, "")) || 0;
+  const byClient = new Map<string, ParsedClient>();
+  let cur: ParsedClient | null = null;
+
+  // A client header: "Last, First [Client Phone: …] DOB: dd/mm/yyyy"
+  const header = /^([^,\n]+,\s*[^\n]*?)\s+(?:Client Phone:[^\n]*?\s+)?DOB:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*$/;
+  // An invoice line ends with a tab then "PAYOR policy/…/… n".
+  const invoice = /\t([A-Za-z][A-Za-z .'&/-]*?)\s+\S*\d/;
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    if (/^GRAND TOTAL/i.test(line) || /Division Summary/i.test(line)) { cur = null; continue; }
+
+    const h = line.match(header);
+    if (h) {
+      const nameRaw = norm(h[1].replace(/\s+Client Phone:.*$/, ""));
+      const { first, last } = splitName(nameRaw);
+      const key = `${first}|${last}`.toLowerCase();
+      cur = byClient.get(key) ?? null;
+      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: h[2], outstanding: 0 }; byClient.set(key, cur); }
+      continue;
+    }
+    if (!cur) continue;
+
+    const inv = line.match(invoice);
+    if (inv && !cur.insurerName) {
+      const payor = norm(inv[1]);
+      // Self-pay AR rows carry the client's own name as the payor.
+      cur.insurerName = payor.toLowerCase() === cur.raw.toLowerCase() ? null : payor;
+    }
+    // The invoice line's first money amount is that invoice's total; sum them,
+    // and keep the earliest invoice date to date the outstanding claim.
+    const amt = line.match(/^\d+\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$([\d,]+\.\d{2})/);
+    if (amt) {
+      cur.outstanding = round2((cur.outstanding ?? 0) + money(amt[2]));
+      const iso = ddmmyyyyToIso(amt[1]);
+      if (iso && (!cur.invoiceDate || iso < cur.invoiceDate)) cur.invoiceDate = iso;
+    }
+  }
+
+  return [...byClient.values()];
+}
+
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/** The report prints dd/mm/yyyy; the app stores YYYY-MM-DD. */
+function ddmmyyyyToIso(s: string): string | null {
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let [, d, mo, y] = m;
+  if (y.length === 2) y = `20${y}`;
+  const dd = d.padStart(2, "0"), mm = mo.padStart(2, "0");
+  if (+mm < 1 || +mm > 12 || +dd < 1 || +dd > 31) return null;
+  return `${y}-${mm}-${dd}`;
 }
 
 /** Match a report payor name to one of the practice's insurers, loosely

@@ -3,8 +3,10 @@
 import { useState } from "react";
 
 interface Clin { id: string; name: string }
-interface Row { first: string; last: string; insurerName: string | null; insurerId: string | null; insurerMatched: boolean }
-interface Preview { providerName: string | null; forClinician: string; clients: Row[] }
+interface Row { first: string; last: string; insurerName: string | null; insurerId: string | null; insurerMatched: boolean; outstanding: number; invoiceDate: string | null }
+interface Preview { providerName: string | null; forClinician: string; clients: Row[]; kind: "ar" | "payments" | "unknown"; owedTotal: number }
+
+const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
   const [clinicianId, setClinicianId] = useState(clinicians[0]?.id ?? "");
@@ -12,7 +14,7 @@ export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ added: number; duplicates: number; forClinician: string } | null>(null);
+  const [done, setDone] = useState<{ added: number; duplicates: number; forClinician: string; claimsAdded: number; claimsSkipped: number; owedTotal: number; kind: string } | null>(null);
 
   const reset = () => { setPreview(null); setDone(null); setError(""); };
 
@@ -27,7 +29,7 @@ export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
       const res = await fetch("/api/billing/import-clients", { method: "POST", body: fd });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Import failed");
-      if (commit) { setDone({ added: j.added, duplicates: j.duplicates, forClinician: j.forClinician }); setPreview(null); setFile(null); }
+      if (commit) { setDone({ added: j.added, duplicates: j.duplicates, forClinician: j.forClinician, claimsAdded: j.claimsAdded ?? 0, claimsSkipped: j.claimsSkipped ?? 0, owedTotal: j.owedTotal ?? 0, kind: j.kind }); setPreview(null); setFile(null); }
       else setPreview(j);
     } catch (e) { setError(e instanceof Error ? e.message : "Import failed"); }
     finally { setBusy(false); }
@@ -68,6 +70,7 @@ export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
         <div className="su-card" style={{ padding: 16, marginTop: 14 }}>
           <b>Added {done.added} client{done.added === 1 ? "" : "s"} to {done.forClinician}.</b>
           {done.duplicates > 0 && <> {done.duplicates} were already on the list and were skipped.</>}
+          {done.claimsAdded > 0 && <> {done.claimsAdded} outstanding claim{done.claimsAdded === 1 ? "" : "s"} ({money(done.owedTotal)}) added to the billing queue.</>}
           {" "}They can now be picked when logging a session.
         </div>
       )}
@@ -76,12 +79,12 @@ export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
         <div style={{ marginTop: 14 }}>
           <div className="su-sechead" style={{ marginTop: 4 }}>
             <h3 className="su-sech" style={{ fontSize: 17 }}>Check it before it lands</h3>
-            <span className="su-hint">{providerNote}{preview.clients.length} client{preview.clients.length === 1 ? "" : "s"} found · they&apos;ll be added to <b>{preview.forClinician}</b></span>
+            <span className="su-hint">{providerNote}{preview.clients.length} client{preview.clients.length === 1 ? "" : "s"} found · added to <b>{preview.forClinician}</b>{preview.kind === "ar" && preview.owedTotal > 0 && <>, with <b>{money(preview.owedTotal)}</b> outstanding added to the billing queue</>}</span>
           </div>
           <div className="su-card">
             <div className="su-tblwrap">
               <table className="su-tbl" style={{ minWidth: 460 }}>
-                <thead><tr><th>Client</th><th>Usual insurer</th></tr></thead>
+                <thead><tr><th>Client</th><th>Usual insurer</th>{preview.kind === "ar" && <th className="num">Outstanding</th>}</tr></thead>
                 <tbody>
                   {preview.clients.map((c, i) => (
                     <tr key={i}>
@@ -91,6 +94,7 @@ export default function ClientImport({ clinicians }: { clinicians: Clin[] }) {
                           : c.insurerMatched ? c.insurerName
                           : <span style={{ color: "var(--neg)" }}>{c.insurerName} — not a known insurer</span>}
                       </td>
+                      {preview.kind === "ar" && <td className="num">{c.outstanding > 0 ? money(c.outstanding) : "—"}</td>}
                     </tr>
                   ))}
                 </tbody>
