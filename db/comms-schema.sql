@@ -71,3 +71,17 @@ CREATE TABLE IF NOT EXISTS comms_notifications (
   read_at    TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS comms_notifications_user_idx ON comms_notifications (user_id, read_at, created_at DESC);
+
+-- Email delivery log: one row per team email we ATTEMPTED, with its outcome, so
+-- "did the notice email go out?" is answerable. No PHI (only the kind, the staff
+-- recipient, and sent/failed/skipped).
+CREATE TABLE IF NOT EXISTS comms_email_log (
+  id              TEXT PRIMARY KEY,
+  recipient_id    TEXT,
+  recipient_email TEXT,
+  kind            TEXT,                    -- notice | ticket_new | ticket_reply | ticket_resolved
+  status          TEXT NOT NULL,           -- sent | failed | skipped
+  detail          TEXT,                    -- error / reason
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comms_email_log_at ON comms_email_log (created_at DESC);

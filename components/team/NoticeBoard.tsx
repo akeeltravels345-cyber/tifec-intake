@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface N { id: string; title: string; body: string; eventAt: string | null; pinned: boolean; createdAt: string; authorId: string; author: string }
 
@@ -79,7 +80,7 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
       <div className="tm-head">
         <div>
           <h1 className="tm-h1">Notice board</h1>
-          <p className="tm-sub">Announcements for everyone at TIFEC.</p>
+          <p className="tm-sub">Announcements for everyone at TIFEC.{isAdmin && <> · <Link href="/team/email-log" className="tm-editlink">Email delivery</Link></>}</p>
         </div>
         {canPost && <button className="tm-cta" onClick={() => setOpen(!open)}>{open ? "Cancel" : "Post a notice"}</button>}
       </div>

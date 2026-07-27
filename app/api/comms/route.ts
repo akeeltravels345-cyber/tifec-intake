@@ -5,7 +5,7 @@ import { sendTeamEmail } from "@/lib/email";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
-  createNotice, deleteNotice, getNotice, updateNotice, notify, listNotifications, markNotificationsRead,
+  createNotice, deleteNotice, getNotice, updateNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
@@ -16,9 +16,13 @@ const MAX_BODY = 5000;
 async function emailTeam(userIds: string[], build: (name: string) => Parameters<typeof sendTeamEmail>[0] | null) {
   await Promise.all([...new Set(userIds)].map(async (id) => {
     const c = getClinician(id);
-    if (!c?.email) return;
-    const args = build(c.name);
-    if (args) await sendTeamEmail({ ...args, to: c.email, recipientName: c.name });
+    const args = build(c?.name ?? id);
+    if (!args) return;
+    if (!c?.email) { await logEmail({ recipientId: id, recipientEmail: "", kind: args.kind, status: "skipped", detail: "no email on file" }); return; }
+    let res: { sent: boolean; reason?: string };
+    try { res = await sendTeamEmail({ ...args, to: c.email, recipientName: c.name }); }
+    catch (e) { res = { sent: false, reason: e instanceof Error ? e.message : "send threw" }; }
+    await logEmail({ recipientId: id, recipientEmail: c.email, kind: args.kind, status: res.sent ? "sent" : "failed", detail: res.reason ?? "" });
   }));
 }
 

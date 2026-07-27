@@ -399,6 +399,39 @@ export async function markNotificationsRead(userId: string): Promise<void> {
   writeJson(NOTIF_FILE, all.map((n) => (n.userId === userId && !n.readAt ? { ...n, readAt: now } : n)));
 }
 
+// ============================ Email delivery log ============================
+const EMAILLOG_FILE = "comms-email-log.local.json";
+export interface EmailLogEntry {
+  id: string; recipientId: string; recipientEmail: string;
+  kind: string; status: "sent" | "failed" | "skipped"; detail: string; createdAt: string;
+}
+
+/** Record the outcome of one team email. Never throws (logging must not break
+ *  the action it's observing). */
+export async function logEmail(e: Omit<EmailLogEntry, "id" | "createdAt">): Promise<void> {
+  try {
+    const row: EmailLogEntry = { ...e, id: randomId(), createdAt: new Date().toISOString() };
+    if (usePostgres) {
+      const sql = await pg();
+      await sql`INSERT INTO comms_email_log (id, recipient_id, recipient_email, kind, status, detail, created_at)
+        VALUES (${row.id}, ${row.recipientId}, ${row.recipientEmail}, ${row.kind}, ${row.status}, ${row.detail}, ${row.createdAt})`;
+      return;
+    }
+    const all = readJson<EmailLogEntry[]>(EMAILLOG_FILE, []);
+    all.push(row);
+    writeJson(EMAILLOG_FILE, all);
+  } catch { /* logging is best-effort */ }
+}
+
+export async function listEmailLog(limit = 100): Promise<EmailLogEntry[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT * FROM comms_email_log ORDER BY created_at DESC LIMIT ${limit}`) as Record<string, unknown>[];
+    return rows.map((r) => ({ id: str(r.id), recipientId: str(r.recipient_id), recipientEmail: str(r.recipient_email), kind: str(r.kind), status: str(r.status) as EmailLogEntry["status"], detail: str(r.detail), createdAt: iso(r.created_at) }));
+  }
+  return readJson<EmailLogEntry[]>(EMAILLOG_FILE, []).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+}
+
 export async function getNotice(id: string): Promise<Notice | undefined> {
   return (await listNotices()).find((n) => n.id === id);
 }
