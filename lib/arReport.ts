@@ -94,8 +94,10 @@ function parseArByInvoice(text: string): ParsedClient[] {
 
   // A client header: "Last, First [Client Phone: …] DOB: dd/mm/yyyy"
   const header = /^([^,\n]+,\s*[^\n]*?)\s+(?:Client Phone:[^\n]*?\s+)?DOB:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*$/;
-  // An invoice line ends with a tab then "PAYOR policy/…/… n".
-  const invoice = /\t([A-Za-z][A-Za-z .'&/-]*?)\s+\S*\d/;
+  // An invoice line names the payor after the amounts, then "policy/…/… n". The
+  // payor sits right after a tab (pdf-parse) OR stuck onto the last $ amount
+  // (unpdf merges columns with no tab, e.g. "$750.00CINICO 996…/-/- 1").
+  const invoice = /(?:\t|\$[\d,]+\.\d{2})([A-Za-z][A-Za-z .'&/-]*?)\s+\S*\d/;
 
   for (const raw of lines) {
     const line = raw.replace(/\s+$/, "");

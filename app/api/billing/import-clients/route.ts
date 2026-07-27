@@ -10,11 +10,13 @@ import { parseArReport, matchInsurer } from "@/lib/arReport";
 export const runtime = "nodejs"; // pdf parsing needs node
 export const dynamic = "force-dynamic";
 
-/** Pull text out of an uploaded PDF, server-side. */
+/** Pull text out of an uploaded PDF, server-side. Uses unpdf, which bundles a
+ *  serverless-safe pdf.js build (pdf-parse's pdfjs failed on Vercel). */
 async function pdfText(buf: Buffer): Promise<string> {
-  const { PDFParse } = await import("pdf-parse");
-  const res = await new PDFParse({ data: new Uint8Array(buf) }).getText();
-  return res.text ?? "";
+  const { extractText, getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(new Uint8Array(buf));
+  const { text } = await extractText(pdf, { mergePages: true });
+  return Array.isArray(text) ? text.join("\n") : String(text ?? "");
 }
 
 // Importing a client roster on behalf of a clinician is the biller's job.
