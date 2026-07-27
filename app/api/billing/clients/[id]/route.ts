@@ -1,9 +1,29 @@
 import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { getClient, clinicianSeesClient, updateClient, type ClientProfile } from "@/lib/clients";
+import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
+import { listSessions, deleteSession } from "@/lib/billing";
 
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+// Delete a whole client: their record, their clinician links, AND all of their
+// charges — so nothing is orphaned. Every downstream view recomputes from what's
+// left. Biller/owner only (a client can be shared across clinicians).
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await getBillingUser();
+  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  if (!isBiller(user.role) && !isOwner(user.role)) return NextResponse.json({ error: "Only the biller or owner can delete a client." }, { status: 403 });
+
+  const client = await getClient(id);
+  if (!client) return NextResponse.json({ error: "Client not found." }, { status: 404 });
+
+  const sessions = await listSessions({ clientId: id });
+  let removedCharges = 0;
+  for (const sess of sessions) { if (await deleteSession(sess.id)) removedCharges++; }
+  await deleteClient(id);
+  return NextResponse.json({ ok: true, removedCharges });
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

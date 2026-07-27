@@ -18,6 +18,9 @@ export interface ParsedClient {
   dob?: string;         // "Accounts Receivable by Invoice" carries a DOB
   outstanding?: number; // total due, from the AR report (0 otherwise)
   invoiceDate?: string; // earliest invoice date (YYYY-MM-DD), for the queue
+  /** One entry per invoice line — so a client with several invoices becomes
+   *  several charges (each its own date of service), not one lump sum. */
+  invoices?: { date: string; amount: number }[];
 }
 
 export interface ParsedReport {
@@ -109,7 +112,7 @@ function parseArByInvoice(text: string): ParsedClient[] {
       const { first, last } = splitName(nameRaw);
       const key = `${first}|${last}`.toLowerCase();
       cur = byClient.get(key) ?? null;
-      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: ddmmyyyyToIso(h[2]) ?? h[2], outstanding: 0 }; byClient.set(key, cur); }
+      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: ddmmyyyyToIso(h[2]) ?? h[2], outstanding: 0, invoices: [] }; byClient.set(key, cur); }
       continue;
     }
     if (!cur) continue;
@@ -124,8 +127,10 @@ function parseArByInvoice(text: string): ParsedClient[] {
     // and keep the earliest invoice date to date the outstanding claim.
     const amt = line.match(/^\d+\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+\$([\d,]+\.\d{2})/);
     if (amt) {
-      cur.outstanding = round2((cur.outstanding ?? 0) + money(amt[2]));
+      const amount = money(amt[2]);
+      cur.outstanding = round2((cur.outstanding ?? 0) + amount);
       const iso = ddmmyyyyToIso(amt[1]);
+      if (iso) (cur.invoices ??= []).push({ date: iso, amount });
       if (iso && (!cur.invoiceDate || iso < cur.invoiceDate)) cur.invoiceDate = iso;
     }
   }

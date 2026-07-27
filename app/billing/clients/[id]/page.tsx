@@ -54,8 +54,10 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         profile={client.profile}
         seenBy={seesAll ? client.clinicianIds.map(clinName) : []}
         insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))}
+        clinicians={client.clinicianIds.map((cid) => ({ id: cid, name: clinName(cid) }))}
         activity={activity}
         canEdit
+        canDelete={seesAll}
       />
     </>
   );

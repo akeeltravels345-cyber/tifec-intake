@@ -19,17 +19,60 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, activity, canEdit,
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false,
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
-  insurers: { id: string; name: string }[]; activity: Activity[]; canEdit: boolean;
+  insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
+  activity: Activity[]; canEdit: boolean; canDelete?: boolean;
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [sel, setSel] = useState<Set<string>>(new Set());
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [delCharge, setDelCharge] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  // add-charge form
+  const [acDate, setAcDate] = useState("");
+  const [acClin, setAcClin] = useState(clinicians[0]?.id ?? "");
+  const [acInsurer, setAcInsurer] = useState(insurerId ?? "");
+  const [acAmount, setAcAmount] = useState("");
+  const [acStage, setAcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+
+  async function deleteClientNow() {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not delete.");
+      router.push("/billing/clients"); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not delete."); setBusy(false); }
+  }
+  async function deleteChargeNow(sid: string) {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/sessions/${sid}`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not delete.");
+      setDelCharge(null); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not delete."); }
+    finally { setBusy(false); }
+  }
+  async function addChargeNow() {
+    if (!acDate || !acAmount) { setMsg("Enter a date and amount for the charge."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}/charges`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clinicianId: acClin, dateOfService: acDate, insurerId: acInsurer || null, totalCost: Number(acAmount) || 0, stage: acStage }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not add.");
+      setShowAdd(false); setAcDate(""); setAcAmount(""); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not add."); }
+    finally { setBusy(false); }
+  }
+  const activityTotal = activity.reduce((t, a) => t + a.total, 0);
+  const canManageCharges = canDelete || clinicians.length > 0;
 
   // Flat form state mirrors the nested profile; assembled back on save.
   const [ins, setIns] = useState(insurerId ?? "");
@@ -43,8 +86,6 @@ export default function ClientDetail({
   const [postal, setPostal] = useState(profile.address?.postal ?? "");
   const [country, setCountry] = useState(profile.address?.country ?? "");
   const [memberId, setMemberId] = useState(profile.insurance?.memberId ?? "");
-  const [groupNo, setGroupNo] = useState(profile.insurance?.groupNo ?? "");
-  const [planName, setPlanName] = useState(profile.insurance?.planName ?? "");
   const [relationship, setRelationship] = useState(profile.insurance?.relationship ?? "self");
   const [insuredFirst, setInsuredFirst] = useState(profile.insurance?.insuredFirst ?? "");
   const [insuredLast, setInsuredLast] = useState(profile.insurance?.insuredLast ?? "");
@@ -60,8 +101,8 @@ export default function ClientDetail({
       address: (line1 || city || region || postal || country || line2)
         ? { line1: line1 || undefined, line2: line2 || undefined, city: city || undefined, region: region || undefined, postal: postal || undefined, country: country || undefined }
         : undefined,
-      insurance: (memberId || groupNo || planName || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
-        ? { memberId: memberId || undefined, groupNo: groupNo || undefined, planName: planName || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
+      insurance: (memberId || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
+        ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
       diagnosis: dx.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
     };
@@ -100,8 +141,18 @@ export default function ClientDetail({
         <div className="cd-actions">
           <a className="bl-cta" href={`/billing/clients/${id}/cms1500`}>Generate CMS-1500</a>
           {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>Edit details</button>}
+          {canDelete && <button className="cd-danger" onClick={() => setConfirmDel(true)}>Delete client</button>}
         </div>
       </div>
+
+      {confirmDel && (
+        <div className="cd-confirm">
+          <span>Delete <b>{first} {last}</b> and all {activity.length} charge{activity.length === 1 ? "" : "s"}? This can&apos;t be undone.</span>
+          <div style={{ flex: 1 }} />
+          <button className="cd-danger" disabled={busy} onClick={deleteClientNow}>{busy ? "Deleting…" : "Yes, delete client"}</button>
+          <button className="su-del" disabled={busy} onClick={() => setConfirmDel(false)}>Cancel</button>
+        </div>
+      )}
 
       {msg && <div className="ls-saved" style={{ margin: "0 0 14px" }}>{msg}</div>}
 
@@ -118,8 +169,6 @@ export default function ClientDetail({
             {field("Address", val([profile.address?.line1, profile.address?.line2, profile.address?.city, profile.address?.region, profile.address?.postal, profile.address?.country].filter(Boolean).join(", ")))}
             {field("Usual insurer", val(insurers.find((i) => i.id === insurerId)?.name ?? (insurerId ? "" : "Self-pay")))}
             {field("Member / ID no.", val(profile.insurance?.memberId ?? ""))}
-            {field("Group no.", val(profile.insurance?.groupNo ?? ""))}
-            {field("Plan name", val(profile.insurance?.planName ?? ""))}
             {field("Relationship to insured", val(profile.insurance?.relationship ?? "self"))}
             {profile.insurance?.relationship && profile.insurance.relationship !== "self" &&
               field("Insured", val([profile.insurance?.insuredFirst, profile.insurance?.insuredLast, profile.insurance?.insuredDob].filter(Boolean).join(" ")))}
@@ -138,8 +187,6 @@ export default function ClientDetail({
             {field("Postal code", <input className="ls-in" value={postal} onChange={(e) => setPostal(e.target.value)} />)}
             {field("Country", <input className="ls-in" value={country} onChange={(e) => setCountry(e.target.value)} />)}
             {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />)}
-            {field("Group no.", <input className="ls-in" value={groupNo} onChange={(e) => setGroupNo(e.target.value)} />)}
-            {field("Plan name", <input className="ls-in" value={planName} onChange={(e) => setPlanName(e.target.value)} />)}
             {field("Relationship to insured", <select className="ls-in" value={relationship} onChange={(e) => setRelationship(e.target.value as typeof relationship)}><option value="self">Self</option><option value="spouse">Spouse</option><option value="child">Child</option><option value="other">Other</option></select>)}
             {relationship !== "self" && <>
               {field("Insured first name", <input className="ls-in" value={insuredFirst} onChange={(e) => setInsuredFirst(e.target.value)} />)}
@@ -157,8 +204,10 @@ export default function ClientDetail({
 
       {/* ---- Activity ---- */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Everything logged with this client</h2>
-          <span className="su-hint">Every appointment logged in the system{activity.length ? ` · ${activity.length} session${activity.length === 1 ? "" : "s"}` : ""}{billable.length ? ` · tick the ones you're claiming, then build the CMS-1500` : ""}</span></div>
+        <div className="su-sechead">
+          <h2 className="su-sech">Appointments &amp; charges{activity.length > 0 && <span className="su-tag">{money(activityTotal)} total</span>}</h2>
+          <span className="su-hint">Every date of service that makes up this client&apos;s total. {billable.length ? "Tick the ones you're claiming to build a CMS-1500, " : ""}or add and remove charges below.</span>
+        </div>
 
         {sel.size > 0 && (
           <div className="cd-selbar">
@@ -169,15 +218,38 @@ export default function ClientDetail({
           </div>
         )}
 
+        {canManageCharges && (
+          <div style={{ marginBottom: 10 }}>
+            {!showAdd ? (
+              <button className="su-add" onClick={() => setShowAdd(true)}>+ Add a charge (date of service)</button>
+            ) : (
+              <div className="cd-addform">
+                <div className="cd-addrow">
+                  <label>Date of service<input type="date" className="ls-in" value={acDate} onChange={(e) => setAcDate(e.target.value)} /></label>
+                  {clinicians.length > 1 && <label>Clinician<select className="ls-in" value={acClin} onChange={(e) => setAcClin(e.target.value)}>{clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
+                  <label>Insurer<select className="ls-in" value={acInsurer} onChange={(e) => setAcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
+                  <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
+                  <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                </div>
+                <div className="cd-addbtns">
+                  <button className="ls-save" disabled={busy} onClick={addChargeNow}>{busy ? "Adding…" : "Add charge"}</button>
+                  <button className="su-del" disabled={busy} onClick={() => { setShowAdd(false); setMsg(""); }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="su-card">
           {activity.length === 0 ? (
-            <div className="bq-empty" style={{ padding: 24 }}><div className="big">No sessions logged yet</div></div>
+            <div className="bq-empty" style={{ padding: 24 }}><div className="big">No charges yet</div><div className="small">Add a date of service above, or they&apos;ll appear here once logged.</div></div>
           ) : (
             <div className="su-tblwrap">
-              <table className="su-tbl" style={{ minWidth: 660 }}>
+              <table className="su-tbl" style={{ minWidth: 700 }}>
                 <thead><tr>
                   <th style={{ width: 30 }}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all billable entries" /></th>
                   <th>Date</th><th>Clinician</th><th>Service</th><th>Insurer</th><th className="num">Fee</th><th>Status</th>
+                  {canManageCharges && <th></th>}
                 </tr></thead>
                 <tbody>
                   {activity.map((a) => {
@@ -191,10 +263,25 @@ export default function ClientDetail({
                         <td>{a.insurer}</td>
                         <td className="num">{money(a.total)}</td>
                         <td><span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span></td>
+                        {canManageCharges && (
+                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                            {delCharge === a.id ? (
+                              <>
+                                <button className="cd-danger sm" disabled={busy} onClick={() => deleteChargeNow(a.id)}>Delete</button>
+                                <button className="su-del sm" disabled={busy} onClick={() => setDelCharge(null)}>Cancel</button>
+                              </>
+                            ) : (
+                              <button className="cd-xbtn" title="Delete this charge" onClick={() => setDelCharge(a.id)}>×</button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr><td colSpan={5} className="num" style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{money(activityTotal)}</td><td colSpan={canManageCharges ? 2 : 1}></td></tr>
+                </tfoot>
               </table>
             </div>
           )}

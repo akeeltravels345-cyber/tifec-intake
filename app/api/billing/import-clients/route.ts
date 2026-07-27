@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       insurerMatched: !c.insurerName || !!ins, // self-pay counts as fine
       outstanding: c.outstanding ?? 0,
       invoiceDate: c.invoiceDate ?? null,
+      invoices: c.invoices ?? [],
     };
   });
   const owedTotal = Math.round(rows.reduce((t, r) => t + r.outstanding, 0) * 100) / 100;
@@ -107,18 +108,23 @@ export async function POST(req: Request) {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (r.outstanding <= 0 || !r.insurerId) continue; // insured, owed money only
-      const dos = r.invoiceDate ?? today;
-      const key = `${`${r.first}|${r.last}`.toLowerCase().trim()}@${dos}@${r.outstanding}`;
-      if (seen.has(key)) { claimsSkipped++; continue; }
-      seen.add(key);
-      await insertSession({
-        clinicianId, createdBy: me.id, clientFirst: r.first, clientLast: r.last, clientId: ids[i],
-        insurerId: r.insurerId, dateOfService: dos, cptCodes: [], durationHours: 0,
-        totalCost: r.outstanding, copayCollected: 0,
-        notes: "Imported from AR report — billed, awaiting payment",
-        billedDate: dos, insurancePaid: false, paidDate: null,
-      });
-      claimsAdded++;
+      // One charge per invoice line (each its own date of service). If the report
+      // gave no per-line detail, fall back to a single charge for the total.
+      const invoices = r.invoices.length ? r.invoices : [{ date: r.invoiceDate ?? today, amount: r.outstanding }];
+      for (const inv of invoices) {
+        const dos = inv.date || today;
+        const key = `${`${r.first}|${r.last}`.toLowerCase().trim()}@${dos}@${inv.amount}`;
+        if (seen.has(key)) { claimsSkipped++; continue; }
+        seen.add(key);
+        await insertSession({
+          clinicianId, createdBy: me.id, clientFirst: r.first, clientLast: r.last, clientId: ids[i],
+          insurerId: r.insurerId, dateOfService: dos, cptCodes: [], durationHours: 0,
+          totalCost: inv.amount, copayCollected: 0,
+          notes: "Imported from AR report — billed, awaiting payment",
+          billedDate: dos, insurancePaid: false, paidDate: null,
+        });
+        claimsAdded++;
+      }
     }
   }
 
