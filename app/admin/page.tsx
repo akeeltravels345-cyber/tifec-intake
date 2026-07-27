@@ -26,9 +26,9 @@ function initials(name: string): string {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ key?: string }>;
+  searchParams: Promise<{ key?: string; log?: string }>;
 }) {
-  const { key } = await searchParams;
+  const { key, log } = await searchParams;
   const me = await getCurrentClinician();
   const expected = process.env.ADMIN_PASSWORD;
   const sessionAdmin = me?.admin === true;
@@ -114,7 +114,17 @@ export default async function AdminPage({
 
   // Retention: drop audit entries older than ~2 years before showing the latest.
   await pruneAccessLog(730);
-  const audit = await listAccessLog(10);
+  // Activity view size is driven by ?log= so admins can page back through history.
+  // "all" shows everything still retained (up to the 730-day window above).
+  const LOG_STEPS = [10, 25, 100, 500] as const;
+  const logAll = log === "all";
+  const logLimit = logAll
+    ? 1_000_000
+    : Math.min(Math.max(Number.parseInt(log ?? "10", 10) || 10, 10), 5000);
+  const audit = await listAccessLog(logLimit);
+  // A page bigger than what came back means we've reached the end of the log.
+  const reachedEnd = logAll || audit.length < logLimit;
+  const logHref = (v: string | number) => `/admin?${key ? `key=${encodeURIComponent(key)}&` : ""}log=${v}#activity`;
   const reports = await listFeedback(15).catch(() => []);
 
   return (
@@ -195,20 +205,49 @@ export default async function AdminPage({
         )}
       </div>
 
-      <div className="card">
+      <div className="card" id="activity">
         <h2 className="section-title">Recent activity</h2>
-        <p className="section-desc">Audit log - the 10 most recent views or changes.</p>
+        <p className="section-desc">
+          Audit log - {logAll ? `showing all ${audit.length} entries` : `showing the ${audit.length} most recent views or changes`}.
+        </p>
         {audit.length === 0 ? (
           <p className="muted">No activity recorded yet.</p>
         ) : (
-          audit.map((e) => (
-            <div className="answer-row" key={e.id}>
-              <div className="a" style={{ fontSize: 14 }}>
-                <strong>{getClinician(e.clinician_id)?.name ?? e.clinician_id}</strong> {e.detail}
+          <>
+            {audit.map((e) => (
+              <div className="answer-row" key={e.id}>
+                <div className="a" style={{ fontSize: 14 }}>
+                  <strong>{getClinician(e.clinician_id)?.name ?? e.clinician_id}</strong> {e.detail}
+                </div>
+                <div className="q">{new Date(e.at).toLocaleString("en-US")}</div>
               </div>
-              <div className="q">{new Date(e.at).toLocaleString("en-US")}</div>
+            ))}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>Show:</span>
+              {LOG_STEPS.map((n) => (
+                <Link
+                  key={n}
+                  href={logHref(n)}
+                  className="status-pill"
+                  aria-current={!logAll && logLimit === n ? "true" : undefined}
+                  style={!logAll && logLimit === n ? { fontWeight: 700, borderColor: "var(--brand)" } : undefined}
+                >
+                  {n}
+                </Link>
+              ))}
+              <Link
+                href={logHref("all")}
+                className="status-pill"
+                aria-current={logAll ? "true" : undefined}
+                style={logAll ? { fontWeight: 700, borderColor: "var(--brand)" } : undefined}
+              >
+                All history
+              </Link>
+              {reachedEnd && !logAll && (
+                <span style={{ fontSize: 12.5, color: "var(--muted)" }}>(end of log)</span>
+              )}
             </div>
-          ))
+          </>
         )}
       </div>
 
