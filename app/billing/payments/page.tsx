@@ -45,7 +45,15 @@ export default async function BillingQueuePage() {
     commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
   });
 
-  const insured = sessions.filter((s) => s.insurerId && insurancePortion(s) > 0);
+  // Whose claims the biller reconciles: practising clinicians only. Not the
+  // biller himself (you don't bill for the biller) and not the hidden admin/
+  // test account. Active outside clinicians count too.
+  const billForIds = new Set([
+    ...CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => c.id),
+    ...external.filter((c) => c.active).map((c) => c.id),
+  ]);
+
+  const insured = sessions.filter((s) => s.insurerId && insurancePortion(s) > 0 && billForIds.has(s.clinicianId));
   const outstanding = insured.filter((s) => !s.insurancePaid).map(toClaim).sort((a, b) => b.age - a.age);
   const billed = insured.filter((s) => s.insurancePaid).map(toClaim).sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
@@ -64,8 +72,12 @@ export default async function BillingQueuePage() {
     awaitingCount: outstanding.length,
     oldestDays: outstanding.length ? outstanding[0].age : 0,
     buckets,
-    clinicians: [...CLINICIANS.map((c) => ({ id: c.id, name: c.name })), ...external.map((c) => ({ id: c.id, name: c.name }))]
-      .filter((c) => insured.some((s) => s.clinicianId === c.id)),
+    // Every clinician the biller bills for — listed even with no claims yet, so
+    // Sofia is selectable before her first one.
+    clinicians: [
+      ...CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name })),
+      ...external.filter((c) => c.active).map((c) => ({ id: c.id, name: c.name })),
+    ],
     today,
   };
 
