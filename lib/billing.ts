@@ -45,12 +45,31 @@ export interface RunningExpense {
   amount: number;   // monthly KYD
   breakdown?: { label: string; amount: number }[];
 }
+// The practice/provider identifiers a CMS-1500 claim needs (boxes 25, 31-33 and
+// the rendering NPI per clinician). Kept here so the claim generator can fill
+// them; empty by default until the owner enters them in Setup.
+export interface ProviderConfig {
+  practiceName?: string;
+  npi?: string;            // billing provider NPI (box 33a)
+  ein?: string;            // Federal Tax ID / EIN (box 25)
+  taxonomy?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  region?: string;
+  postal?: string;
+  country?: string;
+  phone?: string;
+  renderingNpi?: Record<string, string>; // clinicianId -> rendering NPI (box 24J)
+}
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
   runningExpenses: RunningExpense[];
+  provider?: ProviderConfig;
 }
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
+  provider: {},
   runningExpenses: [
     { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [
       { label: "Social media", amount: 500 }, { label: "Web support", amount: 500 }, { label: "Ads", amount: 300 } ] },
@@ -74,6 +93,7 @@ export interface SessionInput {
   clinicianId: string;
   clientFirst: string;
   clientLast: string;
+  clientId?: string | null; // practice-level client record (billing_clients.id)
   insurerId: string | null;
   dateOfService: string; // YYYY-MM-DD
   cptCodes: string[];
@@ -82,8 +102,9 @@ export interface SessionInput {
   copayCollected: number;
   notes?: string;
   createdBy: string;
-  /** Normally a new session starts unbilled. Imported history may already be
-   *  billed, so the import can carry that state in. */
+  /** A session moves logged -> billed (submitted) -> paid (collected). Normally
+   *  it starts logged; an import may bring history in already billed or paid. */
+  billedDate?: string | null;
   insurancePaid?: boolean;
   paidDate?: string | null;
 }
@@ -93,13 +114,15 @@ export interface BillingSession {
   clinicianId: string;
   clientFirst: string;
   clientLast: string;
+  clientId: string | null;
   insurerId: string | null;
   dateOfService: string;
   cptCodes: string[];
   durationHours: number;
   totalCost: number;
   copayCollected: number;
-  insurancePaid: boolean;
+  billedDate: string | null;   // submitted to insurer (null = not yet billed)
+  insurancePaid: boolean;      // insurer has settled (= collected)
   paidDate: string | null;
   notes: string;
   createdBy: string;
@@ -325,12 +348,14 @@ interface StoredSession {
   id: string;
   clinicianId: string;
   clientEnc: string;
+  clientId: string | null;
   insurerId: string | null;
   dateOfService: string;
   cptCodes: string[];
   durationHours: number;
   totalCost: number;
   copayCollected: number;
+  billedDate: string | null;
   insurancePaid: boolean;
   paidDate: string | null;
   notes: string;
@@ -348,9 +373,9 @@ function decryptSession(s: StoredSession): BillingSession {
     first = "Unreadable";
   }
   return {
-    id: s.id, clinicianId: s.clinicianId, clientFirst: first, clientLast: last, insurerId: s.insurerId,
+    id: s.id, clinicianId: s.clinicianId, clientFirst: first, clientLast: last, clientId: s.clientId ?? null, insurerId: s.insurerId,
     dateOfService: s.dateOfService, cptCodes: s.cptCodes || [], durationHours: num(s.durationHours), totalCost: num(s.totalCost),
-    copayCollected: num(s.copayCollected), insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
+    copayCollected: num(s.copayCollected), billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -361,20 +386,25 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
   const createdAt = new Date().toISOString();
   const paid = input.insurancePaid ?? false;
   const paidDate = paid ? (input.paidDate ?? null) : null;
+  // A paid claim was necessarily billed first; default billed_date to the paid
+  // date if the caller didn't supply one, so the lifecycle stays consistent.
+  const billedDate = input.billedDate ?? (paid ? paidDate : null);
+  const clientId = input.clientId ?? null;
+  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_sessions (id, clinician_id, client_enc, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, insurance_paid, paid_date, notes, created_by, created_at)
-      VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${false}, ${null}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
+      INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
+      VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
     for (const code of input.cptCodes) {
       await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
     }
   } else {
     const all = readJson<StoredSession[]>(SESS_FILE, []);
-    all.push({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
+    all.push(stored);
     writeJson(SESS_FILE, all);
   }
-  return decryptSession({ id, clinicianId: input.clinicianId, clientEnc, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt });
+  return decryptSession(stored);
 }
 
 async function loadStored(): Promise<StoredSession[]> {
@@ -382,23 +412,25 @@ async function loadStored(): Promise<StoredSession[]> {
     const sql = await pg();
     // Cast DATE columns to text so they arrive as "YYYY-MM-DD" (the driver otherwise
     // returns JS Date objects, which String().slice() mangled — breaking month filters).
-    const rows = (await sql`SELECT id, clinician_id, client_enc, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    const rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
     const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
     const byId: Record<string, string[]> = {};
     for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
     return rows.map((r) => ({
-      id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, insurerId: (r.insurer_id as string) ?? null,
+      id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, clientId: (r.client_id as string) ?? null, insurerId: (r.insurer_id as string) ?? null,
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
-      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), insurancePaid: !!r.insurance_paid,
+      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null, notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }
   return readJson<StoredSession[]>(SESS_FILE, []).sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
 }
 
-export async function listSessions(filter?: { clinicianId?: string }): Promise<BillingSession[]> {
+export async function listSessions(filter?: { clinicianId?: string; clientId?: string }): Promise<BillingSession[]> {
   const all = await loadStored();
-  const f = filter?.clinicianId ? all.filter((s) => s.clinicianId === filter.clinicianId) : all;
+  let f = all;
+  if (filter?.clinicianId) f = f.filter((s) => s.clinicianId === filter.clinicianId);
+  if (filter?.clientId) f = f.filter((s) => s.clientId === filter.clientId);
   return f.map(decryptSession);
 }
 
@@ -408,10 +440,39 @@ export async function getSession(id: string): Promise<BillingSession | null> {
   return s ? decryptSession(s) : null;
 }
 
+/** Mark a claim as SUBMITTED to the insurer (or undo). This is the middle state
+ *  ahead of payment; it does not affect payouts (only collected money does). */
+export async function markSessionBilled(id: string, billed: boolean, billedDate: string | null): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pg();
+    // Un-billing also clears any paid state — a claim can't be paid but not billed.
+    const res = billed
+      ? (await sql`UPDATE billing_sessions SET billed_date = ${billedDate} WHERE id = ${id} RETURNING id`) as { id: string }[]
+      : (await sql`UPDATE billing_sessions SET billed_date = ${null}, insurance_paid = ${false}, paid_date = ${null} WHERE id = ${id} RETURNING id`) as { id: string }[];
+    return res.length > 0;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return false;
+  s.billedDate = billed ? billedDate : null;
+  if (!billed) { s.insurancePaid = false; s.paidDate = null; }
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
+/** Mark a claim as PAID/collected (or undo). Marking paid implies it was billed,
+ *  so backfill billed_date if it wasn't set. This is what feeds a payout. */
 export async function markSessionPaid(id: string, paid: boolean, paidDate: string | null): Promise<boolean> {
   if (usePostgres) {
     const sql = await pg();
-    const res = (await sql`UPDATE billing_sessions SET insurance_paid = ${paid}, paid_date = ${paid ? paidDate : null} WHERE id = ${id} RETURNING id`) as { id: string }[];
+    // COALESCE backfills billed_date only when paid (paidDate set); when un-paying
+    // we pass null, so COALESCE(billed_date, null) leaves billed_date untouched.
+    const res = (await sql`
+      UPDATE billing_sessions
+      SET insurance_paid = ${paid},
+          paid_date = ${paid ? paidDate : null},
+          billed_date = COALESCE(billed_date, ${paid ? paidDate : null})
+      WHERE id = ${id} RETURNING id`) as { id: string }[];
     return res.length > 0;
   }
   const all = readJson<StoredSession[]>(SESS_FILE, []);
@@ -419,6 +480,7 @@ export async function markSessionPaid(id: string, paid: boolean, paidDate: strin
   if (!s) return false;
   s.insurancePaid = paid;
   s.paidDate = paid ? paidDate : null;
+  if (paid && !s.billedDate) s.billedDate = paidDate;
   writeJson(SESS_FILE, all);
   return true;
 }

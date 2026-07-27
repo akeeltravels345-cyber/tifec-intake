@@ -41,7 +41,7 @@ export default async function BillingQueuePage() {
     clinicianId: s.clinicianId, clinicianName: clinName(s.clinicianId),
     clientName: `${s.clientFirst} ${s.clientLast}`.trim(),
     insurerId: s.insurerId as string, insurerName: insName(s.insurerId),
-    amount: insurancePortion(s), paid: s.insurancePaid, paidDate: s.paidDate,
+    amount: insurancePortion(s), billedDate: s.billedDate, paid: s.insurancePaid, paidDate: s.paidDate,
     commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
   });
 
@@ -53,24 +53,35 @@ export default async function BillingQueuePage() {
     ...external.filter((c) => c.active).map((c) => c.id),
   ]);
 
+  // A claim moves through three stages, each its own tab:
+  //   to bill  = logged, not yet submitted to the insurer (no billed_date)
+  //   awaiting = submitted, waiting on the insurer to pay (billed_date, not paid)
+  //   paid     = insurer settled (this is COLLECTED money — it feeds payouts)
   const insured = sessions.filter((s) => s.insurerId && insurancePortion(s) > 0 && billForIds.has(s.clinicianId));
-  const outstanding = insured.filter((s) => !s.insurancePaid).map(toClaim).sort((a, b) => b.age - a.age);
-  const billed = insured.filter((s) => s.insurancePaid).map(toClaim).sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
+  const toBill = insured.filter((s) => !s.insurancePaid && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
+  const awaiting = insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
+  const paid = insured.filter((s) => s.insurancePaid).map(toClaim).sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
-  const outstandingTotal = r2(outstanding.reduce((t, c) => t + c.amount, 0));
-  const billedThisMonthClaims = billed.filter((c) => c.paidDate?.slice(0, 7) === mKey);
+  // Everything not yet collected (both open stages) drives the outstanding total
+  // and the aging chips.
+  const open = [...toBill, ...awaiting];
+  const outstandingTotal = r2(open.reduce((t, c) => t + c.amount, 0));
+  const awaitingTotal = r2(awaiting.reduce((t, c) => t + c.amount, 0));
+  const paidThisMonthClaims = paid.filter((c) => c.paidDate?.slice(0, 7) === mKey);
+  const collectedThisMonth = r2(paidThisMonthClaims.reduce((t, c) => t + c.amount, 0));
   const buckets = AGING_BUCKETS.map((b, i) => {
-    const inB = outstanding.filter((c) => agingBucketIndex(c.age) === i);
+    const inB = open.filter((c) => agingBucketIndex(c.age) === i);
     return { label: b.label, color: BUCKET_COLORS[i], amount: r2(inB.reduce((t, c) => t + c.amount, 0)), count: inB.length };
   });
 
   const data: QueueData = {
-    outstanding, billed,
-    commissionThisMonth: r2(billedThisMonthClaims.reduce((t, c) => t + c.commission, 0)),
-    waitingCommission: r2(outstanding.reduce((t, c) => t + c.commission, 0)),
-    outstandingTotal,
-    awaitingCount: outstanding.length,
-    oldestDays: outstanding.length ? outstanding[0].age : 0,
+    toBill, awaiting, paid,
+    commissionThisMonth: r2(paidThisMonthClaims.reduce((t, c) => t + c.commission, 0)),
+    waitingCommission: r2(open.reduce((t, c) => t + c.commission, 0)),
+    outstandingTotal, awaitingTotal, collectedThisMonth,
+    toBillCount: toBill.length,
+    awaitingCount: awaiting.length,
+    oldestDays: open.length ? Math.max(...open.map((c) => c.age)) : 0,
     buckets,
     // Every clinician the biller bills for — listed even with no claims yet, so
     // Sofia is selectable before her first one.

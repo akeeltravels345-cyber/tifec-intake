@@ -22,23 +22,26 @@ export default async function NewSessionPage() {
 
   // Distinct clients this clinician has seen before, most recent first, with the
   // insurer they last used — so a returning client is one click, not a re-type.
-  const seen = new Map<string, { first: string; last: string; insurerId: string | null; lastVisit: string; visits: number }>();
+  const seen = new Map<string, { id: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number }>();
   for (const s of [...mySessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService))) {
     const first = s.clientFirst?.trim() ?? "", last = s.clientLast?.trim() ?? "";
     if (!first && !last) continue;
     const key = `${first}|${last}`.toLowerCase();
     const prev = seen.get(key);
-    if (prev) prev.visits += 1;
+    if (prev) { prev.visits += 1; if (!prev.id && s.clientId) prev.id = s.clientId; }
     // Sorted newest-first, so the first sighting carries their latest insurer.
-    else seen.set(key, { first, last, insurerId: s.insurerId, lastVisit: s.dateOfService, visits: 1 });
+    else seen.set(key, { id: s.clientId, first, last, insurerId: s.insurerId, lastVisit: s.dateOfService, visits: 1 });
   }
   // Fold in imported clients who have no logged session yet, so they're
-  // selectable too. Someone already seen via a session keeps that entry.
+  // selectable too. Someone already seen via a session keeps that entry, but we
+  // backfill the client-record id from the roster if the session didn't have one.
   for (const c of roster) {
     const first = c.first?.trim() ?? "", last = c.last?.trim() ?? "";
     if (!first && !last) continue;
     const key = `${first}|${last}`.toLowerCase();
-    if (!seen.has(key)) seen.set(key, { first, last, insurerId: c.insurerId, lastVisit: "", visits: 0 });
+    const prev = seen.get(key);
+    if (prev) { if (!prev.id) prev.id = c.id; }
+    else seen.set(key, { id: c.id, first, last, insurerId: c.insurerId, lastVisit: "", visits: 0 });
   }
   const clients = [...seen.values()].sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`));
 

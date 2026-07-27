@@ -107,7 +107,7 @@ function parseArByInvoice(text: string): ParsedClient[] {
       const { first, last } = splitName(nameRaw);
       const key = `${first}|${last}`.toLowerCase();
       cur = byClient.get(key) ?? null;
-      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: h[2], outstanding: 0 }; byClient.set(key, cur); }
+      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: ddmmyyyyToIso(h[2]) ?? h[2], outstanding: 0 }; byClient.set(key, cur); }
       continue;
     }
     if (!cur) continue;

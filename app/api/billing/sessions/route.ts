@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { insertSession, listExternalClinicians, isExternalId } from "@/lib/billing";
 import { billingRoleOf, isBiller } from "@/lib/billingRole";
+import { resolveClient, type ClientProfile } from "@/lib/clients";
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -40,12 +41,22 @@ export async function POST(req: Request) {
     clinicianId = ext.id;
   }
 
+  const insurerId = body.insurerId ? String(body.insurerId) : null;
+
+  // Resolve the practice-level client (find-or-create by name + DOB) and link
+  // this clinician to them, so the same person seen by several clinicians is one
+  // record. The returned id is stamped on the session.
+  const dob = /^\d{4}-\d{2}-\d{2}$/.test(String(body.dob ?? "")) ? String(body.dob) : undefined;
+  const profile: ClientProfile = dob ? { dob } : {};
+  const clientId = await resolveClient(clinicianId, { first: clientFirst, last: clientLast, insurerId, profile });
+
   const session = await insertSession({
     clinicianId,
     createdBy: me.id,
     clientFirst,
     clientLast,
-    insurerId: body.insurerId ? String(body.insurerId) : null,
+    clientId,
+    insurerId,
     dateOfService,
     cptCodes,
     durationHours: Number(body.durationHours) || 0,

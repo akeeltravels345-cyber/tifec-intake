@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     const ins = matchInsurer(c.insurerName, insurers);
     return {
       first: c.first, last: c.last,
+      dob: c.dob ?? null,
       insurerId: ins?.id ?? null,
       insurerName: c.insurerName,
       insurerMatched: !c.insurerName || !!ins, // self-pay counts as fine
@@ -85,34 +86,42 @@ export async function POST(req: Request) {
     });
   }
 
-  const { added, duplicates } = await addClients(clinicianId, rows.map((r) => ({ first: r.first, last: r.last, insurerId: r.insurerId })));
+  // Create/link each client at the practice level (name + DOB dedup) and keep
+  // the resolved client id per row so the imported claims link to the record.
+  const { added, linked, duplicates, ids } = await addClients(
+    clinicianId,
+    rows.map((r) => ({ first: r.first, last: r.last, insurerId: r.insurerId, profile: r.dob ? { dob: r.dob } : {} })),
+  );
 
   // For a true AR report, also put the outstanding balance into the biller's
-  // queue as one unpaid claim per client — deduped against what's already there
-  // so re-importing the same report can't double the amounts.
+  // queue. These were BILLED to the insurer (that's what an AR report is) but
+  // not yet paid — so they land as billed/submitted, awaiting payment. Deduped
+  // against what's already there so re-importing can't double the amounts.
   let claimsAdded = 0, claimsSkipped = 0;
   if (isAr) {
     const existing = await listSessions({ clinicianId });
     const seen = new Set(existing.map((s) =>
       `${`${s.clientFirst}|${s.clientLast}`.toLowerCase().trim()}@${s.dateOfService}@${insurancePortion(s)}`));
-    for (const r of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
       if (r.outstanding <= 0 || !r.insurerId) continue; // insured, owed money only
       const dos = r.invoiceDate ?? today;
       const key = `${`${r.first}|${r.last}`.toLowerCase().trim()}@${dos}@${r.outstanding}`;
       if (seen.has(key)) { claimsSkipped++; continue; }
       seen.add(key);
       await insertSession({
-        clinicianId, createdBy: me.id, clientFirst: r.first, clientLast: r.last,
+        clinicianId, createdBy: me.id, clientFirst: r.first, clientLast: r.last, clientId: ids[i],
         insurerId: r.insurerId, dateOfService: dos, cptCodes: [], durationHours: 0,
         totalCost: r.outstanding, copayCollected: 0,
-        notes: "Imported from AR report — outstanding balance", insurancePaid: false, paidDate: null,
+        notes: "Imported from AR report — billed, awaiting payment",
+        billedDate: dos, insurancePaid: false, paidDate: null,
       });
       claimsAdded++;
     }
   }
 
   return NextResponse.json({
-    ok: true, added, duplicates, total: rows.length, forClinician: clinician.name,
+    ok: true, added: added + linked, duplicates, total: rows.length, forClinician: clinician.name,
     kind: parsed.kind, owedTotal: isAr ? owedTotal : 0, claimsAdded, claimsSkipped,
   });
 }

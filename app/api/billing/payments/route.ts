@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkPaid } from "@/lib/billingRole";
-import { markSessionPaid } from "@/lib/billing";
+import { markSessionPaid, markSessionBilled } from "@/lib/billing";
+
+const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -16,11 +18,27 @@ export async function POST(req: Request) {
   }
 
   const sessionId = String(body.sessionId ?? "");
+  if (!sessionId) return NextResponse.json({ error: "Missing session." }, { status: 400 });
+
+  // Two lifecycle actions:
+  //   action "billed" → submitted to the insurer (billed_date). Doesn't pay out.
+  //   action "paid"   → insurer settled (paid_date). This is collected money.
+  // Back-compat: a body with `paid` and no `action` is treated as a paid action.
+  const action = body.action ? String(body.action) : "paid";
+
+  if (action === "billed") {
+    const billed = body.billed !== false; // default true
+    const billedDate = body.billedDate ? String(body.billedDate) : null;
+    if (billed && (!billedDate || !isDate(billedDate)))
+      return NextResponse.json({ error: "A valid billed date is required." }, { status: 400 });
+    const ok = await markSessionBilled(sessionId, billed, billed ? billedDate : null);
+    if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
+
   const paid = body.paid !== false; // default true
   const paidDate = body.paidDate ? String(body.paidDate) : null;
-
-  if (!sessionId) return NextResponse.json({ error: "Missing session." }, { status: 400 });
-  if (paid && (!paidDate || !/^\d{4}-\d{2}-\d{2}$/.test(paidDate)))
+  if (paid && (!paidDate || !isDate(paidDate)))
     return NextResponse.json({ error: "A valid paid date is required." }, { status: 400 });
 
   const ok = await markSessionPaid(sessionId, paid, paid ? paidDate : null);

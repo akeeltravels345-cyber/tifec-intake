@@ -54,19 +54,24 @@ CREATE TABLE IF NOT EXISTS billing_external_clinicians (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- One row per visit. 6 visits = 6 rows, each flips to paid independently.
--- Client name is AES-encrypted at rest (client_enc = ciphertext of {first,last}).
+-- One row per visit. 6 visits = 6 rows, each moves through the lifecycle
+-- independently:  logged  ->  billed (submitted to insurer, billed_date)  ->
+-- paid (insurer settled, insurance_paid + paid_date). Only PAID money feeds a
+-- clinician's payout. Client name is AES-encrypted at rest; client_id links the
+-- visit to the practice-level client record (billing_clients).
 CREATE TABLE IF NOT EXISTS billing_sessions (
   id              TEXT PRIMARY KEY,
   clinician_id    TEXT NOT NULL,
   client_enc      TEXT NOT NULL,                 -- AES of JSON {first,last}
+  client_id       TEXT,                          -- billing_clients.id (practice-level record)
   insurer_id      TEXT,                          -- billing_insurers.id (null = self-pay)
   date_of_service DATE NOT NULL,
   duration_hours  NUMERIC NOT NULL DEFAULT 0,
   total_cost      NUMERIC NOT NULL DEFAULT 0,
   copay_collected NUMERIC NOT NULL DEFAULT 0,
+  billed_date     DATE,                          -- when the claim was submitted to the insurer
   insurance_paid  BOOLEAN NOT NULL DEFAULT false,
-  paid_date       DATE,                          -- when insurance payment confirmed
+  paid_date       DATE,                          -- when insurance payment confirmed (= collected)
   notes           TEXT,
   created_by      TEXT NOT NULL,                 -- clinician_id who logged it
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -74,6 +79,10 @@ CREATE TABLE IF NOT EXISTS billing_sessions (
 CREATE INDEX IF NOT EXISTS billing_sessions_clinician_idx ON billing_sessions (clinician_id);
 CREATE INDEX IF NOT EXISTS billing_sessions_paid_idx      ON billing_sessions (insurance_paid, paid_date);
 CREATE INDEX IF NOT EXISTS billing_sessions_dos_idx       ON billing_sessions (date_of_service);
+CREATE INDEX IF NOT EXISTS billing_sessions_client_idx    ON billing_sessions (client_id);
+-- Existing installs: ALTER TABLE billing_sessions
+--   ADD COLUMN IF NOT EXISTS client_id TEXT,
+--   ADD COLUMN IF NOT EXISTS billed_date DATE;
 
 -- Session <-> CPT codes (a session can carry several codes).
 CREATE TABLE IF NOT EXISTS billing_session_cpt (
@@ -82,17 +91,33 @@ CREATE TABLE IF NOT EXISTS billing_session_cpt (
   PRIMARY KEY (session_id, code)
 );
 
--- Persistent client roster per clinician (ADDITIVE). Lets a client be picked
--- when logging a session even before their first one — e.g. imported from a
--- practice's existing records. Names are AES-encrypted; name_key is a blind
--- index (keyed hash) so the same client can be matched for dedup without ever
--- storing the name in plaintext. Always queried scoped to one clinician.
+-- Practice-level client record (ADDITIVE). One row per real person, shared
+-- across the whole practice — the SAME client can be seen by several clinicians
+-- (see billing_client_clinicians). Holds everything a CMS-1500 claim needs
+-- (demographics, insurance, diagnosis), all PHI AES-encrypted in profile_enc.
+--   • identity_key = blind index of "first last | dob" — the practice-wide
+--     identity, so name + DOB dedups one person into one record (never plaintext).
+--   • name_key     = blind index of "first last" — for name-only lookups/merge.
 CREATE TABLE IF NOT EXISTS billing_clients (
   id           TEXT PRIMARY KEY,
-  clinician_id TEXT NOT NULL,
   name_enc     TEXT NOT NULL,              -- AES of {first,last}
-  name_key     TEXT NOT NULL,              -- blind index for dedup
+  name_key     TEXT NOT NULL,              -- blind index of name (name-only match)
+  identity_key TEXT NOT NULL,              -- blind index of name + DOB (practice identity)
   insurer_id   TEXT,                       -- usual insurer (null = self-pay)
+  profile_enc  TEXT,                       -- AES JSON: dob, sex, address, phone, insurance, diagnosis
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS billing_clients_uniq ON billing_clients (clinician_id, name_key);
+CREATE UNIQUE INDEX IF NOT EXISTS billing_clients_identity ON billing_clients (identity_key);
+CREATE INDEX IF NOT EXISTS billing_clients_namekey ON billing_clients (name_key);
+
+-- Which clinicians see a given client. A client seen by two clinicians has two
+-- rows here; each clinician's roster is the set of clients linked to them, while
+-- the biller/owner sees every client. This is what makes clients practice-level
+-- without breaking per-clinician isolation.
+CREATE TABLE IF NOT EXISTS billing_client_clinicians (
+  client_id    TEXT NOT NULL,             -- billing_clients.id
+  clinician_id TEXT NOT NULL,             -- lib/clinicians.ts id (or ext-... )
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (client_id, clinician_id)
+);
+CREATE INDEX IF NOT EXISTS billing_client_clinicians_clin ON billing_client_clinicians (clinician_id);

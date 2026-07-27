@@ -6,14 +6,16 @@ import { useRouter } from "next/navigation";
 export interface Claim {
   id: string; dos: string; age: number;
   clinicianId: string; clinicianName: string; clientName: string;
-  insurerId: string; insurerName: string; amount: number; paid: boolean; paidDate: string | null;
+  insurerId: string; insurerName: string; amount: number;
+  billedDate: string | null; paid: boolean; paidDate: string | null;
   /** The biller's cut of THIS claim, at this clinician's own rate. */
   commission: number;
 }
 export interface QueueData {
-  outstanding: Claim[]; billed: Claim[];
+  toBill: Claim[]; awaiting: Claim[]; paid: Claim[];
   commissionThisMonth: number; waitingCommission: number;
-  outstandingTotal: number; awaitingCount: number; oldestDays: number;
+  outstandingTotal: number; awaitingTotal: number; collectedThisMonth: number;
+  toBillCount: number; awaitingCount: number; oldestDays: number;
   buckets: { label: string; color: string; amount: number; count: number }[];
   clinicians: { id: string; name: string }[];
   today: string;
@@ -23,12 +25,14 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2 : 3);
 
+type Tab = "tobill" | "awaiting" | "paid";
+
 export default function BillingQueueClient({ data }: { data: QueueData }) {
   const router = useRouter();
   // Rates differ per clinician, so a cut is always summed from the claims
   // themselves rather than derived from a total.
   const comm = (claims: Claim[]) => claims.reduce((t, c) => t + c.commission, 0);
-  const [tab, setTab] = useState<"outstanding" | "billed">("outstanding");
+  const [tab, setTab] = useState<Tab>("tobill");
   const [groupBy, setGroupBy] = useState<"insurer" | "clinician">("insurer");
   const [q, setQ] = useState("");
   const [filterClin, setFilterClin] = useState("");
@@ -37,11 +41,22 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const [batchDate, setBatchDate] = useState(data.today);
   const [busy, setBusy] = useState(false);
 
-  const filtered = useMemo(() => data.outstanding.filter((c) =>
+  // The open list the current tab works on (paid is a read-only history tab).
+  const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : data.paid;
+  const isOpen = tab !== "paid";
+
+  const filtered = useMemo(() => active.filter((c) =>
     (!q || c.clientName.toLowerCase().includes(q.toLowerCase())) &&
     (!filterClin || c.clinicianId === filterClin) &&
     (bucket === null || bucketOf(c.age) === bucket)
-  ), [data.outstanding, q, filterClin, bucket]);
+  ), [active, q, filterClin, bucket]);
+
+  // Aging chip counts reflect the tab you're on, not a fixed server total.
+  const chipCounts = useMemo(() => {
+    const counts = [0, 0, 0, 0];
+    for (const c of active) counts[bucketOf(c.age)]++;
+    return counts;
+  }, [active]);
 
   const groups = useMemo(() => {
     const m = new Map<string, { name: string; claims: Claim[] }>();
@@ -54,7 +69,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
     return [...m.entries()].map(([key, g]) => ({ key, name: g.name, claims: g.claims, total: g.claims.reduce((t, c) => t + c.amount, 0), oldest: Math.max(...g.claims.map((c) => c.age)) })).sort((a, b) => b.total - a.total);
   }, [filtered, groupBy]);
 
-  const selClaims = data.outstanding.filter((c) => selected.has(c.id));
+  const selClaims = active.filter((c) => selected.has(c.id));
   const selTotal = selClaims.reduce((t, c) => t + c.amount, 0);
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -63,32 +78,37 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
     claims.forEach((c) => (all ? n.delete(c.id) : n.add(c.id))); return n;
   });
   const clearFilters = () => { setQ(""); setFilterClin(""); setBucket(null); };
+  const switchTab = (t: Tab) => { setTab(t); setSelected(new Set()); setBucket(null); };
 
-  async function mark(ids: string[], paid: boolean, paidDate: string | null) {
+  async function post(ids: string[], payload: Record<string, unknown>) {
     setBusy(true);
     try {
       for (const id of ids) {
-        await fetch("/api/billing/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, paid, paidDate }) });
+        await fetch("/api/billing/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, ...payload }) });
       }
       setSelected(new Set());
       router.refresh();
     } finally { setBusy(false); }
   }
+  const markBilled = (ids: string[], date: string) => post(ids, { action: "billed", billed: true, billedDate: date });
+  const markPaid = (ids: string[], date: string) => post(ids, { action: "paid", paid: true, paidDate: date });
+  const unbill = (id: string) => post([id], { action: "billed", billed: false });
+  const unpay = (id: string) => post([id], { action: "paid", paid: false });
 
   return (
     <>
       <div className="bq-topbar">
         <h1 className="bq-h1">Billing queue</h1>
-        <p className="bq-sub">Reconcile an insurer&apos;s remittance: tick the claims it covers, set the paid date, mark them together · amounts in KYD</p>
+        <p className="bq-sub">Submit claims to the insurer, then mark them paid as the money lands. Only paid claims count as collected · amounts in KYD</p>
       </div>
 
-      {/* Work-status ribbon: the queue is the operational surface, so it leads
-          with what's left to do — not the commission figure (that lives on the
-          dashboard). Your cut is kept, but muted and to the side. */}
+      {/* Work-status ribbon: leads with what's left to do at each stage. Your cut
+          is kept, but muted and to the side (it lives on the dashboard). */}
       <div className="bq-workbar">
-        <div className="bq-wstat"><span className="bq-wk">To reconcile</span><span className="bq-wv mono">{data.awaitingCount} <small>claim{data.awaitingCount === 1 ? "" : "s"}</small></span></div>
-        <div className="bq-wstat"><span className="bq-wk">Outstanding</span><span className="bq-wv mono">{money0(data.outstandingTotal)}</span></div>
-        <div className="bq-wstat"><span className="bq-wk">Oldest claim</span><span className={`bq-wv mono ${data.oldestDays >= 15 ? "warn" : ""}`}>{data.oldestDays} day{data.oldestDays === 1 ? "" : "s"}</span></div>
+        <div className="bq-wstat"><span className="bq-wk">To bill</span><span className="bq-wv mono">{data.toBillCount} <small>claim{data.toBillCount === 1 ? "" : "s"}</small></span></div>
+        <div className="bq-wstat"><span className="bq-wk">Awaiting payment</span><span className="bq-wv mono">{money0(data.awaitingTotal)}</span></div>
+        <div className="bq-wstat"><span className="bq-wk">Collected this month</span><span className="bq-wv mono">{money0(data.collectedThisMonth)}</span></div>
+        <div className="bq-wstat"><span className="bq-wk">Oldest open</span><span className={`bq-wv mono ${data.oldestDays >= 15 ? "warn" : ""}`}>{data.oldestDays} day{data.oldestDays === 1 ? "" : "s"}</span></div>
         <span className="bq-wspace" />
         <div className="bq-wcut">
           <div className="c">Your cut so far <b>{money(data.commissionThisMonth)}</b></div>
@@ -96,24 +116,27 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       </div>
 
-      {/* Aging filter chips — slim pills that drive the list filter. */}
-      <div className="bq-chips">
-        <button className={`bq-chip ${bucket === null ? "on" : ""}`} onClick={() => setBucket(null)}>
-          All ages<span className="cc">{data.awaitingCount}</span>
-        </button>
-        {data.buckets.map((b, i) => (
-          <button key={b.label} className={`bq-chip ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
-            <span className="cd" style={{ background: b.color }} />{b.label}<span className="cc">{b.count}</span>
+      {/* Aging filter chips — slim pills that drive the list filter (open tabs). */}
+      {isOpen && (
+        <div className="bq-chips">
+          <button className={`bq-chip ${bucket === null ? "on" : ""}`} onClick={() => setBucket(null)}>
+            All ages<span className="cc">{active.length}</span>
           </button>
-        ))}
-      </div>
+          {data.buckets.map((b, i) => (
+            <button key={b.label} className={`bq-chip ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
+              <span className="cd" style={{ background: b.color }} />{b.label}<span className="cc">{chipCounts[i]}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="bq-toolbar">
         <div className="bq-tabs">
-          <button className={`bq-tab ${tab === "outstanding" ? "on" : ""}`} onClick={() => setTab("outstanding")}>Outstanding ({data.outstanding.length})</button>
-          <button className={`bq-tab ${tab === "billed" ? "on" : ""}`} onClick={() => setTab("billed")}>Billed ({data.billed.length})</button>
+          <button className={`bq-tab ${tab === "tobill" ? "on" : ""}`} onClick={() => switchTab("tobill")}>To bill ({data.toBill.length})</button>
+          <button className={`bq-tab ${tab === "awaiting" ? "on" : ""}`} onClick={() => switchTab("awaiting")}>Awaiting payment ({data.awaiting.length})</button>
+          <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Paid ({data.paid.length})</button>
         </div>
-        {tab === "outstanding" && <>
+        {isOpen && <>
           <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
           <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
             <option value="">All clinicians</option>
@@ -127,9 +150,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </>}
       </div>
 
-      {tab === "outstanding" ? (
+      {isOpen ? (
         groups.length === 0 ? (
-          <div className="bq-group"><div className="bq-empty"><div className="big">Nothing outstanding here</div><div className="small">Every claim in this view has been marked billed.</div></div></div>
+          <div className="bq-group"><div className="bq-empty">
+            <div className="big">{tab === "tobill" ? "Nothing to bill here" : "Nothing awaiting payment here"}</div>
+            <div className="small">{tab === "tobill" ? "Every logged claim in this view has been submitted to the insurer." : "Every submitted claim in this view has been paid."}</div>
+          </div></div>
         ) : (
           <div className="bq-groups">
             {groups.map((g) => {
@@ -145,13 +171,14 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                     <div className="bq-gright"><div className="bq-gtot">{money(g.total)}</div><div className="bq-gcomm">+{money(comm(g.claims))} to you</div></div>
                   </div>
                   {g.claims.map((c) => (
-                    <div className={`bq-row ${selected.has(c.id) ? "sel" : ""}`} key={c.id}>
+                    <div className={`bq-row ${selected.has(c.id) ? "sel" : ""} ${tab === "awaiting" ? "act" : ""}`} key={c.id}>
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className="dos">{c.dos}</div>
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
-                      <div className="who"><div className="cl">{c.clientName}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
+                      <div className="who"><div className="cl">{c.clientName}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
                       <div className="amt">{money(c.amount)}</div>
                       <div className="comm">+{money(c.commission)}</div>
+                      {tab === "awaiting" && <button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button>}
                     </div>
                   ))}
                 </div>
@@ -161,26 +188,35 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         )
       ) : (
         <div className="bq-billed">
-          <div className="bq-thead"><span>Paid</span><span>Client</span><span>Clinician</span><span className="r">Amount</span><span className="r">Your 3%</span><span className="r"></span></div>
-          {data.billed.length === 0 ? <div className="bq-empty"><div className="big">No payments recorded yet</div></div> : data.billed.map((c) => (
+          <div className="bq-thead"><span>Paid</span><span>Client</span><span>Clinician</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
+          {data.paid.length === 0 ? <div className="bq-empty"><div className="big">No payments recorded yet</div></div> : data.paid.map((c) => (
             <div className="bq-brow" key={c.id}>
               <span className="pill">✓ {c.paidDate}</span>
               <span>{c.clientName}</span>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>{c.clinicianName}</span>
               <span className="amt">{money(c.amount)}</span>
               <span className="comm">+{money(c.commission)}</span>
-              <button className="bq-undo" disabled={busy} onClick={() => mark([c.id], false, null)}>Undo</button>
+              <button className="bq-undo" disabled={busy} onClick={() => unpay(c.id)}>Undo</button>
             </div>
           ))}
         </div>
       )}
 
-      {selected.size > 0 && (
+      {isOpen && selected.size > 0 && (
         <div className="bq-bulk">
           <div><div className="bt">{selected.size} claim{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} insurance · <span className="comm">+{money(comm(selClaims))} to you</span></div></div>
           <div className="sp" />
-          <label>Paid date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
-          <button className="go" disabled={busy} onClick={() => mark([...selected], true, batchDate)}>{busy ? "Marking…" : `Mark ${selected.size} billed`}</button>
+          {tab === "tobill" ? (
+            <>
+              <label>Billed date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
+              <button className="go" disabled={busy} onClick={() => markBilled([...selected], batchDate)}>{busy ? "Submitting…" : `Mark ${selected.size} billed`}</button>
+            </>
+          ) : (
+            <>
+              <label>Paid date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
+              <button className="go" disabled={busy} onClick={() => markPaid([...selected], batchDate)}>{busy ? "Marking…" : `Mark ${selected.size} paid`}</button>
+            </>
+          )}
           <button className="x" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}

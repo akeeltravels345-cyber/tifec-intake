@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; }
-interface ClientOpt { first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; }
+interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; }
 const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -29,6 +29,8 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const router = useRouter();
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
+  const [dob, setDob] = useState("");        // new client's date of birth (for the 1500)
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [picked, setPicked] = useState("");
   // Which kind of client this is. Default to "returning" only when there ARE
   // returning clients; nobody is pre-selected, so it can't pick one by accident.
@@ -46,10 +48,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
 
   function pickClient(c: ClientOpt) {
     const k = clientKey(c.first, c.last);
-    if (picked === k) { setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); return; }
+    if (picked === k) { setPicked(""); setPickedId(null); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); return; }
     // Carry their usual insurer over — it's nearly always the same next visit,
     // but they can still switch this visit to paid-upfront.
-    setPicked(k); setFirst(c.first); setLast(c.last);
+    setPicked(k); setPickedId(c.id ?? null); setFirst(c.first); setLast(c.last);
     setInsurerId(c.insurerId || ""); setPayMode(c.insurerId ? "insurance" : "upfront");
     setCopayTouched(false);
   }
@@ -67,7 +69,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
    *  across (e.g. picking someone, then typing a different new name). */
   function switchMode(next: "returning" | "new") {
     if (next === mode) return;
-    setMode(next); setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); setSearch("");
+    setMode(next); setPicked(""); setPickedId(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront"); setCopayTouched(false); setSearch("");
   }
   const [dos, setDos] = useState(today);
   const [insurerId, setInsurerId] = useState("");
@@ -104,7 +106,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayNum : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayNum : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -112,7 +114,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         // A clinician logging a day's work does several in a row, so keep the
         // date and clear only what changes from one client to the next.
         setSaved(`Logged ${first.trim()} ${last.trim()} — ${money(totalCost)}.`);
-        setPicked(""); setFirst(""); setLast(""); setInsurerId(""); setPayMode("upfront");
+        setPicked(""); setPickedId(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
         setCodes([]); setCopay(""); setCopayTouched(false); setNotes(""); setSearch("");
         setMode(clients.length > 0 ? "returning" : "new");
         setBusy(false);
@@ -208,10 +210,14 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                 {picked && <p className="ls-picked">Logging another visit for <b>{first} {last}</b>. Their usual insurer is filled in below.</p>}
               </>
             ) : (
-              <div className="ls-row2">
-                <input className="ls-in" placeholder="First" value={first} onChange={(e) => { setFirst(e.target.value); setPicked(""); }} />
-                <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
-              </div>
+              <>
+                <div className="ls-row2">
+                  <input className="ls-in" placeholder="First" value={first} onChange={(e) => { setFirst(e.target.value); setPicked(""); }} />
+                  <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
+                </div>
+                <label className="ls-q" style={{ marginTop: 10 }}>Date of birth <span className="opt">used to match records &amp; for insurance claims</span></label>
+                <input type="date" className="ls-in" style={{ maxWidth: 190 }} value={dob} onChange={(e) => setDob(e.target.value)} max={today || undefined} />
+              </>
             )}
           </div>
           <div className="ls-field">

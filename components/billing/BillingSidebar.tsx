@@ -24,12 +24,14 @@ export default function BillingSidebar({
       ? [
           { href: "/billing/biller", label: "Dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
           { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+          { href: "/billing/clients", label: "Clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
           { href: "/billing/outside", label: "Outside clients", icon: IconClin, match: (p) => p.startsWith("/billing/outside") },
           { href: "/billing/import", label: "Import", icon: IconLog, match: (p) => p.startsWith("/billing/import") },
         ]
       : role === "clinician"
         ? [
             { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") || p === "/billing/me" },
+            { href: "/billing/clients", label: "My clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
             { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
           ]
         : [
