@@ -16,6 +16,8 @@ export interface Activity {
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtSize = (n?: number) => (!n ? "" : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+const noteWhen = (iso: string) => { const d = iso.slice(0, 10); const t = iso.slice(11, 16); return t ? `${d} ${t}` : d; };
 const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
   self: { label: "Self-pay", cls: "self" },
   logged: { label: "To bill", cls: "logged" },
@@ -24,13 +26,13 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "",
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician",
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
   insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
   activity: Activity[]; canEdit: boolean; canDelete?: boolean; today?: string;
-  intakeForms?: LinkedIntake[]; currentUserId?: string;
+  intakeForms?: LinkedIntake[]; currentUserId?: string; currentUserRole?: string;
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
@@ -103,11 +105,16 @@ export default function ClientDetail({
   const [refStart, setRefStart] = useState(profile.referral?.startDate ?? "");
   const [refEnd, setRefEnd] = useState(profile.referral?.endDate ?? "");
   const [refSessions, setRefSessions] = useState(profile.referral?.sessions ? String(profile.referral.sessions) : "");
-  // documents (edited live; each add/remove PATCHes the whole profile)
+  // documents (edited live; add/remove sync back the returned list)
   const [docs, setDocs] = useState(profile.documents ?? []);
   const [ndName, setNdName] = useState("");
   const [ndKind, setNdKind] = useState("referral");
   const [ndUrl, setNdUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  // shared cross-role notes
+  const [notes, setNotes] = useState(profile.notes ?? []);
+  const [noteText, setNoteText] = useState("");
+  const canModerate = currentUserRole === "owner" || currentUserRole === "admin";
 
   // Assemble the WHOLE profile from state — every PATCH must send it complete,
   // or fields it omits get wiped. `documents` can be overridden (add/remove).
@@ -148,12 +155,63 @@ export default function ClientDetail({
     setDocs(next); setNdName(""); setNdUrl("");
     patchProfile(buildProfile(next));
   }
-  function removeDocument(docId: string) {
-    const next = docs.filter((d) => d.id !== docId);
-    setDocs(next);
-    patchProfile(buildProfile(next));
+  async function uploadFile() {
+    if (!file) { setMsg("Choose a file to upload."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("name", ndName.trim() || file.name);
+      fd.append("kind", ndKind);
+      const res = await fetch(`/api/billing/clients/${id}/documents`, { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Upload failed.");
+      setDocs(j.documents); setFile(null); setNdName(""); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Upload failed."); }
+    finally { setBusy(false); }
+  }
+  async function removeDocument(doc: { id: string; stored?: boolean }) {
+    setBusy(true); setMsg("");
+    try {
+      if (doc.stored) {
+        const res = await fetch(`/api/billing/clients/${id}/documents/${doc.id}`, { method: "DELETE" });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || "Could not remove.");
+        setDocs(j.documents); router.refresh();
+      } else {
+        const next = docs.filter((d) => d.id !== doc.id);
+        setDocs(next);
+        await patchProfile(buildProfile(next));
+      }
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not remove."); }
+    finally { setBusy(false); }
+  }
+  async function addNote() {
+    if (!noteText.trim()) { setMsg("Write something first."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}/notes`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: noteText.trim() }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not add note.");
+      setNotes(j.notes); setNoteText(""); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not add note."); }
+    finally { setBusy(false); }
+  }
+  async function removeNote(noteId: string) {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}/notes?noteId=${noteId}`, { method: "DELETE" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not remove note.");
+      setNotes(j.notes); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not remove note."); }
+    finally { setBusy(false); }
   }
   const referral = referralStatus(profile.referral?.endDate, today);
+  const refDays = referral.daysLeft;
 
   // Only insured (non self-pay) entries can go on a CMS-1500.
   const billable = activity.filter((a) => a.stage !== "self");
@@ -201,15 +259,24 @@ export default function ClientDetail({
           {referral.state === "none" ? (
             <span className="cd-refval">No referral on file — add one so claims stay payable.</span>
           ) : referral.state === "expired" ? (
-            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b> — sessions after this date can&apos;t be billed.</span>
+            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b> — coverage has ended; sessions after this date can&apos;t be billed.</span>
           ) : (
-            <span className="cd-refval">Valid until <b>{profile.referral?.endDate}</b>
-              {referral.state === "expiring" && referral.daysLeft != null && <> · {referral.daysLeft} day{referral.daysLeft === 1 ? "" : "s"} left</>}</span>
+            <span className="cd-refval">
+              Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
+            </span>
           )}
           {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.authNumber ? ` · #${profile.referral.authNumber}` : ""}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
         </div>
-        {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>{referral.state === "none" ? "Add referral" : "Update"}</button>}
+        {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
       </div>
+      {(referral.state === "expiring" || referral.state === "expired") && (
+        <div className={`cd-refprompt ${referral.state}`}>
+          ⚠ {referral.state === "expiring"
+            ? <>This referral ends in <b>{refDays} day{refDays === 1 ? "" : "s"}</b> ({profile.referral?.endDate}). Apply for a new referral now so {first}&apos;s coverage doesn&apos;t lapse — sessions after the end date can&apos;t be billed.</>
+            : <>This referral has <b>expired</b>. Apply for a new referral before billing further sessions for {first}.</>}
+          {canEdit && !edit && <button className="cd-refprompt-btn" onClick={() => setEdit(true)}>Renew referral</button>}
+        </div>
+      )}
 
       {/* ---- Record ---- */}
       <div className="su-sec">
@@ -255,6 +322,7 @@ export default function ClientDetail({
             {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
             {field("Valid until (end date)", <input type="date" className="ls-in" value={refEnd} onChange={(e) => setRefEnd(e.target.value)} />)}
             {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
+            <div className="cd-refupload-hint">📎 Upload the referral letter itself in <b>Documents</b> below — it&apos;s stored securely on this record. The end date above flags the clinician 30 days before it lapses.</div>
             <div className="cd-save">
               <button className="ls-save" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</button>
               <button className="su-del" disabled={busy} onClick={() => { setEdit(false); setMsg(""); }}>Cancel</button>
@@ -291,28 +359,77 @@ export default function ClientDetail({
             <p className="su-hint" style={{ margin: "0 0 12px" }}>No documents yet.</p>
           ) : (
             <div className="cd-doclist">
-              {docs.map((d) => (
-                <div className="cd-doc" key={d.id}>
-                  <span className={`cd-dockind ${d.kind}`}>{d.kind}</span>
-                  {d.url ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="cd-docname">{d.name}</a> : <span className="cd-docname">{d.name}</span>}
-                  <span className="cd-docdate">{d.addedAt}</span>
-                  {canEdit && <button className="cd-xbtn" title="Remove document" disabled={busy} onClick={() => removeDocument(d.id)}>×</button>}
+              {docs.map((d) => {
+                const href = d.stored ? `/api/billing/clients/${id}/documents/${d.id}` : d.url;
+                return (
+                  <div className="cd-doc" key={d.id}>
+                    <span className={`cd-dockind ${d.kind}`}>{d.kind}</span>
+                    {href
+                      ? <a href={href} target="_blank" rel="noopener noreferrer" className="cd-docname">{d.stored ? "⬇ " : ""}{d.name}</a>
+                      : <span className="cd-docname">{d.name}</span>}
+                    {d.stored && <span className="cd-docmeta">file{d.size ? ` · ${fmtSize(d.size)}` : ""}</span>}
+                    <span className="cd-docdate">{d.addedAt}</span>
+                    {canEdit && <button className="cd-xbtn" title="Remove document" disabled={busy} onClick={() => removeDocument(d)}>×</button>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {canEdit && (
+            <div className="cd-docadd-group">
+              <div className="cd-docadd">
+                <select className="ls-in" value={ndKind} onChange={(e) => setNdKind(e.target.value)}>
+                  <option value="referral">Referral</option>
+                  <option value="intake">Intake form</option>
+                  <option value="other">Other</option>
+                </select>
+                <input className="ls-in" placeholder="Name (optional)" value={ndName} onChange={(e) => setNdName(e.target.value)} />
+              </div>
+              <div className="cd-docadd">
+                <label className="cd-filepick">
+                  <input type="file" style={{ display: "none" }} disabled={busy} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <span>{file ? `📄 ${file.name}` : "Choose a file to upload…"}</span>
+                </label>
+                <button className="su-add" disabled={busy || !file} onClick={uploadFile}>{busy ? "Uploading…" : "Upload file"}</button>
+              </div>
+              <div className="cd-docadd">
+                <input className="ls-in" placeholder="…or paste a link (URL)" value={ndUrl} onChange={(e) => setNdUrl(e.target.value)} />
+                <button className="su-add" disabled={busy || !ndName.trim()} onClick={addDocument}>Add link</button>
+              </div>
+              <p className="su-hint" style={{ margin: "8px 2px 0" }}>Files up to 4&nbsp;MB (PDF, image, or Word) are stored securely, encrypted, on this record. Larger files can be added as a link.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Shared notes (all roles) ---- */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Notes</h2>
+          <span className="su-hint">Shared across everyone who works this record — clinicians, biller, owner, admin. Add benefits, authorisations, calls with the insurer, anything the team should see. (Private clinical notes stay separate.)</span></div>
+        <div className="su-card" style={{ padding: 16 }}>
+          {notes.length === 0 ? (
+            <p className="su-hint" style={{ margin: "0 0 12px" }}>No notes yet.</p>
+          ) : (
+            <div className="cd-notelist">
+              {[...notes].reverse().map((n) => (
+                <div className="cd-note" key={n.id}>
+                  <div className="cd-noterow">
+                    <span className="cd-noteauthor">{n.authorName}</span>
+                    <span className={`cd-noterole ${n.role}`}>{n.role}</span>
+                    <span className="cd-notedate">{noteWhen(n.addedAt)}</span>
+                    {(n.authorId === currentUserId || canModerate) && (
+                      <button className="cd-xbtn" title="Delete note" disabled={busy} onClick={() => removeNote(n.id)}>×</button>
+                    )}
+                  </div>
+                  <div className="cd-notetext">{n.text}</div>
                 </div>
               ))}
             </div>
           )}
-          {canEdit && (
-            <div className="cd-docadd">
-              <select className="ls-in" value={ndKind} onChange={(e) => setNdKind(e.target.value)}>
-                <option value="referral">Referral</option>
-                <option value="intake">Intake form</option>
-                <option value="other">Other</option>
-              </select>
-              <input className="ls-in" placeholder="Document name" value={ndName} onChange={(e) => setNdName(e.target.value)} />
-              <input className="ls-in" placeholder="Link (URL) — optional" value={ndUrl} onChange={(e) => setNdUrl(e.target.value)} />
-              <button className="su-add" disabled={busy} onClick={addDocument}>{busy ? "Adding…" : "Add document"}</button>
-            </div>
-          )}
+          <div className="cd-noteadd">
+            <textarea className="ls-in" rows={2} placeholder="Add a note for the team…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+            <button className="su-add" disabled={busy || !noteText.trim()} onClick={addNote}>{busy ? "Saving…" : "Add note"}</button>
+          </div>
         </div>
       </div>
 

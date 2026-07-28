@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
+import { deleteDocFilesForClient } from "@/lib/clientDocs";
 import { listSessions, deleteSession } from "@/lib/billing";
 
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
@@ -26,10 +27,15 @@ function parseDocuments(v: unknown): ClientProfile["documents"] {
     const doc = (d ?? {}) as Record<string, unknown>;
     const name = s(doc.name);
     if (!name) return null;
+    const size = Number(doc.size);
     return {
       id: s(doc.id) ?? Math.random().toString(36).slice(2),
       name, kind: s(doc.kind) ?? "other", url: s(doc.url), note: s(doc.note),
       addedAt: isDate(doc.addedAt) ? String(doc.addedAt) : new Date().toISOString().slice(0, 10),
+      // Preserve the uploaded-file markers so a record edit never orphans bytes.
+      stored: doc.stored === true || undefined,
+      mime: s(doc.mime),
+      size: Number.isFinite(size) && size > 0 ? size : undefined,
     };
   }).filter(Boolean) as NonNullable<ClientProfile["documents"]>;
   return out.length ? out : undefined;
@@ -50,6 +56,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const sessions = await listSessions({ clientId: id });
   let removedCharges = 0;
   for (const sess of sessions) { if (await deleteSession(sess.id)) removedCharges++; }
+  await deleteDocFilesForClient(id);
   await deleteClient(id);
   return NextResponse.json({ ok: true, removedCharges });
 }
@@ -94,6 +101,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     diagnosis: Array.isArray(p.diagnosis) ? p.diagnosis.map((x) => String(x).trim().toUpperCase()).filter(Boolean).slice(0, 12) : undefined,
     referral: parseReferral(p.referral),
     documents: parseDocuments(p.documents),
+    // Shared notes are managed only through the /notes endpoint; never let a
+    // record edit (which doesn't carry them) wipe the existing stream.
+    notes: client.profile.notes,
+    // Preserve the demo marker so editing a sample client doesn't make it
+    // un-cleanable by the sample-data purge.
+    sample: client.profile.sample || undefined,
   };
 
   const insurerId = body.insurerId ? String(body.insurerId) : null;

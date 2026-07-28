@@ -42,6 +42,7 @@ export interface ClientProfile {
   sample?: boolean;             // seeded demo client, so it can be bulk-removed
   referral?: ClientReferral;    // insurer referral + its validity window
   documents?: ClientDocument[]; // referral letter, intake form, other files/links
+  notes?: ClientNote[];         // shared cross-role notes (benefits, admin, etc.)
 }
 
 /** A referral authorises billing for a window of time. Sessions with a date of
@@ -56,8 +57,9 @@ export interface ClientReferral {
 }
 
 /** A document attached to a client — the intake form, the referral letter, etc.
- *  Stored as a reference (name + optional link/note); actual file bytes are not
- *  held here. */
+ *  A document is EITHER an uploaded file (stored=true; bytes live encrypted in
+ *  billing_client_docs, fetched via the download route) OR an external link
+ *  (url), or both. */
 export interface ClientDocument {
   id: string;
   name: string;
@@ -65,6 +67,21 @@ export interface ClientDocument {
   url?: string;         // link to the document (e.g. in the EHR / drive)
   note?: string;
   addedAt: string;      // YYYY-MM-DD
+  stored?: boolean;     // true when an actual file is held in billing_client_docs
+  mime?: string;        // content type of the stored file
+  size?: number;        // byte size of the stored file
+}
+
+/** A shared note on a client record. Unlike private clinical/session notes, this
+ *  stream is visible to and addable by everyone who can open the record — the
+ *  clinician(s), the biller (e.g. benefits), the owner, the admin. */
+export interface ClientNote {
+  id: string;
+  authorId: string;     // clinician / user id who wrote it
+  authorName: string;   // display name captured at write time
+  role: string;         // "clinician" | "biller" | "owner" | "admin"
+  text: string;
+  addedAt: string;      // ISO datetime
 }
 
 export interface Client {

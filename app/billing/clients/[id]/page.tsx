@@ -64,6 +64,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         today={new Date().toISOString().slice(0, 10)}
         intakeForms={intakeForms}
         currentUserId={user.clinician.id}
+        currentUserRole={user.clinician.contact === "admin" ? "admin" : user.role}
       />
     </>
   );
