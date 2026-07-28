@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getBillingUser, canConfigure, canConfigureBilling, isOwner } from "@/lib/billingRole";
+import { getBillingUser, canConfigure, canConfigureBilling, isOwner, isBiller } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
 import SetupClient from "@/components/billing/SetupClient";
@@ -20,8 +20,9 @@ export default async function SetupPage() {
       insurers={insurers}
       cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, active: c.active }))}
       clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
-      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, billerPct: s.billerPct ?? 0 }))}
+      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0 }))}
       canManageMoney={isOwner(user.role)}
+      canSeeProvider={isBiller(user.role) || user.clinician.contact === "admin"}
       billerPct={cfg.billerCommissionPct}
       expenses={cfg.runningExpenses}
       provider={cfg.provider ?? {}}

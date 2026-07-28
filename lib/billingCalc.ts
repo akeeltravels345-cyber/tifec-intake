@@ -60,6 +60,7 @@ export interface ClinicianMonth {
   otherDeductionPct: number;
   otherDeductionPctAmount: number;
   healthDeduction: number;          // fixed KYD (settings.otherDeductionFixed)
+  pension: number;                  // fixed KYD pension deduction
   payout: number;
   companyKeeps: number;
   // The biller has TWO separate agreements, paid by two different parties:
@@ -96,6 +97,7 @@ export function computeClinicianMonth(
   const retentionAmount = round2((collected * pct) / 100);
   const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
   const health = settings.otherDeductionFixed;
+  const pension = settings.pension ?? 0;
   // The biller has two SEPARATE agreements, and they are paid by different
   // parties — this is the whole point, so keep them apart:
   //   1. with the clinician — their own rate, out of their share, and
@@ -110,7 +112,7 @@ export function computeClinicianMonth(
 
   // The clinician's own agreement is settled out of their share, so it reduces
   // their payout. The company's agreement never does.
-  const payout = round2(collected - retentionAmount - otherPctAmount - health - billerFromClinician);
+  const payout = round2(collected - retentionAmount - otherPctAmount - health - pension - billerFromClinician);
 
   return {
     clinicianId: settings.clinicianId,
@@ -130,8 +132,9 @@ export function computeClinicianMonth(
     otherDeductionPct: settings.otherDeductionPct,
     otherDeductionPctAmount: otherPctAmount,
     healthDeduction: health,
+    pension,
     payout,
-    companyKeeps: round2(retentionAmount + otherPctAmount + health),
+    companyKeeps: round2(retentionAmount + otherPctAmount + health + pension),
     billerPct,
     billerFromClinician,
     billerFromCompany,

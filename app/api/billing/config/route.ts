@@ -104,6 +104,7 @@ export async function POST(req: Request) {
         retentionPct: n(body.retentionPct),
         otherDeductionPct: n(body.otherDeductionPct),
         otherDeductionFixed: n(body.otherDeductionFixed),
+        pension: n(body.pension),
         billerPct: n(body.billerPct),
       });
       return NextResponse.json({ ok: true });
