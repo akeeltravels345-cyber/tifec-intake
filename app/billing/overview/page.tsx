@@ -68,7 +68,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     .map((c) => ({
       id: c.clinicianId, name: nameOf(c.clinicianId), role: "",
       appts: c.appointments, collected: c.collected, owed: c.outstandingThisMonth, payout: c.payout,
-      revenueGenerated: c.revenueGenerated, billed: c.billedFromThisMonth, outstandingThisMonth: c.outstandingThisMonth, copay: c.copayThisMonth,
+      revenueGenerated: c.revenueGenerated, billed: c.billedFromThisMonth, outstandingThisMonth: c.outstandingThisMonth, copay: c.copayThisMonth, uncollectedCopay: c.uncollectedCopay,
     }));
 
   const data: OverviewData = {
@@ -81,6 +81,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     expensesTotal,
     insurers, insurersTotal,
     clinicians, appointments: biz.appointments,
+    uncollectedCopay: biz.uncollectedCopay,
   };
 
   return <OverviewClient data={data} />;

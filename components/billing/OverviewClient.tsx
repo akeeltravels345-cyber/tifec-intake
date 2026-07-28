@@ -10,7 +10,7 @@ const money0 = (n: number) => `${n < 0 ? "−" : ""}$${Math.abs(Math.round(n)).t
 export interface ClinRow {
   id: string; name: string; role: string; appts: number;
   collected: number; owed: number; payout: number;
-  revenueGenerated: number; billed: number; outstandingThisMonth: number; copay: number;
+  revenueGenerated: number; billed: number; outstandingThisMonth: number; copay: number; uncollectedCopay: number;
 }
 export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
@@ -24,6 +24,7 @@ export interface OverviewData {
   insurersTotal: number;
   clinicians: ClinRow[];
   appointments: number;
+  uncollectedCopay: number; // practice-wide co-pays due but not collected this month
 }
 
 function TrendChart({ pts }: { pts: { label: string; value: number; current: boolean }[] }) {
@@ -116,6 +117,16 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
       </div>
 
       <div className="bo-bridge"><span className="line" /><span className="txt">Earned is the work you did · Collected is the cash in the door. They differ by what insurers still owe you.</span><span className="line" /></div>
+
+      {data.uncollectedCopay > 0 && (
+        <div className="bo-uncollected">
+          <div>
+            <span className="lab">Co-pays not collected · {data.monthName}</span>
+            <span className="amt">{money(data.uncollectedCopay)}</span>
+          </div>
+          <p className="note">Co-pays that were due at the visit but weren&apos;t taken across the practice this month — money the practice is missing. See who below.</p>
+        </div>
+      )}
 
       {/* Bottom line + trend */}
       <div className="bo-two">
@@ -210,6 +221,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                     <div className="bo-expcell"><div className="k">Already billed</div><div className="v">{money(c.billed)}</div></div>
                     <div className="bo-expcell"><div className="k">Still outstanding</div><div className="v">{money(c.outstandingThisMonth)}</div></div>
                     <div className="bo-expcell"><div className="k">Collected at visit</div><div className="v">{money(c.copay)}</div></div>
+                    <div className="bo-expcell"><div className="k">Co-pays not collected</div><div className="v" style={c.uncollectedCopay > 0 ? { color: "#9a3b2a" } : undefined}>{money(c.uncollectedCopay)}</div></div>
                   </div>
                   <div className="bo-prog"><i style={{ width: `${pct(c.billed, c.revenueGenerated)}%` }} /></div>
                   <p className="bo-expnote"><Link href={`/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`}>Open {c.name}&apos;s full detail →</Link></p>
