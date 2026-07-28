@@ -152,7 +152,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <tr key={e.id}>
                   <td className="nm"><input className="su-in" value={e.name} onChange={(ev) => setExpenses(upd(expenses, i, { name: ev.target.value }))} /></td>
                   <td><input className="su-in" value={e.detail} onChange={(ev) => setExpenses(upd(expenses, i, { detail: ev.target.value }))} /></td>
-                  <td className="num"><NumInput value={e.amount} onChange={(v) => setExpenses(upd(expenses, i, { amount: v }))} /></td>
+                  <td className="num"><NumInput className="su-in numwide" value={e.amount} onChange={(v) => setExpenses(upd(expenses, i, { amount: v }))} /></td>
                   <td><div className="su-actions"><button className="su-del" onClick={() => { const next = expenses.filter((_, k) => k !== i); setExpenses(next); savePractice(billerPct, next, "Expense removed"); }}>Remove</button></div></td>
                 </tr>
               ))}
@@ -169,21 +169,21 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Insurers &amp; co-pay</h2></div>
           <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th>Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th></th></tr></thead>
+            <thead><tr><th className="grow">Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th></th></tr></thead>
             <tbody>
               {ins.map((x, i) => (
                 <tr key={x.id}>
-                  <td className="nm"><input className="su-in" value={x.name} onChange={(e) => setIns(upd(ins, i, { name: e.target.value }))} /></td>
+                  <td className="nm grow"><input className="su-in" value={x.name} onChange={(e) => setIns(upd(ins, i, { name: e.target.value }))} /></td>
                   <td><select className="su-sel" value={x.copayType} onChange={(e) => setIns(upd(ins, i, { copayType: e.target.value as CopayType }))}><option value="none">None</option><option value="fixed">Fixed $</option><option value="percentage">% of cost</option></select></td>
-                  <td className="num"><NumInput value={x.copayRate} disabled={x.copayType === "none"} onChange={(v) => setIns(upd(ins, i, { copayRate: v }))} /></td>
+                  <td className="num"><NumInput className="su-in numwide" value={x.copayRate} disabled={x.copayType === "none"} onChange={(v) => setIns(upd(ins, i, { copayRate: v }))} /></td>
                   <td><input className="su-in short" placeholder="e.g. 362" value={x.claimCode ?? ""} onChange={(e) => setIns(upd(ins, i, { claimCode: e.target.value }))} /></td>
                   <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "insurer", id: x.id, name: x.name, copayType: x.copayType, copayRate: x.copayRate, claimCode: x.claimCode ?? "", active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "insurer", action: "delete", id: x.id }, "Removed")}>×</button></div></td>
                 </tr>
               ))}
               <tr>
-                <td><input className="su-in" placeholder="New insurer" value={newIns.name} onChange={(e) => setNewIns({ ...newIns, name: e.target.value })} /></td>
+                <td className="grow"><input className="su-in" placeholder="New insurer" value={newIns.name} onChange={(e) => setNewIns({ ...newIns, name: e.target.value })} /></td>
                 <td><select className="su-sel" value={newIns.copayType} onChange={(e) => setNewIns({ ...newIns, copayType: e.target.value as CopayType })}><option value="none">None</option><option value="fixed">Fixed $</option><option value="percentage">% of cost</option></select></td>
-                <td className="num"><NumInput value={newIns.copayRate} onChange={(v) => setNewIns({ ...newIns, copayRate: v })} /></td>
+                <td className="num"><NumInput className="su-in numwide" value={newIns.copayRate} onChange={(v) => setNewIns({ ...newIns, copayRate: v })} /></td>
                 <td><input className="su-in short" placeholder="e.g. 362" value={newIns.claimCode ?? ""} onChange={(e) => setNewIns({ ...newIns, claimCode: e.target.value })} /></td>
                 <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, claimCode: newIns.claimCode ?? "", active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
               </tr>
@@ -195,22 +195,22 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Service codes</h2></div>
           <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th>Code</th><th>Description</th><th className="num">Fee</th><th className="num">Hrs</th><th></th></tr></thead>
+            <thead><tr><th>Code</th><th className="grow">Description</th><th className="num">Fee</th><th className="num">Hrs</th><th></th></tr></thead>
             <tbody>
               {cpt.map((x, i) => (
                 <tr key={x.code}>
                   <td className="nm">{x.code}</td>
-                  <td><input className="su-in" value={x.description} onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} /></td>
-                  <td className="num"><NumInput value={x.fee} onChange={(v) => setCpt(upd(cpt, i, { fee: v }))} /></td>
-                  <td className="num"><NumInput style={{ maxWidth: 64 }} value={x.hrs} onChange={(v) => setCpt(upd(cpt, i, { hrs: v }))} /></td>
+                  <td className="grow"><input className="su-in" value={x.description} onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} /></td>
+                  <td className="num"><NumInput className="su-in numwide" value={x.fee} onChange={(v) => setCpt(upd(cpt, i, { fee: v }))} /></td>
+                  <td className="num"><NumInput style={{ minWidth: 62, maxWidth: 78 }} value={x.hrs} onChange={(v) => setCpt(upd(cpt, i, { hrs: v }))} /></td>
                   <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "cpt", code: x.code, description: x.description, fee: x.fee, hrs: x.hrs, active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "cpt", action: "delete", code: x.code }, "Removed")}>×</button></div></td>
                 </tr>
               ))}
               <tr>
                 <td><input className="su-in short" placeholder="90XXX" value={newCpt.code} onChange={(e) => setNewCpt({ ...newCpt, code: e.target.value })} /></td>
-                <td><input className="su-in" placeholder="Description" value={newCpt.description} onChange={(e) => setNewCpt({ ...newCpt, description: e.target.value })} /></td>
-                <td className="num"><NumInput value={newCpt.fee} onChange={(v) => setNewCpt({ ...newCpt, fee: v })} /></td>
-                <td className="num"><NumInput style={{ maxWidth: 64 }} value={newCpt.hrs} onChange={(v) => setNewCpt({ ...newCpt, hrs: v })} /></td>
+                <td className="grow"><input className="su-in" placeholder="Description" value={newCpt.description} onChange={(e) => setNewCpt({ ...newCpt, description: e.target.value })} /></td>
+                <td className="num"><NumInput className="su-in numwide" value={newCpt.fee} onChange={(v) => setNewCpt({ ...newCpt, fee: v })} /></td>
+                <td className="num"><NumInput style={{ minWidth: 62, maxWidth: 78 }} value={newCpt.hrs} onChange={(v) => setNewCpt({ ...newCpt, hrs: v })} /></td>
                 <td><div className="su-actions"><button className="su-save" disabled={!newCpt.code.trim()} onClick={() => { run({ entity: "cpt", code: newCpt.code, description: newCpt.description, fee: newCpt.fee, hrs: newCpt.hrs, active: true }, "Added"); setNewCpt({ code: "", description: "", fee: 0, hrs: 1, active: true }); }}>Add</button></div></td>
               </tr>
             </tbody>

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion } from "@/lib/billingCalc";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import PrintButton from "@/components/billing/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,8 @@ export default async function PayoutStatement({ params, searchParams }: { params
     .sort((a, b) => (a.paidDate || "").localeCompare(b.paidDate || ""));
 
   const generated = new Date().toISOString().slice(0, 10);
-  const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction;
+  // The biller who takes the clinician's individual % off their insurance collected.
+  const biller = CLINICIANS.find((x) => x.billing === "biller");
 
   return (
     <div className="stmt-wrap">
@@ -85,8 +86,10 @@ export default async function PayoutStatement({ params, searchParams }: { params
               <tr><td>Insurance payments received this month</td><td className="num">{money(c.insuranceBilledThisMonth)}</td></tr>
               <tr className="sub"><td>Collected this month</td><td className="num">{money(c.collected)}</td></tr>
               <tr><td>Company retention ({c.retentionPct}%)</td><td className="num minus">−{money(c.retentionAmount)}</td></tr>
+              {c.billerFromClinician > 0 && <tr><td>Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</td><td className="num minus">−{money(c.billerFromClinician)}</td></tr>}
               {c.otherDeductionPct > 0 && <tr><td>Other deduction ({c.otherDeductionPct}%)</td><td className="num minus">−{money(c.otherDeductionPctAmount)}</td></tr>}
               {c.healthDeduction > 0 && <tr><td>Health insurance</td><td className="num minus">−{money(c.healthDeduction)}</td></tr>}
+              {c.pension > 0 && <tr><td>Pension</td><td className="num minus">−{money(c.pension)}</td></tr>}
               <tr className="total"><td>Net payout</td><td className="num">{money(c.payout)}</td></tr>
             </tbody>
           </table>
