@@ -107,7 +107,11 @@ export function computeClinicianMonth(
   const billerPct = settings.billerPct ?? 0;
   const billerFromClinician = round2((insuranceBilledThisMonth * billerPct) / 100);
   const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
-  const billerFromCompany = round2((insuranceRetention * billerCommissionPct) / 100);
+  // The practice-wide biller commission (the 3% of company retention) is only
+  // agreed for select clinicians — it applies only when this clinician's setting
+  // opts in. Everyone else contributes nothing to the company-paid biller share.
+  const companyCommissionPct = settings.billerCommissionApplies ? billerCommissionPct : 0;
+  const billerFromCompany = round2((insuranceRetention * companyCommissionPct) / 100);
   const billerCommission = round2(billerFromCompany + billerFromClinician);
 
   // The clinician's own agreement is settled out of their share, so it reduces

@@ -6,7 +6,7 @@ import {
   upsertCptCode, deleteCptCode,
   upsertClinicianSettings,
   savePracticeConfig, getPracticeConfig,
-  type CopayType, type RunningExpense, type ProviderConfig,
+  type CopayType, type RunningExpense, type ProviderConfig, type PracticeConfig,
 } from "@/lib/billing";
 
 const n = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
@@ -65,18 +65,24 @@ export async function POST(req: Request) {
     }
 
     if (entity === "practice") {
-      const expenses = Array.isArray(body.runningExpenses)
-        ? (body.runningExpenses as Record<string, unknown>[]).map((e, i) => ({
-            id: String(e.id || `exp-${i}`),
-            name: String(e.name ?? "").trim() || "Expense",
-            detail: String(e.detail ?? "").trim(),
-            amount: n(e.amount),
-            breakdown: Array.isArray(e.breakdown) ? (e.breakdown as Record<string, unknown>[]).map((b) => ({ label: String(b.label ?? ""), amount: n(b.amount) })) : undefined,
-          })) as RunningExpense[]
-        : [];
-      // Preserve the provider block (saved separately) when writing biller % + expenses.
+      // Fields are independent: a commission-only save never touches expenses, and
+      // an expenses save targets one month's snapshot (expenseMonth) or the base list.
       const current = await getPracticeConfig();
-      await savePracticeConfig({ ...current, billerCommissionPct: n(body.billerCommissionPct), runningExpenses: expenses });
+      const next: PracticeConfig = { ...current };
+      if (body.billerCommissionPct !== undefined) next.billerCommissionPct = n(body.billerCommissionPct);
+      if (Array.isArray(body.runningExpenses)) {
+        const expenses = (body.runningExpenses as Record<string, unknown>[]).map((e, i) => ({
+          id: String(e.id || `exp-${i}`),
+          name: String(e.name ?? "").trim() || "Expense",
+          detail: String(e.detail ?? "").trim(),
+          amount: n(e.amount),
+          breakdown: Array.isArray(e.breakdown) ? (e.breakdown as Record<string, unknown>[]).map((b) => ({ label: String(b.label ?? ""), amount: n(b.amount) })) : undefined,
+        })) as RunningExpense[];
+        const monthKey = typeof body.expenseMonth === "string" && /^\d{4}-\d{2}$/.test(body.expenseMonth) ? body.expenseMonth : null;
+        if (monthKey) next.monthlyExpenses = { ...(current.monthlyExpenses ?? {}), [monthKey]: expenses };
+        else next.runningExpenses = expenses;
+      }
+      await savePracticeConfig(next);
       return NextResponse.json({ ok: true });
     }
 
@@ -106,6 +112,7 @@ export async function POST(req: Request) {
         otherDeductionFixed: n(body.otherDeductionFixed),
         pension: n(body.pension),
         billerPct: n(body.billerPct),
+        billerCommissionApplies: body.billerCommissionApplies === true,
       });
       return NextResponse.json({ ok: true });
     }

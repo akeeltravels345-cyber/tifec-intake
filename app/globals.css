@@ -2005,6 +2005,15 @@ body:has(.biz) { background: #F8F9F8; }
 .su-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
 @media (max-width: 900px) { .su-two { grid-template-columns: 1fr; } }
 
+/* Per-month running-expenses controls. */
+.su-expbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 16px 4px; }
+.su-monthnav { display: inline-flex; align-items: center; gap: 6px; }
+.su-mbtn { width: 30px; height: 30px; border: 1px solid var(--edge, #e1d9c8); background: #fff; border-radius: 8px; font-size: 18px; line-height: 1; color: var(--ink, #4a5262); cursor: pointer; }
+.su-mbtn:hover { border-color: var(--teal, #43A9AE); }
+.su-monthlbl { font: 500 15px "Newsreader", serif; color: var(--ink, #1c2330); min-width: 130px; text-align: center; }
+.su-expsrc { font-size: 12px; color: var(--faint, #8a93a3); }
+.su-check { width: 17px; height: 17px; accent-color: var(--teal, #43A9AE); cursor: pointer; }
+
 /* ============ Record / submission detail — harmonized to the billing family ======= */
 body:has(.rec) .brandbar { display: none; }
 body:has(.rec) { background: radial-gradient(1100px 460px at 92% -12%, rgba(47,142,147,.13), transparent 58%), #F8F9F8; }

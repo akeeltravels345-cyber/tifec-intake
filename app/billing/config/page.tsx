@@ -14,17 +14,21 @@ export default async function SetupPage() {
 
   const [insurers, cptCodes, settings, cfg] = await Promise.all([listInsurers(), listCptCodes(), listClinicianSettings(), getPracticeConfig()]);
   const biller = CLINICIANS.find((c) => c.billing === "biller") ?? CLINICIANS[0];
+  const now = new Date();
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 
   return (
     <SetupClient
       insurers={insurers}
       cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, active: c.active }))}
       clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
-      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0 }))}
+      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0, billerCommissionApplies: s.billerCommissionApplies ?? false }))}
       canManageMoney={isOwner(user.role)}
       canSeeProvider={isBiller(user.role) || user.clinician.contact === "admin"}
       billerPct={cfg.billerCommissionPct}
       expenses={cfg.runningExpenses}
+      monthlyExpenses={cfg.monthlyExpenses ?? {}}
+      currentMonthKey={currentMonthKey}
       provider={cfg.provider ?? {}}
       renderingClinicians={CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name }))}
       billerName={biller.name}

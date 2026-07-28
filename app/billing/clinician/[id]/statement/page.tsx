@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
-import { computeClinicianMonth, insurancePortion } from "@/lib/billingCalc";
+import { listSessions, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
+import { computeClinicianMonth } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import PrintButton from "@/components/billing/PrintButton";
 
@@ -24,16 +24,9 @@ export default async function PayoutStatement({ params, searchParams }: { params
   const now = new Date();
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
-  const key = `${year}-${String(month).padStart(2, "0")}`;
 
-  const [all, insurers, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig()]);
+  const [all, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), getClinicianSettings(id), getPracticeConfig()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
-  const insurerName = (iid: string | null) => insurers.find((i) => i.id === iid)?.name ?? (iid ? "—" : "Self-pay");
-
-  // The insurance payments that actually landed this month (the payout basis, incl. rollover).
-  const received = all
-    .filter((s) => s.insurancePaid && s.paidDate && s.paidDate.slice(0, 7) === key && insurancePortion(s) > 0)
-    .sort((a, b) => (a.paidDate || "").localeCompare(b.paidDate || ""));
 
   const generated = new Date().toISOString().slice(0, 10);
   // The biller who takes the clinician's individual % off their insurance collected.
@@ -93,28 +86,7 @@ export default async function PayoutStatement({ params, searchParams }: { params
               <tr className="total"><td>Net payout</td><td className="num">{money(c.payout)}</td></tr>
             </tbody>
           </table>
-          <p className="stmt-note">Payout is 60% of what was actually collected this month, less deductions. Appointments still awaiting insurance ({money(c.outstanding)} outstanding) will appear on the statement for the month their payment is received.</p>
         </section>
-
-        {received.length > 0 && (
-          <section>
-            <h3 className="stmt-h3">Insurance payments received this month</h3>
-            <table className="stmt-table">
-              <thead><tr><th>Paid</th><th>Service date</th><th>Client</th><th>Insurer</th><th className="num">Amount</th></tr></thead>
-              <tbody>
-                {received.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.paidDate}</td>
-                    <td>{s.dateOfService}</td>
-                    <td>{s.clientId ? <Link href={`/billing/clients/${s.clientId}`} className="bq-clientlink">{s.clientFirst} {s.clientLast}</Link> : `${s.clientFirst} ${s.clientLast}`}</td>
-                    <td>{insurerName(s.insurerId)}</td>
-                    <td className="num">{money(insurancePortion(s))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
 
         <footer className="stmt-foot">
           <span>The Institute for Essential Care · Grand Cayman</span>

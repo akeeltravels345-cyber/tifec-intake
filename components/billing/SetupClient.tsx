@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
 interface Cpt { code: string; description: string; fee: number; hrs: number; active: boolean; }
-interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; }
+interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; billerCommissionApplies: boolean; }
 
 /** A number field that holds its own text so you can fully clear it — fixes the
  *  "a 0 appears and won't delete" bug of a controlled type=number bound to a
@@ -44,9 +44,11 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
   billerPct: number; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
+  /** Per-month expense snapshots (key "YYYY-MM"); the current month to default to. */
+  monthlyExpenses?: Record<string, Expense[]>; currentMonthKey: string;
   billerName: string; billerInitials: string;
   /** Owner-only sections (commission, expenses, clinician splits) show only when true. */
   canManageMoney?: boolean;
@@ -72,10 +74,27 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
     } catch (e) { setToast(e instanceof Error ? e.message : "Error"); setTimeout(() => setToast(""), 2200); }
   };
 
-  // practice config (biller % + expenses) held together
+  // Biller commission % (saved on its own — independent of expenses).
   const [billerPct, setBillerPct] = useState(String(pctIn));
-  const [expenses, setExpenses] = useState<Expense[]>(expIn);
-  const savePractice = (pct: string, exp: Expense[], msg: string) => run({ entity: "practice", billerCommissionPct: Number(pct) || 0, runningExpenses: exp }, msg);
+  const saveCommission = (pct: string) => run({ entity: "practice", billerCommissionPct: Number(pct) || 0 }, "Commission saved");
+
+  // Running expenses are PER MONTH: each month can carry its own set. A month with
+  // no snapshot inherits the most recent earlier month's (or the base list).
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthLabel = (key: string) => { const [y, m] = key.split("-").map(Number); return `${MONTH_NAMES[m - 1]} ${y}`; };
+  const shiftMonth = (key: string, delta: number) => { let [y, m] = key.split("-").map(Number); m += delta; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, "0")}`; };
+  const resolveExpenses = (map: Record<string, Expense[]>, key: string): { list: Expense[]; source: "month" | "carried" | "base"; from?: string } => {
+    if (map[key]) return { list: map[key], source: "month" };
+    const earlier = Object.keys(map).filter((k) => k < key).sort();
+    if (earlier.length) { const from = earlier[earlier.length - 1]; return { list: map[from], source: "carried", from }; }
+    return { list: expIn, source: "base" };
+  };
+  const [expMap, setExpMap] = useState<Record<string, Expense[]>>(monthlyExpenses);
+  const [expMonth, setExpMonth] = useState(currentMonthKey);
+  const [expenses, setExpenses] = useState<Expense[]>(() => resolveExpenses(monthlyExpenses, currentMonthKey).list);
+  const expResolved = resolveExpenses(expMap, expMonth);
+  const goMonth = (delta: number) => { const nk = shiftMonth(expMonth, delta); setExpMonth(nk); setExpenses(resolveExpenses(expMap, nk).list); };
+  const saveExpenses = (exp: Expense[]) => { setExpMap((m) => ({ ...m, [expMonth]: exp })); run({ entity: "practice", expenseMonth: expMonth, runningExpenses: exp }, `${monthLabel(expMonth)} expenses saved`); };
   const expTotal = expenses.reduce((t, e) => t + (Number(e.amount) || 0), 0);
 
   // local editable rows
@@ -83,7 +102,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
   const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", fee: 0, hrs: 1, active: true });
-  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0 }]; })));
+  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
 
@@ -128,23 +147,35 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {/* Biller commission — owner only */}
       {canManageMoney && (<>
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Biller commission</h2><span className="su-hint">A share of what the company retains on each clinician’s collections. Comes out of the practice’s retained share, never a clinician’s payout.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Biller commission</h2><span className="su-hint">A share of what the company retains — but only for the clinicians it&apos;s agreed with (set that per clinician in the splits below). Comes out of the practice&apos;s retained share, never a clinician&apos;s payout.</span></div>
         <div className="su-card su-comm">
           <div className="who"><div className="av">{billerInitials}</div><div><div className="nm">{billerName}</div><div className="rl">Biller · reconciles insurer remittances</div></div></div>
           <div className="rate">
             <div>
-              <div className="ratebox"><input type="number" step="0.5" min="0" value={billerPct} onChange={(e) => setBillerPct(e.target.value)} onBlur={() => savePractice(billerPct, expenses, "Commission saved")} /><span className="pct">%</span></div>
-              <div className="basis">of the company retention, on top of each clinician&apos;s own rate below</div>
+              <div className="ratebox"><input type="number" step="0.5" min="0" value={billerPct} onChange={(e) => setBillerPct(e.target.value)} onBlur={() => saveCommission(billerPct)} /><span className="pct">%</span></div>
+              <div className="basis">of the company retention, for the clinicians ticked in the splits below</div>
             </div>
-            <button className="su-save" onClick={() => savePractice(billerPct, expenses, "Commission saved")}>Save</button>
+            <button className="su-save" onClick={() => saveCommission(billerPct)}>Save</button>
           </div>
         </div>
       </div>
 
-      {/* Running expenses */}
+      {/* Running expenses — per month */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Running expenses<span className="su-tag">{money(expTotal)}/mo</span></h2><span className="su-hint">Fixed monthly overhead subtracted from collected cash to reach net profit.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Running expenses<span className="su-tag">{money(expTotal)}/mo</span></h2><span className="su-hint">Monthly overhead subtracted from collected cash to reach net profit. Costs change month to month — set each month&apos;s here.</span></div>
         <div className="su-card">
+          <div className="su-expbar">
+            <div className="su-monthnav">
+              <button className="su-mbtn" onClick={() => goMonth(-1)} aria-label="Previous month">‹</button>
+              <span className="su-monthlbl">{monthLabel(expMonth)}</span>
+              <button className="su-mbtn" onClick={() => goMonth(1)} aria-label="Next month">›</button>
+            </div>
+            <span className="su-expsrc">
+              {expResolved.source === "month" ? "This month has its own set"
+                : expResolved.source === "carried" ? `Carried forward from ${monthLabel(expResolved.from!)} — Save to make it this month's own`
+                : "Showing the default set — Save to make it this month's own"}
+            </span>
+          </div>
           <div className="su-tblwrap"><table className="su-tbl">
             <thead><tr><th>Expense</th><th>Detail</th><th className="num">Monthly</th><th></th></tr></thead>
             <tbody>
@@ -153,13 +184,13 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                   <td className="nm"><input className="su-in" value={e.name} onChange={(ev) => setExpenses(upd(expenses, i, { name: ev.target.value }))} /></td>
                   <td><input className="su-in" value={e.detail} onChange={(ev) => setExpenses(upd(expenses, i, { detail: ev.target.value }))} /></td>
                   <td className="num"><NumInput className="su-in numwide" value={e.amount} onChange={(v) => setExpenses(upd(expenses, i, { amount: v }))} /></td>
-                  <td><div className="su-actions"><button className="su-del" onClick={() => { const next = expenses.filter((_, k) => k !== i); setExpenses(next); savePractice(billerPct, next, "Expense removed"); }}>Remove</button></div></td>
+                  <td><div className="su-actions"><button className="su-del" onClick={() => { const next = expenses.filter((_, k) => k !== i); setExpenses(next); saveExpenses(next); }}>Remove</button></div></td>
                 </tr>
               ))}
             </tbody>
           </table></div>
           <button className="su-add" onClick={() => setExpenses([...expenses, { id: `exp-${Date.now()}`, name: "", detail: "", amount: 0 }])}>+ Add a cost</button>
-          <div style={{ padding: "0 16px 16px", display: "flex", justifyContent: "flex-end" }}><button className="su-save" onClick={() => savePractice(billerPct, expenses, "Expenses saved")}>Save expenses</button></div>
+          <div style={{ padding: "0 16px 16px", display: "flex", justifyContent: "flex-end" }}><button className="su-save" onClick={() => saveExpenses(expenses)}>Save {monthLabel(expMonth)} expenses</button></div>
         </div>
       </div>
       </>)}
@@ -221,9 +252,9 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {/* Clinician splits — owner only */}
       {canManageMoney && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected — on top of the practice rate above. Both come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies to them. Both come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th></th></tr></thead>
+          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th className="num">Practice {billerPct}%</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
               <tr key={c.id}>
@@ -233,7 +264,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td className="num"><NumInput value={s.otherDeductionFixed} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: v } })} /></td>
                 <td className="num"><NumInput value={s.pension} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, pension: v } })} /></td>
                 <td className="num"><NumInput value={s.billerPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, billerPct: v } })} /></td>
-                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, billerPct: s.billerPct }, "Saved")}>Save</button></div></td>
+                <td className="num"><input type="checkbox" className="su-check" checked={s.billerCommissionApplies} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, billerCommissionApplies: e.target.checked } })} /></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, billerPct: s.billerPct, billerCommissionApplies: s.billerCommissionApplies }, "Saved")}>Save</button></div></td>
               </tr>
             ); })}
           </tbody>

@@ -89,7 +89,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
       {/* Hero: work earned + cash collected */}
       <div className="bo-hero">
         <div className="bo-card">
-          <span className="bo-lab">Work earned · {data.monthName}</span>
+          <span className="bo-lab">Total charged · {data.monthName}</span>
           <div className="bo-big">{money(data.earned)}
             {data.earnedDelta !== null && <span className="bo-delta">▲ {Math.abs(data.earnedDelta).toFixed(0)}% vs prior</span>}
           </div>
@@ -101,7 +101,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <span className="k"><span className="bo-dot" style={{ background: "var(--teal)" }} />Collected <b>{money(data.earnedCollected)}</b></span>
             <span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Still owed by insurers <b>{money(data.earnedOwed)}</b></span>
           </div>
-          <p className="bo-cap">The value of every session delivered this month. These two always add back to what you earned — nothing is hidden.</p>
+          <p className="bo-cap">The total charged for every session delivered this month. These two always add back to what was charged — nothing is hidden.</p>
         </div>
 
         <div className="bo-card">

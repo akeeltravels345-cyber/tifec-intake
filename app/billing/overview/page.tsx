@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotal } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth } from "@/lib/billing";
 import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
 import OverviewClient, { type OverviewData, type ClinRow } from "@/components/billing/OverviewClient";
@@ -32,7 +32,8 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
 
   const biz = bizFor(year, month);
   const prev = bizFor(prevY, prevM);
-  const expensesTotal = runningExpensesTotal(cfg);
+  const expensesTotal = runningExpensesTotalForMonth(cfg, year, month);
+  const monthExpenses = expensesForMonth(cfg, year, month).expenses;
   const bottom = computeBottomLine(biz, expensesTotal);
 
   const earned = biz.revenueGenerated;
@@ -77,7 +78,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     earnedDelta: prev.revenueGenerated > 0 ? ((earned - prev.revenueGenerated) / prev.revenueGenerated) * 100 : null,
     cashTotal: biz.collected, cashCopays: biz.copays, cashInsurance: biz.billed, cashRollover,
     bottom, trend,
-    expenses: cfg.runningExpenses.map((e) => ({ name: e.name, detail: e.detail, amount: e.amount, breakdown: e.breakdown })),
+    expenses: monthExpenses.map((e) => ({ name: e.name, detail: e.detail, amount: e.amount, breakdown: e.breakdown })),
     expensesTotal,
     insurers, insurersTotal,
     clinicians, appointments: biz.appointments,

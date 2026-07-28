@@ -82,7 +82,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [dueTouched, setDueTouched] = useState(false);
   const [collectedInput, setCollectedInput] = useState("");
   const [collectedTouched, setCollectedTouched] = useState(false);
-  const resetCopay = () => { setDueTouched(false); setCollectedTouched(false); setDueInput(""); setCollectedInput(""); };
+  // Self-pay discount (e.g. a 50% Adventist discount). Applies to upfront/self-pay
+  // only; the discounted total is what's logged and drives every calculation.
+  const [discountPct, setDiscountPct] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
+  const resetCopay = () => { setDueTouched(false); setCollectedTouched(false); setDueInput(""); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); };
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -94,7 +98,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const copayDue = round2(dueTouched ? Number(dueInput) || 0 : suggested);
   const copayCollected = round2(collectedTouched ? Number(collectedInput) || 0 : copayDue);
   const uncollected = Math.max(0, round2(copayDue - copayCollected));
-  const collectedAtVisit = insurerId ? copayCollected : totalCost;
+  // Discount applies to self-pay only; the charged total is the fee less the discount.
+  const discPct = payMode === "upfront" ? Math.min(100, Math.max(0, Number(discountPct) || 0)) : 0;
+  const chargedTotal = discPct > 0 ? round2(totalCost * (1 - discPct / 100)) : totalCost;
+  const collectedAtVisit = insurerId ? copayCollected : chargedTotal;
   const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayDue)) : 0;
 
   const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); resetCopay(); };
@@ -111,10 +118,14 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (!dos) return setError("Date of service is required.");
     if (!codes.length) return setError("Select at least one service code.");
     setBusy(true);
+    // A self-pay discount is baked into the charged total; record the reason so
+    // the record shows why the fee was reduced.
+    const discountNote = discPct > 0 ? `${discPct}% discount${discountReason.trim() ? ` — ${discountReason.trim()}` : ""} (full fee ${money(totalCost)})` : "";
+    const finalNotes = [notes.trim(), discountNote].filter(Boolean).join(" · ");
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost, copayCollected: payMode === "insurance" ? copayCollected : 0, copayDue: payMode === "insurance" ? copayDue : 0, notes: notes.trim(), ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : 0, copayDue: payMode === "insurance" ? copayDue : 0, notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -325,6 +336,23 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </div>
             </div>
           </div>
+          {payMode === "upfront" && totalCost > 0 && (
+          <div className="ls-field">
+            <label className="ls-q">Discount <span className="opt">reduces the fee — e.g. Adventist 50%</span></label>
+            <div className="ls-row2">
+              <div style={{ width: 120 }}>
+                <span className="ls-sublab">% off</span>
+                <input className="ls-in" type="number" step="1" min="0" max="100" value={discountPct} onChange={(e) => setDiscountPct(e.target.value)} placeholder="0" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span className="ls-sublab">Reason</span>
+                <input className="ls-in" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="e.g. Adventist" />
+              </div>
+              <button type="button" className="ls-writeoff" onClick={() => { setDiscountPct("50"); if (!discountReason.trim()) setDiscountReason("Adventist"); }}>50% Adventist</button>
+            </div>
+            {discPct > 0 && <p className="ls-uncollected" style={{ color: "var(--teal-deep, #2c7a7e)" }}>Charging <b>{money(chargedTotal)}</b> — {discPct}% off the {money(totalCost)} fee.</p>}
+          </div>
+          )}
           {payMode === "insurance" && (
           <div className="ls-field">
             <label className="ls-q">Co-pay <span className="opt">what&apos;s due vs what you collected</span></label>
@@ -337,6 +365,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                 <span className="ls-sublab">Collected</span>
                 <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={collectedTouched ? collectedInput : String(copayDue)} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
               </div>
+              <button type="button" className="ls-writeoff" onClick={() => { setDueTouched(true); setDueInput("0"); setCollectedTouched(true); setCollectedInput("0"); }}>Waive</button>
               <button type="button" className="ls-writeoff" onClick={() => { setCollectedTouched(true); setCollectedInput("0"); }}>Not collected</button>
             </div>
             {uncollected > 0 && (

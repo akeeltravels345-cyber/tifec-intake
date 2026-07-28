@@ -65,7 +65,11 @@ export interface ProviderConfig {
 }
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
-  runningExpenses: RunningExpense[];
+  runningExpenses: RunningExpense[]; // base/default list — the fallback for any month
+  /** Per-month expense snapshots (key "YYYY-MM"). Expenses change month to month,
+   *  so each month can carry its own set; a month with no snapshot carries forward
+   *  the most recent earlier month's, falling back to the base list. */
+  monthlyExpenses?: Record<string, RunningExpense[]>;
   provider?: ProviderConfig;
 }
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
@@ -89,6 +93,7 @@ export interface ClinicianBillingSettings {
   otherDeductionFixed: number; // flat amount per payout (health)
   pension: number; // flat pension amount deducted per payout
   billerPct?: number; // biller commission % on THIS clinician's insurance collected
+  billerCommissionApplies?: boolean; // does the practice-wide biller 3% apply to this clinician?
 }
 
 export interface SessionInput {
@@ -285,13 +290,13 @@ export async function deleteCptCode(code: string): Promise<void> {
 
 // ===================== Clinician billing settings ===========================
 // The practice keeps 40% by default; each clinician can be overridden in Setup.
-const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0, pension: 0 });
+const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0, pension: 0, billerCommissionApplies: false });
 
 export async function listClinicianSettings(): Promise<ClinicianBillingSettings[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_clinician_settings`) as Record<string, unknown>[];
-    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed), pension: num(r.pension), billerPct: r.biller_pct == null ? undefined : num(r.biller_pct) }));
+    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed), pension: num(r.pension), billerPct: r.biller_pct == null ? undefined : num(r.biller_pct), billerCommissionApplies: !!r.biller_commission_applies }));
   }
   return readJson<ClinicianBillingSettings[]>(SET_FILE, []);
 }
@@ -305,9 +310,9 @@ export async function upsertClinicianSettings(s: ClinicianBillingSettings): Prom
   if (usePostgres) {
     const sql = await pg();
     await sql`
-      INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, pension, biller_pct, updated_at)
-      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.pension ?? 0}, ${s.billerPct ?? null}, now())
-      ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, pension = EXCLUDED.pension, biller_pct = EXCLUDED.biller_pct, updated_at = now()`;
+      INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, pension, biller_pct, biller_commission_applies, updated_at)
+      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.pension ?? 0}, ${s.billerPct ?? null}, ${s.billerCommissionApplies ?? false}, now())
+      ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, pension = EXCLUDED.pension, biller_pct = EXCLUDED.biller_pct, biller_commission_applies = EXCLUDED.biller_commission_applies, updated_at = now()`;
     return s;
   }
   const all = readJson<ClinicianBillingSettings[]>(SET_FILE, []);
@@ -346,6 +351,22 @@ export async function savePracticeConfig(cfg: PracticeConfig): Promise<PracticeC
 
 export const runningExpensesTotal = (cfg: PracticeConfig): number =>
   Math.round(cfg.runningExpenses.reduce((t, e) => t + (e.amount || 0), 0) * 100) / 100;
+
+/** The expenses that apply to a given month: that month's snapshot if it exists,
+ *  otherwise the most recent EARLIER month's snapshot (carried forward), otherwise
+ *  the base list. Returns whether the result is an explicit snapshot for the month
+ *  or an inherited/base fallback, so the UI can show which. */
+export function expensesForMonth(cfg: PracticeConfig, year: number, month: number): { expenses: RunningExpense[]; source: "month" | "carried" | "base"; from?: string } {
+  const key = `${year}-${String(month).padStart(2, "0")}`;
+  const snaps = cfg.monthlyExpenses ?? {};
+  if (snaps[key]) return { expenses: snaps[key], source: "month" };
+  const earlier = Object.keys(snaps).filter((k) => k < key).sort();
+  if (earlier.length) { const from = earlier[earlier.length - 1]; return { expenses: snaps[from], source: "carried", from }; }
+  return { expenses: cfg.runningExpenses, source: "base" };
+}
+
+export const runningExpensesTotalForMonth = (cfg: PracticeConfig, year: number, month: number): number =>
+  Math.round(expensesForMonth(cfg, year, month).expenses.reduce((t, e) => t + (e.amount || 0), 0) * 100) / 100;
 
 // ============================ Sessions ======================================
 interface StoredSession {
