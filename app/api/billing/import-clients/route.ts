@@ -3,7 +3,6 @@ import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { CLINICIANS, getClinician } from "@/lib/clinicians";
 import { listInsurers, listSessions, insertSession } from "@/lib/billing";
-import { insurancePortion } from "@/lib/billingCalc";
 import { addClients } from "@/lib/clients";
 import { parseArReport, matchInsurer } from "@/lib/arReport";
 
@@ -102,23 +101,28 @@ export async function POST(req: Request) {
   // against what's already there so re-importing can't double the amounts.
   let claimsAdded = 0, claimsSkipped = 0;
   if (isAr) {
+    // Dedup by COUNT, not presence: a client can genuinely have two identical
+    // charges on one day (same code + fee), so those must both import; only skip
+    // as many as already exist, which keeps a RE-import from doubling anything.
     const existing = await listSessions({ clinicianId });
-    const seen = new Set(existing.map((s) =>
-      `${`${s.clientFirst}|${s.clientLast}`.toLowerCase().trim()}@${s.dateOfService}@${insurancePortion(s)}`));
+    const keyOf = (first: string, last: string, dos: string, amount: number) =>
+      `${`${first}|${last}`.toLowerCase().trim()}@${dos}@${amount}`;
+    const budget = new Map<string, number>();
+    for (const s of existing) { const k = keyOf(s.clientFirst, s.clientLast, s.dateOfService, s.totalCost); budget.set(k, (budget.get(k) ?? 0) + 1); }
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (r.outstanding <= 0 || !r.insurerId) continue; // insured, owed money only
       // One charge per invoice line (each its own date of service). If the report
       // gave no per-line detail, fall back to a single charge for the total.
-      const invoices = r.invoices.length ? r.invoices : [{ date: r.invoiceDate ?? today, amount: r.outstanding }];
+      const invoices = r.invoices.length ? r.invoices : [{ date: r.invoiceDate ?? today, amount: r.outstanding, code: undefined as string | undefined }];
       for (const inv of invoices) {
         const dos = inv.date || today;
-        const key = `${`${r.first}|${r.last}`.toLowerCase().trim()}@${dos}@${inv.amount}`;
-        if (seen.has(key)) { claimsSkipped++; continue; }
-        seen.add(key);
+        const k = keyOf(r.first, r.last, dos, inv.amount);
+        const already = budget.get(k) ?? 0;
+        if (already > 0) { budget.set(k, already - 1); claimsSkipped++; continue; } // already imported before
         await insertSession({
           clinicianId, createdBy: me.id, clientFirst: r.first, clientLast: r.last, clientId: ids[i],
-          insurerId: r.insurerId, dateOfService: dos, cptCodes: [], durationHours: 0,
+          insurerId: r.insurerId, dateOfService: dos, cptCodes: inv.code ? [inv.code] : [], durationHours: 0,
           totalCost: inv.amount, copayCollected: 0,
           notes: "Imported from AR report — billed, awaiting payment",
           billedDate: dos, insurancePaid: false, paidDate: null,

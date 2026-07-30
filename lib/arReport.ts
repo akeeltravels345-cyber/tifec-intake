@@ -20,7 +20,7 @@ export interface ParsedClient {
   invoiceDate?: string; // earliest invoice date (YYYY-MM-DD), for the queue
   /** One entry per invoice line — so a client with several invoices becomes
    *  several charges (each its own date of service), not one lump sum. */
-  invoices?: { date: string; amount: number }[];
+  invoices?: { date: string; amount: number; code?: string }[];
 }
 
 export interface ParsedReport {
@@ -193,7 +193,12 @@ function parseUnpaidServices(text: string): ParsedClient[] {
       const iso = ddmmyyyyToIso(sm[1]);
       const amount = money(sm[2]);
       if (iso && amount > 0) {
-        (cur.invoices ??= []).push({ date: iso, amount });
+        // The service is printed as "<CPT>-<description>" (e.g. "90837-Psychotherapy").
+        // Anchor on the 5-digit CPT + "-" + a letter, so it's caught whether the code
+        // follows a bill date, follows "unit", or is fused onto the amount.
+        const codeM = line.match(/([0-9]{5})-[A-Za-z]/);
+        const code = codeM ? codeM[1] : undefined;
+        (cur.invoices ??= []).push({ date: iso, amount, code });
         cur.outstanding = round2((cur.outstanding ?? 0) + amount);
         if (!cur.invoiceDate || iso < cur.invoiceDate) cur.invoiceDate = iso;
       }
