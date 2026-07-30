@@ -1850,6 +1850,15 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-confirm { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fbeeea; border: 1px solid #e3b7ad; color: #7a2414; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13.5px; }
 .cd-xbtn { background: transparent; border: none; color: #b8bec9; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 6px; }
 .cd-xbtn:hover { color: #9a3b2a; }
+.cd-editbtn { background: transparent; border: none; color: #8a93a3; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 6px; }
+.cd-editbtn:hover { color: var(--teal-deep, #2c7a7e); }
+/* Inline charge editor (fix a mistake on a logged appointment). */
+.cd-editrow > td { background: #fbf9f4; border-top: none; padding: 12px 16px; }
+.cd-editform { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.cd-editform label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
+.cd-editform .ls-in { min-width: 120px; }
+.cd-editform input[type="number"] { max-width: 110px; }
+.cd-editactions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 .cd-addform { border: 1px solid var(--hair, #eae6dc); border-radius: 12px; padding: 14px; background: #fbfaf6; }
 .cd-addrow { display: flex; flex-wrap: wrap; gap: 12px; }
 .cd-addrow label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--faint, #8a93a3); font-weight: 700; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ClientProfile } from "@/lib/clients";
@@ -11,7 +11,7 @@ const randId = () => Math.random().toString(36).slice(2, 10);
 
 export interface Activity {
   id: string; date: string; clinician: string; codes: string[]; codeLabel: string;
-  insurer: string; total: number; copay: number;
+  insurer: string; insurerId: string | null; total: number; copay: number; copayDue: number;
   stage: "self" | "logged" | "billed" | "paid"; paidDate: string | null; billedDate: string | null;
 }
 
@@ -41,6 +41,14 @@ export default function ClientDetail({
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmDel, setConfirmDel] = useState(false);
   const [delCharge, setDelCharge] = useState<string | null>(null);
+  // Inline edit of a logged charge (fix a mistake).
+  const [editCharge, setEditCharge] = useState<string | null>(null);
+  const [ecDate, setEcDate] = useState("");
+  const [ecTotal, setEcTotal] = useState("");
+  const [ecInsurer, setEcInsurer] = useState("");
+  const [ecCopay, setEcCopay] = useState("");
+  const [ecDue, setEcDue] = useState("");
+  const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
   const [showAdd, setShowAdd] = useState(false);
   // add-charge form
   const [acDate, setAcDate] = useState("");
@@ -56,6 +64,35 @@ export default function ClientDetail({
       if (!res.ok) throw new Error((await res.json()).error || "Could not delete.");
       router.push("/billing/clients"); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not delete."); setBusy(false); }
+  }
+  function startEditCharge(a: Activity) {
+    setDelCharge(null);
+    setEditCharge(a.id);
+    setEcDate(a.date);
+    setEcTotal(String(a.total));
+    setEcInsurer(a.insurerId ?? "");
+    setEcCopay(String(a.copay));
+    setEcDue(String(a.copayDue));
+    setEcStage(a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
+  }
+  async function saveEditCharge(sid: string) {
+    if (!ecDate || ecTotal === "") { setMsg("Enter a date and amount."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/sessions/${sid}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateOfService: ecDate, totalCost: Number(ecTotal) || 0,
+          insurerId: ecInsurer || null,
+          copayCollected: ecInsurer ? Number(ecCopay) || 0 : 0,
+          copayDue: ecInsurer ? Number(ecDue) || 0 : 0,
+          stage: ecInsurer ? ecStage : "paid",
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
+      setEditCharge(null); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not save."); }
+    finally { setBusy(false); }
   }
   async function deleteChargeNow(sid: string) {
     setBusy(true); setMsg("");
@@ -489,7 +526,8 @@ export default function ClientDetail({
                   {activity.map((a) => {
                     const claimable = a.stage !== "self";
                     return (
-                      <tr key={a.id} className={sel.has(a.id) ? "cd-selrow" : ""}>
+                      <Fragment key={a.id}>
+                      <tr className={sel.has(a.id) ? "cd-selrow" : ""}>
                         <td><input type="checkbox" checked={sel.has(a.id)} disabled={!claimable} onChange={() => toggleSel(a.id)} title={claimable ? undefined : "Self-pay visits don't go on a CMS-1500"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>
@@ -507,12 +545,38 @@ export default function ClientDetail({
                                 <button className="cd-danger sm" disabled={busy} onClick={() => deleteChargeNow(a.id)}>Delete</button>
                                 <button className="su-del sm" disabled={busy} onClick={() => setDelCharge(null)}>Cancel</button>
                               </>
+                            ) : editCharge === a.id ? (
+                              <button className="su-del sm" disabled={busy} onClick={() => setEditCharge(null)}>Close</button>
                             ) : (
-                              <button className="cd-xbtn" title="Delete this charge" onClick={() => setDelCharge(a.id)}>×</button>
+                              <>
+                                <button className="cd-editbtn" title="Edit this charge" onClick={() => startEditCharge(a)}>✎</button>
+                                <button className="cd-xbtn" title="Delete this charge" onClick={() => setDelCharge(a.id)}>×</button>
+                              </>
                             )}
                           </td>
                         )}
                       </tr>
+                      {editCharge === a.id && (
+                        <tr className="cd-editrow">
+                          <td colSpan={canManageCharges ? 8 : 7}>
+                            <div className="cd-editform">
+                              <label>Date<input type="date" className="ls-in" value={ecDate} onChange={(e) => setEcDate(e.target.value)} /></label>
+                              <label>Fee<input type="number" step="0.01" min="0" className="ls-in" value={ecTotal} onChange={(e) => setEcTotal(e.target.value)} /></label>
+                              <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
+                              {ecInsurer && <>
+                                <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
+                                <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
+                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                              </>}
+                              <div className="cd-editactions">
+                                <button className="ls-save sm" disabled={busy} onClick={() => saveEditCharge(a.id)}>{busy ? "Saving…" : "Save change"}</button>
+                                <button className="su-del sm" disabled={busy} onClick={() => setEditCharge(null)}>Cancel</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>

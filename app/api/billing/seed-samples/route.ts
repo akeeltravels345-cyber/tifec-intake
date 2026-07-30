@@ -109,7 +109,8 @@ export async function DELETE() {
   const sessions = await listSessions();
   let removedSessions = 0;
   for (const s of sessions) if (s.clientId && ids.has(s.clientId)) { await deleteSession(s.id); removedSessions++; }
-  for (const c of samples) await deleteClient(c.id);
+  const { deleteDocFilesForClient } = await import("@/lib/clientDocs");
+  for (const c of samples) { await deleteDocFilesForClient(c.id); await deleteClient(c.id); }
 
   // Intake: the demo submissions (their names carry "Sample-").
   let removedIntake = 0;

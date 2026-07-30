@@ -353,9 +353,12 @@ export async function deleteClient(id: string): Promise<void> {
   writeJson(LINK_FILE, readJson<StoredLink[]>(LINK_FILE, []).filter((l) => l.clientId !== id));
 }
 
-/** Every seeded demo client (profile.sample), for bulk cleanup. */
+/** Every seeded demo client, for bulk cleanup. Matches the `sample` flag AND the
+ *  "Sample-" name all demo records carry — so a demo client that was edited (and
+ *  lost its flag) is still swept, while real clients are never touched. */
 export async function listSampleClients(): Promise<Client[]> {
-  return (await listAllClients()).filter((c) => c.profile.sample);
+  const isDemo = (c: Client) => c.profile.sample || /sample-/i.test(c.last) || /sample-/i.test(c.first);
+  return (await listAllClients()).filter(isDemo);
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */

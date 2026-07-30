@@ -512,6 +512,35 @@ export async function markSessionPaid(id: string, paid: boolean, paidDate: strin
   return true;
 }
 
+/** Edit a logged session (fix a mistake). Updates the money-bearing fields; the
+ *  caller resolves the final values (defaulting to the existing ones) so nothing
+ *  is wiped. Every view recomputes from sessions, so the fix propagates. */
+export async function updateSession(id: string, f: {
+  dateOfService: string; insurerId: string | null; totalCost: number;
+  copayCollected: number; copayDue: number; billedDate: string | null;
+  insurancePaid: boolean; paidDate: string | null; notes: string;
+}): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`
+      UPDATE billing_sessions SET
+        date_of_service = ${f.dateOfService}, insurer_id = ${f.insurerId},
+        total_cost = ${f.totalCost}, copay_collected = ${f.copayCollected}, copay_due = ${f.copayDue},
+        billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
+        notes = ${f.notes}
+      WHERE id = ${id} RETURNING id`) as { id: string }[];
+    return res.length > 0;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return false;
+  s.dateOfService = f.dateOfService; s.insurerId = f.insurerId; s.totalCost = f.totalCost;
+  s.copayCollected = f.copayCollected; s.copayDue = f.copayDue;
+  s.billedDate = f.billedDate; s.insurancePaid = f.insurancePaid; s.paidDate = f.paidDate; s.notes = f.notes;
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
 export async function deleteSession(id: string): Promise<boolean> {
   if (usePostgres) {
     const sql = await pg();
