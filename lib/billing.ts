@@ -439,14 +439,16 @@ async function loadStored(): Promise<StoredSession[]> {
     const sql = await pg();
     // Cast DATE columns to text so they arrive as "YYYY-MM-DD" (the driver otherwise
     // returns JS Date objects, which String().slice() mangled — breaking month filters).
-    const rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    const rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
     const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
     const byId: Record<string, string[]> = {};
     for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
     return rows.map((r) => ({
       id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, clientId: (r.client_id as string) ?? null, insurerId: (r.insurer_id as string) ?? null,
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
-      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
+      // copay_due may be NULL on rows predating the write-off feature; leave it
+      // undefined so decryptSession falls back to copay_collected for those.
+      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), copayDue: r.copay_due == null ? undefined : num(r.copay_due), billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null, notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }

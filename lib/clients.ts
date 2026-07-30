@@ -280,10 +280,23 @@ async function ensureClient(clinicianId: string, input: ClientInput, all: Stored
 
   // Candidates: same name across the practice.
   const sameName = all.filter((c) => c.nameKey === nk);
-  let match =
-    sameName.find((c) => c.identityKey === idk) ||           // exact name+DOB (or name-only) hit
-    (dob ? sameName.find((c) => c.identityKey === nk) : undefined) || // a name-only stub to upgrade with this DOB
-    (!dob && sameName.length ? sameName[0] : undefined);     // no DOB given: fold into the one on file
+  // A match may cross into another clinician's record, so guard the isolation
+  // boundary: a bare NAME collision (no DOB on one side) must NOT link one
+  // clinician to a different clinician's client. We only reuse another clinician's
+  // record when identity is PROVEN by name + DOB; otherwise we reuse only a record
+  // the caller already sees, and fall back to creating a fresh record.
+  const linkMap = sameName.length ? await clinicianIdsFor(sameName.map((c) => c.id)) : new Map<string, string[]>();
+  const callerLinked = (c: StoredClient) => (linkMap.get(c.id) ?? []).includes(clinicianId);
+  let match: StoredClient | undefined;
+  if (dob) {
+    match =
+      sameName.find((c) => c.identityKey === idk) ||                          // exact name+DOB — same person, safe to share
+      sameName.find((c) => c.identityKey === nk && callerLinked(c));          // upgrade the caller's OWN name-only stub with this DOB
+  } else {
+    match =
+      sameName.find((c) => c.identityKey === idk && callerLinked(c)) ||       // the caller's own name-only record
+      sameName.find((c) => callerLinked(c));                                  // any of this name the caller already sees
+  }
 
   if (match) {
     // Enrich: fill the usual insurer + any missing profile fields; upgrade a

@@ -19,10 +19,14 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const monthKey = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 const inMonth = (dateStr: string | null, y: number, m: number) => !!dateStr && dateStr.slice(0, 7) === monthKey(y, m);
 
-/** Part of a session's fee that goes through insurance (0 for self-pay). */
+/** Part of a session's fee that goes through insurance (0 for self-pay). The
+ *  insurer owes the fee less the patient's CONTRACTED co-pay (copayDue), never
+ *  less what was actually collected — an uncollected co-pay is the practice's
+ *  loss (see uncollectedCopay), not extra insurance revenue. */
 export function insurancePortion(s: BillingSession): number {
   if (!s.insurerId) return 0;
-  return round2(Math.max(0, (s.totalCost || 0) - (s.copayCollected || 0)));
+  const due = s.copayDue == null ? s.copayCollected : s.copayDue;
+  return round2(Math.max(0, (s.totalCost || 0) - (due || 0)));
 }
 /** Part collected at the visit: the co-pay, or the whole fee if self-pay. */
 export function collectedAtVisit(s: BillingSession): number {
