@@ -61,6 +61,9 @@ export default async function ClinicianDetail({ params, searchParams }: { params
     copay: s.copayCollected,
     insurance: insurancePortion(s),
     status: !s.insurerId ? "self" : s.insurancePaid ? "paid" : "pend",
+    insurerId: s.insurerId,
+    copayDue: s.copayDue,
+    billed: !!s.billedDate,
   });
 
   // What's still with the insurers. This is the clinician's future pay — payout
@@ -192,7 +195,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         {visits.length === 0 ? (
           <div className="cd-empty">No appointments logged for this month.</div>
         ) : (
-          <ClinicianSessions month={visits.map(toRow)} />
+          <ClinicianSessions month={visits.map(toRow)} insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))} canManage={isOwner(user.role) || isSelf} today={todayISO} />
         )}
       </div>
     </>
