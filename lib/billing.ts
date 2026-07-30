@@ -65,6 +65,7 @@ export interface ProviderConfig {
 }
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
+  processingFeePct?: number; // builder's platform fee — % of TOTAL cash collected
   runningExpenses: RunningExpense[]; // base/default list — the fallback for any month
   /** Per-month expense snapshots (key "YYYY-MM"). Expenses change month to month,
    *  so each month can carry its own set; a month with no snapshot carries forward
@@ -74,6 +75,7 @@ export interface PracticeConfig {
 }
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
+  processingFeePct: 2,
   provider: {},
   runningExpenses: [
     { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [
@@ -335,7 +337,9 @@ export async function getPracticeConfig(): Promise<PracticeConfig> {
     }
     return DEFAULT_PRACTICE_CONFIG;
   }
-  return readJson<PracticeConfig>(CFG_FILE, DEFAULT_PRACTICE_CONFIG);
+  // Merge defaults so a config saved before a new field (e.g. processingFeePct)
+  // still picks it up — matching the Postgres path above.
+  return { ...DEFAULT_PRACTICE_CONFIG, ...readJson<Partial<PracticeConfig>>(CFG_FILE, {}) } as PracticeConfig;
 }
 
 export async function savePracticeConfig(cfg: PracticeConfig): Promise<PracticeConfig> {

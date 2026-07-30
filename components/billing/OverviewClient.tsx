@@ -16,7 +16,8 @@ export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
   earned: number; earnedCollected: number; earnedOwed: number; earnedDelta: number | null;
   cashTotal: number; cashCopays: number; cashInsurance: number; cashRollover: number;
-  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number };
+  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; netAfterProcessing: number };
+  isAdmin?: boolean; // the builder/admin sees the platform processing-fee line
   trend: { label: string; value: number; current: boolean }[];
   expenses: { name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[] }[];
   expensesTotal: number;
@@ -144,6 +145,13 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             )}
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Running expenses</span><span className="v">−{money(data.bottom.runningExpenses)}</span></div>
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
+            {data.isAdmin && data.bottom.processingFeePct > 0 && (
+              <div className="bo-adminfee">
+                <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />Processing fee ({data.bottom.processingFeePct}% of collected) · builder</span><span className="v">−{money(data.bottom.processingFee)}</span></div>
+                <div className="bo-wftot"><span className="k">Net after processing fee</span><span className="v" style={{ color: data.bottom.netAfterProcessing < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.netAfterProcessing)}</span></div>
+                <div className="bo-adminnote">Admin-only — not shown to the owner. Your take this month: <b>{money(data.bottom.processingFee)}</b> ({data.bottom.processingFeePct}% of {money(data.bottom.cashCollected)} collected).</div>
+              </div>
+            )}
           </div>
           <div className="bo-proj">Projected <b>{money0(data.bottom.projectedNet)}</b> once the {money(data.bottom.outstanding)} still owed by insurers lands (you keep ~{Math.max(0, 100 - 60 - data.bottom.billerCommissionPct)}% of it after payouts).</div>
         </div>

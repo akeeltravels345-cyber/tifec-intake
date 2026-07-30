@@ -212,11 +212,17 @@ export interface BottomLine {
   net: number;
   outstanding: number;
   projectedNet: number; // net + what the practice keeps once outstanding lands (~37%)
+  // Builder's platform fee — % of total cash collected. Kept OUT of `net` (the
+  // practice's operating net) and surfaced only to the admin/builder.
+  processingFee: number;
+  processingFeePct: number;
+  netAfterProcessing: number;
 }
 
-export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number): BottomLine {
+export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number, processingFeePct = 0): BottomLine {
   const billerCommission = biz.billerCommission; // per-clinician, already summed
   const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal);
+  const processingFee = round2((biz.collected * processingFeePct) / 100);
   // Blended biller rate (varies by clinician) for the projected-net estimate. Once an
   // outstanding claim is paid: 60% to the clinician, ~blended% to the biller, rest kept.
   const effBillerPct = biz.billed > 0 ? (billerCommission / biz.billed) * 100 : 8.5;
@@ -232,6 +238,9 @@ export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: numb
     net,
     outstanding: biz.outstanding,
     projectedNet: round2(net + biz.outstanding * keepRate),
+    processingFee,
+    processingFeePct,
+    netAfterProcessing: round2(net - processingFee),
   };
 }
 

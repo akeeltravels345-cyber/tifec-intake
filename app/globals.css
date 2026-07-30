@@ -1981,6 +1981,9 @@ body:has(.biz) { background: #F8F9F8; }
    doesn't widen it. Marking the free-text column width:100% makes it absorb all
    the slack so descriptions / names show in full, while fixed columns stay tight. */
 .su-tbl th.grow, .su-tbl td.grow { width: 100%; }
+/* Admin/builder-only processing-fee block under the bottom line. */
+.bo-adminfee { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cdbff5; }
+.bo-adminnote { font-size: 12px; color: #6b57b8; margin-top: 6px; }
 .bo-uncollected { background: #fbeeea; border: 1px solid #e3b7ad; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; }
 .bo-uncollected > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .bo-uncollected .lab { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: #9a3b2a; }

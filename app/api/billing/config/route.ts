@@ -70,6 +70,7 @@ export async function POST(req: Request) {
       const current = await getPracticeConfig();
       const next: PracticeConfig = { ...current };
       if (body.billerCommissionPct !== undefined) next.billerCommissionPct = n(body.billerCommissionPct);
+      if (body.processingFeePct !== undefined) next.processingFeePct = n(body.processingFeePct);
       if (Array.isArray(body.runningExpenses)) {
         const expenses = (body.runningExpenses as Record<string, unknown>[]).map((e, i) => ({
           id: String(e.id || `exp-${i}`),

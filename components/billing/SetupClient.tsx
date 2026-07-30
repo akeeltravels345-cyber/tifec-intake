@@ -44,9 +44,9 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
-  billerPct: number; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
+  billerPct: number; processingFeePct?: number; isAdmin?: boolean; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
   /** Per-month expense snapshots (key "YYYY-MM"); the current month to default to. */
   monthlyExpenses?: Record<string, Expense[]>; currentMonthKey: string;
   billerName: string; billerInitials: string;
@@ -77,6 +77,10 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   // Biller commission % (saved on its own — independent of expenses).
   const [billerPct, setBillerPct] = useState(String(pctIn));
   const saveCommission = (pct: string) => run({ entity: "practice", billerCommissionPct: Number(pct) || 0 }, "Commission saved");
+
+  // Builder processing fee % (admin only) — % of total collected.
+  const [procPct, setProcPct] = useState(String(procIn));
+  const saveProcFee = (pct: string) => run({ entity: "practice", processingFeePct: Number(pct) || 0 }, "Processing fee saved");
 
   // Running expenses are PER MONTH: each month can carry its own set. A month with
   // no snapshot inherits the most recent earlier month's (or the base list).
@@ -109,6 +113,20 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   return (
     <>
       <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">{canManageMoney ? "The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits." : "Insurers, claim codes, service fees, and the practice details that print on your CMS-1500 claims."}</p></div>
+
+      {/* Builder processing fee — admin (builder) only, not shown to the owner */}
+      {isAdmin && (
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Processing fee <span className="su-tag">builder</span></h2><span className="su-hint">Your platform fee as a % of total cash collected. Shows only to you (admin) on the overview — not on the owner&apos;s dashboard.</span></div>
+        <div className="su-card su-comm">
+          <div className="who"><div className="av" style={{ background: "linear-gradient(135deg,#7c5cff,#2E3192)" }}>%</div><div><div className="nm">Platform processing fee</div><div className="rl">% of total collected · your take</div></div></div>
+          <div className="rate">
+            <div><div className="ratebox"><input type="number" step="0.5" min="0" value={procPct} onChange={(e) => setProcPct(e.target.value)} onBlur={() => saveProcFee(procPct)} /><span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
+            <button className="su-save" onClick={() => saveProcFee(procPct)}>Save</button>
+          </div>
+        </div>
+      </div>
+      )}
 
       {/* Practice / provider details for CMS-1500 — biller + admin only */}
       {canSeeProvider && (

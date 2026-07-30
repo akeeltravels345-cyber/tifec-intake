@@ -34,7 +34,9 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const prev = bizFor(prevY, prevM);
   const expensesTotal = runningExpensesTotalForMonth(cfg, year, month);
   const monthExpenses = expensesForMonth(cfg, year, month).expenses;
-  const bottom = computeBottomLine(biz, expensesTotal);
+  const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0);
+  // The builder's processing-fee line shows only to the admin (the builder).
+  const isAdmin = user.clinician.contact === "admin";
 
   const earned = biz.revenueGenerated;
   const thisMonthOutstanding = r2(biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0));
@@ -83,6 +85,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     insurers, insurersTotal,
     clinicians, appointments: biz.appointments,
     uncollectedCopay: biz.uncollectedCopay,
+    isAdmin,
   };
 
   return <OverviewClient data={data} />;
