@@ -66,6 +66,7 @@ export interface ClinicianMonth {
   healthDeduction: number;          // fixed KYD (settings.otherDeductionFixed)
   pension: number;                  // fixed KYD pension deduction
   payout: number;
+  noPayout: boolean;                // owner draws nothing; collections stay with the practice
   companyKeeps: number;
   // The biller has TWO separate agreements, paid by two different parties:
   billerPct: number;              // the clinician's own rate with the biller
@@ -97,11 +98,14 @@ export function computeClinicianMonth(
   const insuranceBilledThisMonth = sumBy(billedThisMonth, insurancePortion);
   const collected = round2(copayThisMonth + insuranceBilledThisMonth);
 
-  const pct = settings.retentionPct;
-  const retentionAmount = round2((collected * pct) / 100);
-  const otherPctAmount = round2((collected * settings.otherDeductionPct) / 100);
-  const health = settings.otherDeductionFixed;
-  const pension = settings.pension ?? 0;
+  // An owner who draws no payout: their collections stay with the practice, with
+  // no retention split or deductions applied. Their production still computes.
+  const noPayout = settings.noPayout ?? false;
+  const pct = noPayout ? 0 : settings.retentionPct;
+  const retentionAmount = noPayout ? 0 : round2((collected * pct) / 100);
+  const otherPctAmount = noPayout ? 0 : round2((collected * settings.otherDeductionPct) / 100);
+  const health = noPayout ? 0 : settings.otherDeductionFixed;
+  const pension = noPayout ? 0 : (settings.pension ?? 0);
   // The biller has two SEPARATE agreements, and they are paid by different
   // parties — this is the whole point, so keep them apart:
   //   1. with the clinician — their own rate, out of their share, and
@@ -119,8 +123,9 @@ export function computeClinicianMonth(
   const billerCommission = round2(billerFromCompany + billerFromClinician);
 
   // The clinician's own agreement is settled out of their share, so it reduces
-  // their payout. The company's agreement never does.
-  const payout = round2(collected - retentionAmount - otherPctAmount - health - pension - billerFromClinician);
+  // their payout. The company's agreement never does. An owner who draws nothing
+  // has a payout of 0 — all collected stays with the practice.
+  const payout = noPayout ? 0 : round2(collected - retentionAmount - otherPctAmount - health - pension - billerFromClinician);
 
   return {
     clinicianId: settings.clinicianId,
@@ -142,7 +147,8 @@ export function computeClinicianMonth(
     healthDeduction: health,
     pension,
     payout,
-    companyKeeps: round2(retentionAmount + otherPctAmount + health + pension),
+    noPayout,
+    companyKeeps: noPayout ? round2(collected - billerFromClinician) : round2(retentionAmount + otherPctAmount + health + pension),
     billerPct,
     billerFromClinician,
     billerFromCompany,

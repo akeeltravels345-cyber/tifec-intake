@@ -127,30 +127,41 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
       <div className="cd-two">
         <div className="cd-card">
-          <span className="cd-lab">Payout · {MONTHS[month - 1]}</span>
-          <div className="cd-flowbar">
-            <i style={{ width: `${w(c.payout, c.collected)}%`, background: "var(--indigo)" }} />
-            <i style={{ width: `${w(c.retentionAmount, c.collected)}%`, background: "#8b93b8" }} />
-            <i style={{ width: `${w(c.billerFromClinician, c.collected)}%`, background: "#43A9AE" }} />
-            <i style={{ width: `${w(otherDeductions, c.collected)}%`, background: "#D9A441" }} />
-          </div>
-          <div className="cd-flowline"><span className="lbl"><span className="cd-keydot" style={{ background: "#EEE7DB" }} />Collected this month</span><span className="amt">{money(c.collected)}</span></div>
-          <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
-          {c.billerFromClinician > 0 && (
-            <div className="cd-flowline minus">
-              <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</span>
-              <span className="amt">−{money(c.billerFromClinician)}</span>
-            </div>
+          <span className="cd-lab">{c.noPayout ? "Collections" : "Payout"} · {MONTHS[month - 1]}</span>
+          {c.noPayout ? (
+            <>
+              <div className="cd-flowbar"><i style={{ width: "100%", background: "var(--indigo)" }} /></div>
+              <div className="cd-flowline"><span className="lbl"><span className="cd-keydot" style={{ background: "#EEE7DB" }} />Collected this month</span><span className="amt">{money(c.collected)}</span></div>
+              <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Stays with the practice</span><span className="v">{money(c.collected)}</span></div>
+              <p className="cd-note">As the owner you draw no payout — no retention or deductions are taken, and your collections stay with the practice. Your production is shown here so you can see your numbers.</p>
+            </>
+          ) : (
+            <>
+              <div className="cd-flowbar">
+                <i style={{ width: `${w(c.payout, c.collected)}%`, background: "var(--indigo)" }} />
+                <i style={{ width: `${w(c.retentionAmount, c.collected)}%`, background: "#8b93b8" }} />
+                <i style={{ width: `${w(c.billerFromClinician, c.collected)}%`, background: "#43A9AE" }} />
+                <i style={{ width: `${w(otherDeductions, c.collected)}%`, background: "#D9A441" }} />
+              </div>
+              <div className="cd-flowline"><span className="lbl"><span className="cd-keydot" style={{ background: "#EEE7DB" }} />Collected this month</span><span className="amt">{money(c.collected)}</span></div>
+              <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
+              {c.billerFromClinician > 0 && (
+                <div className="cd-flowline minus">
+                  <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</span>
+                  <span className="amt">−{money(c.billerFromClinician)}</span>
+                </div>
+              )}
+              {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
+              {c.healthDeduction > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Health insurance</span><span className="amt">−{money(c.healthDeduction)}</span></div>}
+              {c.pension > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Pension</span><span className="amt">−{money(c.pension)}</span></div>}
+              <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
+              <p className="cd-note">
+                Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
+                {c.billerFromClinician > 0 && <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on the {money0(c.insuranceBilledThisMonth)} of insurance collected for you.</>}
+              </p>
+              <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="cd-stmt">🧾 View payout statement →</Link>
+            </>
           )}
-          {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
-          {c.healthDeduction > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Health insurance</span><span className="amt">−{money(c.healthDeduction)}</span></div>}
-          {c.pension > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Pension</span><span className="amt">−{money(c.pension)}</span></div>}
-          <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
-          <p className="cd-note">
-            Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
-            {c.billerFromClinician > 0 && <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on the {money0(c.insuranceBilledThisMonth)} of insurance collected for you.</>}
-          </p>
-          <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="cd-stmt">🧾 View payout statement →</Link>
         </div>
 
         <div className="cd-card">

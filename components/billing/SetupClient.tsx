@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
 interface Cpt { code: string; description: string; fee: number; hrs: number; active: boolean; }
-interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; billerCommissionApplies: boolean; }
+interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; billerCommissionApplies: boolean; noPayout: boolean; }
 
 /** A number field that holds its own text so you can fully clear it — fixes the
  *  "a 0 appears and won't delete" bug of a controlled type=number bound to a
@@ -102,7 +102,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
   const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", fee: 0, hrs: 1, active: true });
-  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false }]; })));
+  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
 
@@ -254,18 +254,19 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies to them. Both come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
-          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th className="num">Practice {billerPct}%</th><th></th></tr></thead>
+          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th className="num">Practice {billerPct}%</th><th className="num">No payout</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
               <tr key={c.id}>
                 <td className="nm">{c.name}</td>
-                <td className="num"><NumInput value={s.retentionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, retentionPct: v } })} /></td>
-                <td className="num"><NumInput value={s.otherDeductionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionPct: v } })} /></td>
-                <td className="num"><NumInput value={s.otherDeductionFixed} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: v } })} /></td>
-                <td className="num"><NumInput value={s.pension} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, pension: v } })} /></td>
+                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.retentionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, retentionPct: v } })} />}</td>
+                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.otherDeductionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionPct: v } })} />}</td>
+                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.otherDeductionFixed} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: v } })} />}</td>
+                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.pension} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, pension: v } })} />}</td>
                 <td className="num"><NumInput value={s.billerPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, billerPct: v } })} /></td>
                 <td className="num"><input type="checkbox" className="su-check" checked={s.billerCommissionApplies} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, billerCommissionApplies: e.target.checked } })} /></td>
-                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, billerPct: s.billerPct, billerCommissionApplies: s.billerCommissionApplies }, "Saved")}>Save</button></div></td>
+                <td className="num"><input type="checkbox" className="su-check" checked={s.noPayout} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, noPayout: e.target.checked } })} title="Owner draws no payout — collections stay with the practice" /></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, billerPct: s.billerPct, billerCommissionApplies: s.billerCommissionApplies, noPayout: s.noPayout }, "Saved")}>Save</button></div></td>
               </tr>
             ); })}
           </tbody>

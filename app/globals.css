@@ -2022,6 +2022,7 @@ body:has(.biz) { background: #F8F9F8; }
 .su-monthlbl { font: 500 15px "Newsreader", serif; color: var(--ink, #1c2330); min-width: 130px; text-align: center; }
 .su-expsrc { font-size: 12px; color: var(--faint, #8a93a3); }
 .su-check { width: 17px; height: 17px; accent-color: var(--teal, #43A9AE); cursor: pointer; }
+.su-na { color: var(--faint, #b8bec9); }
 
 /* ============ Record / submission detail — harmonized to the billing family ======= */
 body:has(.rec) .brandbar { display: none; }
@@ -2358,6 +2359,12 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .ls-code .cd { font: 700 13px "Open Sans"; color: var(--ink); font-variant-numeric: tabular-nums; }
 .biz .ls-code .ds { font-size: 12.5px; color: var(--muted); min-width: 0; }
 .biz .ls-code .fe { font: 600 13px "Open Sans"; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Selected service codes as removable chips — makes what's picked (and how to
+   remove it) obvious. */
+.biz .ls-selcodes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 5px 8px 5px 12px; font: 600 12.5px "Open Sans"; cursor: pointer; }
+.biz .ls-selchip:hover { background: #e0efef; }
+.biz .ls-selchip .x { font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); }
 .biz .ls-more { background: none; border: none; color: var(--teal-deep); font: 600 12.5px "Open Sans"; cursor: pointer; padding: 10px 2px 0; }
 .biz .ls-more:hover { color: var(--indigo); }
 

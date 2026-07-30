@@ -113,6 +113,7 @@ export async function POST(req: Request) {
         pension: n(body.pension),
         billerPct: n(body.billerPct),
         billerCommissionApplies: body.billerCommissionApplies === true,
+        noPayout: body.noPayout === true,
       });
       return NextResponse.json({ ok: true });
     }

@@ -282,6 +282,16 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
+            <p className="ls-help" style={{ marginTop: 0 }}>Tap a code to add it. Tap a highlighted code again — or its <b>×</b> below — to remove it.</p>
+            {codes.length > 0 && (
+              <div className="ls-selcodes">
+                {codes.map((code) => { const c = cptCodes.find((x) => x.code === code); return (
+                  <button type="button" key={code} className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
+                    <span>{code}{c ? ` · ${money(c.fee)}` : ""}</span><span className="x">×</span>
+                  </button>
+                ); })}
+              </div>
+            )}
             {usual.length > 0 && (
               <>
                 <p className="ls-codelab">The ones you use most</p>
