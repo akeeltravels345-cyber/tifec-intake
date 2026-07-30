@@ -49,8 +49,11 @@ export function parseArReport(text: string): ParsedReport {
   const provM = text.match(/Provider:\s*([^,]+,\s*[^,]+?)\s*,/);
   const providerName = provM ? norm(provM[1]) : null;
 
-  // Two report shapes come out of the practice's system. Pick the parser by the
+  // Three report shapes come out of the practice's system. Pick the parser by the
   // report's own title.
+  if (/Unpaid Services Report/i.test(text)) {
+    return { providerName, kind: "ar", clients: parseUnpaidServices(text) };
+  }
   if (/Accounts Receivable by Invoice/i.test(text)) {
     return { providerName, kind: "ar", clients: parseArByInvoice(text) };
   }
@@ -132,6 +135,68 @@ function parseArByInvoice(text: string): ParsedClient[] {
       const iso = ddmmyyyyToIso(amt[1]);
       if (iso) (cur.invoices ??= []).push({ date: iso, amount });
       if (iso && (!cur.invoiceDate || iso < cur.invoiceDate)) cur.invoiceDate = iso;
+    }
+  }
+
+  return [...byClient.values()];
+}
+
+/** "Unpaid Services Report": one block per client —
+ *    <Last, First>  DOB: dd/mm/yyyy[Phone: …]
+ *    <PAYOR> ID/Policy/Claim #: …            (absent for self-pay clients)
+ *    $amt  n unit  <bill date>  <code>-<desc>  <inv#> <days> <service date>  $…  $total
+ *    … more service lines …
+ *    $amt  n units  <Last, First> Totals: … $total
+ *  Each service line becomes one outstanding charge (its own service date), so a
+ *  client with several invoices lands as several claims, not one lump sum. */
+function parseUnpaidServices(text: string): ParsedClient[] {
+  const lines = text.split("\n");
+  const money = (s: string) => Number(s.replace(/[$,]/g, "")) || 0;
+  const byClient = new Map<string, ParsedClient>();
+  let cur: ParsedClient | null = null;
+
+  // Header: a "Last, First" name (comma required) immediately before "DOB:".
+  const header = /^([^\n]*?,[^\n]*?)\s+DOB:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/;
+  // Insurer line: "<PAYOR> ID/Policy/Claim #: …".
+  const insurerLine = /^(.+?)\s+ID\/Policy\/Claim\s*#:/;
+  // A service line: the SERVICE date (the dd/mm/yyyy that sits right before the
+  // run of $ amounts) and the line's Total Amount (the last $ figure on the line).
+  const service = /(\d{1,2}\/\d{1,2}\/\d{4})\s+\$[\d,]+\.\d{2}[\s$\d.,]*\$([\d,]+\.\d{2})\s*$/;
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    if (/^GRAND TOTAL/i.test(line) || /Division Summary/i.test(line) || /Report Total/i.test(line)) { cur = null; continue; }
+
+    const h = line.match(header);
+    if (h) {
+      const nameRaw = norm(h[1].replace(/\s+Phone:.*$/i, ""));
+      const { first, last } = splitName(nameRaw);
+      const key = `${first}|${last}`.toLowerCase();
+      cur = byClient.get(key) ?? null;
+      if (!cur) { cur = { first, last, raw: nameRaw, insurerName: null, dob: ddmmyyyyToIso(h[2]) ?? h[2], outstanding: 0, invoices: [] }; byClient.set(key, cur); }
+      continue;
+    }
+    if (!cur) continue;
+
+    if (!cur.insurerName) {
+      const im = line.match(insurerLine);
+      if (im) {
+        const payor = norm(im[1]);
+        // Self-pay rows carry the client's own name as the payor.
+        cur.insurerName = payor.toLowerCase() === cur.raw.toLowerCase() ? null : payor;
+      }
+    }
+
+    if (/Totals:/i.test(line)) continue; // the client subtotal line — not a charge
+    const sm = line.match(service);
+    if (sm) {
+      const iso = ddmmyyyyToIso(sm[1]);
+      const amount = money(sm[2]);
+      if (iso && amount > 0) {
+        (cur.invoices ??= []).push({ date: iso, amount });
+        cur.outstanding = round2((cur.outstanding ?? 0) + amount);
+        if (!cur.invoiceDate || iso < cur.invoiceDate) cur.invoiceDate = iso;
+      }
     }
   }
 
