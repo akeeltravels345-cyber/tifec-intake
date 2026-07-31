@@ -294,13 +294,13 @@ export async function deleteCptCode(code: string): Promise<void> {
 
 // ===================== Clinician billing settings ===========================
 // The practice keeps 40% by default; each clinician can be overridden in Setup.
-const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0, pension: 0, billerPct: 0, billerBasePct: 100, billerCommissionApplies: false, noPayout: false });
+const DEFAULT_SETTINGS = (clinicianId: string): ClinicianBillingSettings => ({ clinicianId, retentionPct: 40, otherDeductionPct: 0, otherDeductionFixed: 0, pension: 0, billerPct: 0, billerBasePct: 0, billerCommissionApplies: false, noPayout: false });
 
 export async function listClinicianSettings(): Promise<ClinicianBillingSettings[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_clinician_settings`) as Record<string, unknown>[];
-    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed), pension: num(r.pension), billerPct: r.biller_pct == null ? undefined : num(r.biller_pct), billerBasePct: r.biller_base_pct == null ? 100 : num(r.biller_base_pct), billerCommissionApplies: !!r.biller_commission_applies, noPayout: !!r.no_payout }));
+    return rows.map((r) => ({ clinicianId: r.clinician_id as string, retentionPct: num(r.retention_pct), otherDeductionPct: num(r.other_deduction_pct), otherDeductionFixed: num(r.other_deduction_fixed), pension: num(r.pension), billerPct: r.biller_pct == null ? undefined : num(r.biller_pct), billerBasePct: r.biller_base_pct == null ? 0 : num(r.biller_base_pct), billerCommissionApplies: !!r.biller_commission_applies, noPayout: !!r.no_payout }));
   }
   return readJson<ClinicianBillingSettings[]>(SET_FILE, []);
 }
@@ -315,7 +315,7 @@ export async function upsertClinicianSettings(s: ClinicianBillingSettings): Prom
     const sql = await pg();
     await sql`
       INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, pension, biller_pct, biller_base_pct, biller_commission_applies, no_payout, updated_at)
-      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.pension ?? 0}, ${s.billerPct ?? null}, ${s.billerBasePct ?? 100}, ${s.billerCommissionApplies ?? false}, ${s.noPayout ?? false}, now())
+      VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.pension ?? 0}, ${s.billerPct ?? null}, ${s.billerBasePct ?? 0}, ${s.billerCommissionApplies ?? false}, ${s.noPayout ?? false}, now())
       ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, pension = EXCLUDED.pension, biller_pct = EXCLUDED.biller_pct, biller_base_pct = EXCLUDED.biller_base_pct, biller_commission_applies = EXCLUDED.biller_commission_applies, no_payout = EXCLUDED.no_payout, updated_at = now()`;
     return s;
   }

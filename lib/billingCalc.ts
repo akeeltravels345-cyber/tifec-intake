@@ -114,10 +114,11 @@ export function computeClinicianMonth(
   // Both are charged on insurance collected (what the biller chases); co-pays
   // are taken at the visit by the clinician.
   const billerPct = settings.billerPct ?? 0;
-  // The biller's % is charged on only a SHARE of the clinician's insurance billed
-  // (default 100%). A lower base means more of their billed income is theirs, free
-  // of the biller's cut — e.g. Nick bills Joan on 70% of hers, not all of it.
-  const billerBasePct = settings.billerBasePct ?? 100;
+  // Nick charges his % on what the clinician RECEIVES AFTER the company retention
+  // — i.e. their after-retention share (100 − retention)% of insurance billed, not
+  // the gross. A per-clinician override sets an explicit share (e.g. Nick bills
+  // Joan on 70% of hers right now, a touch below her natural after-retention).
+  const billerBasePct = settings.billerBasePct && settings.billerBasePct > 0 ? settings.billerBasePct : Math.max(0, 100 - pct);
   const billerBase = round2((insuranceBilledThisMonth * billerBasePct) / 100);
   const billerFromClinician = round2((billerBase * billerPct) / 100);
   const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);

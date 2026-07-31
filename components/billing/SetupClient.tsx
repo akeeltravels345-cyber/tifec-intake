@@ -106,7 +106,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
   const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", fee: 0, hrs: 1, active: true });
-  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 100, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
+  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
 
@@ -270,7 +270,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {/* Clinician splits — owner only */}
       {canManageMoney && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Base %</b> is the share of their billed income that rate is charged on (100% = all of it; e.g. Nick bills Joan on 70% of hers). <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies. All come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Base %</b> is the share the biller rate is charged on — leave <b>0</b> for auto (the clinician&apos;s after-retention share, i.e. what they actually receive), or set an explicit % for a special deal (Nick bills Joan on 70% of hers). <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies. All come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
         <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
           <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th className="num">Base %</th><th className="num">Practice {billerPct}%</th><th className="num">No payout</th><th></th></tr></thead>
           <tbody>
