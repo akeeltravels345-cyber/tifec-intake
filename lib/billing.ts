@@ -75,7 +75,7 @@ export interface PracticeConfig {
 }
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
-  processingFeePct: 2.5,
+  processingFeePct: 2,
   provider: {},
   runningExpenses: [
     { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [

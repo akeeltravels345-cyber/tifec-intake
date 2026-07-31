@@ -147,7 +147,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
             {data.isAdmin && data.bottom.processingFeePct > 0 && (
               <div className="bo-adminfee">
-                <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />Processing fee ({data.bottom.processingFeePct}% of collected) · builder</span><span className="v">−{money(data.bottom.processingFee)}</span></div>
+                <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />😁 Platform Processing Fee ({data.bottom.processingFeePct}% of collected)</span><span className="v">−{money(data.bottom.processingFee)}</span></div>
                 <div className="bo-wftot"><span className="k">Net after processing fee</span><span className="v" style={{ color: data.bottom.netAfterProcessing < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.netAfterProcessing)}</span></div>
                 <div className="bo-adminnote">Admin-only — not shown to the owner. Your take this month: <b>{money(data.bottom.processingFee)}</b> ({data.bottom.processingFeePct}% of {money(data.bottom.cashCollected)} collected).</div>
               </div>
