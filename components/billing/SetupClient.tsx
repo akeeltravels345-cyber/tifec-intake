@@ -44,7 +44,7 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, isBillerUser = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
   billerPct: number; processingFeePct?: number; isAdmin?: boolean; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
   /** Per-month expense snapshots (key "YYYY-MM"); the current month to default to. */
@@ -52,6 +52,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   billerName: string; billerInitials: string;
   /** Owner-only sections (commission, expenses, clinician splits) show only when true. */
   canManageMoney?: boolean;
+  /** The biller sees a compact "my % per clinician" table. */
+  isBillerUser?: boolean;
   /** Practice/provider details (CMS-1500) — biller + admin only, not the owner. */
   canSeeProvider?: boolean;
 }) {
@@ -113,6 +115,25 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   return (
     <>
       <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">{canManageMoney ? "The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits." : "Insurers, claim codes, service fees, and the practice details that print on your CMS-1500 claims."}</p></div>
+
+      {/* Biller's own % per clinician — biller only */}
+      {isBillerUser && (
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">My rates{billerName ? ` · ${billerName}` : ""}</h2><span className="su-hint">Your % per clinician. It&apos;s always charged on what each clinician <b>retains after the company&apos;s cut</b> (never on their co-pays) — so you only set the rate; the base is handled for you.</span></div>
+        <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
+          <thead><tr><th>Clinician</th><th className="num">My %</th><th></th></tr></thead>
+          <tbody>
+            {clinicians.map((c) => { const s = sets[c.id]; return (
+              <tr key={c.id}>
+                <td className="nm">{c.name}</td>
+                <td className="num"><NumInput value={s.billerPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, billerPct: v } })} /></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "billerRate", clinicianId: c.id, billerPct: s.billerPct }, "Saved")}>Save</button></div></td>
+              </tr>
+            ); })}
+          </tbody>
+        </table></div></div>
+      </div>
+      )}
 
       {/* Builder processing fee — admin (builder) only, not shown to the owner */}
       {isAdmin && (

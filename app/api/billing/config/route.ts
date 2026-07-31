@@ -4,7 +4,7 @@ import { billingRoleOf, canConfigure, canConfigureBilling } from "@/lib/billingR
 import {
   upsertInsurer, deleteInsurer,
   upsertCptCode, deleteCptCode,
-  upsertClinicianSettings,
+  upsertClinicianSettings, getClinicianSettings,
   savePracticeConfig, getPracticeConfig,
   type CopayType, type RunningExpense, type ProviderConfig, type PracticeConfig,
 } from "@/lib/billing";
@@ -117,6 +117,17 @@ export async function POST(req: Request) {
         billerCommissionApplies: body.billerCommissionApplies === true,
         noPayout: body.noPayout === true,
       });
+      return NextResponse.json({ ok: true });
+    }
+
+    // The biller sets ONLY their own % on a clinician — everything else (retention,
+    // deductions, base) is untouched, and the % is always charged on the clinician's
+    // after-retention share. Available to the biller and the owner.
+    if (entity === "billerRate") {
+      const clinicianId = String(body.clinicianId ?? "");
+      if (!clinicianId) return NextResponse.json({ error: "Missing clinician." }, { status: 400 });
+      const existing = await getClinicianSettings(clinicianId);
+      await upsertClinicianSettings({ ...existing, billerPct: n(body.billerPct) });
       return NextResponse.json({ ok: true });
     }
 
