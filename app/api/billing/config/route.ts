@@ -113,6 +113,7 @@ export async function POST(req: Request) {
         otherDeductionFixed: n(body.otherDeductionFixed),
         pension: n(body.pension),
         billerPct: n(body.billerPct),
+        billerBasePct: body.billerBasePct === undefined ? 100 : n(body.billerBasePct),
         billerCommissionApplies: body.billerCommissionApplies === true,
         noPayout: body.noPayout === true,
       });

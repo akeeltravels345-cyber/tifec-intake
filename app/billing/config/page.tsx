@@ -22,7 +22,7 @@ export default async function SetupPage() {
       insurers={insurers}
       cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, active: c.active }))}
       clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
-      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0, billerCommissionApplies: s.billerCommissionApplies ?? false, noPayout: s.noPayout ?? false }))}
+      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0, billerBasePct: s.billerBasePct ?? 100, billerCommissionApplies: s.billerCommissionApplies ?? false, noPayout: s.noPayout ?? false }))}
       canManageMoney={isOwner(user.role)}
       canSeeProvider={isBiller(user.role) || user.clinician.contact === "admin"}
       billerPct={cfg.billerCommissionPct}

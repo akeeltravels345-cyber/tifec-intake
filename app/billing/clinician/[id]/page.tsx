@@ -149,7 +149,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
               <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
               {c.billerFromClinician > 0 && (
                 <div className="cd-flowline minus">
-                  <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</span>
+                  <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%{c.billerBasePct < 100 ? ` of ${c.billerBasePct}% billed` : ""})</span>
                   <span className="amt">−{money(c.billerFromClinician)}</span>
                 </div>
               )}

@@ -70,6 +70,7 @@ export interface ClinicianMonth {
   companyKeeps: number;
   // The biller has TWO separate agreements, paid by two different parties:
   billerPct: number;              // the clinician's own rate with the biller
+  billerBasePct: number;          // the share of billed income that rate is charged on
   billerFromClinician: number;    // deducted from THIS clinician's payout
   billerFromCompany: number;      // paid by the practice out of its retention
   billerCommission: number;       // both together — what the biller earns here
@@ -113,7 +114,12 @@ export function computeClinicianMonth(
   // Both are charged on insurance collected (what the biller chases); co-pays
   // are taken at the visit by the clinician.
   const billerPct = settings.billerPct ?? 0;
-  const billerFromClinician = round2((insuranceBilledThisMonth * billerPct) / 100);
+  // The biller's % is charged on only a SHARE of the clinician's insurance billed
+  // (default 100%). A lower base means more of their billed income is theirs, free
+  // of the biller's cut — e.g. Nick bills Joan on 70% of hers, not all of it.
+  const billerBasePct = settings.billerBasePct ?? 100;
+  const billerBase = round2((insuranceBilledThisMonth * billerBasePct) / 100);
+  const billerFromClinician = round2((billerBase * billerPct) / 100);
   const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
   // The practice-wide biller commission (the 3% of company retention) is only
   // agreed for select clinicians — it applies only when this clinician's setting
@@ -150,6 +156,7 @@ export function computeClinicianMonth(
     noPayout,
     companyKeeps: noPayout ? round2(collected - billerFromClinician) : round2(retentionAmount + otherPctAmount + health + pension),
     billerPct,
+    billerBasePct,
     billerFromClinician,
     billerFromCompany,
     billerCommission,
