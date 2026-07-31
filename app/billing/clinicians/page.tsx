@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
+import { getBillingUser, canSeeBusiness, isBiller } from "@/lib/billingRole";
 import { listSessions, getClinicianSettings, getPracticeConfig, type BillingSession } from "@/lib/billing";
 import { computeClinicianMonth } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
@@ -16,7 +16,9 @@ const w = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0
 export default async function ClinicianDirectory({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/clinicians");
-  if (!canSeeBusiness(user.role)) redirect("/billing/me");
+  // Owner sees this as the practice snapshot; the biller needs it too, to
+  // reconcile each clinician's numbers against what they report.
+  if (!canSeeBusiness(user.role) && !isBiller(user.role)) redirect("/billing/me");
 
   const sp = await searchParams;
   const now = new Date();

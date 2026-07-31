@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingUser, isOwner } from "@/lib/billingRole";
+import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { listClients } from "@/lib/clients";
@@ -22,7 +22,9 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   if (!user) redirect("/login?next=/billing/me");
 
   const { id } = await params;
-  if (!isOwner(user.role) && id !== user.clinician.id) redirect(`/billing/clinician/${user.clinician.id}`);
+  // Owner and biller can open any clinician (the biller reconciles their numbers);
+  // a clinician only their own.
+  if (!isOwner(user.role) && !isBiller(user.role) && id !== user.clinician.id) redirect(`/billing/clinician/${user.clinician.id}`);
   const clinician = getClinician(id);
   if (!clinician) redirect(isOwner(user.role) ? "/billing/overview" : "/billing/me");
 

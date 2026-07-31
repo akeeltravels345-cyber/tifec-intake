@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingUser, isOwner } from "@/lib/billingRole";
+import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
 import { listSessions, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { computeClinicianMonth } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
@@ -16,7 +16,7 @@ export default async function PayoutStatement({ params, searchParams }: { params
   if (!user) redirect("/login?next=/billing/me");
 
   const { id } = await params;
-  if (!isOwner(user.role) && id !== user.clinician.id) redirect(`/billing/clinician/${user.clinician.id}`);
+  if (!isOwner(user.role) && !isBiller(user.role) && id !== user.clinician.id) redirect(`/billing/clinician/${user.clinician.id}`);
   const clinician = getClinician(id);
   if (!clinician) redirect("/billing/overview");
 

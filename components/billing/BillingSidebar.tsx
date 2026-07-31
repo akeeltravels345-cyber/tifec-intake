@@ -24,6 +24,7 @@ export default function BillingSidebar({
       ? [
           { href: "/billing/biller", label: "Dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
           { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+          { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
           { href: "/billing/clients", label: "Clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
           // "Outside clients" temporarily disabled — the biller only handles the
           // practice's own clinicians for now.
