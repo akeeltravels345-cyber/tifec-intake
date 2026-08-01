@@ -60,6 +60,7 @@ export default function ClientDetail({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkStage, setBulkStage] = useState<"keep" | "tobill" | "awaiting" | "paid">("keep");
   const [bulkInsurer, setBulkInsurer] = useState("keep"); // "keep" | "self" | insurerId
+  const [bulkDate, setBulkDate] = useState(""); // "" = keep; YYYY-MM-DD to move all selected to that date
 
   async function deleteClientNow() {
     setBusy(true); setMsg("");
@@ -126,6 +127,7 @@ export default function ClientDetail({
     const patch: Record<string, unknown> = {};
     if (bulkStage !== "keep") patch.stage = bulkStage;
     if (bulkInsurer !== "keep") patch.insurerId = bulkInsurer === "self" ? null : bulkInsurer;
+    if (bulkDate) patch.dateOfService = bulkDate;
     if (Object.keys(patch).length === 0) { setMsg("Choose what to change first."); return; }
     setBusy(true); setMsg("");
     try {
@@ -135,7 +137,7 @@ export default function ClientDetail({
       const failed = results.filter((r) => !r.ok).length;
       if (failed) throw new Error(`${failed} of ${ids.length} couldn't be changed.`);
       setMsg(`Updated ${ids.length} charge${ids.length === 1 ? "" : "s"}.`);
-      setBulkOpen(false); setBulkStage("keep"); setBulkInsurer("keep"); setSel(new Set());
+      setBulkOpen(false); setBulkStage("keep"); setBulkInsurer("keep"); setBulkDate(""); setSel(new Set());
       router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not apply the change."); }
     finally { setBusy(false); }
@@ -534,8 +536,9 @@ export default function ClientDetail({
                   <option value="self">Self-pay</option>
                   {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select></label>
+                <label>Set date of service<input type="date" className="ls-in" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} /></label>
               </div>
-              <p className="su-hint" style={{ margin: "2px 2px 8px" }}>Applies the change you pick to all {sel.size} selected charge{sel.size === 1 ? "" : "s"}. &ldquo;Keep as is&rdquo; leaves that field untouched.</p>
+              <p className="su-hint" style={{ margin: "2px 2px 8px" }}>Applies the changes you pick to all {sel.size} selected charge{sel.size === 1 ? "" : "s"}. &ldquo;Keep as is&rdquo; (or a blank date) leaves that field untouched. Setting a date moves every selected charge to that same day.</p>
               <div className="cd-addbtns">
                 <button className="ls-save" disabled={busy} onClick={applyBulk}>{busy ? "Applying…" : `Apply to ${sel.size}`}</button>
                 <button className="su-del" disabled={busy} onClick={() => setBulkOpen(false)}>Cancel</button>
