@@ -146,18 +146,16 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           <button className={`bq-tab ${tab === "awaiting" ? "on" : ""}`} onClick={() => switchTab("awaiting")}>Awaiting payment ({data.awaiting.length})</button>
           <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Paid ({data.paid.length})</button>
         </div>
-        {isOpen && <>
-          <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
-            <option value="">All clinicians</option>
-            {data.clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <div className="bq-tabs">
-            <button className={`bq-tab ${groupBy === "insurer" ? "on" : ""}`} onClick={() => setGroupBy("insurer")}>By insurer</button>
-            <button className={`bq-tab ${groupBy === "clinician" ? "on" : ""}`} onClick={() => setGroupBy("clinician")}>By clinician</button>
-          </div>
-          {(q || filterClin || bucket !== null) && <button className="bq-clear" onClick={clearFilters}>Clear filters</button>}
-        </>}
+        <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
+          <option value="">All clinicians</option>
+          {data.clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <div className="bq-tabs">
+          <button className={`bq-tab ${groupBy === "insurer" ? "on" : ""}`} onClick={() => setGroupBy("insurer")}>By insurer</button>
+          <button className={`bq-tab ${groupBy === "clinician" ? "on" : ""}`} onClick={() => setGroupBy("clinician")}>By clinician</button>
+        </div>
+        {(q || filterClin || bucket !== null) && <button className="bq-clear" onClick={clearFilters}>Clear filters</button>}
       </div>
 
       {isOpen ? (
@@ -198,15 +196,30 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         )
       ) : (
         <div className="bq-billed">
-          <div className="bq-thead"><span>Paid</span><span>Client</span><span>Clinician</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
-          {data.paid.length === 0 ? <div className="bq-empty"><div className="big">No payments recorded yet</div></div> : data.paid.map((c) => (
-            <div className="bq-brow" key={c.id}>
-              <span className="pill">✓ {c.paidDate}</span>
-              <span><ClientName id={c.clientId} name={c.clientName} /></span>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>{c.clinicianName}</span>
-              <span className="amt">{money(c.amount)}</span>
-              <span className="comm">+{money(c.commission)}</span>
-              <button className="bq-undo" disabled={busy} onClick={() => unpay(c.id)}>Undo</button>
+          <div className="bq-thead"><span>Paid</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
+          {data.paid.length === 0 ? (
+            <div className="bq-empty"><div className="big">No payments recorded yet</div></div>
+          ) : groups.length === 0 ? (
+            <div className="bq-empty"><div className="big">No paid claims match your filters</div></div>
+          ) : groups.map((g) => (
+            <div key={g.key}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)" }}>
+                <span className="bq-gname">{g.name}</span>
+                <span className="bq-gmeta">{g.claims.length} paid</span>
+                <span style={{ flex: 1 }} />
+                <span className="bq-gtot">{money(g.total)}</span>
+                <span className="bq-gcomm" style={{ marginLeft: 10 }}>+{money(comm(g.claims))} to you</span>
+              </div>
+              {[...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
+                <div className="bq-brow" key={c.id}>
+                  <span className="pill">✓ {c.paidDate}</span>
+                  <span><ClientName id={c.clientId} name={c.clientName} /></span>
+                  <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
+                  <span className="amt">{money(c.amount)}</span>
+                  <span className="comm">+{money(c.commission)}</span>
+                  <button className="bq-undo" disabled={busy} onClick={() => unpay(c.id)}>Undo</button>
+                </div>
+              ))}
             </div>
           ))}
         </div>
