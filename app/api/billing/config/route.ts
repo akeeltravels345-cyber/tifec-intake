@@ -96,6 +96,7 @@ export async function POST(req: Request) {
         practiceName: t(p.practiceName), npi: t(p.npi), ein: t(p.ein), taxonomy: t(p.taxonomy),
         addressLine1: t(p.addressLine1), addressLine2: t(p.addressLine2), city: t(p.city),
         region: t(p.region), postal: t(p.postal), country: t(p.country), phone: t(p.phone),
+        email: t(p.email), website: t(p.website),
         renderingNpi: Object.keys(renderingNpi).length ? renderingNpi : undefined,
       };
       const current = await getPracticeConfig();

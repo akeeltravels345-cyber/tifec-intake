@@ -34,7 +34,7 @@ interface Expense { id: string; name: string; detail: string; amount: number; br
 interface ClinRef { id: string; name: string; }
 interface Provider {
   practiceName?: string; npi?: string; ein?: string; taxonomy?: string;
-  addressLine1?: string; addressLine2?: string; city?: string; region?: string; postal?: string; country?: string; phone?: string;
+  addressLine1?: string; addressLine2?: string; city?: string; region?: string; postal?: string; country?: string; phone?: string; email?: string; website?: string;
   renderingNpi?: Record<string, string>;
 }
 
@@ -152,10 +152,12 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {/* Practice / provider details for CMS-1500 — biller + admin only */}
       {canSeeProvider && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Practice details (for CMS-1500 claims)</h2><span className="su-hint">The billing-provider identifiers that print on every claim (boxes 25, 32, 33) and each clinician&apos;s rendering NPI (box 24J). Fill these once.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Practice details (claims &amp; invoices)</h2><span className="su-hint">The billing-provider identifiers that print on every CMS-1500 (boxes 25, 32, 33) and each clinician&apos;s rendering NPI (box 24J), plus the name, address and contact details printed on self-pay invoices. Fill these once.</span></div>
         <div className="su-card cd-grid">
           <div className="cd-f"><span className="cd-fl">Practice name</span><input className="ls-in" value={prov.practiceName ?? ""} onChange={(e) => setP("practiceName", e.target.value)} /></div>
           <div className="cd-f"><span className="cd-fl">Phone</span><input className="ls-in" value={prov.phone ?? ""} onChange={(e) => setP("phone", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Email (invoices)</span><input className="ls-in" value={prov.email ?? ""} onChange={(e) => setP("email", e.target.value)} /></div>
+          <div className="cd-f"><span className="cd-fl">Website (invoices)</span><input className="ls-in" value={prov.website ?? ""} onChange={(e) => setP("website", e.target.value)} /></div>
           <div className="cd-f"><span className="cd-fl">Billing NPI (box 33a)</span><input className="ls-in" value={prov.npi ?? ""} onChange={(e) => setP("npi", e.target.value)} /></div>
           <div className="cd-f"><span className="cd-fl">Federal Tax ID / EIN (box 25)</span><input className="ls-in" value={prov.ein ?? ""} onChange={(e) => setP("ein", e.target.value)} /></div>
           <div className="cd-f"><span className="cd-fl">Taxonomy code</span><input className="ls-in" value={prov.taxonomy ?? ""} onChange={(e) => setP("taxonomy", e.target.value)} /></div>

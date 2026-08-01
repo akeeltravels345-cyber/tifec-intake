@@ -61,6 +61,8 @@ export interface ProviderConfig {
   postal?: string;
   country?: string;
   phone?: string;
+  email?: string;          // shown on self-pay invoices
+  website?: string;        // shown on self-pay invoices
   renderingNpi?: Record<string, string>; // clinicianId -> rendering NPI (box 24J)
 }
 export interface PracticeConfig {

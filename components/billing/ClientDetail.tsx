@@ -250,12 +250,20 @@ export default function ClientDetail({
   const referral = referralStatus(profile.referral?.endDate, today);
   const refDays = referral.daysLeft;
 
-  // Only insured (non self-pay) entries can go on a CMS-1500.
+  // Insured entries → CMS-1500 claim; self-pay entries (paid in full by the
+  // client) → invoice. Both are selectable; the action bar offers whichever
+  // generator matches what's ticked.
   const billable = activity.filter((a) => a.stage !== "self");
+  const selfPayEntries = activity.filter((a) => a.stage === "self");
+  const hasInsured = billable.length > 0;
+  const hasSelfPay = selfPayEntries.length > 0;
   const toggleSel = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const allSelected = billable.length > 0 && billable.every((a) => sel.has(a.id));
-  const toggleAll = () => setSel((s) => { if (allSelected) return new Set(); const n = new Set(s); billable.forEach((a) => n.add(a.id)); return n; });
-  const generateSelected = () => { if (sel.size) router.push(`/billing/clients/batch?sessions=${[...sel].join(",")}`); };
+  const allSelected = activity.length > 0 && activity.every((a) => sel.has(a.id));
+  const toggleAll = () => setSel((s) => { if (allSelected) return new Set(); const n = new Set(s); activity.forEach((a) => n.add(a.id)); return n; });
+  const selInsuredIds = billable.filter((a) => sel.has(a.id)).map((a) => a.id);
+  const selSelfIds = selfPayEntries.filter((a) => sel.has(a.id)).map((a) => a.id);
+  const generateSelectedClaims = () => { if (selInsuredIds.length) router.push(`/billing/clients/batch?sessions=${selInsuredIds.join(",")}`); };
+  const generateSelectedInvoice = () => { if (selSelfIds.length) router.push(`/billing/clients/${id}/invoice?sessions=${selSelfIds.join(",")}`); };
   const field = (label: string, node: React.ReactNode) => (
     <div className="cd-f"><span className="cd-fl">{label}</span>{node}</div>
   );
@@ -272,7 +280,8 @@ export default function ClientDetail({
           </div>
         </div>
         <div className="cd-actions">
-          <a className="bl-cta" href={`/billing/clients/${id}/cms1500`}>Generate CMS-1500</a>
+          {hasInsured && <a className="bl-cta" href={`/billing/clients/${id}/cms1500`}>Generate CMS-1500</a>}
+          {hasSelfPay && <a className="bl-cta" href={`/billing/clients/${id}/invoice`}>Generate invoice</a>}
           {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>Edit details</button>}
           {canDelete && <button className="cd-danger" onClick={() => setConfirmDel(true)}>Delete client</button>}
         </div>
@@ -474,14 +483,15 @@ export default function ClientDetail({
       <div className="su-sec">
         <div className="su-sechead">
           <h2 className="su-sech">Appointments &amp; charges{activity.length > 0 && <span className="su-tag">{money(activityTotal)} total</span>}</h2>
-          <span className="su-hint">Every date of service that makes up this client&apos;s total. {billable.length ? "Tick the ones you're claiming to build a CMS-1500, " : ""}or add and remove charges below.</span>
+          <span className="su-hint">Every date of service that makes up this client&apos;s total. Tick insured visits to build a CMS-1500, or self-pay visits to build an invoice. Add and remove charges below.</span>
         </div>
 
         {sel.size > 0 && (
           <div className="cd-selbar">
-            <span>{sel.size} entr{sel.size === 1 ? "y" : "ies"} selected · {money(billable.filter((a) => sel.has(a.id)).reduce((t, a) => t + a.total, 0))}</span>
+            <span>{sel.size} entr{sel.size === 1 ? "y" : "ies"} selected · {money(activity.filter((a) => sel.has(a.id)).reduce((t, a) => t + a.total, 0))}</span>
             <div style={{ flex: 1 }} />
-            <button className="bl-cta" onClick={generateSelected}>Generate CMS-1500 from selected</button>
+            {selInsuredIds.length > 0 && <button className="bl-cta" onClick={generateSelectedClaims}>CMS-1500 from selected ({selInsuredIds.length})</button>}
+            {selSelfIds.length > 0 && <button className="bl-cta" onClick={generateSelectedInvoice}>Invoice from selected ({selSelfIds.length})</button>}
             <button className="su-del" onClick={() => setSel(new Set())}>Clear</button>
           </div>
         )}
@@ -528,7 +538,7 @@ export default function ClientDetail({
                     return (
                       <Fragment key={a.id}>
                       <tr className={sel.has(a.id) ? "cd-selrow" : ""}>
-                        <td><input type="checkbox" checked={sel.has(a.id)} disabled={!claimable} onChange={() => toggleSel(a.id)} title={claimable ? undefined : "Self-pay visits don't go on a CMS-1500"} aria-label={`Select ${a.date}`} /></td>
+                        <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>
                         <td>{a.codes.join(", ") || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
