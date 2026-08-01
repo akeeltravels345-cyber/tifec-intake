@@ -20,6 +20,7 @@ export interface InvoiceLine {
 export interface InvoiceData {
   number: string;
   issueDate: string;    // YYYY-MM-DD
+  dueDate: string;      // YYYY-MM-DD (issue + 30 days)
   practice: {
     name: string;
     addressLines: string[];
@@ -100,9 +101,13 @@ export function buildInvoice(
     provider.country,
   ].filter(Boolean).map(String);
 
+  const dueMs = Date.parse(`${issueDate}T00:00:00Z`);
+  const dueDate = isNaN(dueMs) ? "" : new Date(dueMs + 30 * 86400000).toISOString().slice(0, 10);
+
   return {
     number: invoiceNumber(ordered.map((s) => s.id)),
     issueDate,
+    dueDate,
     practice: {
       name: provider.practiceName || "TIFEC · Essential Care",
       addressLines: practiceAddr,
