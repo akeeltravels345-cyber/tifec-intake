@@ -7,7 +7,10 @@ export default function Invoice({ inv, printedAt }: { inv: InvoiceData; printedA
     <div className="inv-sheet">
       <header className="inv-head">
         <div className="inv-from">
-          <div className="inv-pname">{inv.practice.name}</div>
+          <div className="inv-brandrow">
+            <img className="inv-logo" src="/tifec-mark.png" alt="" />
+            <div className="inv-pname">{inv.practice.name}</div>
+          </div>
           <div className="inv-paddr">
             {inv.practice.addressLines.map((l, i) => <div key={i}>{l}</div>)}
             {inv.practice.phone && <div>{inv.practice.phone}</div>}
@@ -81,6 +84,8 @@ export const INVOICE_CSS = `
 }
 .inv-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
   padding-bottom: 16px; border-bottom: 1px solid #1a1d24; margin-bottom: 26px; }
+.inv-brandrow { display: flex; align-items: center; gap: 11px; }
+.inv-logo { height: 38px; width: auto; display: block; }
 .inv-pname { font-size: 15pt; font-weight: 600; letter-spacing: -.2px; }
 .inv-paddr { margin-top: 6px; font-size: 8.7pt; line-height: 1.65; color: #5c636e; }
 .inv-headright { text-align: right; white-space: nowrap; }

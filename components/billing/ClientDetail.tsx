@@ -56,6 +56,10 @@ export default function ClientDetail({
   const [acInsurer, setAcInsurer] = useState(insurerId ?? "");
   const [acAmount, setAcAmount] = useState("");
   const [acStage, setAcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+  // Bulk-edit: apply one change to every selected charge at once.
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkStage, setBulkStage] = useState<"keep" | "tobill" | "awaiting" | "paid">("keep");
+  const [bulkInsurer, setBulkInsurer] = useState("keep"); // "keep" | "self" | insurerId
 
   async function deleteClientNow() {
     setBusy(true); setMsg("");
@@ -114,6 +118,26 @@ export default function ClientDetail({
       if (!res.ok) throw new Error((await res.json()).error || "Could not add.");
       setShowAdd(false); setAcDate(""); setAcAmount(""); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not add."); }
+    finally { setBusy(false); }
+  }
+  async function applyBulk() {
+    const ids = [...sel];
+    if (!ids.length) return;
+    const patch: Record<string, unknown> = {};
+    if (bulkStage !== "keep") patch.stage = bulkStage;
+    if (bulkInsurer !== "keep") patch.insurerId = bulkInsurer === "self" ? null : bulkInsurer;
+    if (Object.keys(patch).length === 0) { setMsg("Choose what to change first."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const results = await Promise.all(ids.map((sid) =>
+        fetch(`/api/billing/sessions/${sid}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
+      ));
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed) throw new Error(`${failed} of ${ids.length} couldn't be changed.`);
+      setMsg(`Updated ${ids.length} charge${ids.length === 1 ? "" : "s"}.`);
+      setBulkOpen(false); setBulkStage("keep"); setBulkInsurer("keep"); setSel(new Set());
+      router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not apply the change."); }
     finally { setBusy(false); }
   }
   const activityTotal = activity.reduce((t, a) => t + a.total, 0);
@@ -487,13 +511,38 @@ export default function ClientDetail({
         </div>
 
         {sel.size > 0 && (
+          <>
           <div className="cd-selbar">
             <span>{sel.size} entr{sel.size === 1 ? "y" : "ies"} selected · {money(activity.filter((a) => sel.has(a.id)).reduce((t, a) => t + a.total, 0))}</span>
             <div style={{ flex: 1 }} />
-            {selInsuredIds.length > 0 && <button className="bl-cta" onClick={generateSelectedClaims}>CMS-1500 from selected ({selInsuredIds.length})</button>}
-            {selSelfIds.length > 0 && <button className="bl-cta" onClick={generateSelectedInvoice}>Invoice from selected ({selSelfIds.length})</button>}
-            <button className="su-del" onClick={() => setSel(new Set())}>Clear</button>
+            {selInsuredIds.length > 0 && <button className="bl-cta" onClick={generateSelectedClaims}>CMS-1500 ({selInsuredIds.length})</button>}
+            {selSelfIds.length > 0 && <button className="bl-cta" onClick={generateSelectedInvoice}>Invoice ({selSelfIds.length})</button>}
+            {canManageCharges && <button className="su-add" onClick={() => setBulkOpen((o) => !o)}>Change selected…</button>}
+            <button className="su-del" onClick={() => { setSel(new Set()); setBulkOpen(false); }}>Clear</button>
           </div>
+          {bulkOpen && canManageCharges && (
+            <div className="cd-addform" style={{ marginBottom: 12 }}>
+              <div className="cd-addrow">
+                <label>Set status<select className="ls-in" value={bulkStage} onChange={(e) => setBulkStage(e.target.value as typeof bulkStage)}>
+                  <option value="keep">Keep as is</option>
+                  <option value="tobill">To bill</option>
+                  <option value="awaiting">Awaiting payment</option>
+                  <option value="paid">Paid</option>
+                </select></label>
+                <label>Set insurer<select className="ls-in" value={bulkInsurer} onChange={(e) => setBulkInsurer(e.target.value)}>
+                  <option value="keep">Keep as is</option>
+                  <option value="self">Self-pay</option>
+                  {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select></label>
+              </div>
+              <p className="su-hint" style={{ margin: "2px 2px 8px" }}>Applies the change you pick to all {sel.size} selected charge{sel.size === 1 ? "" : "s"}. &ldquo;Keep as is&rdquo; leaves that field untouched.</p>
+              <div className="cd-addbtns">
+                <button className="ls-save" disabled={busy} onClick={applyBulk}>{busy ? "Applying…" : `Apply to ${sel.size}`}</button>
+                <button className="su-del" disabled={busy} onClick={() => setBulkOpen(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+          </>
         )}
 
         {canManageCharges && (
