@@ -52,9 +52,12 @@ export async function findIntakeForClient(first: string, last: string, dob?: str
       formLabel: templateLabel((r.form_key || "individual") as FormTemplateKey),
       clinicianId: r.clinician_id,
       clinicianName: getClinician(r.clinician_id)?.name ?? r.clinician_id,
-      createdAt: r.created_at,
+      // Postgres returns timestamps as Date objects; the JSON store returns
+      // ISO strings. Normalise to an ISO string so the sort (.localeCompare)
+      // and the UI (.slice) that consume this can't blow up on a Date.
+      createdAt: r.created_at ? new Date(r.created_at as unknown as string | number | Date).toISOString() : "",
       status: r.status,
     });
   }
-  return out.sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+  return out.sort((x, y) => (y.createdAt || "").localeCompare(x.createdAt || ""));
 }

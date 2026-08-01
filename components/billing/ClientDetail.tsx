@@ -384,7 +384,7 @@ export default function ClientDetail({
                     ? <Link href={`/submissions/${f.token}`} className="cd-docname">{f.formLabel}</Link>
                     : <span className="cd-docname" style={{ color: "var(--ink,#1c2330)" }}>{f.formLabel}</span>}
                   <span className="su-hint">{f.clinicianName} · {f.status}{currentUserId !== f.clinicianId ? " · clinician only" : ""}</span>
-                  <span className="cd-docdate">{f.createdAt.slice(0, 10)}</span>
+                  <span className="cd-docdate">{(f.createdAt || "").slice(0, 10)}</span>
                 </div>
               ))}
             </div>
