@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingUser, isBiller } from "@/lib/billingRole";
+import { getBillingUser, canConfigureBilling } from "@/lib/billingRole";
 import { listInsurers } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
 import ImportClient from "@/components/billing/ImportClient";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ImportPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/import");
-  if (!isBiller(user.role)) redirect("/billing/me");
+  if (!canConfigureBilling(user.role)) redirect("/billing/me");
 
   const insurers = await listInsurers();
   // Outside clinicians are disabled for now — only the practice's own clinicians.

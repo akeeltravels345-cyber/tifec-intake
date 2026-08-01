@@ -14,10 +14,32 @@ const IconLog = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="non
 interface NavItem { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; }
 
 export default function BillingSidebar({
-  role, meId, name, initials, roleLabel, queueCount, isDev,
-}: { role: BillingRole; meId: string; name: string; initials: string; roleLabel: string; queueCount: number; isDev: boolean; }) {
+  role, meId, name, initials, roleLabel, queueCount, isDev, isAdmin = false,
+}: { role: BillingRole; meId: string; name: string; initials: string; roleLabel: string; queueCount: number; isDev: boolean; isAdmin?: boolean; }) {
   const path = usePathname();
   const myDetail = `/billing/clinician/${meId}`;
+
+  // The admin (Akeel) is the one person who should see the WHOLE system at once,
+  // grouped by whose job each screen is — owner, biller, clinician — so it's
+  // obvious what belongs to whom while building. Everyone else gets the focused
+  // nav for their own role only.
+  const groups: { label: string; items: NavItem[] }[] = [
+    { label: "Owner", items: [
+      { href: "/billing/overview", label: "Overview", icon: IconOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
+      { href: "/billing/clinicians", label: "By clinician", icon: IconClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
+      { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
+    ] },
+    { label: "Biller", items: [
+      { href: "/billing/biller", label: "Biller dashboard", icon: IconOverview, match: (p) => p === "/billing/biller" },
+      { href: "/billing/payments", label: "Billing queue", icon: IconQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+      { href: "/billing/clients", label: "Clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
+      { href: "/billing/import", label: "Import", icon: IconLog, match: (p) => p.startsWith("/billing/import") },
+    ] },
+    { label: "Clinician", items: [
+      { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
+      { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p === "/billing/me" },
+    ] },
+  ];
 
   const nav: NavItem[] =
     role === "biller"
@@ -46,6 +68,8 @@ export default function BillingSidebar({
             // wants it (e.g. while the biller is away).
             { href: "/billing/config", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/config") },
           ];
+
+  const flatNav = isAdmin ? groups.flatMap((g) => g.items) : nav;
 
   function viewAs(r: "owner" | "clinician" | "biller") {
     const who = r === "owner" ? "shion-oconnor" : r === "clinician" ? "donnet-oconnor" : "nick-oconnor";
@@ -77,25 +101,46 @@ export default function BillingSidebar({
         Back to intake
       </Link>
 
-      <div className="bo-navl">{sectionLabel}</div>
-      <nav className="bo-nav">
-        {nav.map((n) => {
-          const Icon = n.icon;
-          return (
-            <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
-              <Icon />{n.label}
-              {n.badge ? <span className="bdg">{n.badge}</span> : null}
-            </Link>
-          );
-        })}
-      </nav>
+      {isAdmin ? (
+        <nav className="bo-nav">
+          {groups.map((g, gi) => (
+            <div key={g.label}>
+              <div className="bo-navl" style={gi === 0 ? undefined : { marginTop: 16 }}>{g.label}</div>
+              {g.items.map((n) => {
+                const Icon = n.icon;
+                return (
+                  <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
+                    <Icon />{n.label}
+                    {n.badge ? <span className="bdg">{n.badge}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      ) : (
+        <>
+          <div className="bo-navl">{sectionLabel}</div>
+          <nav className="bo-nav">
+            {nav.map((n) => {
+              const Icon = n.icon;
+              return (
+                <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
+                  <Icon />{n.label}
+                  {n.badge ? <span className="bdg">{n.badge}</span> : null}
+                </Link>
+              );
+            })}
+          </nav>
+        </>
+      )}
 
       <div className="bo-side-foot">
         {isDev && (
           <>
             <div className="bo-viewas">View as</div>
             <div className="bo-roles">
-              {(["owner", "biller"] as const).map((r) => (
+              {(["owner", "biller", "clinician"] as const).map((r) => (
                 <button key={r} type="button" className={`bo-role ${role === r ? "on" : ""}`} onClick={() => viewAs(r)}>
                   {r[0].toUpperCase() + r.slice(1)}
                 </button>
@@ -118,7 +163,7 @@ export default function BillingSidebar({
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
         Intake
       </Link>
-      {nav.map((n) => {
+      {flatNav.map((n) => {
         const Icon = n.icon;
         return (
           <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>

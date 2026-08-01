@@ -38,6 +38,7 @@ export default async function BillingLayout({ children }: { children: React.Reac
         roleLabel={roleLabel}
         queueCount={queueCount}
         isDev={devMode()}
+        isAdmin={user.clinician.contact === "admin"}
       />
       <main className="bo-main">{children}</main>
     </div>
