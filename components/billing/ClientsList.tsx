@@ -18,11 +18,17 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [filterClin, setFilterClin] = useState("");
+  const [filterInsurer, setFilterInsurer] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [dir, setDir] = useState<"asc" | "desc">("asc");
 
-  // Biller/owner/admin can narrow the whole practice down to one clinician's book.
-  const scoped = filterClin ? rows.filter((r) => r.clinicianIds.includes(filterClin)) : rows;
+  // Narrow the list: by one insurer (anyone), and/or one clinician's book
+  // (biller/owner/admin). The insurer list is just the ones that actually appear.
+  const insurerOptions = [...new Set(rows.map((r) => r.insurer))].sort();
+  const scoped = rows.filter((r) =>
+    (!filterClin || r.clinicianIds.includes(filterClin)) &&
+    (!filterInsurer || r.insurer === filterInsurer)
+  );
   const term = q.trim().toLowerCase();
   const filtered = term
     ? scoped.filter((r) => `${r.first} ${r.last}`.toLowerCase().includes(term) || `${r.last} ${r.first}`.toLowerCase().includes(term))
@@ -74,6 +80,15 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
       {rows.length > 0 && (
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <input className="ls-in" type="search" placeholder="Search clients by name…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search clients by name" style={{ maxWidth: 300 }} />
+          {insurerOptions.length > 1 && (
+            <label className="su-hint" style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+              Insurer
+              <select className="ls-in" value={filterInsurer} onChange={(e) => setFilterInsurer(e.target.value)} style={{ width: "auto" }} aria-label="Filter by insurer">
+                <option value="">All insurers</option>
+                {insurerOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+          )}
           {seesAll && clinicians.length > 0 && (
             <label className="su-hint" style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               Clinician
@@ -83,7 +98,7 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
               </select>
             </label>
           )}
-          {(term || filterClin) && <span className="su-hint">{filtered.length} of {rows.length}</span>}
+          {(term || filterClin || filterInsurer) && <span className="su-hint">{filtered.length} of {rows.length}</span>}
           <span style={{ flex: 1 }} />
           <span className="su-hint" style={{ whiteSpace: "nowrap" }}>Tap a column heading to sort ↕</span>
         </div>
@@ -92,7 +107,7 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
         {rows.length === 0 ? (
           <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients yet</div><div className="small">They&apos;ll appear here once sessions are logged or a roster is imported.</div></div>
         ) : filtered.length === 0 ? (
-          <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients match your filters</div><div className="small">{term ? `Nothing named "${q}"${filterClin ? " for this clinician" : ""}.` : "This clinician has no clients yet."}</div></div>
+          <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients match your filters</div><div className="small">Try clearing a filter or searching a different name.</div></div>
         ) : (
           <div className="su-tblwrap">
             <table className="su-tbl su-tbl-sort" style={{ minWidth: 740 }}>
