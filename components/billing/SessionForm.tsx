@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
@@ -38,6 +38,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
   const [search, setSearch] = useState("");
   const [codeSearch, setCodeSearch] = useState("");
+  // "Browse all codes" opens the full catalogue in a modal, so the inline form
+  // stays short but every code is one tap away.
+  const [showAll, setShowAll] = useState(false);
   const [saved, setSaved] = useState("");
   // Whether this visit goes through insurance or is paid in full on the day.
   // Kept separate from the insurer itself: an insured client may still choose
@@ -104,6 +107,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayDue)) : 0;
 
   const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); resetCopay(); };
+  // Close the "all codes" modal on Escape.
+  useEffect(() => {
+    if (!showAll) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowAll(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showAll]);
 
   async function submit(e: React.FormEvent, andAnother = false) {
     e.preventDefault();
@@ -296,11 +306,15 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                 ); })}
               </div>
             )}
-            <input
-              className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
-              placeholder="Search by code or name — e.g. 90837 or psychotherapy" aria-label="Search service codes"
-              style={{ margin: "2px 0 10px" }}
-            />
+            <div className="ls-codesearch">
+              <input
+                className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
+                placeholder="Search by code or name — e.g. 90837 or psychotherapy" aria-label="Search service codes"
+              />
+              <button type="button" className="ls-seeall" onClick={() => setShowAll(true)}>
+                See all {cptCodes.length} codes
+              </button>
+            </div>
             {codeSearch.trim() ? (
               <div className="ls-cptlist tall">
                 {matches.length === 0 ? (
@@ -422,6 +436,37 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           <div className="ls-status self"><span className="ic">✓</span><span>Self-pay — the full {money(totalCost)} is collected at the visit, nothing goes to insurance.</span></div>
         )}
       </div>
+
+      {showAll && (
+        <div className="ls-modal-ov" onClick={() => setShowAll(false)}>
+          <div className="ls-modal" role="dialog" aria-modal="true" aria-label="All service codes" onClick={(e) => e.stopPropagation()}>
+            <div className="ls-modal-head">
+              <span>All service codes</span>
+              <button type="button" className="ls-modal-x" onClick={() => setShowAll(false)} aria-label="Close">×</button>
+            </div>
+            <input
+              className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
+              placeholder="Search by code or name — e.g. 90837 or psychotherapy" aria-label="Search service codes"
+              autoFocus
+            />
+            <div className="ls-cptlist ls-modal-list">
+              {(codeSearch.trim() ? matches : cptCodes).length === 0 ? (
+                <p className="ls-none">No code matches &ldquo;{codeSearch}&rdquo;.</p>
+              ) : (codeSearch.trim() ? matches : cptCodes).map((c) => (
+                <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
+                  <span className="cd">{c.code}</span>
+                  <span className="ds">{c.description || "—"}</span>
+                  <span className="fe">{money(c.fee)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="ls-modal-foot">
+              <span className="ls-modal-count">{codes.length ? `${codes.length} selected` : "Tap codes to add them"}</span>
+              <button type="button" className="ls-modal-done" onClick={() => setShowAll(false)}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

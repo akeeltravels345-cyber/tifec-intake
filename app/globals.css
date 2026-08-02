@@ -2501,6 +2501,18 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 /* Selected service codes as removable chips — makes what's picked (and how to
    remove it) obvious. */
 .biz .ls-selcodes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.biz .ls-codesearch { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }
+.biz .ls-codesearch .ls-in { flex: 1; min-width: 0; }
+.biz .ls-seeall { flex: none; border: 1px solid var(--edge); background: #fff; color: var(--indigo); font-size: 12.5px; font-weight: 600; border-radius: 9px; padding: 10px 12px; cursor: pointer; white-space: nowrap; }
+.biz .ls-seeall:hover { background: #f3f0e8; }
+.ls-modal-ov { position: fixed; inset: 0; background: rgba(30,25,15,.38); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 200; }
+.biz .ls-modal, .ls-modal { background: #fff; border-radius: 16px; width: min(540px, 100%); max-height: 84vh; display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(30,25,15,.3); padding: 18px; }
+.ls-modal-head { display: flex; justify-content: space-between; align-items: center; font: 400 19px "Newsreader", serif; color: var(--ink); margin-bottom: 12px; }
+.ls-modal-x { border: 0; background: none; font-size: 24px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 4px; }
+.biz .ls-modal-list { overflow-y: auto; max-height: 58vh; margin-top: 12px; padding-right: 2px; }
+.ls-modal-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--edge); }
+.ls-modal-count { font-size: 13px; color: var(--muted); }
+.ls-modal-done { border: 0; background: var(--indigo); color: #fff; border-radius: 10px; padding: 10px 22px; font-weight: 600; font-size: 14px; cursor: pointer; }
 .biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 5px 8px 5px 12px; font: 600 12.5px "Open Sans"; cursor: pointer; }
 .biz .ls-selchip:hover { background: #e0efef; }
 .biz .ls-selchip .x { font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); }
