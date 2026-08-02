@@ -28,10 +28,27 @@ export function insurancePortion(s: BillingSession): number {
   const due = s.copayDue == null ? s.copayCollected : s.copayDue;
   return round2(Math.max(0, (s.totalCost || 0) - (due || 0)));
 }
-/** Part collected at the visit: the co-pay, or the whole fee if self-pay. */
+/** Cash actually collected for this visit: the co-pay (insured), or for self-pay
+ *  the amount paid. Self-pay disposition: undefined/"paid" = paid in full at the
+ *  visit (default, so legacy self-pay is unchanged); "owing" = only copayCollected
+ *  has come in so far; "waived" = written off, nothing collected. */
 export function collectedAtVisit(s: BillingSession): number {
-  if (!s.insurerId) return round2(s.totalCost || 0);
+  if (!s.insurerId) {
+    if (s.selfPayStatus === "waived") return 0;
+    if (s.selfPayStatus === "owing") return round2(Math.min(s.totalCost || 0, s.copayCollected || 0));
+    return round2(s.totalCost || 0);
+  }
   return round2(s.copayCollected || 0);
+}
+/** For a self-pay visit still owing, how much the client has yet to pay (fee minus
+ *  what's collected). 0 for insured, paid-in-full, or waived self-pay. */
+export function selfPayOutstanding(s: BillingSession): number {
+  if (s.insurerId || s.selfPayStatus !== "owing") return 0;
+  return round2(Math.max(0, (s.totalCost || 0) - (s.copayCollected || 0)));
+}
+/** The fee written off on a waived self-pay visit (0 otherwise). */
+export function selfPayWaived(s: BillingSession): number {
+  return !s.insurerId && s.selfPayStatus === "waived" ? round2(s.totalCost || 0) : 0;
 }
 /** Co-pay that was DUE but not collected (written off) — insured visits only. */
 export function uncollectedCopay(s: BillingSession): number {

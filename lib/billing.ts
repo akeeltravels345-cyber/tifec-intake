@@ -102,6 +102,11 @@ export interface ClinicianBillingSettings {
   noPayout?: boolean; // owner who draws nothing: no retention/deductions, payout 0, all stays with the practice
 }
 
+/** Self-pay disposition. Undefined/null = paid in full at the visit (the default,
+ *  so legacy self-pay is unchanged). "owing" = a running balance the client still
+ *  owes. "waived" = the fee was written off. Ignored for insured sessions. */
+export type SelfPayStatus = "owing" | "waived" | null;
+
 export interface SessionInput {
   clinicianId: string;
   clientFirst: string;
@@ -114,6 +119,7 @@ export interface SessionInput {
   totalCost: number;
   copayCollected: number;
   copayDue?: number; // co-pay that should have been collected (defaults to collected)
+  selfPayStatus?: SelfPayStatus;
   notes?: string;
   createdBy: string;
   /** A session moves logged -> billed (submitted) -> paid (collected). Normally
@@ -136,6 +142,7 @@ export interface BillingSession {
   totalCost: number;
   copayCollected: number;
   copayDue: number;            // co-pay that should have been collected
+  selfPayStatus: SelfPayStatus; // self-pay disposition (null = paid in full)
   billedDate: string | null;   // submitted to insurer (null = not yet billed)
   insurancePaid: boolean;      // insurer has settled (= collected)
   paidDate: string | null;
@@ -389,6 +396,7 @@ interface StoredSession {
   totalCost: number;
   copayCollected: number;
   copayDue?: number;
+  selfPayStatus?: SelfPayStatus;
   billedDate: string | null;
   insurancePaid: boolean;
   paidDate: string | null;
@@ -409,7 +417,9 @@ function decryptSession(s: StoredSession): BillingSession {
   return {
     id: s.id, clinicianId: s.clinicianId, clientFirst: first, clientLast: last, clientId: s.clientId ?? null, insurerId: s.insurerId,
     dateOfService: s.dateOfService, cptCodes: s.cptCodes || [], durationHours: num(s.durationHours), totalCost: num(s.totalCost),
-    copayCollected: num(s.copayCollected), copayDue: s.copayDue == null ? num(s.copayCollected) : num(s.copayDue), billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
+    copayCollected: num(s.copayCollected), copayDue: s.copayDue == null ? num(s.copayCollected) : num(s.copayDue),
+    selfPayStatus: s.selfPayStatus === "owing" || s.selfPayStatus === "waived" ? s.selfPayStatus : null,
+    billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -425,12 +435,20 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
   const billedDate = input.billedDate ?? (paid ? paidDate : null);
   const clientId = input.clientId ?? null;
   const copayDue = input.copayDue == null ? input.copayCollected : input.copayDue;
-  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, copayDue, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
+  const selfPayStatus = input.selfPayStatus ?? null;
+  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
   if (usePostgres) {
     const sql = await pg();
-    await sql`
-      INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
-      VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${copayDue}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
+    try {
+      await sql`
+        INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, copay_due, self_pay_status, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
+        VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${copayDue}, ${selfPayStatus}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
+    } catch {
+      // Pre-migration: insert without self_pay_status so logging still works.
+      await sql`
+        INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
+        VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${copayDue}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
+    }
     for (const code of input.cptCodes) {
       await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
     }
@@ -447,7 +465,14 @@ async function loadStored(): Promise<StoredSession[]> {
     const sql = await pg();
     // Cast DATE columns to text so they arrive as "YYYY-MM-DD" (the driver otherwise
     // returns JS Date objects, which String().slice() mangled — breaking month filters).
-    const rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    // self_pay_status is added by db/migrate-self-pay-status.sql; fall back to a
+    // read without it so the app never 500s if the migration hasn't run yet.
+    let rows: Record<string, unknown>[];
+    try {
+      rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, copay_due, self_pay_status, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    } catch {
+      rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
+    }
     const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
     const byId: Record<string, string[]> = {};
     for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
@@ -456,7 +481,9 @@ async function loadStored(): Promise<StoredSession[]> {
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
       // copay_due may be NULL on rows predating the write-off feature; leave it
       // undefined so decryptSession falls back to copay_collected for those.
-      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), copayDue: r.copay_due == null ? undefined : num(r.copay_due), billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
+      totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), copayDue: r.copay_due == null ? undefined : num(r.copay_due),
+      selfPayStatus: r.self_pay_status === "owing" || r.self_pay_status === "waived" ? r.self_pay_status : null,
+      billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null, notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }
@@ -529,23 +556,38 @@ export async function updateSession(id: string, f: {
   dateOfService: string; insurerId: string | null; totalCost: number;
   copayCollected: number; copayDue: number; billedDate: string | null;
   insurancePaid: boolean; paidDate: string | null; notes: string;
+  selfPayStatus?: SelfPayStatus;
 }): Promise<boolean> {
+  const selfPayStatus = f.selfPayStatus ?? null;
   if (usePostgres) {
     const sql = await pg();
-    const res = (await sql`
-      UPDATE billing_sessions SET
-        date_of_service = ${f.dateOfService}, insurer_id = ${f.insurerId},
-        total_cost = ${f.totalCost}, copay_collected = ${f.copayCollected}, copay_due = ${f.copayDue},
-        billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
-        notes = ${f.notes}
-      WHERE id = ${id} RETURNING id`) as { id: string }[];
-    return res.length > 0;
+    try {
+      const res = (await sql`
+        UPDATE billing_sessions SET
+          date_of_service = ${f.dateOfService}, insurer_id = ${f.insurerId},
+          total_cost = ${f.totalCost}, copay_collected = ${f.copayCollected}, copay_due = ${f.copayDue},
+          self_pay_status = ${selfPayStatus},
+          billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
+          notes = ${f.notes}
+        WHERE id = ${id} RETURNING id`) as { id: string }[];
+      return res.length > 0;
+    } catch {
+      // Pre-migration: update without self_pay_status.
+      const res = (await sql`
+        UPDATE billing_sessions SET
+          date_of_service = ${f.dateOfService}, insurer_id = ${f.insurerId},
+          total_cost = ${f.totalCost}, copay_collected = ${f.copayCollected}, copay_due = ${f.copayDue},
+          billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
+          notes = ${f.notes}
+        WHERE id = ${id} RETURNING id`) as { id: string }[];
+      return res.length > 0;
+    }
   }
   const all = readJson<StoredSession[]>(SESS_FILE, []);
   const s = all.find((x) => x.id === id);
   if (!s) return false;
   s.dateOfService = f.dateOfService; s.insurerId = f.insurerId; s.totalCost = f.totalCost;
-  s.copayCollected = f.copayCollected; s.copayDue = f.copayDue;
+  s.copayCollected = f.copayCollected; s.copayDue = f.copayDue; s.selfPayStatus = selfPayStatus;
   s.billedDate = f.billedDate; s.insurancePaid = f.insurancePaid; s.paidDate = f.paidDate; s.notes = f.notes;
   writeJson(SESS_FILE, all);
   return true;

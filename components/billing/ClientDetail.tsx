@@ -13,6 +13,7 @@ export interface Activity {
   id: string; date: string; clinician: string; codes: string[]; codeLabel: string;
   insurer: string; insurerId: string | null; total: number; copay: number; copayDue: number;
   stage: "self" | "logged" | "billed" | "paid"; paidDate: string | null; billedDate: string | null;
+  selfPayStatus?: "owing" | "waived" | null; selfPayOwed?: number;
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -51,6 +52,7 @@ export default function ClientDetail({
   const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
   const [ecBilled, setEcBilled] = useState("");
   const [ecPaid, setEcPaid] = useState("");
+  const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived">("paid");
   const [showAdd, setShowAdd] = useState(false);
   // add-charge form
   const [acDate, setAcDate] = useState("");
@@ -83,6 +85,7 @@ export default function ClientDetail({
     setEcStage(a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
     setEcBilled(a.billedDate ?? "");
     setEcPaid(a.paidDate ?? "");
+    setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
   }
   async function saveEditCharge(sid: string) {
     if (!ecDate || ecTotal === "") { setMsg("Enter a date and amount."); return; }
@@ -93,9 +96,10 @@ export default function ClientDetail({
         body: JSON.stringify({
           dateOfService: ecDate, totalCost: Number(ecTotal) || 0,
           insurerId: ecInsurer || null,
-          copayCollected: ecInsurer ? Number(ecCopay) || 0 : 0,
+          copayCollected: ecInsurer ? Number(ecCopay) || 0 : (ecSelfPay === "owing" ? Number(ecCopay) || 0 : 0),
           copayDue: ecInsurer ? Number(ecDue) || 0 : 0,
           stage: ecInsurer ? ecStage : "paid",
+          selfPayStatus: ecInsurer ? null : (ecSelfPay === "paid" ? null : ecSelfPay),
           billedDate: ecBilled || null,
           paidDate: ecPaid || null,
         }),
@@ -631,6 +635,10 @@ export default function ClientDetail({
                               <label>Date<input type="date" className="ls-in" value={ecDate} onChange={(e) => setEcDate(e.target.value)} /></label>
                               <label>Fee<input type="number" step="0.01" min="0" className="ls-in" value={ecTotal} onChange={(e) => setEcTotal(e.target.value)} /></label>
                               <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
+                              {!ecInsurer && <>
+                                <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => setEcSelfPay(e.target.value as typeof ecSelfPay)}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
+                                {ecSelfPay === "owing" && <label>Collected so far<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>}
+                              </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>

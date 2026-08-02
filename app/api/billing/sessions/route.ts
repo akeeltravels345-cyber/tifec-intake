@@ -63,6 +63,8 @@ export async function POST(req: Request) {
     totalCost,
     copayCollected: Number(body.copayCollected) || 0,
     copayDue: body.copayDue == null ? undefined : Number(body.copayDue) || 0,
+    // Self-pay disposition (ignored when insured): owing / waived, else paid in full.
+    selfPayStatus: insurerId ? null : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null),
     notes: typeof body.notes === "string" ? body.notes : "",
   });
 

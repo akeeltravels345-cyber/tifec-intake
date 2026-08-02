@@ -6,6 +6,7 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
 import { findIntakeForClient } from "@/lib/intakeLink";
+import { selfPayOutstanding } from "@/lib/billingCalc";
 import ClientDetail, { type Activity } from "@/components/billing/ClientDetail";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       insurer: insName(s.insurerId), insurerId: s.insurerId, total: s.totalCost, copay: s.copayCollected, copayDue: s.copayDue,
       stage: !s.insurerId ? "self" : s.insurancePaid ? "paid" : s.billedDate ? "billed" : "logged",
       paidDate: s.paidDate, billedDate: s.billedDate,
+      selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s),
     }));
 
   return (

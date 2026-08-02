@@ -46,6 +46,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Kept separate from the insurer itself: an insured client may still choose
   // to pay upfront for a session, which is common in a psychology practice.
   const [payMode, setPayMode] = useState<"insurance" | "upfront">("upfront");
+  // Self-pay disposition: paid in full now, owing (running balance), or waived.
+  const [selfPay, setSelfPay] = useState<"paid" | "owing" | "waived">("paid");
+  const [collectedNow, setCollectedNow] = useState("");
   // Only supplied when the biller is logging a claim for an outside clinician.
   const [forId, setForId] = useState(forClinicians[0]?.id ?? "");
 
@@ -103,7 +106,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Discount applies to self-pay only; the charged total is the fee less the discount.
   const discPct = payMode === "upfront" ? Math.min(100, Math.max(0, Number(discountPct) || 0)) : 0;
   const chargedTotal = discPct > 0 ? round2(totalCost * (1 - discPct / 100)) : totalCost;
-  const collectedAtVisit = insurerId ? copayCollected : chargedTotal;
+  const collectedAtVisit = insurerId ? copayCollected
+    : selfPay === "owing" ? Math.min(chargedTotal, Number(collectedNow) || 0)
+    : selfPay === "waived" ? 0
+    : chargedTotal;
   const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayDue)) : 0;
 
   const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); resetCopay(); };
@@ -135,7 +141,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : 0, copayDue: payMode === "insurance" ? copayDue : 0, notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? null : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -144,7 +150,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         // date and clear only what changes from one client to the next.
         setSaved(`✓ Logged ${codes.join(", ")} for ${first.trim()} ${last.trim()} — ${money(chargedTotal)}${insurerId ? ` · ${insurer?.name}` : " · self-pay"}${dos ? ` · ${dos}` : ""}.`);
         setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
-        setCodes([]); resetCopay(); setNotes(""); setSearch("");
+        setCodes([]); resetCopay(); setNotes(""); setSearch(""); setSelfPay("paid"); setCollectedNow("");
         setMode(clients.length > 0 ? "returning" : "new");
         setBusy(false);
         // Deliberately NO router.refresh() here. A full server refetch after every
@@ -383,6 +389,24 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             {discPct > 0 && <p className="ls-uncollected" style={{ color: "var(--teal-deep, #2c7a7e)" }}>Charging <b>{money(chargedTotal)}</b> — {discPct}% off the {money(totalCost)} fee.</p>}
           </div>
           )}
+          {payMode === "upfront" && chargedTotal > 0 && (
+          <div className="ls-field">
+            <label className="ls-q">Was it paid?</label>
+            <div className="ls-seg3" role="tablist">
+              <button type="button" role="tab" aria-selected={selfPay === "paid"} className={`ls-segbtn ${selfPay === "paid" ? "on" : ""}`} onClick={() => setSelfPay("paid")}>Paid in full<small>collected today</small></button>
+              <button type="button" role="tab" aria-selected={selfPay === "owing"} className={`ls-segbtn ${selfPay === "owing" ? "on" : ""}`} onClick={() => setSelfPay("owing")}>Owing<small>collect later</small></button>
+              <button type="button" role="tab" aria-selected={selfPay === "waived"} className={`ls-segbtn ${selfPay === "waived" ? "on" : ""}`} onClick={() => setSelfPay("waived")}>Waived<small>written off</small></button>
+            </div>
+            {selfPay === "owing" && (
+              <div style={{ marginTop: 10 }}>
+                <span className="ls-sublab">Collected today (leave 0 if nothing paid)</span>
+                <input className="ls-in" type="number" step="0.01" min="0" max={chargedTotal} value={collectedNow} onChange={(e) => setCollectedNow(e.target.value)} placeholder="0" style={{ maxWidth: 160 }} />
+                <p className="ls-uncollected" style={{ color: "#9a3b2a" }}><b>{money(Math.max(0, chargedTotal - (Number(collectedNow) || 0)))}</b> will be owed by the client — it shows in the biller&apos;s balances to follow up.</p>
+              </div>
+            )}
+            {selfPay === "waived" && <p className="ls-uncollected" style={{ color: "var(--muted)" }}>The {money(chargedTotal)} fee is written off — not collected, not owed.</p>}
+          </div>
+          )}
           {payMode === "insurance" && (
           <div className="ls-field">
             <label className="ls-q">Co-pay collected</label>
@@ -433,7 +457,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         {insurerId ? (
           <div className="ls-status ins"><span className="ic">→</span><span>{money(billedToInsurance)} enters the billing queue for <b>{insurer?.name}</b> once you save.</span></div>
         ) : (
-          <div className="ls-status self"><span className="ic">✓</span><span>Self-pay — the full {money(totalCost)} is collected at the visit, nothing goes to insurance.</span></div>
+          selfPay === "owing" ? (
+            <div className="ls-status self"><span className="ic">→</span><span>Self-pay — {money(collectedAtVisit)} collected, <b>{money(Math.max(0, chargedTotal - collectedAtVisit))}</b> owed by the client (shows in the biller&apos;s balances).</span></div>
+          ) : selfPay === "waived" ? (
+            <div className="ls-status self"><span className="ic">–</span><span>Self-pay — the {money(chargedTotal)} fee is waived (written off).</span></div>
+          ) : (
+            <div className="ls-status self"><span className="ic">✓</span><span>Self-pay — the full {money(chargedTotal)} is collected at the visit, nothing goes to insurance.</span></div>
+          )
         )}
       </div>
 

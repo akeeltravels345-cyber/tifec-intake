@@ -6,7 +6,7 @@ import { billingRoleOf, isOwner, isBiller, hasBillingBeta, devMode } from "@/lib
 import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
-import { insurancePortion } from "@/lib/billingCalc";
+import { insurancePortion, collectedAtVisit, selfPayOutstanding } from "@/lib/billingCalc";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
 import { getSidebarData } from "@/lib/sidebarData";
@@ -75,7 +75,9 @@ export default async function TodayPage() {
         let notBilled = 0, withInsurers = 0, inBank = 0;
         for (const s of all) {
           if (!String(s.dateOfService || "").startsWith(mKey)) continue;
-          if (!s.insurerId) { inBank += s.totalCost || 0; continue; }
+          // Self-pay: only what's actually collected is in the bank; an unpaid
+          // balance sits with "not billed yet" (owed) — a waive is simply neither.
+          if (!s.insurerId) { inBank += collectedAtVisit(s); notBilled += selfPayOutstanding(s); continue; }
           inBank += s.copayCollected || 0;
           const ins = insurancePortion(s);
           if (s.insurancePaid) inBank += ins;

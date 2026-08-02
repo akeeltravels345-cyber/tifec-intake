@@ -39,8 +39,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const bodyPaid = isDate(body.paidDate) ? String(body.paidDate) : null;
   const billedDate = stage === "tobill" ? null : (bodyBilled ?? session.billedDate ?? dateOfService);
   const paidDate = paid ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
+  // Self-pay disposition (only meaningful when there's no insurer).
+  const selfPayStatus = insurerId ? null
+    : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null);
 
-  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, billedDate, insurancePaid: paid, paidDate, notes });
+  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listSessions, listExternalClinicians } from "@/lib/billing";
-import { insurancePortion } from "@/lib/billingCalc";
+import { insurancePortion, collectedAtVisit } from "@/lib/billingCalc";
 import { listClients, listAllClients } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import ClientsList, { type ClientRow } from "@/components/billing/ClientsList";
@@ -43,9 +43,9 @@ export default async function ClientsPage() {
   for (const s of sessions) {
     if (!s.clientId) continue;
     if (s.insurerId) billableByClient.set(s.clientId, (billableByClient.get(s.clientId) ?? 0) + 1);
-    const collected = s.insurerId
-      ? (s.copayCollected || 0) + (s.insurancePaid ? insurancePortion(s) : 0)
-      : (s.totalCost || 0); // self-pay: full fee collected at the visit
+    // Cash actually collected: co-pay + insurance if paid (insured), or the
+    // self-pay amount actually taken (full, partial, or 0 if owing/waived).
+    const collected = collectedAtVisit(s) + (s.insurerId && s.insurancePaid ? insurancePortion(s) : 0);
     paidByClient.set(s.clientId, (paidByClient.get(s.clientId) ?? 0) + collected);
     const prev = lastVisitByClient.get(s.clientId);
     if (!prev || s.dateOfService > prev) lastVisitByClient.set(s.clientId, s.dateOfService);
