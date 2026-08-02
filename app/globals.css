@@ -1808,7 +1808,10 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-clear:hover { text-decoration: underline; }
 .bq-groups { display: flex; flex-direction: column; gap: 14px; }
 .bq-group { background: #fff; border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 10px 26px rgba(70,55,25,.045); }
-.bq-ghead { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: #fbf9f4; border-bottom: 1px solid var(--hair); }
+.bq-ghead { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: #fbf9f4; border-bottom: 1px solid var(--hair); cursor: pointer; }
+.bq-ghead:hover { background: #f7f3ea; }
+.bq-gchev { font-size: 20px; line-height: 1; color: var(--muted); transition: transform .15s ease; transform: rotate(0deg); }
+.bq-gchev.open { transform: rotate(90deg); }
 .bq-check { width: 18px; height: 18px; flex: none; accent-color: var(--indigo); cursor: pointer; }
 .bq-gname { font-weight: 700; font-size: 15.5px; }
 .bq-gmeta { font-size: 12px; color: var(--faint); margin-top: 2px; display: flex; align-items: center; gap: 8px; }

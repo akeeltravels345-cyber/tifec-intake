@@ -46,6 +46,9 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const [filterClin, setFilterClin] = useState("");
   const [bucket, setBucket] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Which groups are folded shut (by group key), so long queues stay scannable.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleCollapse = (key: string) => setCollapsed((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   const [batchDate, setBatchDate] = useState(data.today);
   const [busy, setBusy] = useState(false);
 
@@ -168,17 +171,19 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           <div className="bq-groups">
             {groups.map((g) => {
               const allSel = g.claims.every((c) => selected.has(c.id));
+              const open = !collapsed.has(g.key);
               return (
                 <div className="bq-group" key={g.key}>
-                  <div className="bq-ghead">
-                    <input type="checkbox" className="bq-check" checked={allSel} onChange={() => toggleGroup(g.claims)} />
+                  <div className="bq-ghead" onClick={() => toggleCollapse(g.key)} role="button" aria-expanded={open} title={open ? "Collapse" : "Expand"}>
+                    <input type="checkbox" className="bq-check" checked={allSel} onChange={() => toggleGroup(g.claims)} onClick={(e) => e.stopPropagation()} />
                     <div>
                       <div className="bq-gname">{g.name}</div>
                       <div className="bq-gmeta">{g.claims.length} claim{g.claims.length === 1 ? "" : "s"} · <span className={`bq-age ${g.oldest >= 15 ? "warn" : ""}`}>oldest {g.oldest}d</span></div>
                     </div>
                     <div className="bq-gright"><div className="bq-gtot">{money(g.total)}</div><div className="bq-gcomm">+{money(comm(g.claims))} to you</div></div>
+                    <span className={`bq-gchev ${open ? "open" : ""}`} aria-hidden="true">›</span>
                   </div>
-                  {g.claims.map((c) => (
+                  {open && g.claims.map((c) => (
                     <div className={`bq-row ${selected.has(c.id) ? "sel" : ""} ${tab === "awaiting" ? "act" : ""}`} key={c.id}>
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className="dos">{c.dos}</div>
@@ -201,16 +206,19 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
             <div className="bq-empty"><div className="big">No payments recorded yet</div></div>
           ) : groups.length === 0 ? (
             <div className="bq-empty"><div className="big">No paid claims match your filters</div></div>
-          ) : groups.map((g) => (
+          ) : groups.map((g) => {
+            const open = !collapsed.has(g.key);
+            return (
             <div key={g.key}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)", cursor: "pointer" }} onClick={() => toggleCollapse(g.key)} role="button" aria-expanded={open} title={open ? "Collapse" : "Expand"}>
                 <span className="bq-gname">{g.name}</span>
                 <span className="bq-gmeta">{g.claims.length} paid</span>
                 <span style={{ flex: 1 }} />
                 <span className="bq-gtot">{money(g.total)}</span>
                 <span className="bq-gcomm" style={{ marginLeft: 10 }}>+{money(comm(g.claims))} to you</span>
+                <span className={`bq-gchev ${open ? "open" : ""}`} aria-hidden="true">›</span>
               </div>
-              {[...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
+              {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
                 <div className="bq-brow" key={c.id}>
                   <span className="pill">✓ {c.paidDate}</span>
                   <span><ClientName id={c.clientId} name={c.clientName} /></span>
@@ -221,7 +229,8 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                 </div>
               ))}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
