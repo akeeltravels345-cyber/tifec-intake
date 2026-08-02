@@ -1826,8 +1826,10 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .bq-dateedit:hover:not(:disabled) { border-color: var(--edge); background: #fff; }
 .biz .bq-dateedit:focus { border-color: var(--teal); background: #fff; outline: none; box-shadow: none; }
 .biz .bq-dateedit:disabled { opacity: .55; cursor: default; color: var(--muted); }
-.biz .bq-dateedit::-webkit-calendar-picker-indicator { opacity: .3; margin-left: 1px; padding: 0; cursor: pointer; }
-.biz .bq-dateedit:hover::-webkit-calendar-picker-indicator { opacity: .7; }
+/* Hide the native calendar glyph — the date reads as clean text and clicking it
+   opens the picker (via showPicker). Keeps rows tidy instead of icon-cluttered. */
+.biz .bq-dateedit::-webkit-calendar-picker-indicator { display: none; }
+.biz .bq-dateedit { -webkit-appearance: none; appearance: none; }
 /* On the green "paid" pill: inherit the pill's colour, faint hover chip. */
 .biz .pill .bq-dateedit.onpill { color: inherit; font-weight: 700; }
 .biz .pill .bq-dateedit.onpill:hover:not(:disabled) { border-color: rgba(30,49,146,.25); background: rgba(255,255,255,.55); }
