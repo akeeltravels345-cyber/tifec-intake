@@ -2051,8 +2051,17 @@ body:has(.biz) { background: #F8F9F8; }
 .today-sh-body { font-size: 13.5px; color: rgba(255,255,255,.86); margin-top: 4px; max-width: 52ch; line-height: 1.5; }
 .today-sh-cta { white-space: nowrap; font-size: 13.5px; font-weight: 700; color: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; padding: 9px 16px; }
 .today-pipe { margin-bottom: 22px; }
-.today-pipe-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.today-pipe-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
 .today-pipe-total { font: 400 18px "Newsreader", serif; }
+.today-pipe { outline: none; }
+.today-pipe-nav { display: flex; align-items: center; gap: 8px; }
+.today-pipe-month { display: inline-block; min-width: 118px; text-align: center; }
+.today-pipe-arrow { border: 1px solid var(--edge); background: #fff; color: var(--muted); width: 24px; height: 24px; border-radius: 7px; font-size: 16px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+.today-pipe-arrow:hover:not(:disabled) { background: #f3f0e8; color: var(--ink); }
+.today-pipe-arrow:disabled { opacity: .3; cursor: default; }
+.today-pipe-dots { display: flex; gap: 6px; justify-content: center; margin-top: 14px; }
+.today-pipe-pip { width: 7px; height: 7px; border-radius: 999px; border: 0; padding: 0; background: var(--edge); cursor: pointer; }
+.today-pipe-pip.on { background: var(--indigo); }
 .today-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--hair); }
 .today-bar i { display: block; height: 100%; }
 .today-pipe-cells { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: 12px; overflow: hidden; margin-top: 14px; }

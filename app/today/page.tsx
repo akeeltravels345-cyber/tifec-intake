@@ -8,12 +8,12 @@ import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { insurancePortion } from "@/lib/billingCalc";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
+import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
 import { getSidebarData } from "@/lib/sidebarData";
 
 export const dynamic = "force-dynamic";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-const money2 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const firstName = (name: string) => name.replace(/^(Dr\.?|Mrs\.?|Mr\.?|Ms\.?|Miss)\s+/i, "").trim().split(/\s+/)[0];
 
@@ -49,7 +49,7 @@ export default async function TodayPage() {
 
   // Billing money position (only computed for people with billing access).
   let toBillPractice = 0, myToBill = 0;
-  let pipe: { notBilled: number; withInsurers: number; inBank: number; total: number } | null = null;
+  let pipes: MonthPipe[] = [];
   if (hasBilling) {
     const all = await listSessions();
     for (const s of all) {
@@ -62,19 +62,30 @@ export default async function TodayPage() {
     toBillPractice = r2(toBillPractice); myToBill = r2(myToBill);
 
     if (owner) {
+      // Every month that has activity, plus the current month — newest first,
+      // capped so the swipeable card stays manageable.
       const now = new Date();
-      const mKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-      let notBilled = 0, withInsurers = 0, inBank = 0;
+      const keys = new Set<string>([`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`]);
       for (const s of all) {
-        if (!(s.dateOfService || "").startsWith(mKey)) continue;
-        if (!s.insurerId) { inBank += s.totalCost || 0; continue; }
-        inBank += s.copayCollected || 0;
-        const ins = insurancePortion(s);
-        if (s.insurancePaid) inBank += ins;
-        else if (s.billedDate) withInsurers += ins;
-        else notBilled += ins;
+        const d = String(s.dateOfService || "");
+        if (d.length >= 7) keys.add(d.slice(0, 7));
       }
-      pipe = { notBilled: r2(notBilled), withInsurers: r2(withInsurers), inBank: r2(inBank), total: r2(notBilled + withInsurers + inBank) };
+      const monthKeys = [...keys].sort().reverse().slice(0, 12);
+      pipes = monthKeys.map((mKey) => {
+        let notBilled = 0, withInsurers = 0, inBank = 0;
+        for (const s of all) {
+          if (!String(s.dateOfService || "").startsWith(mKey)) continue;
+          if (!s.insurerId) { inBank += s.totalCost || 0; continue; }
+          inBank += s.copayCollected || 0;
+          const ins = insurancePortion(s);
+          if (s.insurancePaid) inBank += ins;
+          else if (s.billedDate) withInsurers += ins;
+          else notBilled += ins;
+        }
+        const [y, mo] = mKey.split("-").map(Number);
+        const label = new Date(Date.UTC(y, mo - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+        return { key: mKey, label, notBilled: r2(notBilled), withInsurers: r2(withInsurers), inBank: r2(inBank), total: r2(notBilled + withInsurers + inBank) };
+      });
     }
   }
 
@@ -127,26 +138,8 @@ export default async function TodayPage() {
           <span className="today-sh-cta">{startHere.cta} →</span>
         </Link>
 
-        {/* Owner money pipeline */}
-        {owner && pipe && (
-          <div className="bo-card today-pipe">
-            <div className="today-pipe-head"><span className="bo-lab">The practice this month</span><span className="today-pipe-total">{money2(pipe.total)} charged</span></div>
-            <div className="today-bar">
-              {pipe.total > 0 ? (<>
-                <i style={{ width: `${(pipe.inBank / pipe.total) * 100}%`, background: "var(--teal)" }} />
-                <i style={{ width: `${(pipe.withInsurers / pipe.total) * 100}%`, background: "var(--amber)" }} />
-                <i style={{ width: `${(pipe.notBilled / pipe.total) * 100}%`, background: "#d8cbb0" }} />
-              </>) : <i style={{ width: "100%", background: "var(--hair)" }} />}
-            </div>
-            <div className="today-pipe-cells">
-              <div><span className="tp-dot" style={{ background: "#d8cbb0" }} />Not billed yet<b>{money2(pipe.notBilled)}</b></div>
-              <div><span className="tp-dot" style={{ background: "var(--amber)" }} />With insurers<b>{money2(pipe.withInsurers)}</b></div>
-              <div><span className="tp-dot" style={{ background: "var(--teal)" }} />In the bank<b>{money2(pipe.inBank)}</b></div>
-            </div>
-            <Link href="/billing/overview" className="today-pipe-link">Full P&amp;L, trend and by-clinician in the business overview →</Link>
-            <Link href="/billing/payments" className="today-pipe-link" style={{ marginTop: 2 }}>Nick&apos;s queue handles the claim-by-claim submissions →</Link>
-          </div>
-        )}
+        {/* Owner money pipeline — swipeable by month */}
+        {owner && pipes.length > 0 && <TodayPipeline months={pipes} />}
 
         {/* Areas */}
         <div className="today-secrow"><span className="bo-lab">Your areas</span></div>
