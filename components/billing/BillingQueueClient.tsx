@@ -105,6 +105,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const markPaid = (ids: string[], date: string) => post(ids, { action: "paid", paid: true, paidDate: date });
   const unbill = (id: string) => post([id], { action: "billed", billed: false });
   const unpay = (id: string) => post([id], { action: "paid", paid: false });
+  // Correct the date on a record that's already billed/paid — a claim that came
+  // in last week but got marked today should read last week. Only fires on a
+  // real, changed date.
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const editBilled = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markBilled([id], val); };
+  const editPaid = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markPaid([id], val); };
   // Build CMS-1500 claims for exactly the selected claims (each id is a session).
   const generateClaims = () => { if (selected.size) router.push(`/billing/clients/batch?sessions=${[...selected].join(",")}`); };
 
@@ -188,7 +194,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className="dos">{c.dos}</div>
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
-                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && c.billedDate ? ` · billed ${c.billedDate}` : ""}</div></div>
+                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}{tab === "awaiting" && <span className="bq-when"> · billed <input type="date" className="bq-dateedit" value={c.billedDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editBilled(c.id, c.billedDate, e.target.value)} title="Correct the billed date (e.g. back-date to when it actually came in)" /></span>}</div></div>
                       <div className="amt">{money(c.amount)}</div>
                       <div className="comm">+{money(c.commission)}</div>
                       {tab === "awaiting" && <button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button>}
@@ -220,7 +226,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
               </div>
               {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
                 <div className="bq-brow" key={c.id}>
-                  <span className="pill">✓ {c.paidDate}</span>
+                  <span className="pill">✓ <input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} title="Correct the paid date (back-date to when the insurer actually settled)" /></span>
                   <span><ClientName id={c.clientId} name={c.clientName} /></span>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
                   <span className="amt">{money(c.amount)}</span>
