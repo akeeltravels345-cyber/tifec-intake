@@ -31,7 +31,11 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
   return {
     role: billingRoleOf(me),
     hasBilling,
-    isAdmin: !!me.admin,
+    // The builder/oversight account (contact === "admin", e.g. Akeel) gets the
+    // three-role builder sidebar. The practice owner (Dr. Shion) also carries
+    // admin: true for oversight, but they are an OWNER and must see only the
+    // owner's own menu — never the builder view.
+    isAdmin: me.contact === "admin",
     meId: me.id,
     name: me.name,
     queueCount: sessions.filter((s) => s.insurerId && !s.insurancePaid).length,
