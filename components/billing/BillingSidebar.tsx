@@ -168,7 +168,7 @@ export default function BillingSidebar({
         const Icon = n.icon;
         return (
           <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
-            <Icon />{n.label.split(" ")[0]}
+            <Icon />{n.label.startsWith("My ") ? n.label.slice(3) : n.label.split(" ")[0]}
             {n.badge ? <span className="bdg">{n.badge}</span> : null}
           </Link>
         );
