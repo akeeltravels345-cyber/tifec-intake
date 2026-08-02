@@ -1463,6 +1463,11 @@ body:has(.biz) { background: #F8F9F8; }
 .bo-backlink { display: flex; align-items: center; gap: 8px; margin: -14px 0 14px; padding: 8px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; border: 1px solid var(--edge); background: #fff; }
 .bo-backlink:hover { color: var(--teal-deep); border-color: var(--teal); }
 .bo-navl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #b3aa98; font-weight: 700; padding: 6px 12px 10px; }
+.bo-navl-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: none; border: 0; cursor: pointer; font-family: inherit; padding: 8px 12px; border-radius: 8px; }
+.bo-navl-btn:hover { background: #f3f0e8; color: var(--muted); }
+.bo-navl-btn svg { transition: transform .15s ease; flex: none; }
+.bo-navl-btn:not(.open) svg { transform: rotate(-90deg); }
+.bo-brand { text-decoration: none; color: inherit; }
 .bo-nav { display: flex; flex-direction: column; gap: 3px; }
 .bo-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 10px; color: #6a6f66; font-size: 14px; font-weight: 600; text-decoration: none; }
 .bo-nav a:hover { background: #f3f0e8; }
