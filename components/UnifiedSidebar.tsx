@@ -70,6 +70,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       uToday, uDash, uForms,
       { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
       { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+      { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
       { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
       { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
       uNotices, uMessages, uTickets,
@@ -104,6 +105,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
           ? [
               { href: "/billing/biller", label: "Biller dashboard", icon: IcOverview, match: (p) => p === "/billing/biller" || p === "/billing" },
               { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+              { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
               { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
             ]
