@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
-import { insurancePortion, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
+import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
 import { listAllClients } from "@/lib/clients";
 import { chargeAfterReferral } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
@@ -63,9 +63,25 @@ export default async function BillingQueuePage() {
   //   awaiting = submitted, waiting on the insurer to pay (billed_date, not paid)
   //   paid     = insurer settled (this is COLLECTED money — it feeds payouts)
   const insured = sessions.filter((s) => s.insurerId && insurancePortion(s) > 0 && billForIds.has(s.clinicianId));
+
+  // Self-pay balances behave like a payer: an "owing" visit sits in Awaiting
+  // (owed by the client — no insurer to submit to), and moves to Paid once the
+  // client clears it. Marking it paid records the fee collected + a paid date.
+  const toSelfClaim = (s: (typeof sessions)[number], amount: number): Claim => ({
+    id: s.id, dos: s.dateOfService, age: ageDays(s.dateOfService, today),
+    clinicianId: s.clinicianId, clinicianName: clinName(s.clinicianId),
+    clientId: s.clientId, clientName: `${s.clientFirst} ${s.clientLast}`.trim(),
+    insurerId: "self", insurerName: "Self-pay",
+    amount: r2(amount), billedDate: null, paid: false, paidDate: s.paidDate,
+    commission: 0, afterReferral: false,
+  });
+  const selfPay = sessions.filter((s) => !s.insurerId && s.selfPayStatus === "owing" && billForIds.has(s.clinicianId));
+  const selfOwing = selfPay.filter((s) => selfPayOutstanding(s) > 0).map((s) => toSelfClaim(s, selfPayOutstanding(s)));
+  const selfPaidClaims = selfPay.filter((s) => selfPayOutstanding(s) <= 0 && (s.copayCollected || 0) > 0 && s.paidDate).map((s) => toSelfClaim(s, s.totalCost || 0));
+
   const toBill = insured.filter((s) => !s.insurancePaid && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
-  const awaiting = insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
-  const paid = insured.filter((s) => s.insurancePaid).map(toClaim).sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
+  const awaiting = [...insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim), ...selfOwing].sort((a, b) => b.age - a.age);
+  const paid = [...insured.filter((s) => s.insurancePaid).map(toClaim), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
   // Everything not yet collected (both open stages) drives the outstanding total
   // and the aging chips.

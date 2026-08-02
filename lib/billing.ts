@@ -504,6 +504,29 @@ export async function getSession(id: string): Promise<BillingSession | null> {
   return s ? decryptSession(s) : null;
 }
 
+/** Settle (or unsettle) a self-pay balance from the billing queue: paid means the
+ *  client cleared the balance, so record the full fee collected + the payment date;
+ *  undo puts the whole fee back as owed. Keeps self_pay_status = 'owing' so the
+ *  visit stays on the running-credit ledger. */
+export async function markSelfPayPaid(id: string, paid: boolean, paidDate: string | null): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`
+      UPDATE billing_sessions
+      SET copay_collected = CASE WHEN ${paid} THEN total_cost ELSE 0 END,
+          paid_date = ${paid ? paidDate : null}
+      WHERE id = ${id} AND insurer_id IS NULL RETURNING id`) as { id: string }[];
+    return res.length > 0;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s || s.insurerId) return false;
+  s.copayCollected = paid ? (s.totalCost || 0) : 0;
+  s.paidDate = paid ? paidDate : null;
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
 /** Mark a claim as SUBMITTED to the insurer (or undo). This is the middle state
  *  ahead of payment; it does not affect payouts (only collected money does). */
 export async function markSessionBilled(id: string, billed: boolean, billedDate: string | null): Promise<boolean> {

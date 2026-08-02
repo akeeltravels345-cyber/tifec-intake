@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkPaid } from "@/lib/billingRole";
-import { markSessionPaid, markSessionBilled } from "@/lib/billing";
+import { markSessionPaid, markSessionBilled, markSelfPayPaid, getSession } from "@/lib/billing";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -41,7 +41,12 @@ export async function POST(req: Request) {
   if (paid && (!paidDate || !isDate(paidDate)))
     return NextResponse.json({ error: "A valid paid date is required." }, { status: 400 });
 
-  const ok = await markSessionPaid(sessionId, paid, paid ? paidDate : null);
+  // Self-pay is settled by the client, not an insurer: record the fee as collected
+  // rather than flipping the insurance_paid flag.
+  const session = await getSession(sessionId);
+  const ok = session && !session.insurerId
+    ? await markSelfPayPaid(sessionId, paid, paid ? paidDate : null)
+    : await markSessionPaid(sessionId, paid, paid ? paidDate : null);
   if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
