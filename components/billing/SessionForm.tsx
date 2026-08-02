@@ -77,15 +77,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Co-pay has TWO numbers: what was DUE (the insurer's rule) and what was
   // actually COLLECTED. The gap is a write-off — money not collected that should
   // have been.
-  const [dueInput, setDueInput] = useState("");
-  const [dueTouched, setDueTouched] = useState(false);
   const [collectedInput, setCollectedInput] = useState("");
   const [collectedTouched, setCollectedTouched] = useState(false);
   // Self-pay discount (e.g. a 50% Adventist discount). Applies to upfront/self-pay
   // only; the discounted total is what's logged and drives every calculation.
   const [discountPct, setDiscountPct] = useState("");
   const [discountReason, setDiscountReason] = useState("");
-  const resetCopay = () => { setDueTouched(false); setCollectedTouched(false); setDueInput(""); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); };
+  const resetCopay = () => { setCollectedTouched(false); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); };
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -94,9 +92,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.fee || 0), 0)), [codes, cptCodes]);
   const duration = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes]);
   const suggested = suggestCopay(insurer, totalCost);
-  const copayDue = round2(dueTouched ? Number(dueInput) || 0 : suggested);
-  const copayCollected = round2(collectedTouched ? Number(collectedInput) || 0 : copayDue);
-  const uncollected = Math.max(0, round2(copayDue - copayCollected));
+  // One box: the co-pay you collect IS this client's co-pay (plans vary per
+  // client), so "due" tracks "collected". Defaults to the insurer's suggested
+  // rule until the clinician types the specific amount for this client.
+  const copayCollected = round2(collectedTouched ? Number(collectedInput) || 0 : suggested);
+  const copayDue = copayCollected;
   // Discount applies to self-pay only; the charged total is the fee less the discount.
   const discPct = payMode === "upfront" ? Math.min(100, Math.max(0, Number(discountPct) || 0)) : 0;
   const chargedTotal = discPct > 0 ? round2(totalCost * (1 - discPct / 100)) : totalCost;
@@ -371,24 +371,23 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           )}
           {payMode === "insurance" && (
           <div className="ls-field">
-            <label className="ls-q">Co-pay <span className="opt">what&apos;s due vs what you collected</span></label>
-            <div className="ls-row2">
-              <div style={{ flex: 1 }}>
-                <span className="ls-sublab">Due</span>
-                <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={dueTouched ? dueInput : (suggested ? String(suggested) : "0")} onChange={(e) => { setDueTouched(true); setDueInput(e.target.value); if (!collectedTouched) { setCollectedTouched(true); setCollectedInput(e.target.value); } }} /></div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <span className="ls-sublab">Collected</span>
-                <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" value={collectedTouched ? collectedInput : String(copayDue)} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
-              </div>
-              <button type="button" className="ls-writeoff" onClick={() => { setDueTouched(true); setDueInput("0"); setCollectedTouched(true); setCollectedInput("0"); }}>Waive</button>
-              <button type="button" className="ls-writeoff" onClick={() => { setCollectedTouched(true); setCollectedInput("0"); }}>Not collected</button>
-            </div>
-            {uncollected > 0 && (
-              <p className="ls-uncollected">⚠ {money(uncollected)} co-pay not collected — recorded as a write-off. It counts toward your monthly uncollected total.</p>
-            )}
-            {insurerId && uncollected === 0 && !dueTouched && suggested > 0 && (
-              <p className="ls-help">Co-pay due auto-filled from <b>{insurer?.name}</b>. Change &ldquo;Due&rdquo; if this client&apos;s plan differs; lower &ldquo;Collected&rdquo; (or tap <b>Not collected</b>) if you didn&apos;t take it.</p>
+            <label className="ls-q">Co-pay collected</label>
+            {!insurerId ? (
+              <p className="ls-help" style={{ marginTop: 0 }}>Choose the insurer above to see the suggested co-pay.</p>
+            ) : (
+              <>
+                <p className="ls-help" style={{ marginTop: 0 }}>
+                  {suggested > 0
+                    ? <>Based on <b>{insurer?.name}</b> rules, the co-pay due should be <b>{money(suggested)}</b>. Plans vary from client to client — enter the specific amount collected for this client.</>
+                    : <><b>{insurer?.name}</b> has no standard co-pay. Enter an amount only if this client&apos;s plan requires one.</>}
+                </p>
+                <div className="ls-row2" style={{ alignItems: "center" }}>
+                  <div style={{ width: 170 }}>
+                    <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" placeholder="0.00" value={collectedTouched ? collectedInput : (suggested ? String(suggested) : "")} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
+                  </div>
+                  <button type="button" className="ls-writeoff" onClick={() => { setCollectedTouched(true); setCollectedInput("0"); }}>Didn&apos;t collect</button>
+                </div>
+              </>
             )}
           </div>
           )}
