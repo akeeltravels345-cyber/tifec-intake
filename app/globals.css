@@ -1981,6 +1981,16 @@ body:has(.biz) { background: #F8F9F8; }
    doesn't widen it. Marking the free-text column width:100% makes it absorb all
    the slack so descriptions / names show in full, while fixed columns stay tight. */
 .su-tbl th.grow, .su-tbl td.grow { width: 100%; }
+/* Sortable table headers: click to sort, click again to flip direction. */
+.su-tbl-sort th.cl-th { cursor: pointer; user-select: none; transition: color .12s ease, background .12s ease; }
+.su-tbl-sort th.cl-th:hover { color: var(--indigo, #3f3a8c); background: #f3f1ea; }
+.su-tbl-sort th.cl-th.on { color: var(--indigo, #3f3a8c); background: #f1f0fb; }
+.cl-thin { display: inline-flex; align-items: center; gap: 5px; }
+.cl-arrow { font-size: 9px; line-height: 1; transition: opacity .12s ease; }
+.su-tbl-sort th.cl-th:not(.on) .cl-arrow { opacity: .25; }
+.su-tbl-sort th.cl-th.on .cl-arrow { opacity: 1; }
+/* Body cells under the active sort column get a whisper of the same tint. */
+.su-tbl-sort td.cl-oncol { background: #faf9fe; }
 /* Admin/builder-only processing-fee block under the bottom line. */
 .bo-adminfee { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cdbff5; }
 .bo-adminnote { font-size: 12px; color: #6b57b8; margin-top: 6px; }
