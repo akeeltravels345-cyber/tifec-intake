@@ -47,14 +47,20 @@ function clean(e: Partial<ClinicianExpense>): ClinicianExpense {
 /** Every month snapshot this clinician has saved. */
 async function snapshotsFor(clinicianId: string): Promise<Record<string, ClinicianExpense[]>> {
   if (usePostgres) {
-    const sql = await pg();
-    const rows = (await sql`SELECT month, expenses FROM billing_clinician_expenses WHERE clinician_id = ${clinicianId}`) as { month: string; expenses: unknown }[];
-    const out: Record<string, ClinicianExpense[]> = {};
-    for (const r of rows) {
-      const arr = typeof r.expenses === "string" ? JSON.parse(r.expenses) : r.expenses;
-      out[String(r.month)] = Array.isArray(arr) ? arr.map(clean) : [];
+    try {
+      const sql = await pg();
+      const rows = (await sql`SELECT month, expenses FROM billing_clinician_expenses WHERE clinician_id = ${clinicianId}`) as { month: string; expenses: unknown }[];
+      const out: Record<string, ClinicianExpense[]> = {};
+      for (const r of rows) {
+        const arr = typeof r.expenses === "string" ? JSON.parse(r.expenses) : r.expenses;
+        out[String(r.month)] = Array.isArray(arr) ? arr.map(clean) : [];
+      }
+      return out;
+    } catch {
+      // Table not migrated yet (or a transient DB error): degrade to "no expenses"
+      // rather than 500 the clinician's whole dashboard.
+      return {};
     }
-    return out;
   }
   return readAll()[clinicianId] ?? {};
 }
