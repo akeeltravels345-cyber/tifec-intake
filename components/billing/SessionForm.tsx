@@ -108,6 +108,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
 
   async function submit(e: React.FormEvent, andAnother = false) {
     e.preventDefault();
+    if (busy) return; // never let a second click fire while a save is already in flight
     setError(""); setSaved("");
     if (!first.trim() || !last.trim()) {
       return setError(mode === "returning"
@@ -137,7 +138,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         setCodes([]); resetCopay(); setNotes(""); setSearch("");
         setMode(clients.length > 0 ? "returning" : "new");
         setBusy(false);
-        router.refresh();
+        // Deliberately NO router.refresh() here. A full server refetch after every
+        // entry can interrupt the next rapid entry (the reported "second one won't
+        // save"). The session is already saved server-side; the payout/roster views
+        // refresh when the clinician leaves the form (Save session, or Back).
         return;
       }
       router.push("/billing/me");

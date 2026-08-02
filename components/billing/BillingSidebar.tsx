@@ -55,8 +55,8 @@ export default function BillingSidebar({
         ]
       : role === "clinician"
         ? [
-            { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") || p === "/billing/me" },
-            { href: "/billing/clients", label: "My clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
+            { href: "/billing/me", label: "Payout", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") || p === "/billing/me" },
+            { href: "/billing/clients", label: "Clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
             { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
           ]
         : [

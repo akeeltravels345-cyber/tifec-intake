@@ -8,6 +8,7 @@ import { referralStatus } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
+import StatGlossary from "@/components/billing/StatGlossary";
 
 export const dynamic = "force-dynamic";
 
@@ -98,18 +99,19 @@ export default async function ClinicianDetail({ params, searchParams }: { params
       </div>
 
       <div className="cd-kpis">
-        <div className="cd-kpi"><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
-        <div className="cd-kpi"><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
+        <div className="cd-kpi" title="How many sessions you logged this month."><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
+        <div className="cd-kpi" title="The full value of the work you did this month, before anything is taken out — whether or not the money has arrived yet."><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
         {/* Money taken at the appointment itself: the co-pay on an insured
             visit, or the whole fee when the client is self-pay. Sits with the
             insurance figures, since together they are the cash that arrived. */}
-        <div className="cd-kpi"><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
-        <div className="cd-kpi"><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
-        <div className="cd-kpi"><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
+        <div className="cd-kpi" title="Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. Money in hand."><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
+        <div className="cd-kpi" title="Insurance payments that have actually landed this month."><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
+        <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
-        <div className="cd-kpi"><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div></div>
+        <div className="cd-kpi" title="Co-pays that were due at this month's visits but weren't taken — a write-off unless you collect them later."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div></div>
       </div>
+      {isSelf && <StatGlossary />}
       {c.uncollectedCopay > 0 && (
         <div className="cd-missnote">You didn&apos;t collect <b>{money(c.uncollectedCopay)}</b> in co-pays that were due this month. That&apos;s money owed to you at the visit — worth chasing.</div>
       )}
