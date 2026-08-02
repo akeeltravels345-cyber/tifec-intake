@@ -36,8 +36,9 @@ export default function BillingSidebar({
       { href: "/billing/import", label: "Import", icon: IconLog, match: (p) => p.startsWith("/billing/import") },
     ] },
     { label: "Clinician", items: [
-      { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
       { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p === "/billing/me" },
+      { href: "/billing/clients", label: "My clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
+      { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
     ] },
   ];
 
