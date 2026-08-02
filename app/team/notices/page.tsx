@@ -22,6 +22,9 @@ export default async function NoticesPage() {
       notices={notices.map((n) => ({
         id: n.id, title: n.title, body: n.body, eventAt: n.eventAt, pinned: n.pinned,
         createdAt: n.createdAt, authorId: n.authorId, author: getClinician(n.authorId)?.name ?? n.authorId,
+        askAck: n.askAck,
+        acks: n.acks.map((a) => ({ name: getClinician(a.userId)?.name ?? a.userId, response: a.response })),
+        iAcked: n.acks.some((a) => a.userId === me.id),
       }))}
     />
   );

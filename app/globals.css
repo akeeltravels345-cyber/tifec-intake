@@ -2266,6 +2266,14 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-msgnote { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 4px 10px; font-size: 12px; color: var(--muted, #6B7580); }
 .tm-msgticket { font-size: 12px; font-weight: 600; color: var(--indigo, #2E3192); text-decoration: none; white-space: nowrap; }
 .tm-msgticket:hover { text-decoration: underline; }
+.tm-countdown { color: var(--indigo, #2E3192); font-weight: 700; }
+.tm-ackrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0eade; }
+.tm-acks { display: flex; align-items: center; gap: 6px; }
+.tm-ackav { width: 26px; height: 26px; border-radius: 50%; background: #E9EEF9; color: #2E3192; font: 700 10px "Open Sans"; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid #fff; margin-left: -8px; }
+.tm-ackav:first-child { margin-left: 0; }
+.tm-ackcount { font-size: 12px; color: var(--muted, #6B7580); margin-left: 6px; }
+.tm-acked { font-size: 12.5px; font-weight: 700; color: #2c7a55; }
+.tm-cta.sm { padding: 6px 14px; font-size: 12.5px; }
 .tm-tleft { min-width: 0; }
 .tm-tsub { font: 600 14px "Open Sans"; color: var(--ink); }
 .tm-ref { color: var(--muted); font-weight: 700; margin-right: 8px; }

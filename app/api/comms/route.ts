@@ -5,7 +5,7 @@ import { sendTeamEmail } from "@/lib/email";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
   createTicket, updateTicket, getTicket,
-  createNotice, deleteNotice, getNotice, updateNotice, notify, logEmail, listNotifications, markNotificationsRead,
+  createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
       const eventAt = eventAtRaw ? new Date(eventAtRaw).toISOString() : null;
       if (eventAtRaw && !eventAt) return NextResponse.json({ error: "That date didn't make sense." }, { status: 400 });
 
-      const n = await createNotice({ authorId: me.id, title, body: text, eventAt, pinned: body.pinned === true });
+      const n = await createNotice({ authorId: me.id, title, body: text, eventAt, pinned: body.pinned === true, askAck: body.askAck === true });
       const others = CLINICIANS.filter((c) => c.id !== me.id).map((c) => c.id);
       await notify(others, "notice", `${me.name} posted a notice`, "/team/notices");
       await emailTeam(others, () => ({
@@ -202,6 +202,15 @@ export async function POST(req: Request) {
       const eventAt = eventAtRaw ? new Date(eventAtRaw).toISOString() : null;
       if (eventAtRaw && (!eventAt || eventAt === "Invalid Date")) return NextResponse.json({ error: "That date didn't make sense." }, { status: 400 });
       await updateNotice(id, { title, body: text, eventAt, pinned: body.pinned === true });
+      return NextResponse.json({ ok: true });
+    }
+
+    // Acknowledge a notice ("Got it" / "I'll be there"). Any signed-in person.
+    if (action === "notice:ack") {
+      const id = String(body.id ?? "");
+      if (!id) return NextResponse.json({ error: "Which notice?" }, { status: 400 });
+      const response = String(body.response ?? "Got it").trim() || "Got it";
+      await acknowledgeNotice(id, me.id, response);
       return NextResponse.json({ ok: true });
     }
 

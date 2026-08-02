@@ -1,10 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-interface N { id: string; title: string; body: string; eventAt: string | null; pinned: boolean; createdAt: string; authorId: string; author: string }
+interface Ack { name: string; response: string }
+interface N { id: string; title: string; body: string; eventAt: string | null; pinned: boolean; createdAt: string; authorId: string; author: string; askAck: boolean; acks: Ack[]; iAcked: boolean }
+
+const initials = (name: string) => {
+  const p = name.replace(/\(.*?\)/g, "").split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss)\.?$/i.test(w));
+  return ((p[0]?.[0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase() || "?";
+};
+/** Live "in 2d 3h" / "in 14m" / "happening now" for a meeting time. */
+function countdown(iso: string, now: number): string {
+  const diff = new Date(iso).getTime() - now;
+  if (diff <= 0) return diff > -3600000 ? "happening now" : "just passed";
+  const mins = Math.floor(diff / 60000);
+  const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  if (d > 0) return `in ${d}d ${h}h`;
+  if (h > 0) return `in ${h}h ${m}m`;
+  return `in ${m}m`;
+}
 
 /** ISO timestamp → the value a <input type="datetime-local"> expects. */
 const toLocalInput = (iso: string | null) => {
@@ -32,8 +48,13 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
   const [body, setBody] = useState("");
   const [eventAt, setEventAt] = useState("");
   const [pinned, setPinned] = useState(false);
+  const [askAck, setAskAck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"all" | "nod" | "meet">("all");
+  // Live clock for meeting countdowns (client-only, so no hydration mismatch).
+  const [now, setNow] = useState(0);
+  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
   // Inline edit of an existing notice.
   const [editId, setEditId] = useState<string | null>(null);
   const [eTitle, setETitle] = useState("");
@@ -64,12 +85,18 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
     if (busy) return;
     setBusy(true); setError("");
     try {
-      await post({ action: "notice:create", title, body, eventAt, pinned });
-      setTitle(""); setBody(""); setEventAt(""); setPinned(false); setOpen(false);
+      await post({ action: "notice:create", title, body, eventAt, pinned, askAck });
+      setTitle(""); setBody(""); setEventAt(""); setPinned(false); setAskAck(false); setOpen(false);
       router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
     finally { setBusy(false); }
   }
+
+  async function ack(id: string, response: string) {
+    try { await post({ action: "notice:ack", id, response }); router.refresh(); } catch { /* shown on next load */ }
+  }
+  const filtered = notices.filter((n) => (filter === "nod" ? n.askAck && !n.iAcked : filter === "meet" ? !!n.eventAt : true));
+  const nodCount = notices.filter((n) => n.askAck && !n.iAcked).length;
 
   async function remove(id: string) {
     try { await post({ action: "notice:delete", id }); router.refresh(); } catch { /* shown on next load */ }
@@ -102,6 +129,10 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
               <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
               Pin to the top
             </label>
+            <label className="tm-check">
+              <input type="checkbox" checked={askAck} onChange={(e) => setAskAck(e.target.checked)} />
+              Ask everyone to acknowledge
+            </label>
           </div>
 
           {error && <p className="tm-err">{error}</p>}
@@ -111,14 +142,20 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
         </form>
       )}
 
-      {notices.length === 0 ? (
+      <div className="tm-tabs2">
+        <button className={`tm-tab2 ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")}>All ({notices.length})</button>
+        <button className={`tm-tab2 ${filter === "nod" ? "on" : ""}`} onClick={() => setFilter("nod")}>Needs your nod ({nodCount})</button>
+        <button className={`tm-tab2 ${filter === "meet" ? "on" : ""}`} onClick={() => setFilter("meet")}>Meetings ({notices.filter((n) => n.eventAt).length})</button>
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="tm-card tm-empty">
-          <div className="big">Nothing on the board</div>
+          <div className="big">{filter === "nod" ? "Nothing needs your nod" : filter === "meet" ? "No meetings scheduled" : "Nothing on the board"}</div>
           <div className="small">{canPost ? "Post the first notice and everyone will see it here." : "Notices from the practice will appear here."}</div>
         </div>
       ) : (
         <div className="tm-notices">
-          {notices.map((n) => editId === n.id ? (
+          {filtered.map((n) => editId === n.id ? (
             <form key={n.id} className="tm-card tm-form" onSubmit={saveEdit}>
               <label className="tm-l">Title</label>
               <input className="tm-in" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
@@ -158,9 +195,20 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
                   </div>
                 )}
               </div>
-              {n.eventAt && <div className="tm-meet">📅 {meetingWhen(n.eventAt)}</div>}
+              {n.eventAt && <div className="tm-meet">📅 {meetingWhen(n.eventAt)}{now > 0 && <span className="tm-countdown"> · {countdown(n.eventAt, now)}</span>}</div>}
               <p className="tm-nb">{n.body}</p>
               <div className="tm-nfoot">{n.author} · {when(n.createdAt)}</div>
+              {n.askAck && (
+                <div className="tm-ackrow">
+                  <div className="tm-acks">
+                    {n.acks.slice(0, 6).map((a, i) => <span key={i} className="tm-ackav" title={`${a.name}: ${a.response}`}>{initials(a.name)}</span>)}
+                    <span className="tm-ackcount">{n.acks.length === 0 ? "No one yet" : `${n.acks.length} confirmed`}</span>
+                  </div>
+                  {n.iAcked
+                    ? <span className="tm-acked">✓ You&apos;re in</span>
+                    : <button className="tm-cta sm" type="button" onClick={() => ack(n.id, n.eventAt ? "I'll be there" : "Got it")}>{n.eventAt ? "I'll be there" : "Got it"}</button>}
+                </div>
+              )}
             </article>
           ))}
         </div>

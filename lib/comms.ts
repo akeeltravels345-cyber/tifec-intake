@@ -77,6 +77,7 @@ export interface Notification {
   readAt: string | null;
 }
 
+export interface NoticeAck { userId: string; response: string; at: string }
 export interface Notice {
   id: string;
   authorId: string;
@@ -85,6 +86,8 @@ export interface Notice {
   eventAt: string | null; // set when the notice is a meeting
   pinned: boolean;
   createdAt: string;
+  askAck: boolean;        // does this notice ask people to acknowledge?
+  acks: NoticeAck[];      // who has acknowledged, and how
 }
 
 const usePostgres = !!process.env.DATABASE_URL;
@@ -298,26 +301,69 @@ export async function updateTicket(id: string, patch: { status?: TicketStatus; a
 }
 
 // ============================ Notices =======================================
-interface StoredNotice extends Omit<Notice, "body" | "title"> { bodyEnc: string; titleEnc: string }
+interface StoredNotice extends Omit<Notice, "body" | "title" | "askAck" | "acks"> { bodyEnc: string; titleEnc: string }
+
+// Acknowledgement + ask-ack state lives in a SEPARATE store keyed by notice id,
+// so the notices table never changes and a missing table degrades to "no acks".
+const NOTMETA_FILE = "comms-notice-meta.local.json";
+type NoticeMeta = { askAck: boolean; acks: NoticeAck[] };
+async function loadNoticeMeta(): Promise<Record<string, NoticeMeta>> {
+  if (usePostgres) {
+    try {
+      const sql = await pg();
+      const rows = (await sql`SELECT notice_id, ask_ack, acks FROM comms_notice_meta`) as Record<string, unknown>[];
+      const out: Record<string, NoticeMeta> = {};
+      for (const r of rows) {
+        const raw = typeof r.acks === "string" ? JSON.parse(r.acks) : (r.acks ?? []);
+        out[str(r.notice_id)] = { askAck: !!r.ask_ack, acks: Array.isArray(raw) ? (raw as NoticeAck[]) : [] };
+      }
+      return out;
+    } catch { return {}; }
+  }
+  return readJson<Record<string, NoticeMeta>>(NOTMETA_FILE, {});
+}
+async function writeNoticeMeta(noticeId: string, meta: NoticeMeta): Promise<void> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`
+      INSERT INTO comms_notice_meta (notice_id, ask_ack, acks)
+      VALUES (${noticeId}, ${meta.askAck}, ${JSON.stringify(meta.acks)}::jsonb)
+      ON CONFLICT (notice_id) DO UPDATE SET ask_ack = EXCLUDED.ask_ack, acks = EXCLUDED.acks`;
+    return;
+  }
+  const all = readJson<Record<string, NoticeMeta>>(NOTMETA_FILE, {});
+  all[noticeId] = meta;
+  writeJson(NOTMETA_FILE, all);
+}
+/** Record (or replace) one person's acknowledgement of a notice. */
+export async function acknowledgeNotice(noticeId: string, userId: string, response: string): Promise<void> {
+  const meta = (await loadNoticeMeta())[noticeId] ?? { askAck: true, acks: [] };
+  meta.acks = [...meta.acks.filter((a) => a.userId !== userId), { userId, response: response.slice(0, 40), at: new Date().toISOString() }];
+  await writeNoticeMeta(noticeId, meta);
+}
 
 export async function listNotices(): Promise<Notice[]> {
+  let base: Omit<Notice, "askAck" | "acks">[];
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`
       SELECT id, author_id, title_enc, body_enc, event_at, pinned, created_at
       FROM comms_notices ORDER BY pinned DESC, created_at DESC`) as Record<string, unknown>[];
-    return rows.map((r) => ({
+    base = rows.map((r) => ({
       id: str(r.id), authorId: str(r.author_id), title: safeDecrypt(r.title_enc), body: safeDecrypt(r.body_enc),
       eventAt: r.event_at ? iso(r.event_at) : null, pinned: !!r.pinned, createdAt: iso(r.created_at),
     }));
+  } else {
+    base = readJson<StoredNotice[]>(NOT_FILE, [])
+      .map((n) => ({ ...n, title: safeDecrypt(n.titleEnc), body: safeDecrypt(n.bodyEnc) }))
+      .sort((a, b) => (a.pinned === b.pinned ? b.createdAt.localeCompare(a.createdAt) : a.pinned ? -1 : 1));
   }
-  return readJson<StoredNotice[]>(NOT_FILE, [])
-    .map((n) => ({ ...n, title: safeDecrypt(n.titleEnc), body: safeDecrypt(n.bodyEnc) }))
-    .sort((a, b) => (a.pinned === b.pinned ? b.createdAt.localeCompare(a.createdAt) : a.pinned ? -1 : 1));
+  const meta = await loadNoticeMeta();
+  return base.map((n) => ({ ...n, askAck: meta[n.id]?.askAck ?? false, acks: meta[n.id]?.acks ?? [] }));
 }
 
 export async function createNotice(input: {
-  authorId: string; title: string; body: string; eventAt: string | null; pinned: boolean;
+  authorId: string; title: string; body: string; eventAt: string | null; pinned: boolean; askAck?: boolean;
 }): Promise<Notice> {
   const row: StoredNotice = {
     id: randomId(), authorId: input.authorId, titleEnc: encrypt(input.title), bodyEnc: encrypt(input.body),
@@ -333,7 +379,8 @@ export async function createNotice(input: {
     all.push(row);
     writeJson(NOT_FILE, all);
   }
-  return { ...row, title: input.title, body: input.body };
+  await writeNoticeMeta(row.id, { askAck: !!input.askAck, acks: [] });
+  return { ...row, title: input.title, body: input.body, askAck: !!input.askAck, acks: [] };
 }
 
 // ============================ Notifications =================================
