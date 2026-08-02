@@ -1444,7 +1444,7 @@ body:has(.biz)::before, body:has(.biz) > .brandbar { display: none; }
 body:has(.biz) { background: #F8F9F8; }
 .biz {
   --indigo: #2E3192; --indigo-soft: #4B4FA6; --teal: #2F8E93; --teal-deep: #256E72;
-  --ink: #22283A; --muted: #6B7580; --faint: #9AA0A6;
+  --ink: #22283A; --muted: #6B7580; --faint: #6B7580;
   --paper: #F8F9F8; --panel: #F3F6F7; --edge: #ECE6DA; --hair: #F0EADE;
   --amber: #BE8127; --amber-bg: #F6ECD9; --amber-line: #ECD9B8;
   --neg: #a5432f; --pos: #2c7a55; --green: #2c7a55;
