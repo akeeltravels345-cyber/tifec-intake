@@ -10,7 +10,7 @@ export interface ClientRow {
   clinicianIds: string[];
 }
 
-const money0 = (n: number) => (n ? `$${Math.round(n).toLocaleString("en-US")}` : "—");
+const money0 = (n: number) => (n ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—");
 type SortKey = "name" | "insurer" | "clinician" | "paid" | "lastVisit";
 
 export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: ClientRow[]; seesAll: boolean; clinicians?: { id: string; name: string }[] }) {

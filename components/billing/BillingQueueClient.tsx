@@ -30,7 +30,7 @@ export interface QueueData {
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const money0 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2 : 3);
 
 type Tab = "tobill" | "awaiting" | "paid";

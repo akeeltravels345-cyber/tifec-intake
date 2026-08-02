@@ -9,7 +9,7 @@ import MonthNav from "@/components/billing/MonthNav";
 export const dynamic = "force-dynamic";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const money0 = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const money0 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const w = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
 
