@@ -33,8 +33,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const curStage = !insurerId ? "paid" : session.insurancePaid ? "paid" : session.billedDate ? "awaiting" : "tobill";
   const stage = ["tobill", "awaiting", "paid"].includes(String(body.stage)) ? String(body.stage) : curStage;
   const paid = stage === "paid";
-  const billedDate = stage === "tobill" ? null : (session.billedDate ?? dateOfService);
-  const paidDate = paid ? (session.paidDate ?? dateOfService) : null;
+  // Explicit billed/paid dates can be supplied (e.g. the biller back-dating from
+  // a client record); otherwise keep the existing date, or fall back to the DOS.
+  const bodyBilled = isDate(body.billedDate) ? String(body.billedDate) : null;
+  const bodyPaid = isDate(body.paidDate) ? String(body.paidDate) : null;
+  const billedDate = stage === "tobill" ? null : (bodyBilled ?? session.billedDate ?? dateOfService);
+  const paidDate = paid ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
 
   const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, billedDate, insurancePaid: paid, paidDate, notes });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });

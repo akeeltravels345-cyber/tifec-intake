@@ -49,6 +49,8 @@ export default function ClientDetail({
   const [ecCopay, setEcCopay] = useState("");
   const [ecDue, setEcDue] = useState("");
   const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+  const [ecBilled, setEcBilled] = useState("");
+  const [ecPaid, setEcPaid] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   // add-charge form
   const [acDate, setAcDate] = useState("");
@@ -79,6 +81,8 @@ export default function ClientDetail({
     setEcCopay(String(a.copay));
     setEcDue(String(a.copayDue));
     setEcStage(a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
+    setEcBilled(a.billedDate ?? "");
+    setEcPaid(a.paidDate ?? "");
   }
   async function saveEditCharge(sid: string) {
     if (!ecDate || ecTotal === "") { setMsg("Enter a date and amount."); return; }
@@ -92,6 +96,8 @@ export default function ClientDetail({
           copayCollected: ecInsurer ? Number(ecCopay) || 0 : 0,
           copayDue: ecInsurer ? Number(ecDue) || 0 : 0,
           stage: ecInsurer ? ecStage : "paid",
+          billedDate: ecBilled || null,
+          paidDate: ecPaid || null,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
@@ -629,6 +635,8 @@ export default function ClientDetail({
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
                                 <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                                {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer — back-date to the real date if needed" /></label>}
+                                {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer actually settled — this drives the payout month" /></label>}
                               </>}
                               <div className="cd-editactions">
                                 <button className="ls-save sm" disabled={busy} onClick={() => saveEditCharge(a.id)}>{busy ? "Saving…" : "Save change"}</button>
