@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { SidebarData } from "@/lib/sidebarData";
 
 const S = (d: React.ReactNode) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{d}</svg>);
@@ -28,14 +28,15 @@ function initialsOf(name: string): string {
 
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
+  const tab = useSearchParams().get("tab");
   const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets } = data;
   const owner = role === "owner", biller = role === "biller";
 
   const groups: Group[] = [
     { label: "", items: [{ href: "/today", label: "Today", icon: IcToday, match: (p) => p === "/today" }] },
     { label: "Intake", items: [
-      { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" },
-      { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: () => false },
+      { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" },
+      { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" },
     ] },
   ];
   if (hasBilling) {
@@ -128,6 +129,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
             </button>
           </div>
+          <Link href="/account" className="bo-acctlink">Change password</Link>
         </div>
       </aside>
 

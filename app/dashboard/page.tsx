@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentClinician } from "@/lib/auth";
 import { getTourSeen } from "@/lib/users";
-import { hasBillingBeta } from "@/lib/billingRole";
+import { hasBillingBeta, devMode } from "@/lib/billingRole";
+import { getSidebarData } from "@/lib/sidebarData";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { getSubmissionsByClinician, type SubmissionRow, type SubmissionStatus } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
@@ -238,6 +239,8 @@ export default async function Dashboard() {
       teamUnread={teamUnread}
       openTickets={openTickets}
       noteCount={noteCount}
+      sidebar={await getSidebarData(me)}
+      isDev={devMode()}
     />
   );
 }

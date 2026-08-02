@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
 import Tour from "@/components/Tour";
 import NotificationBell from "@/components/team/NotificationBell";
+import UnifiedSidebar from "@/components/UnifiedSidebar";
+import type { SidebarData } from "@/lib/sidebarData";
 
 export interface DashItem {
   token: string;
@@ -87,6 +90,8 @@ export default function DashboardShell({
   teamUnread = 0,
   openTickets = 0,
   noteCount = 0,
+  sidebar,
+  isDev = false,
 }: {
   name: string;
   initials: string;
@@ -102,11 +107,19 @@ export default function DashboardShell({
   openTickets?: number;
   /** Unread notifications, so the bell works here too — not only in /team. */
   noteCount?: number;
+  /** Data for the shared app sidebar; when present, intake uses the one shell. */
+  sidebar: SidebarData;
+  isDev?: boolean;
 }) {
-  const [view, setView] = useState<View>("dashboard");
+  // The Dashboard/Forms toggle is now URL-driven (?tab=forms) so the shared
+  // sidebar's Intake links switch it — with the tour able to override live.
+  const searchParams = useSearchParams();
+  const urlView: View = searchParams.get("tab") === "forms" ? "forms" : "dashboard";
+  const [view, setView] = useState<View>(urlView);
   const [status, setStatus] = useState<Status>("new");
   const [query, setQuery] = useState("");
 
+  useEffect(() => { setView(urlView); }, [urlView]);
   // Let the guided tour switch to the Forms view when it reaches that step.
   useEffect(() => {
     const onSetView = (e: Event) => {
@@ -158,79 +171,12 @@ export default function DashboardShell({
   const filterWord = { all: "", new: "new", reviewed: "reviewed", archived: "archived" }[status];
 
   return (
-    <div className="dm-shell">
+    <div className="biz">
       <IdleLogout />
       <Tour mount="dashboard" tourToken={tourToken} autoStart={!!autoTour} />
+      <UnifiedSidebar data={sidebar} isDev={isDev} />
 
-      <aside className="dm-side">
-        <div className="dm-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/tifec-mark.png" alt="TIFEC" />
-          <div>
-            <div className="dm-brand-name">TIFEC Intake</div>
-            <div className="dm-brand-sub">Client Intake</div>
-          </div>
-        </div>
-
-        <div className="dm-menu-label">MENU</div>
-        <nav className="dm-nav">
-          <Link className="dm-nav-item" href="/today">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>
-            Today
-          </Link>
-          <button className={`dm-nav-item ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>
-            {home(view === "dashboard")} Dashboard
-            {needReview > 0 && <span className="dm-nav-badge">{needReview}</span>}
-          </button>
-          <button className={`dm-nav-item ${view === "forms" ? "active" : ""}`} onClick={() => setView("forms")}>
-            {file(view === "forms")} Forms
-          </button>
-          <Link className="dm-nav-item" href="/team/notices">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M8 12h8M8 8h8M8 16h5" /><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
-            Notice board
-          </Link>
-          <Link className="dm-nav-item" href="/team/messages">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.1A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /></svg>
-            Messages
-            {teamUnread > 0 && <span className="dm-nav-badge">{teamUnread}</span>}
-          </Link>
-          <Link className="dm-nav-item" href="/team/tickets">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" /><path d="M13 5v14" /></svg>
-            Tickets
-            {openTickets > 0 && <span className="dm-nav-badge">{openTickets}</span>}
-          </Link>
-          {billingBeta && (
-            <Link className="dm-nav-item" href="/billing">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>
-              Billing <span className="dm-beta">Beta</span>
-            </Link>
-          )}
-          {isAdmin && (
-            <Link className="dm-nav-item" href="/admin">
-              {star(false)} Admin
-            </Link>
-          )}
-        </nav>
-
-        <div className="dm-spacer" />
-
-        <div className="dm-account">
-          <div className="dm-user">
-            <div className="dm-user-av">{initials}</div>
-            <div className="dm-user-meta">
-              <div className="dm-user-name">{firstName}</div>
-              <div className="dm-user-role">{isAdmin ? "Admin" : "Clinician"}</div>
-            </div>
-          </div>
-          <div className="dm-user-actions">
-            <button onClick={() => window.dispatchEvent(new Event("tifec-tour"))}>{icCompass} Take a tour</button>
-            <Link href="/account">{icLock} Change password</Link>
-            <button className="danger" onClick={signOut}>{icLogout} Sign out</button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="dm-main">
+      <main className="bo-main">
         {view === "dashboard" ? (
           <>
             <div className="dm-topbar">
@@ -259,6 +205,7 @@ export default function DashboardShell({
                   aria-label="Search submissions"
                 />
               </div>
+              <button type="button" className="dm-iconbtn" onClick={() => window.dispatchEvent(new Event("tifec-tour"))} title="Take a tour" aria-label="Take a tour">{icCompass}</button>
               <NotificationBell initialUnread={noteCount} />
               <div className="dm-avatar-sq">{initials}</div>
             </div>
