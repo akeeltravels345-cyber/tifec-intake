@@ -38,7 +38,6 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
   const [search, setSearch] = useState("");
   const [codeSearch, setCodeSearch] = useState("");
-  const [showAllCodes, setShowAllCodes] = useState(false);
   const [saved, setSaved] = useState("");
   // Whether this visit goes through insurance or is paid in full on the day.
   // Kept separate from the insurer itself: an insured client may still choose
@@ -133,7 +132,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
       if (andAnother) {
         // A clinician logging a day's work does several in a row, so keep the
         // date and clear only what changes from one client to the next.
-        setSaved(`Logged ${first.trim()} ${last.trim()} — ${money(totalCost)}.`);
+        setSaved(`✓ Logged ${codes.join(", ")} for ${first.trim()} ${last.trim()} — ${money(chargedTotal)}${insurerId ? ` · ${insurer?.name}` : " · self-pay"}${dos ? ` · ${dos}` : ""}.`);
         setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
         setCodes([]); resetCopay(); setNotes(""); setSearch("");
         setMode(clients.length > 0 ? "returning" : "new");
@@ -155,12 +154,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const usual = useMemo(
     () => usualCodes.map((c) => cptCodes.find((x) => x.code === c)).filter(Boolean) as CptOpt[],
     [usualCodes, cptCodes]);
-  const otherCodes = useMemo(() => {
+  // A live search across EVERY code (number or description). Always available,
+  // so a clinician can find any code by typing instead of hunting a long list.
+  const matches = useMemo(() => {
     const q = codeSearch.trim().toLowerCase();
-    const rest = cptCodes.filter((c) => !usualCodes.includes(c.code));
-    if (!q) return rest;
-    return rest.filter((c) => c.code.includes(q) || c.description.toLowerCase().includes(q));
-  }, [cptCodes, usualCodes, codeSearch]);
+    if (!q) return [];
+    return cptCodes.filter((c) => c.code.includes(q) || c.description.toLowerCase().includes(q));
+  }, [cptCodes, codeSearch]);
 
   // Same client, same day — nearly always a double entry rather than two visits.
   const duplicate = useMemo(() => {
@@ -286,7 +286,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
-            <p className="ls-help" style={{ marginTop: 0 }}>Tap a code to add it. Tap a highlighted code again — or its <b>×</b> below — to remove it.</p>
+            <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Tap a selected code again (or its <b>×</b>) to remove it.</p>
             {codes.length > 0 && (
               <div className="ls-selcodes">
                 {codes.map((code) => { const c = cptCodes.find((x) => x.code === code); return (
@@ -296,9 +296,26 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                 ); })}
               </div>
             )}
-            {usual.length > 0 && (
+            <input
+              className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
+              placeholder="Search by code or name — e.g. 90837 or psychotherapy" aria-label="Search service codes"
+              style={{ margin: "2px 0 10px" }}
+            />
+            {codeSearch.trim() ? (
+              <div className="ls-cptlist tall">
+                {matches.length === 0 ? (
+                  <p className="ls-none">No code matches &ldquo;{codeSearch}&rdquo;.</p>
+                ) : matches.map((c) => (
+                  <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
+                    <span className="cd">{c.code}</span>
+                    <span className="ds">{c.description || "—"}</span>
+                    <span className="fe">{money(c.fee)}</span>
+                  </button>
+                ))}
+              </div>
+            ) : usual.length > 0 ? (
               <>
-                <p className="ls-codelab">The ones you use most</p>
+                <p className="ls-codelab">Your most-used codes</p>
                 <div className="ls-cptlist">
                   {usual.map((c) => (
                     <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
@@ -308,33 +325,18 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                     </button>
                   ))}
                 </div>
+                <p className="ls-help" style={{ marginTop: 8 }}>Need a different code? Start typing in the box above.</p>
               </>
-            )}
-
-            {!showAllCodes ? (
-              <button type="button" className="ls-more" onClick={() => setShowAllCodes(true)}>
-                {usual.length > 0 ? `Another code (${otherCodes.length} more)` : `Choose a code (${otherCodes.length})`}
-              </button>
             ) : (
-              <>
-                <input
-                  className="ls-in" value={codeSearch} onChange={(e) => setCodeSearch(e.target.value)}
-                  placeholder="Search by code or description…" aria-label="Search service codes"
-                  style={{ margin: "10px 0" }}
-                />
-                <div className="ls-cptlist tall">
-                  {otherCodes.length === 0 ? (
-                    <p className="ls-none">No code matches &ldquo;{codeSearch}&rdquo;.</p>
-                  ) : otherCodes.map((c) => (
-                    <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
-                      <span className="cd">{c.code}</span>
-                      <span className="ds">{c.description || "—"}</span>
-                      <span className="fe">{money(c.fee)}</span>
-                    </button>
-                  ))}
-                </div>
-                <button type="button" className="ls-more" onClick={() => { setShowAllCodes(false); setCodeSearch(""); }}>Hide the full list</button>
-              </>
+              <div className="ls-cptlist tall">
+                {cptCodes.map((c) => (
+                  <button type="button" key={c.code} className={`ls-code ${codes.includes(c.code) ? "on" : ""}`} onClick={() => toggle(c.code)}>
+                    <span className="cd">{c.code}</span>
+                    <span className="ds">{c.description || "—"}</span>
+                    <span className="fe">{money(c.fee)}</span>
+                  </button>
+                ))}
+              </div>
             )}
             <p className="ls-help">Total cost and duration fill in automatically from the codes you pick.</p>
           </div>
