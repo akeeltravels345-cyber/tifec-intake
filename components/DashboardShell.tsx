@@ -174,6 +174,10 @@ export default function DashboardShell({
 
         <div className="dm-menu-label">MENU</div>
         <nav className="dm-nav">
+          <Link className="dm-nav-item" href="/today">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a9799" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>
+            Today
+          </Link>
           <button className={`dm-nav-item ${view === "dashboard" ? "active" : ""}`} onClick={() => setView("dashboard")}>
             {home(view === "dashboard")} Dashboard
             {needReview > 0 && <span className="dm-nav-badge">{needReview}</span>}

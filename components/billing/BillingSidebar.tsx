@@ -99,9 +99,9 @@ export default function BillingSidebar({
         <div><div className="bo-bt">TIFEC Billing</div><div className="bo-bs">Essential Care</div></div>
       </div>
 
-      <Link href="/dashboard" className="bo-backlink">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-        Back to intake
+      <Link href="/today" className="bo-backlink">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-8 9 8M5 10v10h14V10" /></svg>
+        Today
       </Link>
 
       {isAdmin ? (
@@ -162,9 +162,9 @@ export default function BillingSidebar({
     </aside>
 
     <nav className="bo-mobtabs">
-      <Link href="/dashboard">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-        Intake
+      <Link href="/today">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-8 9 8M5 10v10h14V10" /></svg>
+        Today
       </Link>
       {flatNav.map((n) => {
         const Icon = n.icon;

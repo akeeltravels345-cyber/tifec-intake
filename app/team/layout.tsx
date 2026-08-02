@@ -19,7 +19,7 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
       <div className="tm-strip" />
       <div className="tm-wrap">
         <div className="tm-top">
-          <Link href="/dashboard" className="tm-back">← Dashboard</Link>
+          <Link href="/today" className="tm-back">← Today</Link>
           <div className="tm-topright">
             <NotificationBell initialUnread={noteCount} />
             <span className="tm-me">{me.name}</span>
