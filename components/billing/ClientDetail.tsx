@@ -638,6 +638,7 @@ export default function ClientDetail({
                               {!ecInsurer && <>
                                 <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => setEcSelfPay(e.target.value as typeof ecSelfPay)}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
                                 {ecSelfPay === "owing" && <label>Collected so far<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>}
+                                {ecSelfPay !== "waived" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected — set independently of the date of service" /></label>}
                               </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
