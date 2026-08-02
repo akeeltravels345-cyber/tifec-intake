@@ -1831,8 +1831,8 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .bq-dateedit::-webkit-calendar-picker-indicator { display: none; }
 .biz .bq-dateedit { -webkit-appearance: none; appearance: none; }
 /* On the green "paid" pill: inherit the pill's colour, faint hover chip. */
-.biz .pill .bq-dateedit.onpill { color: inherit; font-weight: 700; }
-.biz .pill .bq-dateedit.onpill:hover:not(:disabled) { border-color: rgba(30,49,146,.25); background: rgba(255,255,255,.55); }
+.biz .pill .bq-dateedit.onpill { color: var(--ink); font-weight: 500; font-size: 13px; }
+.biz .pill .bq-dateedit.onpill:hover:not(:disabled) { border-color: var(--edge); background: #fff; }
 /* Leading date-of-service column on the Awaiting tab: reads like the row's date. */
 .biz .bq-dateedit.lead { font-size: 13px; color: var(--ink); font-weight: 600; padding: 1px 2px; margin-left: -2px; }
 /* Self-pay disposition segmented control (Log a session). */
@@ -1991,7 +1991,8 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-billed { background: #fff; border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 10px 26px rgba(70,55,25,.045); }
 .bq-brow { display: grid; grid-template-columns: 96px 1fr 120px 96px 96px 70px; align-items: center; gap: 14px; padding: 14px 20px; border-top: 1px solid var(--hair); }
 .bq-brow:first-child { border-top: none; }
-.bq-brow .pill { display: inline-flex; align-items: center; gap: 4px; justify-self: start; width: fit-content; max-width: 100%; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: #dcefe0; color: var(--green); white-space: nowrap; }
+.bq-brow .pill { display: inline-flex; align-items: baseline; gap: 6px; justify-self: start; width: fit-content; max-width: 100%; padding: 0; background: none; white-space: nowrap; }
+.bq-brow .pill .ok { color: var(--green); font-weight: 700; font-size: 12px; }
 .bq-brow .amt { text-align: right; font: 400 15px "Newsreader", serif; font-variant-numeric: tabular-nums; }
 .bq-brow .comm { text-align: right; font-size: 12.5px; color: var(--teal-deep); font-weight: 700; }
 .bq-undo { border: none; background: transparent; color: var(--indigo); font: 600 12.5px "Open Sans"; cursor: pointer; text-align: right; }

@@ -229,7 +229,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
               </div>
               {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
                 <div className="bq-brow" key={c.id}>
-                  <span className="pill">✓ <input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Paid date — click to change (back-date to when it actually settled)" /></span>
+                  <span className="pill"><span className="ok" aria-hidden="true">✓</span><input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Paid date — click to change (back-date to when it actually settled)" /></span>
                   <span><ClientName id={c.clientId} name={c.clientName} /></span>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
                   <span className="amt">{money(c.amount)}</span>
