@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentClinician } from "@/lib/auth";
+import { isSystemAdmin } from "@/lib/clinicians";
 import { listDemoRecords } from "@/lib/demoCleanup";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function CleanupPage() {
   const me = await getCurrentClinician();
 
-  if (!me?.admin) {
+  if (!isSystemAdmin(me)) {
     return (
       <div className="container container-narrow">
         <div className="card">

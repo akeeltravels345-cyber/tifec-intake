@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentClinician } from "@/lib/auth";
-import { CLINICIANS, getClinician } from "@/lib/clinicians";
+import { CLINICIANS, getClinician, isSystemAdmin } from "@/lib/clinicians";
 import { listUserIds } from "@/lib/users";
 import {
   listSubmissions,
@@ -31,7 +31,7 @@ export default async function AdminPage({
   const { key, log } = await searchParams;
   const me = await getCurrentClinician();
   const expected = process.env.ADMIN_PASSWORD;
-  const sessionAdmin = me?.admin === true;
+  const sessionAdmin = isSystemAdmin(me);
   const bootstrapOk = !!expected && key === expected;
 
   // Access gate

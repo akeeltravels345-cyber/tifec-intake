@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, isSystemAdmin } from "@/lib/clinicians";
 import { setUserPassword } from "@/lib/users";
 import { hashPassword, getCurrentClinician } from "@/lib/auth";
 import { logAuth } from "@/lib/db";
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   // Authorize via EITHER a logged-in admin session OR the bootstrap ADMIN_PASSWORD.
   const me = await getCurrentClinician();
-  const sessionAdmin = me?.admin === true;
+  const sessionAdmin = isSystemAdmin(me);
   const expected = process.env.ADMIN_PASSWORD;
   const bootstrapOk = !!expected && body.adminKey === expected;
 

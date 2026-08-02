@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
+import { isSystemAdmin } from "@/lib/clinicians";
 import { deleteSubmission, logAccess } from "@/lib/db";
 import { isDemoToken } from "@/lib/demoCleanup";
 import { randomId } from "@/lib/crypto";
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 // crafted request can never remove a real client's submission.
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
-  if (!me?.admin) {
+  if (!me || !isSystemAdmin(me)) {
     return NextResponse.json({ error: "Admins only." }, { status: 403 });
   }
 

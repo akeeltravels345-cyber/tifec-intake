@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, isSystemAdmin } from "@/lib/clinicians";
 import { listEmailLog } from "@/lib/comms";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,8 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "sh
 export default async function EmailLogPage() {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/team/email-log");
-  // Oversight only — the owner and the practice admin.
-  if (!me.admin) redirect("/team/notices");
+  // System admin only — the developer/oversight account, not the practice owner.
+  if (!isSystemAdmin(me)) redirect("/team/notices");
 
   const log = await listEmailLog(200);
   const sent = log.filter((l) => l.status === "sent").length;

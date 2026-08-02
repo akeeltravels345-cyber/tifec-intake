@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician, isContact, CLINICIANS } from "@/lib/clinicians";
+import { getClinician, isContact, isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { sendTeamEmail } from "@/lib/email";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner,
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
       const id = String(body.id ?? "");
       const notice = await getNotice(id);
       if (!notice) return NextResponse.json({ error: "Notice not found." }, { status: 404 });
-      const isAdmin = !!getClinician(me.id)?.admin;
+      const isAdmin = isSystemAdmin(getClinician(me.id));
       if (notice.authorId !== me.id && !isAdmin) {
         return NextResponse.json({ error: "You can only edit or remove your own notices." }, { status: 403 });
       }

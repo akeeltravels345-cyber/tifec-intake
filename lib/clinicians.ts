@@ -367,6 +367,12 @@ export function getClinician(id: string): Clinician | undefined {
   return CLINICIANS.find((c) => c.id === id);
 }
 
+/** The system/builder administrator (contact === "admin", e.g. Akeel) — the
+ *  only admin who gets the developer/system tools (data cleanup, email log,
+ *  /admin oversight, notice moderation). The practice owner also carries
+ *  admin: true for business oversight, but is NOT a system admin. */
+export const isSystemAdmin = (c: Clinician | null | undefined): boolean => c?.contact === "admin";
+
 /** The people behind the owner / biller / admin contacts. */
 export const CONTACTS = CLINICIANS.filter((c) => !!c.contact);
 export const contactFor = (role: ContactRole): Clinician | undefined => CLINICIANS.find((c) => c.contact === role);

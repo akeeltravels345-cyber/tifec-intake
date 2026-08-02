@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { getClinician, isContact } from "@/lib/clinicians";
+import { getClinician, isContact, isSystemAdmin } from "@/lib/clinicians";
 import { listNotices } from "@/lib/comms";
 import NoticeBoard from "@/components/team/NoticeBoard";
 
@@ -18,7 +18,7 @@ export default async function NoticesPage() {
     <NoticeBoard
       canPost={canPost}
       meId={me.id}
-      isAdmin={!!me.admin}
+      isAdmin={isSystemAdmin(me)}
       notices={notices.map((n) => ({
         id: n.id, title: n.title, body: n.body, eventAt: n.eventAt, pinned: n.pinned,
         createdAt: n.createdAt, authorId: n.authorId, author: getClinician(n.authorId)?.name ?? n.authorId,
