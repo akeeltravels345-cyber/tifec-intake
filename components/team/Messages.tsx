@@ -160,6 +160,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                 <div ref={endRef} />
               </div>
 
+              <div className="tm-msgnote">
+                <span>Encrypted, but not a clinical record — use initials, not client names.</span>
+                <Link href="/team/tickets" className="tm-msgticket">Need it tracked (payout, HR)? Raise a ticket instead →</Link>
+              </div>
               <form className="tm-compose" onSubmit={send}>
                 <input
                   className="tm-in" value={text} onChange={(e) => setText(e.target.value)}

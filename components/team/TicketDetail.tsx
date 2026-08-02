@@ -11,7 +11,7 @@ interface Ticket {
 interface Reply { id: string; body: string; at: string; who: string; mine: boolean }
 interface Contact { id: string; name: string; label: string }
 
-const STATUS: Record<string, string> = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
+const STATUS: Record<string, string> = { open: "Not started", in_progress: "Being sorted", resolved: "Done" };
 const nameList = (names: string[]) =>
   names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 const stamp = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -113,7 +113,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
         <textarea id="rp" className="tm-in" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Add an update..." />
         <div className="tm-actions">
           {canManage && ticket.status !== "resolved" && (
-            <button type="button" className="tm-ghost" onClick={() => set({ status: "resolved" })}>Mark resolved</button>
+            <button type="button" className="tm-ghost" onClick={() => set({ status: "resolved" })}>Mark done</button>
           )}
           <button className="tm-cta" type="submit" disabled={busy || !text.trim()}>{busy ? "Sending..." : "Reply"}</button>
         </div>

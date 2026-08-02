@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
-  createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean;
+  createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean; needsYou: boolean;
 }
 interface Contact { id: string; name: string; label: string }
 
-const STATUS: Record<string, string> = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
+// Plainer words than the raw statuses (legibility pass).
+const STATUS: Record<string, string> = { open: "Not started", in_progress: "Being sorted", resolved: "Done" };
 const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 /** "Nick", "Nick and Akeel", "Shion, Nick and Akeel" */
 const nameList = (names: string[]) =>
@@ -21,7 +22,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<"live" | "all">("live");
+  const [filter, setFilter] = useState<"open" | "done">("open");
   const [assignees, setAssignees] = useState<string[]>(contacts[0] ? [contacts[0].id] : []);
   const toggle = (id: string) =>
     setAssignees((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
@@ -31,7 +32,10 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const shown = tickets.filter((t) => (filter === "all" ? true : t.status !== "resolved"));
+  const shown = tickets
+    .filter((t) => (filter === "done" ? t.status === "resolved" : t.status !== "resolved"))
+    // Tickets waiting on you rise to the top.
+    .sort((a, b) => (a.needsYou === b.needsYou ? 0 : a.needsYou ? -1 : 1));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,19 +102,19 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
       )}
 
       <div className="tm-tabs2">
-        <button className={`tm-tab2 ${filter === "live" ? "on" : ""}`} onClick={() => setFilter("live")}>Open ({tickets.filter((t) => t.status !== "resolved").length})</button>
-        <button className={`tm-tab2 ${filter === "all" ? "on" : ""}`} onClick={() => setFilter("all")}>All ({tickets.length})</button>
+        <button className={`tm-tab2 ${filter === "open" ? "on" : ""}`} onClick={() => setFilter("open")}>Still open ({tickets.filter((t) => t.status !== "resolved").length})</button>
+        <button className={`tm-tab2 ${filter === "done" ? "on" : ""}`} onClick={() => setFilter("done")}>Done ({tickets.filter((t) => t.status === "resolved").length})</button>
       </div>
 
       {shown.length === 0 ? (
         <div className="tm-card tm-empty">
-          <div className="big">{filter === "live" ? "Nothing open" : "No tickets yet"}</div>
+          <div className="big">{filter === "done" ? "Nothing done yet" : "Nothing open"}</div>
           <div className="small">Raise one and it goes straight to whoever can sort it.</div>
         </div>
       ) : (
         <div className="tm-tickets">
           {shown.map((t) => (
-            <Link key={t.id} href={`/team/tickets/${t.id}`} className="tm-card tm-ticket">
+            <Link key={t.id} href={`/team/tickets/${t.id}`} className={`tm-card tm-ticket${t.needsYou ? " needsyou" : ""}`}>
               <div className="tm-tleft">
                 <div className="tm-tsub"><span className="tm-ref">#{t.ref}</span>{t.subject}</div>
                 <div className="tm-tmeta">
@@ -119,7 +123,10 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
                   · {when(t.createdAt)}
                 </div>
               </div>
-              <span className={`tm-status ${t.status}`}>{STATUS[t.status]}</span>
+              <div className="tm-tright">
+                {t.needsYou && <span className="tm-needsyou">Needs you</span>}
+                <span className={`tm-status ${t.status}`}>{STATUS[t.status]}</span>
+              </div>
             </Link>
           ))}
         </div>

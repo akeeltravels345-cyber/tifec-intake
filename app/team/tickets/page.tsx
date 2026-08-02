@@ -27,6 +27,7 @@ export default async function TicketsPage() {
         raisedBy: getClinician(t.createdBy)?.name ?? t.createdBy,
         assignees: t.assignees.map((id) => getClinician(id)?.name ?? id),
         mine: t.createdBy === me.id,
+        needsYou: t.assignees.includes(me.id) && t.status !== "resolved",
       }))}
     />
   );
