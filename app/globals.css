@@ -1643,8 +1643,10 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-mbtn.on { background: #eef4f3; color: var(--teal-deep); }
 .cd-lab { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--teal-deep); font-weight: 700; }
 .cd-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 24px 26px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
-.cd-kpis { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 20px; }
-.cd-kpi { background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 15px 18px; }
+/* Six KPIs in ONE bordered container (3x2), split by internal hairlines — the
+   1px grid gap over a hairline-coloured background draws the dividers. */
+.cd-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-bottom: 20px; background: var(--edge); border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+.cd-kpi { background: #fff; padding: 16px 18px; }
 .cd-missnote { background: #fbeeea; border: 1px solid #e3b7ad; color: #7a2414; border-radius: 12px; padding: 12px 16px; margin: 12px 0 0; font-size: 13.5px; }
 .cd-refalert { background: #fdf3e0; border: 1px solid #e6cf9a; border-radius: 12px; padding: 12px 16px; margin: 12px 0 0; }
 .cd-refalert-h { font-size: 13.5px; font-weight: 700; color: #9a6a17; margin-bottom: 8px; }
@@ -1991,6 +1993,37 @@ body:has(.biz) { background: #F8F9F8; }
 .su-tbl-sort th.cl-th.on .cl-arrow { opacity: 1; }
 /* Body cells under the active sort column get a whisper of the same tint. */
 .su-tbl-sort td.cl-oncol { background: #faf9fe; }
+
+/* ---- Clinician "My expenses" card (Setup) ---- */
+.exp-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 20px 22px; }
+.exp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--hair); margin-bottom: 16px; flex-wrap: wrap; }
+.exp-title { font: 400 20px "Newsreader", serif; color: var(--ink); }
+.exp-takehome { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.exp-thlab { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.exp-thfig { font: 400 30px "Newsreader", serif; color: var(--indigo, #3f3a8c); font-variant-numeric: tabular-nums; }
+.exp-thsub { font-size: 12px; color: var(--muted, #5c636e); }
+.exp-note { background: var(--paper, #fbf9f4); border: 1px solid var(--hair); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--muted, #5c636e); line-height: 1.55; margin-bottom: 16px; }
+.exp-groups { display: grid; gap: 20px; }
+.exp-ghead { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.exp-glab { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--ink); }
+.exp-gsub { font-size: 12px; color: var(--faint); }
+.exp-rows { display: grid; gap: 8px; margin-bottom: 8px; }
+.exp-erow { display: flex; align-items: center; gap: 10px; }
+.exp-erow > .ls-in:first-child { flex: 1; }
+.exp-flip { background: none; border: none; color: var(--indigo, #3f3a8c); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; padding: 4px 2px; }
+.exp-flip:hover { text-decoration: underline; }
+.exp-leader { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; }
+.exp-lname { font-size: 14px; color: var(--ink); }
+.exp-dots { flex: 1; border-bottom: 1px dotted #cbc6ba; transform: translateY(-3px); }
+.exp-lamt { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.exp-foot { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
+/* ---- "My agreement" read-only card ---- */
+.agr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+.agr-cell { background: #fff; padding: 14px 18px; }
+.agr-k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.agr-v { font: 400 22px "Newsreader", serif; margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.agr-note { margin-top: 12px; font-size: 13px; color: var(--muted, #5c636e); }
+@media (max-width: 640px) { .agr-grid { grid-template-columns: 1fr; } }
 /* Admin/builder-only processing-fee block under the bottom line. */
 .bo-adminfee { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cdbff5; }
 .bo-adminnote { font-size: 12px; color: #6b57b8; margin-top: 6px; }

@@ -9,8 +9,6 @@ import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
 import StatGlossary from "@/components/billing/StatGlossary";
-import MyExpenses from "@/components/billing/MyExpenses";
-import { resolveClinicianExpenses } from "@/lib/clinicianExpenses";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +45,6 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const insurerName = (iid: string | null) =>
     insurers.find((i) => i.id === iid)?.name ?? (iid ? "Unknown insurer" : "Self-pay");
   const isSelf = id === user.clinician.id;
-  // A clinician's own private expenses for the month being viewed. Only ever
-  // loaded for the clinician themselves — never for an owner/biller viewing them.
-  const myExpenses = isSelf ? await resolveClinicianExpenses(id, year, month) : null;
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
   const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction + c.pension;
   // The clinician's own agreement with the biller — settled from their share,
@@ -206,18 +201,6 @@ export default async function ClinicianDetail({ params, searchParams }: { params
           </div>
         </div>
       </div>
-
-      {isSelf && myExpenses && (
-        <MyExpenses
-          key={`${year}-${month}`}
-          monthKey={`${year}-${String(month).padStart(2, "0")}`}
-          monthLabel={`${MONTHS[month - 1]} ${year}`}
-          initial={myExpenses.expenses}
-          source={myExpenses.source}
-          from={myExpenses.from}
-          netPayout={c.payout}
-        />
-      )}
 
       <div className="cd-secrow">
         <h3 className="cd-sech">Sessions in {MONTHS[month - 1]}</h3>

@@ -32,6 +32,6 @@ export async function POST(req: Request) {
     return { id: String(o.id ?? ""), name: String(o.name ?? ""), amount: Number(o.amount) || 0, kind: o.kind === "oneoff" ? "oneoff" : "running" } as ClinicianExpense;
   });
 
-  const saved = await saveClinicianExpenses(me.id, month, expenses);
-  return NextResponse.json({ ok: true, expenses: saved });
+  const saved = await saveClinicianExpenses(me.id, month, expenses, new Date().toISOString());
+  return NextResponse.json({ ok: true, expenses: saved.expenses, savedAt: saved.savedAt });
 }

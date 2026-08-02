@@ -39,6 +39,7 @@ export default function BillingSidebar({
       { href: "/billing/me", label: "My payout", icon: IconClin, match: (p) => p === "/billing/me" },
       { href: "/billing/clients", label: "My clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
       { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
+      { href: "/billing/me/setup", label: "My setup", icon: IconSetup, match: (p) => p.startsWith("/billing/me/setup") },
     ] },
   ];
 
@@ -59,6 +60,7 @@ export default function BillingSidebar({
             { href: "/billing/me", label: "Payout", icon: IconClin, match: (p) => p.startsWith("/billing/clinician") || p === "/billing/me" },
             { href: "/billing/clients", label: "Clients", icon: IconUser, match: (p) => p.startsWith("/billing/clients") },
             { href: "/billing/sessions/new", label: "Log a session", icon: IconLog, match: (p) => p.startsWith("/billing/sessions") },
+            { href: "/billing/me/setup", label: "Setup", icon: IconSetup, match: (p) => p.startsWith("/billing/me/setup") },
           ]
         : [
             { href: "/billing/overview", label: "Overview", icon: IconOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
