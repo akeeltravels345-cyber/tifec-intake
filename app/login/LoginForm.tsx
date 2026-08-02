@@ -23,7 +23,7 @@ export default function LoginForm({ next }: { next: string }) {
         const b = await res.json().catch(() => ({}));
         throw new Error(b.error || "Login failed.");
       }
-      window.location.href = next || "/dashboard";
+      window.location.href = next || "/today";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
       setBusy(false);

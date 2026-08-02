@@ -12,7 +12,7 @@ export default async function LoginPage({
   const { next, timeout } = await searchParams;
   const me = await getCurrentClinician();
   // Only allow internal relative redirect targets.
-  const safeNext = next && next.startsWith("/") ? next : "/dashboard";
+  const safeNext = next && next.startsWith("/") ? next : "/today";
   if (me) redirect(safeNext);
 
   return (
