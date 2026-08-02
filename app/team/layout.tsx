@@ -1,33 +1,36 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { unreadCount, unreadNotifications } from "@/lib/comms";
-import TeamTabs from "@/components/team/TeamTabs";
+import { devMode } from "@/lib/billingRole";
+import { unreadNotifications } from "@/lib/comms";
+import { getSidebarData } from "@/lib/sidebarData";
+import UnifiedSidebar from "@/components/UnifiedSidebar";
 import NotificationBell from "@/components/team/NotificationBell";
 
 export const dynamic = "force-dynamic";
 
-// The team area is for everyone who works here, so it lives in the intake app
-// rather than behind the billing beta gate.
+// The team area is for everyone who works here. It now shares the one app shell
+// (sidebar handles Notice board / Messages / Tickets navigation) instead of its
+// own tab bar.
 export default async function TeamLayout({ children }: { children: React.ReactNode }) {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/team/notices");
-  const [unread, noteCount] = await Promise.all([unreadCount(me.id), unreadNotifications(me.id)]);
+  const [noteCount, data] = await Promise.all([unreadNotifications(me.id), getSidebarData(me)]);
 
   return (
-    <div className="tm">
-      <div className="tm-strip" />
-      <div className="tm-wrap">
-        <div className="tm-top">
-          <Link href="/today" className="tm-back">← Today</Link>
-          <div className="tm-topright">
-            <NotificationBell initialUnread={noteCount} />
-            <span className="tm-me">{me.name}</span>
+    <div className="biz">
+      <UnifiedSidebar data={data} isDev={devMode()} />
+      <main className="bo-main">
+        <div className="tm-wrap">
+          <div className="tm-top">
+            <div />
+            <div className="tm-topright">
+              <NotificationBell initialUnread={noteCount} />
+              <span className="tm-me">{me.name}</span>
+            </div>
           </div>
+          {children}
         </div>
-        <TeamTabs unread={unread} />
-        <main className="tm-main">{children}</main>
-      </div>
+      </main>
     </div>
   );
 }

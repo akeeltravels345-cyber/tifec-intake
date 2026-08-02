@@ -7,7 +7,8 @@ import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { insurancePortion } from "@/lib/billingCalc";
-import TodayViewAs from "@/components/billing/TodayViewAs";
+import UnifiedSidebar from "@/components/UnifiedSidebar";
+import { getSidebarData } from "@/lib/sidebarData";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export default async function TodayPage() {
   const owner = isOwner(role);
   const biller = isBiller(role);
   const hasBilling = hasBillingBeta(me);
-  const admin = !!me.admin;
+  const sidebar = await getSidebarData(me);
 
   // Intake: forms waiting to be looked at.
   const subs = await getSubmissionsByClinician(me.id);
@@ -103,20 +104,16 @@ export default async function TodayPage() {
   if (teamUnread > 0) attention.push({ label: `${teamUnread} unread message${teamUnread === 1 ? "" : "s"}`, href: "/team" });
   if (noteCount > 0) attention.push({ label: `${noteCount} notice${noteCount === 1 ? "" : "s"} on the board`, href: "/team" });
 
-  const roleLabel = owner ? "Owner" : biller ? "Biller" : "Clinician";
 
   return (
-    <div className="biz today-page">
+    <div className="biz">
+      <UnifiedSidebar data={sidebar} isDev={devMode()} />
+      <main className="bo-main">
       <div className="today-wrap">
         <header className="today-head">
           <div>
-            <div className="today-brand"><img className="today-mark" src="/tifec-mark.png" alt="" /><span>TIFEC · Essential Care</span></div>
             <h1 className="today-h1">Hello, {firstName(me.name)}</h1>
             <p className="today-sub">Here&apos;s your day across intake, billing and the team.</p>
-          </div>
-          <div className="today-idwrap">
-            <div className="today-id"><span className="today-role">{roleLabel}{admin ? " · Admin" : ""}</span><span className="today-name">{me.name}</span></div>
-            {devMode() && <TodayViewAs />}
           </div>
         </header>
 
@@ -177,6 +174,7 @@ export default async function TodayPage() {
           </>
         )}
       </div>
+      </main>
     </div>
   );
 }
