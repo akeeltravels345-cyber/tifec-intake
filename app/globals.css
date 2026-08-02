@@ -1831,6 +1831,9 @@ body:has(.biz) { background: #F8F9F8; }
 /* On the green "paid" pill: inherit the pill's colour, faint hover chip. */
 .biz .pill .bq-dateedit.onpill { color: inherit; font-weight: 700; }
 .biz .pill .bq-dateedit.onpill:hover:not(:disabled) { border-color: rgba(30,49,146,.25); background: rgba(255,255,255,.55); }
+/* Leading date-of-service column on the Awaiting tab: reads like the row's date. */
+.biz .bq-dateedit.lead { font-size: 13px; color: var(--ink); font-weight: 600; padding: 1px 2px; margin-left: -2px; }
+.biz .bq-row .dos.bq-leaddate { overflow: visible; }
 .bq-check { width: 18px; height: 18px; flex: none; accent-color: var(--indigo); cursor: pointer; }
 .bq-gname { font-weight: 700; font-size: 15.5px; }
 .bq-gmeta { font-size: 12px; color: var(--faint); margin-top: 2px; display: flex; align-items: center; gap: 8px; }
@@ -1978,7 +1981,7 @@ body:has(.biz) { background: #F8F9F8; }
   .bq-hero { grid-template-columns: 1fr 1fr; }
   .bq-bulk { left: 16px; right: 16px; flex-wrap: wrap; gap: 10px; }
   .bq-row { grid-template-columns: 22px 1fr 92px 84px; gap: 10px; }
-  .bq-row .dos, .bq-row .comm { display: none; }
+  .bq-row .dos:not(.bq-leaddate), .bq-row .comm { display: none; }
   .bq-brow { grid-template-columns: 1fr 96px 70px; gap: 10px; }
 }
 
