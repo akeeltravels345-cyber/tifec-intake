@@ -112,7 +112,14 @@ export function computeClinicianMonth(
   const visitsUnbilled = visits.filter((s) => s.insurerId && !s.insurancePaid);
 
   const revenueGenerated = sumBy(visits, (s) => s.totalCost || 0);
-  const copayThisMonth = sumBy(visits, collectedAtVisit);
+  // Co-pays are taken at the visit, so they count in the visit month. Self-pay
+  // counts when the money is actually COLLECTED — its paid date, or the visit if
+  // paid then — the same rollover rule insurance follows. So back-dating a
+  // self-pay's paid date moves that income (and the resulting payout) months.
+  const insuredCopay = sumBy(visits.filter((s) => s.insurerId), collectedAtVisit);
+  const selfPayCollectedSessions = sessions.filter((s) => !s.insurerId && inMonth(s.paidDate || s.dateOfService, year, month));
+  const selfPayCollected = sumBy(selfPayCollectedSessions, collectedAtVisit);
+  const copayThisMonth = round2(insuredCopay + selfPayCollected);
   const insuranceBilledThisMonth = sumBy(billedThisMonth, insurancePortion);
   const collected = round2(copayThisMonth + insuranceBilledThisMonth);
 
