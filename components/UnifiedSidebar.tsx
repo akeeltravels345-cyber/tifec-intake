@@ -40,7 +40,20 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     ] },
   ];
   if (hasBilling) {
-    const billing: Item[] = owner
+    // The admin oversees the whole practice, so they see every billing screen —
+    // owner, biller and clinician — not just one role's set.
+    const billing: Item[] = isAdmin
+      ? [
+          { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
+          { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
+          { href: "/billing/biller", label: "Biller dashboard", icon: IcOverview, match: (p) => p === "/billing/biller" },
+          { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+          { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+          { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
+          { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician/") },
+          { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
+        ]
+      : owner
       ? [
           { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
           { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
