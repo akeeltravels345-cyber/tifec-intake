@@ -20,7 +20,7 @@ export interface Claim {
   afterReferral?: boolean;
 }
 export interface QueueData {
-  toBill: Claim[]; awaiting: Claim[]; paid: Claim[];
+  toBill: Claim[]; awaiting: Claim[]; selfPay: Claim[]; paid: Claim[];
   commissionThisMonth: number; waitingCommission: number;
   outstandingTotal: number; awaitingTotal: number; collectedThisMonth: number;
   toBillCount: number; awaitingCount: number; oldestDays: number;
@@ -33,7 +33,7 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const money0 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2 : 3);
 
-type Tab = "tobill" | "awaiting" | "paid";
+type Tab = "tobill" | "awaiting" | "selfpay" | "paid";
 
 export default function BillingQueueClient({ data }: { data: QueueData }) {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const [busy, setBusy] = useState(false);
 
   // The open list the current tab works on (paid is a read-only history tab).
-  const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : data.paid;
+  const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : tab === "selfpay" ? data.selfPay : data.paid;
   const isOpen = tab !== "paid";
 
   const filtered = useMemo(() => active.filter((c) =>
@@ -153,6 +153,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         <div className="bq-tabs">
           <button className={`bq-tab ${tab === "tobill" ? "on" : ""}`} onClick={() => switchTab("tobill")}>To bill ({data.toBill.length})</button>
           <button className={`bq-tab ${tab === "awaiting" ? "on" : ""}`} onClick={() => switchTab("awaiting")}>Awaiting payment ({data.awaiting.length})</button>
+          {data.selfPay.length > 0 && <button className={`bq-tab ${tab === "selfpay" ? "on" : ""}`} onClick={() => switchTab("selfpay")}>Self-pay ({data.selfPay.length})</button>}
           <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Paid ({data.paid.length})</button>
         </div>
         <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -170,8 +171,8 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
       {isOpen ? (
         groups.length === 0 ? (
           <div className="bq-group"><div className="bq-empty">
-            <div className="big">{tab === "tobill" ? "Nothing to bill here" : "Nothing awaiting payment here"}</div>
-            <div className="small">{tab === "tobill" ? "Every logged claim in this view has been submitted to the insurer." : "Every submitted claim in this view has been paid."}</div>
+            <div className="big">{tab === "tobill" ? "Nothing to bill here" : tab === "selfpay" ? "No self-pay balances here" : "Nothing awaiting payment here"}</div>
+            <div className="small">{tab === "tobill" ? "Every logged claim in this view has been submitted to the insurer." : tab === "selfpay" ? "Every self-pay visit in this view has been paid or waived." : "Every submitted claim in this view has been paid."}</div>
           </div></div>
         ) : (
           <div className="bq-groups">
@@ -244,9 +245,9 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
 
       {isOpen && selected.size > 0 && (
         <div className="bq-bulk">
-          <div><div className="bt">{selected.size} claim{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} insurance · <span className="comm">+{money(comm(selClaims))} to you</span></div></div>
+          <div><div className="bt">{selected.size} {tab === "selfpay" ? "balance" : "claim"}{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} {tab === "selfpay" ? "owed" : "insurance"}{tab === "selfpay" ? "" : <> · <span className="comm">+{money(comm(selClaims))} to you</span></>}</div></div>
           <div className="sp" />
-          <button className="gen" onClick={generateClaims} title="Build CMS-1500 claims for the selected claims">Generate CMS-1500</button>
+          {tab !== "selfpay" && <button className="gen" onClick={generateClaims} title="Build CMS-1500 claims for the selected claims">Generate CMS-1500</button>}
           {tab === "tobill" ? (
             <>
               <label>Billed date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>

@@ -80,12 +80,13 @@ export default async function BillingQueuePage() {
   const selfPaidClaims = selfPay.filter((s) => selfPayOutstanding(s) <= 0 && (s.copayCollected || 0) > 0 && s.paidDate).map((s) => toSelfClaim(s, s.totalCost || 0));
 
   const toBill = insured.filter((s) => !s.insurancePaid && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
-  const awaiting = [...insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim), ...selfOwing].sort((a, b) => b.age - a.age);
+  const awaiting = insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
+  const selfPayClaims = selfOwing.sort((a, b) => b.age - a.age); // self-pay balances owed by clients — their own tab
   const paid = [...insured.filter((s) => s.insurancePaid).map(toClaim), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
   // Everything not yet collected (both open stages) drives the outstanding total
   // and the aging chips.
-  const open = [...toBill, ...awaiting];
+  const open = [...toBill, ...awaiting, ...selfPayClaims];
   const outstandingTotal = r2(open.reduce((t, c) => t + c.amount, 0));
   const awaitingTotal = r2(awaiting.reduce((t, c) => t + c.amount, 0));
   const paidThisMonthClaims = paid.filter((c) => c.paidDate?.slice(0, 7) === mKey);
@@ -96,7 +97,7 @@ export default async function BillingQueuePage() {
   });
 
   const data: QueueData = {
-    toBill, awaiting, paid,
+    toBill, awaiting, selfPay: selfPayClaims, paid,
     commissionThisMonth: r2(paidThisMonthClaims.reduce((t, c) => t + c.commission, 0)),
     waitingCommission: r2(open.reduce((t, c) => t + c.commission, 0)),
     outstandingTotal, awaitingTotal, collectedThisMonth,
