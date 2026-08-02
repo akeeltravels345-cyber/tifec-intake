@@ -1645,7 +1645,7 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 24px 26px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 /* Six KPIs in ONE bordered container (3x2), split by internal hairlines — the
    1px grid gap over a hairline-coloured background draws the dividers. */
-.cd-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-bottom: 20px; background: var(--edge); border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+.cd-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-bottom: 20px; background: var(--edge); border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 .cd-kpi { background: #fff; padding: 16px 18px; }
 .cd-missnote { background: #fbeeea; border: 1px solid #e3b7ad; color: #7a2414; border-radius: 12px; padding: 12px 16px; margin: 12px 0 0; font-size: 13.5px; }
 .cd-refalert { background: #fdf3e0; border: 1px solid #e6cf9a; border-radius: 12px; padding: 12px 16px; margin: 12px 0 0; }
@@ -1995,7 +1995,7 @@ body:has(.biz) { background: #F8F9F8; }
 .su-tbl-sort td.cl-oncol { background: #faf9fe; }
 
 /* ---- Clinician "My expenses" card (Setup) ---- */
-.exp-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 20px 22px; }
+.exp-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 20px 22px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 .exp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--hair); margin-bottom: 16px; flex-wrap: wrap; }
 .exp-title { font: 400 20px "Newsreader", serif; color: var(--ink); }
 .exp-takehome { text-align: right; display: flex; flex-direction: column; gap: 2px; }
@@ -2018,7 +2018,7 @@ body:has(.biz) { background: #F8F9F8; }
 .exp-lamt { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .exp-foot { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
 /* ---- "My agreement" read-only card ---- */
-.agr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+.agr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 .agr-cell { background: #fff; padding: 14px 18px; }
 .agr-k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
 .agr-v { font: 400 22px "Newsreader", serif; margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--ink); }
