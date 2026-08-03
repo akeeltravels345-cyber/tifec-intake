@@ -39,8 +39,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const bodyPaid = isDate(body.paidDate) ? String(body.paidDate) : null;
   const billedDate = stage === "tobill" ? null : (bodyBilled ?? session.billedDate ?? dateOfService);
   const paidDate = paid ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
-  // Self-pay disposition (only meaningful when there's no insurer).
-  const selfPayStatus = insurerId ? null
+  // Uncollected-amount disposition: self-pay owing/waived, or an insured co-pay
+  // waived (write-off). Anything else is null (collected / didn't-collect-owed).
+  const selfPayStatus = insurerId
+    ? (body.selfPayStatus === "waived" ? "waived" : null)
     : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null);
 
   const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes });

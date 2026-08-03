@@ -109,7 +109,8 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
-        <div className="cd-kpi" title="Co-pays that were due at this month's visits but weren't taken — a write-off unless you collect them later."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div></div>
+        <div className="cd-kpi" title="Co-pays due at this month's visits that weren't taken but are STILL OWED — the biller can invoice these."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div></div>
+        <div className="cd-kpi" title="Co-pays deliberately WAIVED this month — written off, never chased."><div className="k">Co-pays waived</div><div className="v">{money0(c.waivedCopay)}</div></div>
       </div>
       {isSelf && <StatGlossary />}
       {c.uncollectedCopay > 0 && (

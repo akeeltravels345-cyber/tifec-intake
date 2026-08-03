@@ -85,11 +85,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // have been.
   const [collectedInput, setCollectedInput] = useState("");
   const [collectedTouched, setCollectedTouched] = useState(false);
+  // How the co-pay was handled: collected / didn't collect (owed → invoice) / waived (written off).
+  const [copayDisp, setCopayDisp] = useState<"collected" | "didnt" | "waived">("collected");
   // Self-pay discount (e.g. a 50% Adventist discount). Applies to upfront/self-pay
   // only; the discounted total is what's logged and drives every calculation.
   const [discountPct, setDiscountPct] = useState("");
   const [discountReason, setDiscountReason] = useState("");
-  const resetCopay = () => { setCollectedTouched(false); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); };
+  const resetCopay = () => { setCollectedTouched(false); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); setCopayDisp("collected"); };
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -98,11 +100,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.fee || 0), 0)), [codes, cptCodes]);
   const duration = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes]);
   const suggested = suggestCopay(insurer, totalCost);
-  // One box: the co-pay you collect IS this client's co-pay (plans vary per
-  // client), so "due" tracks "collected". Defaults to the insurer's suggested
-  // rule until the clinician types the specific amount for this client.
-  const copayCollected = round2(collectedTouched ? Number(collectedInput) || 0 : suggested);
-  const copayDue = copayCollected;
+  // The co-pay figure the clinician enters is what was DUE (defaults to the
+  // insurer's suggested rule). Whether it was collected depends on copayDisp:
+  //   collected → taken at the visit; didn't collect → owed (biller invoices);
+  //   waived → written off (not chased). Due stays set so we can track both.
+  const copayAmt = round2(collectedTouched ? Number(collectedInput) || 0 : suggested);
+  const copayCollected = copayDisp === "collected" ? copayAmt : 0;
+  const copayDue = copayAmt;
   // Discount applies to self-pay only; the charged total is the fee less the discount.
   const discPct = payMode === "upfront" ? Math.min(100, Math.max(0, Number(discountPct) || 0)) : 0;
   const chargedTotal = discPct > 0 ? round2(totalCost * (1 - discPct / 100)) : totalCost;
@@ -141,7 +145,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? null : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? (copayDisp === "waived" ? "waived" : null) : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -394,37 +398,42 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             <label className="ls-q">Was it paid?</label>
             <div className="ls-seg3" role="tablist">
               <button type="button" role="tab" aria-selected={selfPay === "paid"} className={`ls-segbtn ${selfPay === "paid" ? "on" : ""}`} onClick={() => setSelfPay("paid")}>Paid in full<small>collected today</small></button>
-              <button type="button" role="tab" aria-selected={selfPay === "owing"} className={`ls-segbtn ${selfPay === "owing" ? "on" : ""}`} onClick={() => setSelfPay("owing")}>Owing<small>collect later</small></button>
-              <button type="button" role="tab" aria-selected={selfPay === "waived"} className={`ls-segbtn ${selfPay === "waived" ? "on" : ""}`} onClick={() => setSelfPay("waived")}>Waived<small>written off</small></button>
+              <button type="button" role="tab" aria-selected={selfPay === "owing"} className={`ls-segbtn ${selfPay === "owing" ? "on" : ""}`} onClick={() => setSelfPay("owing")}>Didn&apos;t collect<small>owed &middot; invoice</small></button>
+              <button type="button" role="tab" aria-selected={selfPay === "waived"} className={`ls-segbtn ${selfPay === "waived" ? "on" : ""}`} onClick={() => setSelfPay("waived")}>Waive<small>written off</small></button>
             </div>
             {selfPay === "owing" && (
               <div style={{ marginTop: 10 }}>
                 <span className="ls-sublab">Collected today (leave 0 if nothing paid)</span>
                 <input className="ls-in" type="number" step="0.01" min="0" max={chargedTotal} value={collectedNow} onChange={(e) => setCollectedNow(e.target.value)} placeholder="0" style={{ maxWidth: 160 }} />
-                <p className="ls-uncollected" style={{ color: "#9a3b2a" }}><b>{money(Math.max(0, chargedTotal - (Number(collectedNow) || 0)))}</b> will be owed by the client — it shows in the biller&apos;s balances to follow up.</p>
+                <p className="ls-uncollected" style={{ color: "#9a3b2a" }}><b>{money(Math.max(0, chargedTotal - (Number(collectedNow) || 0)))}</b> is still owed — it goes to the biller&apos;s <b>Owed by clients</b> list to invoice. Choose <b>Waive</b> instead only if you&apos;re writing it off.</p>
               </div>
             )}
-            {selfPay === "waived" && <p className="ls-uncollected" style={{ color: "var(--muted)" }}>The {money(chargedTotal)} fee is written off — not collected, not owed.</p>}
+            {selfPay === "waived" && <p className="ls-uncollected" style={{ color: "var(--muted)" }}>The {money(chargedTotal)} fee is <b>waived</b> — written off, never chased. Choose <b>Didn&apos;t collect</b> instead if the client still owes it.</p>}
           </div>
           )}
           {payMode === "insurance" && (
           <div className="ls-field">
-            <label className="ls-q">Co-pay collected</label>
+            <label className="ls-q">Co-pay</label>
             {!insurerId ? (
               <p className="ls-help" style={{ marginTop: 0 }}>Choose the insurer above to see the suggested co-pay.</p>
             ) : (
               <>
                 <p className="ls-help" style={{ marginTop: 0 }}>
                   {suggested > 0
-                    ? <>Based on <b>{insurer?.name}</b> rules, the co-pay due should be <b>{money(suggested)}</b>. Plans vary from client to client — enter the specific amount collected for this client.</>
+                    ? <>Based on <b>{insurer?.name}</b> rules, the co-pay due should be <b>{money(suggested)}</b>. Plans vary from client to client — enter the specific amount for this client.</>
                     : <><b>{insurer?.name}</b> has no standard co-pay. Enter an amount only if this client&apos;s plan requires one.</>}
                 </p>
-                <div className="ls-row2" style={{ alignItems: "center" }}>
-                  <div style={{ width: 170 }}>
-                    <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" placeholder="0.00" value={collectedTouched ? collectedInput : (suggested ? String(suggested) : "")} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
-                  </div>
-                  <button type="button" className="ls-writeoff" onClick={() => { setCollectedTouched(true); setCollectedInput("0"); }}>Didn&apos;t collect</button>
+                <div style={{ width: 170, marginBottom: 10 }}>
+                  <span className="ls-sublab">{copayDisp === "collected" ? "Amount collected" : "Amount due"}</span>
+                  <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" placeholder="0.00" value={collectedTouched ? collectedInput : (suggested ? String(suggested) : "")} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
                 </div>
+                <div className="ls-seg3" role="tablist">
+                  <button type="button" role="tab" aria-selected={copayDisp === "collected"} className={`ls-segbtn ${copayDisp === "collected" ? "on" : ""}`} onClick={() => setCopayDisp("collected")}>Collected<small>taken at visit</small></button>
+                  <button type="button" role="tab" aria-selected={copayDisp === "didnt"} className={`ls-segbtn ${copayDisp === "didnt" ? "on" : ""}`} onClick={() => setCopayDisp("didnt")}>Didn&apos;t collect<small>owed &middot; invoice</small></button>
+                  <button type="button" role="tab" aria-selected={copayDisp === "waived"} className={`ls-segbtn ${copayDisp === "waived" ? "on" : ""}`} onClick={() => setCopayDisp("waived")}>Waive<small>written off</small></button>
+                </div>
+                {copayDisp === "didnt" && copayAmt > 0 && <p className="ls-uncollected" style={{ color: "#9a3b2a" }}><b>{money(copayAmt)}</b> is still owed — it goes to the biller&apos;s <b>Owed by clients</b> list to invoice. Choose <b>Waive</b> instead only if you&apos;re writing it off for good.</p>}
+                {copayDisp === "waived" && copayAmt > 0 && <p className="ls-uncollected" style={{ color: "var(--muted)" }}><b>{money(copayAmt)}</b> waived — written off, never chased. Choose <b>Didn&apos;t collect</b> instead if the client still owes it.</p>}
               </>
             )}
           </div>

@@ -63,8 +63,11 @@ export async function POST(req: Request) {
     totalCost,
     copayCollected: Number(body.copayCollected) || 0,
     copayDue: body.copayDue == null ? undefined : Number(body.copayDue) || 0,
-    // Self-pay disposition (ignored when insured): owing / waived, else paid in full.
-    selfPayStatus: insurerId ? null : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null),
+    // Disposition of the uncollected amount: self-pay can be owing or waived;
+    // an insured co-pay can only be waived (write-off) — otherwise null.
+    selfPayStatus: insurerId
+      ? (body.selfPayStatus === "waived" ? "waived" : null)
+      : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null),
     notes: typeof body.notes === "string" ? body.notes : "",
   });
 
