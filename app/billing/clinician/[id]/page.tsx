@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, listCptCodes } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { listClients } from "@/lib/clients";
 import { referralStatus } from "@/lib/referral";
@@ -34,7 +34,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const year = Number(sp.y) || now.getUTCFullYear();
   const month = Number(sp.m) || now.getUTCMonth() + 1;
 
-  const [all, insurers, settings, cfg, myClients] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig(), listClients(id)]);
+  const [all, insurers, settings, cfg, myClients, cptCodes] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig(), listClients(id), listCptCodes()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
   // Referrals that need attention: expired, or expiring within 30 days.
   const todayISO = now.toISOString().slice(0, 10);
@@ -60,6 +60,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
     clientId: s.clientId,
     client: `${s.clientFirst} ${s.clientLast}`.trim(),
     codes: s.cptCodes.join(", "),
+    codeList: s.cptCodes,
     fee: s.totalCost,
     copay: s.copayCollected,
     insurance: insurancePortion(s),
@@ -211,7 +212,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         {visits.length === 0 ? (
           <div className="cd-empty">No appointments logged for this month.</div>
         ) : (
-          <ClinicianSessions month={visits.map(toRow)} insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))} canManage={isOwner(user.role) || isSelf} today={todayISO} />
+          <ClinicianSessions month={visits.map(toRow)} insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))} canManage={isOwner(user.role) || isSelf} today={todayISO} cptCodes={cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0 }))} />
         )}
       </div>
     </>

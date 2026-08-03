@@ -10,6 +10,7 @@ export interface SessionRow {
   clientId: string | null;
   client: string;
   codes: string;
+  codeList: string[];
   fee: number;
   copay: number;
   insurance: number;
@@ -20,17 +21,19 @@ export interface SessionRow {
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const STATUS: Record<SessionRow["status"], string> = { self: "Self-pay", paid: "Billed", pend: "Outstanding" };
 const pill = (s: SessionRow["status"]) => <span className={`cd-pill ${s}`}>{STATUS[s]}</span>;
 
 /** The month's sessions. Clicking a client opens their full record; the clinician
  *  (and the owner/biller) can also fix or remove a mistaken entry right here. The
  *  client link uses the opaque id, never their name, so no PHI ends up in the URL. */
-export default function ClinicianSessions({ month, insurers = [], canManage = false, today = "" }: {
+export default function ClinicianSessions({ month, insurers = [], canManage = false, today = "", cptCodes = [] }: {
   month: SessionRow[];
   insurers?: { id: string; name: string }[];
   canManage?: boolean;
   today?: string;
+  cptCodes?: { code: string; description: string; fee: number }[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -43,6 +46,9 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
   const [ecCopay, setEcCopay] = useState("");
   const [ecDue, setEcDue] = useState("");
   const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+  const [ecCodes, setEcCodes] = useState<string[]>([]);
+  const cptFee = (code: string) => cptCodes.find((c) => c.code === code)?.fee ?? 0;
+  const cptLabel = (code: string) => { const c = cptCodes.find((x) => x.code === code); return c ? `${c.code} · ${c.description}` : code; };
 
   function startEdit(s: SessionRow) {
     setDelId(null);
@@ -53,6 +59,18 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
     setEcCopay(String(s.copay));
     setEcDue(String(s.copayDue));
     setEcStage(s.status === "paid" ? "paid" : s.billed ? "awaiting" : "tobill");
+    setEcCodes(s.codeList ?? []);
+  }
+  // Add/remove a service code; changing the codes re-suggests the fee as their sum.
+  function toggleEcCode(code: string, on: boolean) {
+    setEcCodes((prev) => {
+      const next = on ? (prev.includes(code) ? prev : [...prev, code]) : prev.filter((c) => c !== code);
+      if (cptCodes.length) {
+        const sum = next.reduce((s, c) => s + cptFee(c), 0);
+        if (sum > 0) setEcFee(String(round2(sum)));
+      }
+      return next;
+    });
   }
   async function saveEdit(id: string) {
     if (!ecDate || ecFee === "") { setMsg("Enter a date and fee."); return; }
@@ -66,6 +84,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
           copayCollected: ecInsurer ? Number(ecCopay) || 0 : 0,
           copayDue: ecInsurer ? Number(ecDue) || 0 : 0,
           stage: ecInsurer ? ecStage : "paid",
+          cptCodes: ecCodes,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
@@ -133,6 +152,23 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
                   <div className="cd-editform">
                     <label>Date<input type="date" className="ls-in" value={ecDate} onChange={(e) => setEcDate(e.target.value)} /></label>
                     <label>Fee<input type="number" step="0.01" min="0" className="ls-in" value={ecFee} onChange={(e) => setEcFee(e.target.value)} /></label>
+                    {cptCodes.length > 0 && (
+                      <div className="cd-editcodes">
+                        <span className="cd-lab">Service codes <span className="opt">changing these re-suggests the fee</span></span>
+                        <div className="cd-codechips">
+                          {ecCodes.length === 0 && <span className="cd-nocodes">No codes yet</span>}
+                          {ecCodes.map((c) => (
+                            <span className="cd-codechip" key={c} title={cptLabel(c)}>{c}<button type="button" aria-label={`Remove ${c}`} onClick={() => toggleEcCode(c, false)}>×</button></span>
+                          ))}
+                        </div>
+                        <select className="ls-in" value="" onChange={(e) => { if (e.target.value) toggleEcCode(e.target.value, true); }}>
+                          <option value="">+ Add a code…</option>
+                          {cptCodes.filter((c) => !ecCodes.includes(c.code)).map((c) => (
+                            <option key={c.code} value={c.code}>{c.code} · {c.description} ({money(c.fee)})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                     {ecInsurer && <>
                       <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
