@@ -45,7 +45,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     ? (body.selfPayStatus === "waived" ? "waived" : null)
     : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null);
 
-  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes });
+  // Service (CPT) codes: only replace them when a valid non-empty list is sent;
+  // otherwise leave the existing codes untouched.
+  const cptCodes = Array.isArray(body.cptCodes)
+    ? body.cptCodes.map((c) => String(c).trim()).filter(Boolean)
+    : undefined;
+
+  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes, ...(cptCodes && cptCodes.length ? { cptCodes } : {}) });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

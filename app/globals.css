@@ -1736,6 +1736,13 @@ body:has(.biz) { background: #F8F9F8; }
 .ls-req { color: var(--neg); }
 .ls-in { border: 1px solid #E1D9C8; border-radius: 9px; padding: 11px 13px; font: 15px "Open Sans"; background: #fff; width: 100%; color: var(--ink); }
 .ls-in:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,142,147,.12); }
+/* Date-of-birth: Month / Day / Year dropdowns (no fiddly native date picker). */
+.dob-in { display: flex; gap: 8px; align-items: center; max-width: 340px; }
+.dob-in .ls-in { padding: 11px 10px; width: auto; min-width: 0; cursor: pointer; }
+.dob-in .dob-mo { flex: 1.5; }
+.dob-in .dob-day { flex: 1; }
+.dob-in .dob-yr { flex: 1.1; }
+@media (max-width: 420px) { .dob-in { gap: 6px; } .dob-in .ls-in { padding: 11px 6px; } }
 .ls-row2 { display: flex; gap: 12px; align-items: flex-end; }
 .ls-row2 .ls-in { flex: 1; min-width: 0; }
 .ls-sublab { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--faint, #8a93a3); font-weight: 700; margin-bottom: 3px; }
@@ -1965,6 +1972,16 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-editform label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
 .cd-editform .ls-in { min-width: 120px; }
 .cd-editform input[type="number"] { max-width: 110px; }
+/* Service (CPT) code editor inside the edit-charge form. */
+.cd-editcodes { display: flex; flex-direction: column; gap: 6px; flex-basis: 100%; }
+.cd-editcodes .cd-lab { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
+.cd-editcodes .cd-lab .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint, #8a93a3); }
+.cd-editcodes .ls-in { max-width: 340px; }
+.cd-codechips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 22px; }
+.cd-nocodes { font-size: 12px; color: var(--faint, #8a93a3); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.cd-codechip { display: inline-flex; align-items: center; gap: 5px; background: #EAF3F3; color: #1f6b6f; border: 1px solid #cfe6e6; border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 13px; font-weight: 600; }
+.cd-codechip button { border: none; background: rgba(31,107,111,.14); color: #1f6b6f; width: 16px; height: 16px; border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.cd-codechip button:hover { background: rgba(31,107,111,.28); }
 .cd-editactions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 .cd-addform { border: 1px solid var(--hair, #eae6dc); border-radius: 12px; padding: 14px; background: #fbfaf6; }
 .cd-addrow { display: flex; flex-wrap: wrap; gap: 12px; }

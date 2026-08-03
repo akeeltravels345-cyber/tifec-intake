@@ -580,10 +580,12 @@ export async function updateSession(id: string, f: {
   copayCollected: number; copayDue: number; billedDate: string | null;
   insurancePaid: boolean; paidDate: string | null; notes: string;
   selfPayStatus?: SelfPayStatus;
+  cptCodes?: string[];
 }): Promise<boolean> {
   const selfPayStatus = f.selfPayStatus ?? null;
   if (usePostgres) {
     const sql = await pg();
+    let ok = false;
     try {
       const res = (await sql`
         UPDATE billing_sessions SET
@@ -593,7 +595,7 @@ export async function updateSession(id: string, f: {
           billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
           notes = ${f.notes}
         WHERE id = ${id} RETURNING id`) as { id: string }[];
-      return res.length > 0;
+      ok = res.length > 0;
     } catch {
       // Pre-migration: update without self_pay_status.
       const res = (await sql`
@@ -603,8 +605,16 @@ export async function updateSession(id: string, f: {
           billed_date = ${f.billedDate}, insurance_paid = ${f.insurancePaid}, paid_date = ${f.paidDate},
           notes = ${f.notes}
         WHERE id = ${id} RETURNING id`) as { id: string }[];
-      return res.length > 0;
+      ok = res.length > 0;
     }
+    // Replace the service (CPT) codes if the caller changed them.
+    if (ok && f.cptCodes) {
+      await sql`DELETE FROM billing_session_cpt WHERE session_id = ${id}`;
+      for (const code of f.cptCodes) {
+        await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
+      }
+    }
+    return ok;
   }
   const all = readJson<StoredSession[]>(SESS_FILE, []);
   const s = all.find((x) => x.id === id);
@@ -612,6 +622,7 @@ export async function updateSession(id: string, f: {
   s.dateOfService = f.dateOfService; s.insurerId = f.insurerId; s.totalCost = f.totalCost;
   s.copayCollected = f.copayCollected; s.copayDue = f.copayDue; s.selfPayStatus = selfPayStatus;
   s.billedDate = f.billedDate; s.insurancePaid = f.insurancePaid; s.paidDate = f.paidDate; s.notes = f.notes;
+  if (f.cptCodes) s.cptCodes = f.cptCodes;
   writeJson(SESS_FILE, all);
   return true;
 }

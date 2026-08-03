@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import DobInput from "./DobInput";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; }
@@ -263,7 +264,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                   <input className="ls-in" placeholder="Last" value={last} onChange={(e) => { setLast(e.target.value); setPicked(""); }} />
                 </div>
                 <label className="ls-q" style={{ marginTop: 10 }}>Date of birth <span className="opt">used to match records &amp; for insurance claims</span></label>
-                <input type="date" className="ls-in" style={{ maxWidth: 190 }} value={dob} onChange={(e) => setDob(e.target.value)} max={today || undefined} />
+                <DobInput value={dob} onChange={setDob} />
               </>
             )}
           </div>

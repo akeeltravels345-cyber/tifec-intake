@@ -67,6 +67,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         intakeForms={intakeForms}
         currentUserId={user.clinician.id}
         currentUserRole={user.clinician.contact === "admin" ? "admin" : user.role}
+        cptCodes={cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0 }))}
       />
     </>
   );

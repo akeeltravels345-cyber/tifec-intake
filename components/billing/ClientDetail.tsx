@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ClientProfile } from "@/lib/clients";
 import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
+import DobInput from "./DobInput";
 
 const randId = () => Math.random().toString(36).slice(2, 10);
 
@@ -17,6 +18,7 @@ export interface Activity {
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmtSize = (n?: number) => (!n ? "" : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
 const noteWhen = (iso: string) => { const d = iso.slice(0, 10); const t = iso.slice(11, 16); return t ? `${d} ${t}` : d; };
 const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
@@ -27,13 +29,14 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician",
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician", cptCodes = [],
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
   insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
   activity: Activity[]; canEdit: boolean; canDelete?: boolean; today?: string;
   intakeForms?: LinkedIntake[]; currentUserId?: string; currentUserRole?: string;
+  cptCodes?: { code: string; description: string; fee: number }[];
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState(false);
@@ -53,6 +56,9 @@ export default function ClientDetail({
   const [ecBilled, setEcBilled] = useState("");
   const [ecPaid, setEcPaid] = useState("");
   const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived">("paid");
+  const [ecCodes, setEcCodes] = useState<string[]>([]);
+  const cptFee = (code: string) => cptCodes.find((c) => c.code === code)?.fee ?? 0;
+  const cptLabel = (code: string) => { const c = cptCodes.find((x) => x.code === code); return c ? `${c.code} · ${c.description}` : code; };
   const [showAdd, setShowAdd] = useState(false);
   // add-charge form
   const [acDate, setAcDate] = useState("");
@@ -86,6 +92,19 @@ export default function ClientDetail({
     setEcBilled(a.billedDate ?? "");
     setEcPaid(a.paidDate ?? "");
     setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
+    setEcCodes(a.codes ?? []);
+  }
+  // Add/remove a service code; when codes change, re-suggest the fee as their sum
+  // (the clinician can still override the Fee field afterwards).
+  function toggleEcCode(code: string, on: boolean) {
+    setEcCodes((prev) => {
+      const next = on ? (prev.includes(code) ? prev : [...prev, code]) : prev.filter((c) => c !== code);
+      if (cptCodes.length) {
+        const sum = next.reduce((s, c) => s + cptFee(c), 0);
+        if (sum > 0) setEcTotal(String(round2(sum)));
+      }
+      return next;
+    });
   }
   async function saveEditCharge(sid: string) {
     if (!ecDate || ecTotal === "") { setMsg("Enter a date and amount."); return; }
@@ -102,6 +121,7 @@ export default function ClientDetail({
           selfPayStatus: ecInsurer ? null : (ecSelfPay === "paid" ? null : ecSelfPay),
           billedDate: ecBilled || null,
           paidDate: ecPaid || null,
+          cptCodes: ecCodes,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
@@ -380,7 +400,7 @@ export default function ClientDetail({
           </div>
         ) : (
           <div className="su-card cd-grid">
-            {field("Date of birth", <input type="date" className="ls-in" value={dob} onChange={(e) => setDob(e.target.value)} />)}
+            {field("Date of birth", <DobInput value={dob} onChange={setDob} />)}
             {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">—</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
@@ -395,7 +415,7 @@ export default function ClientDetail({
             {relationship !== "self" && <>
               {field("Insured first name", <input className="ls-in" value={insuredFirst} onChange={(e) => setInsuredFirst(e.target.value)} />)}
               {field("Insured last name", <input className="ls-in" value={insuredLast} onChange={(e) => setInsuredLast(e.target.value)} />)}
-              {field("Insured date of birth", <input type="date" className="ls-in" value={insuredDob} onChange={(e) => setInsuredDob(e.target.value)} />)}
+              {field("Insured date of birth", <DobInput value={insuredDob} onChange={setInsuredDob} />)}
             </>}
             {field("Diagnosis (ICD-10, comma-separated)", <input className="ls-in" placeholder="e.g. F41.1, F32.1" value={dx} onChange={(e) => setDx(e.target.value)} />)}
             <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in — after the end date they can&apos;t be paid</span></div>
@@ -634,6 +654,23 @@ export default function ClientDetail({
                             <div className="cd-editform">
                               <label>Date<input type="date" className="ls-in" value={ecDate} onChange={(e) => setEcDate(e.target.value)} /></label>
                               <label>Fee<input type="number" step="0.01" min="0" className="ls-in" value={ecTotal} onChange={(e) => setEcTotal(e.target.value)} /></label>
+                              {cptCodes.length > 0 && (
+                                <div className="cd-editcodes">
+                                  <span className="cd-lab">Service codes <span className="opt">changing these re-suggests the fee</span></span>
+                                  <div className="cd-codechips">
+                                    {ecCodes.length === 0 && <span className="cd-nocodes">No codes yet</span>}
+                                    {ecCodes.map((c) => (
+                                      <span className="cd-codechip" key={c} title={cptLabel(c)}>{c}<button type="button" aria-label={`Remove ${c}`} onClick={() => toggleEcCode(c, false)}>×</button></span>
+                                    ))}
+                                  </div>
+                                  <select className="ls-in" value="" onChange={(e) => { if (e.target.value) toggleEcCode(e.target.value, true); }}>
+                                    <option value="">+ Add a code…</option>
+                                    {cptCodes.filter((c) => !ecCodes.includes(c.code)).map((c) => (
+                                      <option key={c.code} value={c.code}>{c.code} · {c.description} ({money(c.fee)})</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
                               <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                               {!ecInsurer && <>
                                 <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => setEcSelfPay(e.target.value as typeof ecSelfPay)}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
