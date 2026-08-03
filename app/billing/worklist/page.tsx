@@ -20,6 +20,7 @@ export default async function WorklistPage() {
     description: f.description,
     flow: f.flow,
     priority: f.priority,
+    attachments: f.attachments,
     by: getClinician(f.requestedBy)?.name ?? "Someone",
     at: f.createdAt.slice(0, 10),
   }));

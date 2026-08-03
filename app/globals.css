@@ -1891,6 +1891,23 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .wl-flag { flex: none; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--teal-deep); background: #edf4f3; border-radius: 6px; padding: 2px 7px; }
 .biz .wl-meta { font-size: 12px; color: var(--faint); margin-top: 10px; }
 @media (max-width: 560px) { .biz .wl-flow { grid-template-columns: 1fr; } .biz .wl-arrow { display: none; } }
+/* Worklist attachments + voice notes */
+.biz .wl-attbar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.biz .wl-attbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--edge); background: #fff; color: var(--ink); border-radius: 10px; padding: 9px 14px; font: 600 13px "Open Sans"; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.biz .wl-attbtn:hover { border-color: var(--teal); }
+.biz .wl-attbtn.rec { border-color: #c0392b; color: #9a3b2a; background: #fbe6e0; }
+.biz .wl-recdot { width: 9px; height: 9px; border-radius: 999px; background: #c0392b; animation: wl-pulse 1s infinite; }
+@keyframes wl-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.biz .wl-drafts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.biz .wl-draft { display: inline-flex; align-items: center; gap: 6px; background: #f3f0e8; border-radius: 999px; padding: 4px 6px 4px 12px; font: 500 12.5px "Open Sans"; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.biz .wl-draft .x { border: 0; background: rgba(0,0,0,.08); color: var(--muted); border-radius: 999px; width: 18px; height: 18px; line-height: 1; cursor: pointer; font-size: 13px; }
+.biz .wl-draft .x:hover { background: rgba(0,0,0,.16); }
+.biz .wl-atts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.biz .wl-audio { height: 38px; max-width: 100%; }
+.biz .wl-thumbwrap { display: inline-block; line-height: 0; }
+.biz .wl-thumb { max-width: 120px; max-height: 90px; border-radius: 8px; border: 1px solid var(--edge); object-fit: cover; }
+.biz .wl-fileatt { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--indigo); text-decoration: none; border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px; }
+.biz .wl-fileatt:hover { border-color: var(--teal); text-decoration: underline; }
 .biz .bq-row .dos.bq-leaddate { overflow: visible; }
 .bq-check { width: 18px; height: 18px; flex: none; accent-color: var(--indigo); cursor: pointer; }
 .bq-gname { font-weight: 700; font-size: 15.5px; }

@@ -5,6 +5,10 @@ import { insertFeedback, listFeedback } from "./feedback";
 
 export type Priority = "nice" | "important" | "urgent";
 
+/** An attached file or voice note. Bytes live in the shared doc store (keyed by
+ *  docId); only this lightweight pointer is kept on the feature. */
+export interface Attachment { docId: string; name: string; mime: string; kind: "file" | "voice" }
+
 export interface Feature {
   id: string;
   requestedBy: string; // clinician id
@@ -12,6 +16,7 @@ export interface Feature {
   description: string;
   flow: string;        // "starts … → ends …"
   priority: Priority;
+  attachments: Attachment[];
   createdAt: string;   // ISO
 }
 
@@ -19,10 +24,13 @@ const CATEGORY = "worklist";
 
 export async function addFeature(
   requestedBy: string,
-  f: { name: string; description: string; flow: string; priority: string }
+  f: { name: string; description: string; flow: string; priority: string; attachments?: Attachment[] }
 ): Promise<void> {
   const priority: Priority = f.priority === "urgent" || f.priority === "important" ? f.priority : "nice";
-  const payload = JSON.stringify({ name: f.name.trim(), description: f.description.trim(), flow: f.flow.trim(), priority });
+  const payload = JSON.stringify({
+    name: f.name.trim(), description: f.description.trim(), flow: f.flow.trim(), priority,
+    attachments: (f.attachments || []).slice(0, 6),
+  });
   await insertFeedback(CATEGORY, payload, requestedBy);
 }
 
@@ -47,6 +55,7 @@ export async function listFeatures(): Promise<Feature[]> {
         description: p.description || "",
         flow: p.flow || "",
         priority: (p.priority as Priority) || "nice",
+        attachments: Array.isArray(p.attachments) ? p.attachments : [],
         createdAt: r.created_at,
       };
     });
