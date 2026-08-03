@@ -1636,6 +1636,19 @@ body:has(.biz) { background: #F8F9F8; }
   .bo-clhead { grid-template-columns: 110px 1fr 92px 16px; gap: 12px; }
   .bo-expgrid { grid-template-columns: repeat(2,1fr); }
 }
+/* Phones: stack the overview rows so amounts never clip off the right edge —
+   name + total on top, the bar (and its collected/outstanding caption) below. */
+@media (max-width: 560px) {
+  .bo-crow { grid-template-columns: 1fr auto; grid-template-areas: "name amt" "bar bar"; gap: 6px 12px; align-items: center; }
+  .bo-crow > .ins { grid-area: name; }
+  .bo-crow > .bo-ctrack { grid-area: bar; }
+  .bo-crow > .bo-cright { grid-area: amt; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .bo-clhead { grid-template-columns: 1fr auto auto; grid-template-areas: "name pay chev" "bar bar bar"; gap: 6px 10px; align-items: center; }
+  .bo-clhead > .nm { grid-area: name; }
+  .bo-clhead > .bo-clmid { grid-area: bar; }
+  .bo-clhead > .bo-clpay { grid-area: pay; }
+  .bo-clhead > .bo-chev { grid-area: chev; }
+}
 
 /* ---- Clinician Detail (design handoff) ---- */
 .cd-back { font-size: 13px; color: var(--muted); font-weight: 600; text-decoration: none; display: inline-block; margin-bottom: 12px; }

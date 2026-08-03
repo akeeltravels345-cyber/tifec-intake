@@ -215,7 +215,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <div className="bo-clrow" key={c.id}>
               <div className="bo-clhead" onClick={() => setOpen(isOpen ? null : c.id)}>
                 <div className="nm">{c.name}<small>{c.appts} appointment{c.appts === 1 ? "" : "s"}</small></div>
-                <div>
+                <div className="bo-clmid">
                   <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
                   <div className="bo-clcap"><span>{money0(c.collected)} collected</span><span>{c.owed > 0 ? `${money0(c.owed)} outstanding` : "all collected"}</span></div>
                 </div>
