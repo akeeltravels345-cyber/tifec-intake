@@ -1457,6 +1457,16 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .serif { font-family: "Newsreader", Georgia, serif; }
 .bo-side { width: 242px; flex: none; background: #fff; border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .bo-brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 26px; }
+/* Admin "Viewing as" role switcher pinned above the menu. */
+.bo-switch { margin: -14px 0 16px; padding: 10px; border: 1px solid var(--edge, #E1D9C8); border-radius: 12px; background: #faf8f3; }
+.bo-switch-lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b3aa98; font-weight: 700; margin: 0 2px 7px; }
+.bo-switch-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.bo-switch-btn { padding: 7px 6px; border: 1px solid var(--edge, #E1D9C8); border-radius: 8px; background: #fff; cursor: pointer; font: 600 12.5px "Open Sans", system-ui, sans-serif; color: var(--muted, #6a6f66); }
+.bo-switch-btn:hover:not(:disabled) { border-color: var(--brand, #2E3192); color: var(--ink); }
+.bo-switch-btn.on { background: var(--brand, #2E3192); border-color: var(--brand, #2E3192); color: #fff; }
+.bo-switch-btn:disabled { opacity: .4; cursor: not-allowed; }
+.bo-switch-back { margin-top: 8px; width: 100%; padding: 8px; border: none; border-radius: 8px; background: #D9A441; color: #3a2a06; cursor: pointer; font: 700 11.5px "Open Sans", system-ui, sans-serif; line-height: 1.3; }
+.bo-switch-back:hover { background: #cf982f; }
 .bo-logo { width: 36px; height: 36px; border-radius: 10px; background: #fff; border: 1px solid var(--edge); object-fit: contain; padding: 3px; }
 .bo-bt { font-weight: 700; font-size: 15px; line-height: 1.1; }
 .bo-bs { font-size: 11px; color: var(--faint); margin-top: 3px; letter-spacing: .03em; }
@@ -1736,6 +1746,22 @@ body:has(.biz) { background: #F8F9F8; }
 .ls-req { color: var(--neg); }
 .ls-in { border: 1px solid #E1D9C8; border-radius: 9px; padding: 11px 13px; font: 15px "Open Sans"; background: #fff; width: 100%; color: var(--ink); }
 .ls-in:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,142,147,.12); }
+/* Foldable long lists: >6 rows collapse to the first 6 with a Show all toggle. */
+.fold { position: relative; }
+.fold-clip { position: relative; }
+.fold-clip[style*="hidden"]::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #fff 88%);
+}
+.fold-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin: 10px auto 2px; padding: 7px 16px;
+  background: #fff; border: 1px solid var(--line, #E1D9C8); border-radius: 999px; cursor: pointer;
+  font: 600 12.5px "Open Sans", system-ui, sans-serif; color: var(--brand, #2E3192);
+}
+.fold-toggle:hover { border-color: var(--brand, #2E3192); background: #f7f7fb; }
+.fold-toggle { position: relative; left: 50%; transform: translateX(-50%); }
+.fold-chev { transition: transform .15s ease; }
+.fold-chev.up { transform: rotate(180deg); }
 /* Date-of-birth: Month / Day / Year dropdowns (no fiddly native date picker). */
 .dob-in { display: flex; gap: 8px; align-items: center; max-width: 340px; }
 .dob-in .ls-in { padding: 11px 10px; width: auto; min-width: 0; cursor: pointer; }

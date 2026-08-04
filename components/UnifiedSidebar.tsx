@@ -32,7 +32,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets } = data;
+  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const owner = role === "owner", biller = role === "biller";
 
 
@@ -47,21 +47,11 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
 
   let groups: Group[];
   if (isAdmin && hasBilling) {
-    // The admin sees everything, so this is ONE clean menu of every page — no
-    // per-role duplicate sections. Grouped by area, each page listed once.
+    // The admin's own menu is intentionally lean: just their admin tools + team.
+    // Billing / intake / clinician screens are reached by "viewing as" that role
+    // via the switcher at the top of the sidebar — no duplicated menus here.
     groups = [
       { label: "", items: [uToday] },
-      { label: "Intake", items: [uDash, uForms] },
-      { label: "Billing", items: [
-        { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
-        { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
-        { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
-        { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
-        { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-        { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
-        { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
-        { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
-      ] },
       { label: "Team", items: [uNotices, uMessages, uTickets] },
       { label: "Admin", items: [
         { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
@@ -124,6 +114,20 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     document.cookie = `dev_as=${who}; path=/; max-age=31536000`;
     window.location.href = "/today";
   }
+  // Admin "Viewing as": set (or clear) the server-checked admin_as cookie and land
+  // on that role's home. Only the system admin can do this; the server enforces it.
+  function switchView(target: "me" | "owner" | "biller" | "clinician") {
+    if (target === "me") {
+      document.cookie = "admin_as=; path=/; max-age=0";
+      window.location.href = "/today";
+      return;
+    }
+    const id = switchTargets[target];
+    if (!id) return;
+    document.cookie = `admin_as=${id}; path=/; max-age=31536000`;
+    window.location.href = target === "owner" ? "/billing/overview" : target === "biller" ? "/billing/biller" : "/billing/me";
+  }
+  const SWITCHES = [["me", "Me"], ["owner", "Owner"], ["biller", "Biller"], ["clinician", "Clinician"]] as const;
   async function signOut() {
     document.cookie = "dev_role=; path=/; max-age=0";
     document.cookie = "dev_as=; path=/; max-age=0";
@@ -138,6 +142,26 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
           <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
           <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
         </Link>
+
+        {canSwitchViews && (
+          <div className="bo-switch">
+            <div className="bo-switch-lab">Viewing as</div>
+            <div className="bo-switch-seg">
+              {SWITCHES.map(([key, label]) => {
+                const active = (viewingAsRole ?? "me") === key;
+                const disabled = key !== "me" && !switchTargets[key];
+                return (
+                  <button key={key} type="button" className={`bo-switch-btn ${active ? "on" : ""}`} disabled={disabled} onClick={() => switchView(key)}>{label}</button>
+                );
+              })}
+            </div>
+            {viewingAsRole && (
+              <button type="button" className="bo-switch-back" onClick={() => switchView("me")}>
+                ← Back to my admin{viewingAsName ? ` · you are seeing ${viewingAsName}'s view` : ""}
+              </button>
+            )}
+          </div>
+        )}
 
         <nav className="bo-nav">
           {groups.map((g, gi) => (

@@ -3,8 +3,13 @@
 
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { getClinician, type Clinician } from "./clinicians";
+import { getClinician, isSystemAdmin, type Clinician } from "./clinicians";
 import { getUser } from "./users";
+
+// Cookie the system admin sets to "view as" another person. It is ONLY ever
+// honoured when the real signed-in user is a system admin (checked server-side),
+// so a non-admin setting it themselves does nothing.
+const VIEW_AS_COOKIE = "admin_as";
 
 const COOKIE_NAME = "tifec_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 hours
@@ -94,10 +99,8 @@ export async function clearSessionCookie() {
   store.delete(COOKIE_NAME);
 }
 
-/** Returns the logged-in clinician (verified) or null. Safe to call in server components. */
-export async function getCurrentClinician(): Promise<Clinician | null> {
-  const store = await cookies();
-
+/** The REAL signed-in clinician (ignoring any admin "view as"), or null. */
+async function resolveRealClinician(store: Awaited<ReturnType<typeof cookies>>): Promise<Clinician | null> {
   // 1) A real signed-in session always wins — this is how per-person logins work.
   const token = store.get(COOKIE_NAME)?.value;
   if (token) {
@@ -126,4 +129,44 @@ export async function getCurrentClinician(): Promise<Clinician | null> {
   }
 
   return null;
+}
+
+/**
+ * The EFFECTIVE clinician for the request. Normally the real signed-in user, but
+ * if that user is a system admin and has set the "view as" cookie, we return the
+ * impersonated clinician so every page + the menu render exactly as that person
+ * sees them. Safe to call in server components.
+ */
+export async function getCurrentClinician(): Promise<Clinician | null> {
+  const store = await cookies();
+  const real = await resolveRealClinician(store);
+  if (!real) return null;
+  if (isSystemAdmin(real)) {
+    const as = store.get(VIEW_AS_COOKIE)?.value;
+    if (as && as !== real.id) {
+      const target = getClinician(as);
+      if (target) return target;
+    }
+  }
+  return real;
+}
+
+/**
+ * Impersonation state for the sidebar switcher + banner. `real` is who is truly
+ * signed in; `impersonating` is true when a system admin is viewing as someone
+ * else. Only a system admin can ever impersonate.
+ */
+export async function getViewAsState(): Promise<{ real: Clinician; effective: Clinician; impersonating: boolean } | null> {
+  const store = await cookies();
+  const real = await resolveRealClinician(store);
+  if (!real) return null;
+  let effective = real;
+  if (isSystemAdmin(real)) {
+    const as = store.get(VIEW_AS_COOKIE)?.value;
+    if (as && as !== real.id) {
+      const target = getClinician(as);
+      if (target) effective = target;
+    }
+  }
+  return { real, effective, impersonating: effective.id !== real.id };
 }

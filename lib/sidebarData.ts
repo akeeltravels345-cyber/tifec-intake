@@ -6,7 +6,8 @@ import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { billingRoleOf, hasBillingBeta } from "@/lib/billingRole";
-import type { Clinician } from "@/lib/clinicians";
+import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
+import { getViewAsState } from "@/lib/auth";
 
 export interface SidebarData {
   role: "owner" | "biller" | "clinician";
@@ -18,19 +19,36 @@ export interface SidebarData {
   needReview: number;
   teamUnread: number;
   openTickets: number;
+  // "Viewing as" switcher (system admin only). canSwitchViews = the REAL user is
+  // the admin; viewingAsRole = the role currently being impersonated (null when
+  // the admin is on their own menu); switchTargets = who to impersonate per role.
+  canSwitchViews: boolean;
+  viewingAsRole: "owner" | "biller" | "clinician" | null;
+  viewingAsName: string | null;
+  switchTargets: { owner: string | null; biller: string | null; clinician: string | null };
 }
 
 export async function getSidebarData(me: Clinician): Promise<SidebarData> {
   const hasBilling = hasBillingBeta(me);
-  const [subs, teamUnread, tickets, sessions] = await Promise.all([
+  const [subs, teamUnread, tickets, sessions, view] = await Promise.all([
     getSubmissionsByClinician(me.id),
     unreadCount(me.id),
     listTickets(),
     hasBilling ? listSessions() : Promise.resolve([]),
+    getViewAsState(),
   ]);
+  const canSwitchViews = !!view && isSystemAdmin(view.real);
+  const impersonating = canSwitchViews && !!view && view.impersonating;
+  const billingFolks = CLINICIANS.filter((c) => hasBillingBeta(c));
+  const pick = (r: "owner" | "biller" | "clinician") =>
+    billingFolks.find((c) => !isSystemAdmin(c) && billingRoleOf(c) === r && (r !== "clinician" || !c.intakeHidden))?.id ?? null;
   return {
     role: billingRoleOf(me),
     hasBilling,
+    canSwitchViews,
+    viewingAsRole: impersonating ? billingRoleOf(me) : null,
+    viewingAsName: impersonating ? me.name : null,
+    switchTargets: { owner: pick("owner"), biller: pick("biller"), clinician: pick("clinician") },
     // The builder/oversight account (contact === "admin", e.g. Akeel) gets the
     // three-role builder sidebar. The practice owner (Dr. Shion) also carries
     // admin: true for oversight, but they are an OWNER and must see only the
