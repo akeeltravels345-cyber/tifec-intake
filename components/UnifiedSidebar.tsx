@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { SidebarData } from "@/lib/sidebarData";
 
@@ -22,10 +21,8 @@ const IcWork = () => S(<><rect x="4" y="4" width="16" height="16" rx="2" /><path
 const IcKey = () => S(<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2" /></>);
 const IcSetup = () => S(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
-const IcChevron = () => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>);
-
 interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; }
-interface Group { label: string; items: Item[]; collapsible?: boolean; }
+interface Group { label: string; items: Item[]; }
 
 function initialsOf(name: string): string {
   const parts = name.replace(/\(.*?\)/g, "").replace(/^(Dr\.?|Mrs\.?|Mr\.?|Ms\.?|Miss)\s+/i, "").trim().split(/\s+/);
@@ -38,17 +35,6 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets } = data;
   const owner = role === "owner", biller = role === "biller";
 
-  // Which collapsible role sections (admin builder view) are folded away. The
-  // flat "all my pages" menu is the admin's day-to-day view, so the three
-  // role-inspection sections start collapsed. Choice persists per browser.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ "Owner view": true, "Biller view": true, "Clinician view": true });
-  // Key is versioned: bumping it retires everyone's old saved state so the new
-  // "my menu open, role views folded" default takes effect on next login.
-  useEffect(() => {
-    try { const raw = localStorage.getItem("bo-collapsed-v2"); if (raw) setCollapsed(JSON.parse(raw)); } catch {}
-  }, []);
-  const toggleGroup = (label: string) =>
-    setCollapsed((c) => { const n = { ...c, [label]: !c[label] }; try { localStorage.setItem("bo-collapsed-v2", JSON.stringify(n)); } catch {} return n; });
 
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.
@@ -61,67 +47,27 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
 
   let groups: Group[];
   if (isAdmin && hasBilling) {
-    // The admin is the builder. Each collapsible section is a faithful, COMPLETE
-    // replica of one role's own menu — top to bottom, exactly what that person
-    // sees — so the admin can inspect, configure or troubleshoot any screen.
-    const ownerItems: Item[] = [
-      uToday, uDash, uForms,
-      { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
-      { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
-      { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
-      { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
-      { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-      uNotices, uMessages, uTickets,
-      { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
-      { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
-    ];
-    const billerItems: Item[] = [
-      uToday, uDash, uForms,
-      { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
-      { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
-      { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
-      { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
-      { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-      { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
-      uNotices, uMessages, uTickets,
-      { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
-      { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
-    ];
-    const clinicianItems: Item[] = [
-      uToday, uDash, uForms,
-      { href: "/billing/me", label: "Payout statement", icon: IcClin, match: (p) => p === "/billing/me" },
-      { href: "/billing/clients", label: "My clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-      { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
-      uNotices, uMessages, uTickets,
-      { href: "/billing/me/setup", label: "My setup", icon: IcSetup, match: (p) => p.startsWith("/billing/me/setup") },
-    ];
-    // The admin's own menu: one flat, deduped list of every page they can reach —
-    // "all my pages" — grouped by area. The three role-replica sections stay
-    // below as a collapsible builder tool for inspecting exactly what each role
-    // sees, but they start folded so this clean menu is what shows by default.
-    const adminItems: Item[] = [
-      { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
-      { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
-      { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
-      { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
-      { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
-      { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-      { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
-      { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
-    ];
+    // The admin sees everything, so this is ONE clean menu of every page — no
+    // per-role duplicate sections. Grouped by area, each page listed once.
     groups = [
       { label: "", items: [uToday] },
       { label: "Intake", items: [uDash, uForms] },
-      { label: "Billing", items: adminItems },
+      { label: "Billing", items: [
+        { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
+        { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
+        { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+        { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
+        { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+        { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
+        { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
+        { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
+      ] },
       { label: "Team", items: [uNotices, uMessages, uTickets] },
       { label: "Admin", items: [
         { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
         { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
         { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
       ] },
-      { label: "Owner view", items: ownerItems, collapsible: true },
-      { label: "Biller view", items: billerItems, collapsible: true },
-      { label: "Clinician view", items: clinicianItems, collapsible: true },
     ];
   } else {
     groups = [
@@ -194,35 +140,20 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
         </Link>
 
         <nav className="bo-nav">
-          {groups.map((g, gi) => {
-            const folded = g.collapsible ? !!collapsed[g.label] : false;
-            return (
-              <div key={g.label || gi} style={g.collapsible && gi > 0 ? { marginTop: 6 } : undefined}>
-                {g.collapsible ? (
-                  <button
-                    type="button"
-                    className={`bo-navl bo-navl-btn ${folded ? "" : "open"}`}
-                    onClick={() => toggleGroup(g.label)}
-                    aria-expanded={!folded}
-                  >
-                    <span>{g.label}</span>
-                    <IcChevron />
-                  </button>
-                ) : (
-                  g.label && <div className="bo-navl" style={gi === 0 ? undefined : { marginTop: 14 }}>{g.label}</div>
-                )}
-                {!folded && g.items.map((n) => {
-                  const Icon = n.icon;
-                  return (
-                    <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
-                      <Icon />{n.label}
-                      {n.badge ? <span className="bdg">{n.badge}</span> : null}
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          })}
+          {groups.map((g, gi) => (
+            <div key={g.label || gi}>
+              {g.label && <div className="bo-navl" style={gi === 0 ? undefined : { marginTop: 14 }}>{g.label}</div>}
+              {g.items.map((n) => {
+                const Icon = n.icon;
+                return (
+                  <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
+                    <Icon />{n.label}
+                    {n.badge ? <span className="bdg">{n.badge}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="bo-side-foot">
