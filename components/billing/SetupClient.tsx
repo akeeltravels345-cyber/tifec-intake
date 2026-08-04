@@ -136,15 +136,22 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       </div>
       )}
 
-      {/* Builder processing fee — admin (builder) only, not shown to the owner */}
-      {isAdmin && (
+      {/* Platform processing fee — the admin (builder) sets it; the owner sees it
+          (read-only) since it's charged to the practice. Hidden from the biller. */}
+      {(isAdmin || canManageMoney) && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Processing fee <span className="su-tag">builder</span></h2><span className="su-hint">Your platform fee as a % of total cash collected. Shows only to you (admin) on the overview — not on the owner&apos;s dashboard.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Processing fee {isAdmin && <span className="su-tag">builder</span>}</h2><span className="su-hint">{isAdmin ? "Your platform fee as a % of total cash collected." : "The platform fee charged on every dollar the practice collects — set by your administrator."}</span></div>
         <div className="su-card su-comm">
-          <div className="who"><div className="av" style={{ background: "linear-gradient(135deg,#7c5cff,#2E3192)" }}>%</div><div><div className="nm">Platform processing fee</div><div className="rl">% of total collected · your take</div></div></div>
+          <div className="who"><div className="av" style={{ background: "linear-gradient(135deg,#7c5cff,#2E3192)" }}>%</div><div><div className="nm">Platform processing fee</div><div className="rl">% of total collected</div></div></div>
           <div className="rate">
-            <div><div className="ratebox"><input type="number" step="0.5" min="0" value={procPct} onChange={(e) => setProcPct(e.target.value)} onBlur={() => saveProcFee(procPct)} /><span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
-            <button className="su-save" onClick={() => saveProcFee(procPct)}>Save</button>
+            {isAdmin ? (
+              <>
+                <div><div className="ratebox"><input type="number" step="0.5" min="0" value={procPct} onChange={(e) => setProcPct(e.target.value)} onBlur={() => saveProcFee(procPct)} /><span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
+                <button className="su-save" onClick={() => saveProcFee(procPct)}>Save</button>
+              </>
+            ) : (
+              <div><div className="ratebox readonly">{procPct || 0}<span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
+            )}
           </div>
         </div>
       </div>

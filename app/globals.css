@@ -1455,7 +1455,7 @@ body:has(.biz) { background: #F8F9F8; }
 }
 .biz a { color: var(--indigo); }
 .biz .serif { font-family: "Newsreader", Georgia, serif; }
-.bo-side { width: 242px; flex: none; background: #fff; border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.bo-side { width: 242px; flex: none; background: #fff; border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; z-index: 50; }
 .bo-brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 26px; }
 /* Brand row: logo/name on the left, the notification bell tucked to the right. */
 .bo-brandrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
@@ -2314,6 +2314,7 @@ body:has(.biz) { background: #F8F9F8; }
    height clipped the digit top and bottom. The .ratebox wrapper gives padding. */
 .su-comm .ratebox input { border: none; background: transparent; font: 500 22px/1.3 "Newsreader", serif; width: 46px; height: auto; padding: 0; text-align: right; color: var(--ink); }
 .su-comm .ratebox input:focus { outline: none; }
+.su-comm .ratebox.readonly { font: 500 22px/1.3 "Newsreader", serif; color: var(--ink); background: #faf8f3; }
 .su-comm .pct { font: 500 20px "Newsreader", serif; color: var(--muted); }
 .su-comm .basis { font-size: 12px; color: var(--faint); margin-top: 4px; }
 .su-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
