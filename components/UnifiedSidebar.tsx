@@ -42,11 +42,13 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // flat "all my pages" menu is the admin's day-to-day view, so the three
   // role-inspection sections start collapsed. Choice persists per browser.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ "Owner view": true, "Biller view": true, "Clinician view": true });
+  // Key is versioned: bumping it retires everyone's old saved state so the new
+  // "my menu open, role views folded" default takes effect on next login.
   useEffect(() => {
-    try { const raw = localStorage.getItem("bo-collapsed"); if (raw) setCollapsed(JSON.parse(raw)); } catch {}
+    try { const raw = localStorage.getItem("bo-collapsed-v2"); if (raw) setCollapsed(JSON.parse(raw)); } catch {}
   }, []);
   const toggleGroup = (label: string) =>
-    setCollapsed((c) => { const n = { ...c, [label]: !c[label] }; try { localStorage.setItem("bo-collapsed", JSON.stringify(n)); } catch {} return n; });
+    setCollapsed((c) => { const n = { ...c, [label]: !c[label] }; try { localStorage.setItem("bo-collapsed-v2", JSON.stringify(n)); } catch {} return n; });
 
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.

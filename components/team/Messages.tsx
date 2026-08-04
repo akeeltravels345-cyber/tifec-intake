@@ -39,9 +39,17 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState<Msg[]>(messages);
   const endRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setLive(messages); }, [messages]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [live.length]);
+  // Grow the compose box with the text (up to a few lines), shrink back on send.
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [text]);
 
   // No websockets on this hosting, so poll while a thread is open. Cheap at
   // this size, and it stops when the tab is hidden.
@@ -63,8 +71,8 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
     return () => clearInterval(h);
   }, [threadId, meId, activeWith, threads]);
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
+  function onSubmit(e: React.FormEvent) { e.preventDefault(); send(); }
+  async function send() {
     const body = text.trim();
     if (!body || busy || !threadId) return;
     setBusy(true);
@@ -164,9 +172,11 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                 <span>Encrypted, but not a clinical record — use initials, not client names.</span>
                 <Link href="/team/tickets" className="tm-msgticket">Need it tracked (payout, HR)? Raise a ticket instead →</Link>
               </div>
-              <form className="tm-compose" onSubmit={send}>
-                <input
-                  className="tm-in" value={text} onChange={(e) => setText(e.target.value)}
+              <form className="tm-compose" onSubmit={onSubmit}>
+                <textarea
+                  ref={taRef} rows={1}
+                  className="tm-in tm-composein" value={text} onChange={(e) => setText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder={`Message ${active?.name?.split(" ")[0] ?? ""}...`} aria-label="Message"
                 />
                 <button className="tm-cta" type="submit" disabled={busy || !text.trim()}>Send</button>

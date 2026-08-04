@@ -2383,7 +2383,12 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-bubble.me .tm-btext { color: #fff; }
 .tm-btime { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
 .tm-bubble.me .tm-btime { color: rgba(255,255,255,.7); }
-.tm-compose { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+.tm-compose { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); align-items: flex-end; }
+/* Compose box starts at one line and grows with the message (JS caps the height
+   at max-height, then it scrolls); Enter sends, Shift+Enter adds a line. The low
+   min-height overrides the global textarea floor so it isn't stuck tall. */
+.tm-composein { flex: 1; min-width: 0; min-height: 42px; resize: none; overflow-y: auto; max-height: 140px; line-height: 1.5; }
+.tm-compose .tm-cta { flex: 0 0 auto; }
 
 /* --- tickets --------------------------------------------------------------- */
 .tm-tabs2 { display: flex; gap: 6px; margin-bottom: 14px; }
