@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Attach { docId: string; name: string; mime: string; kind: "file" | "voice" }
+interface NoteRow { by: string; at: string; text: string }
 
 export interface FeatureRow {
   id: string;
@@ -11,10 +12,14 @@ export interface FeatureRow {
   description: string;
   flow: string;
   priority: "nice" | "important" | "urgent";
+  status: "open" | "in_progress" | "done";
   attachments: Attach[];
+  notes: NoteRow[];
   by: string;
   at: string;
 }
+
+const STATUS_LABEL: Record<string, string> = { open: "Open", in_progress: "In progress", done: "Done" };
 
 interface Draft { name: string; mime: string; kind: "file" | "voice"; base64: string }
 
@@ -172,30 +177,85 @@ export default function WorklistClient({ rows }: { rows: FeatureRow[] }) {
         </div>
       ) : (
         <div className="wl-list">
-          {rows.map((f) => (
-            <div className="wl-card" key={f.id}>
-              <div className="wl-head">
-                <span className="wl-name">{f.name}</span>
-                <span className={`wl-pri ${f.priority}`}>{PRI_LABEL[f.priority]}</span>
-              </div>
-              {f.description && <p className="wl-desc">{f.description}</p>}
-              {f.flow && <div className="wl-flowline"><span className="wl-flag">Flow</span>{f.flow}</div>}
-              {f.attachments.length > 0 && (
-                <div className="wl-atts">
-                  {f.attachments.map((a) => a.kind === "voice" ? (
-                    <audio key={a.docId} controls preload="none" src={ATT(a.docId)} className="wl-audio" />
-                  ) : /^image\//.test(a.mime) ? (
-                    <a key={a.docId} href={ATT(a.docId)} target="_blank" rel="noreferrer" className="wl-thumbwrap"><img src={ATT(a.docId)} alt={a.name} className="wl-thumb" /></a>
-                  ) : (
-                    <a key={a.docId} href={ATT(a.docId)} target="_blank" rel="noreferrer" className="wl-fileatt">📎 {a.name}</a>
-                  ))}
-                </div>
-              )}
-              <div className="wl-meta">Requested by {f.by} · {f.at}</div>
-            </div>
-          ))}
+          {rows.map((f) => <FeatureCard key={f.id} f={f} />)}
         </div>
       )}
     </>
+  );
+}
+
+function FeatureCard({ f }: { f: FeatureRow }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState("");
+
+  async function act(payload: Record<string, unknown>) {
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/billing/worklist", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: f.id, ...payload }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not update.");
+      setNote(""); setNoteOpen(false);
+      router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not update.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className={`wl-card ${f.status === "done" ? "done" : ""}`}>
+      <div className="wl-head">
+        <span className="wl-name">{f.name}</span>
+        <span className={`wl-status ${f.status}`}>{STATUS_LABEL[f.status]}</span>
+        <span className={`wl-pri ${f.priority}`}>{PRI_LABEL[f.priority]}</span>
+      </div>
+      {f.description && <p className="wl-desc">{f.description}</p>}
+      {f.flow && <div className="wl-flowline"><span className="wl-flag">Flow</span>{f.flow}</div>}
+      {f.attachments.length > 0 && (
+        <div className="wl-atts">
+          {f.attachments.map((a) => a.kind === "voice" ? (
+            <audio key={a.docId} controls preload="none" src={ATT(a.docId)} className="wl-audio" />
+          ) : /^image\//.test(a.mime) ? (
+            <a key={a.docId} href={ATT(a.docId)} target="_blank" rel="noreferrer" className="wl-thumbwrap"><img src={ATT(a.docId)} alt={a.name} className="wl-thumb" /></a>
+          ) : (
+            <a key={a.docId} href={ATT(a.docId)} target="_blank" rel="noreferrer" className="wl-fileatt">📎 {a.name}</a>
+          ))}
+        </div>
+      )}
+
+      {f.notes.length > 0 && (
+        <div className="wl-notes">
+          {f.notes.map((n, i) => (
+            <div className="wl-note" key={i}><span className="who">{n.by}</span><span className="when">{n.at}</span><div className="txt">{n.text}</div></div>
+          ))}
+        </div>
+      )}
+
+      {err && <div className="ls-err" style={{ margin: "8px 0 0" }}>{err}</div>}
+
+      {noteOpen && (
+        <div className="wl-noteadd">
+          <textarea className="ls-in" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ask a question or leave a reply…" autoFocus />
+          <div className="wl-noteacts">
+            <button type="button" className="ls-save sm" disabled={busy || !note.trim()} onClick={() => act({ action: "note", text: note })}>{busy ? "Posting…" : "Post note"}</button>
+            <button type="button" className="su-del sm" disabled={busy} onClick={() => { setNoteOpen(false); setNote(""); }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="wl-cardfoot">
+        <div className="wl-actions">
+          {f.status !== "done" && <button type="button" className="wl-act done" disabled={busy} onClick={() => act({ action: "status", status: "done" })}>✓ Mark done</button>}
+          {f.status === "open" && <button type="button" className="wl-act" disabled={busy} onClick={() => act({ action: "status", status: "in_progress" })}>Start</button>}
+          {f.status === "done" && <button type="button" className="wl-act" disabled={busy} onClick={() => act({ action: "status", status: "open" })}>Reopen</button>}
+          {!noteOpen && <button type="button" className="wl-act" disabled={busy} onClick={() => setNoteOpen(true)}>Ask / reply</button>}
+        </div>
+        <div className="wl-meta">Requested by {f.by} · {f.at}</div>
+      </div>
+    </div>
   );
 }

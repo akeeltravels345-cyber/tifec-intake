@@ -25,7 +25,7 @@ export default async function SetupPage() {
       settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0, billerBasePct: s.billerBasePct ?? 0, billerCommissionApplies: s.billerCommissionApplies ?? false, noPayout: s.noPayout ?? false }))}
       canManageMoney={isOwner(user.role)}
       isBillerUser={isBiller(user.role)}
-      canSeeProvider={isBiller(user.role) || user.clinician.contact === "admin"}
+      canSeeProvider={isBiller(user.role)}
       billerPct={cfg.billerCommissionPct}
       processingFeePct={cfg.processingFeePct ?? 0}
       isAdmin={user.clinician.contact === "admin"}

@@ -20,7 +20,9 @@ export default async function WorklistPage() {
     description: f.description,
     flow: f.flow,
     priority: f.priority,
+    status: f.status,
     attachments: f.attachments,
+    notes: f.notes.map((n) => ({ by: getClinician(n.by)?.name ?? "Someone", at: n.at.slice(0, 16).replace("T", " "), text: n.text })),
     by: getClinician(f.requestedBy)?.name ?? "Someone",
     at: f.createdAt.slice(0, 10),
   }));

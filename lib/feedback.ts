@@ -52,6 +52,25 @@ export async function insertFeedback(category: string, message: string, clinicia
   return row;
 }
 
+/** Replace a row's message (used by the worklist to update status / notes). */
+export async function updateFeedbackMessage(id: string, message: string): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    const res = (await sql`UPDATE feedback SET message = ${message} WHERE id = ${id} RETURNING id`) as { id: string }[];
+    return res.length > 0;
+  }
+  try {
+    const rows: FeedbackRow[] = JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));
+    const row = rows.find((r) => r.id === id);
+    if (!row) return false;
+    row.message = message;
+    fs.writeFileSync(LOCAL_FILE, JSON.stringify(rows, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function listFeedback(limit = 50): Promise<FeedbackRow[]> {
   if (usePostgres) {
     const sql = await pgClient();
