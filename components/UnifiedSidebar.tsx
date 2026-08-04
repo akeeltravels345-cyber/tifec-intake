@@ -140,21 +140,14 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
 
   return (
     <>
-      {/* Persistent Messages + Notifications, pinned to the top-right of every
-          page (not the sidebar rail). */}
-      <div className="app-topright">
-        <Link href="/team/messages" className="app-tricon" title="Messages" aria-label={`Messages${teamUnread > 0 ? ` (${teamUnread} unread)` : ""}`}>
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-          {teamUnread > 0 && <span className="app-tridot">{teamUnread > 9 ? "9+" : teamUnread}</span>}
-        </Link>
-        <NotificationBell initialUnread={noteCount} />
-      </div>
-
       <aside className="bo-side">
-        <Link href="/today" className="bo-brand">
-          <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
-          <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
-        </Link>
+        <div className="bo-brandrow">
+          <Link href="/today" className="bo-brand">
+            <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
+            <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
+          </Link>
+          <NotificationBell initialUnread={noteCount} unreadMessages={teamUnread} />
+        </div>
 
         {canSwitchViews && (
           <div className="bo-switch">

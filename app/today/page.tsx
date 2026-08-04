@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, isOwner, isBiller, hasBillingBeta, devMode } from "@/lib/billingRole";
+import { isSystemAdmin } from "@/lib/clinicians";
 import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
-import { listSessions } from "@/lib/billing";
+import { listSessions, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, collectedAtVisit, selfPayOutstanding } from "@/lib/billingCalc";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
@@ -36,6 +37,7 @@ export default async function TodayPage() {
   const role = billingRoleOf(me);
   const owner = isOwner(role);
   const biller = isBiller(role);
+  const admin = isSystemAdmin(me);
   const hasBilling = hasBillingBeta(me);
   const sidebar = await getSidebarData(me);
 
@@ -46,10 +48,14 @@ export default async function TodayPage() {
   // Team: unread messages + tickets waiting on this person.
   const [teamUnread, noteCount, tickets] = await Promise.all([unreadCount(me.id), unreadNotifications(me.id), listTickets()]);
   const openTickets = tickets.filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length;
+  const openTicketsAll = tickets.filter((t) => t.status !== "resolved").length;
 
   // Billing money position (only computed for people with billing access).
   let toBillPractice = 0, myToBill = 0;
   let pipes: MonthPipe[] = [];
+  // Admin (builder) processing-fee numbers: the platform fee is a % of cash
+  // collected, so "outstanding" is that % of money still to be collected.
+  let feePct = 0, collectedAll = 0, outstandingAll = 0;
   if (hasBilling) {
     const all = await listSessions();
     for (const s of all) {
@@ -60,6 +66,19 @@ export default async function TodayPage() {
       }
     }
     toBillPractice = r2(toBillPractice); myToBill = r2(myToBill);
+
+    if (admin) {
+      feePct = (await getPracticeConfig()).processingFeePct ?? 0;
+      for (const s of all) {
+        // Cash already collected (drives the fee earned).
+        collectedAll += collectedAtVisit(s);
+        if (s.insurerId && s.insurancePaid) collectedAll += insurancePortion(s);
+        // Money still to come in (will generate fee when it lands).
+        if (s.insurerId && !s.insurancePaid) outstandingAll += insurancePortion(s);
+        outstandingAll += selfPayOutstanding(s);
+      }
+      collectedAll = r2(collectedAll); outstandingAll = r2(outstandingAll);
+    }
 
     if (owner) {
       // Every month that has activity, plus the current month — newest first,
@@ -90,6 +109,9 @@ export default async function TodayPage() {
       });
     }
   }
+
+  const feeEarned = r2((collectedAll * feePct) / 100);
+  const feeOutstanding = r2((outstandingAll * feePct) / 100);
 
   // The single most useful next action for this person.
   const startHere = owner
@@ -139,6 +161,36 @@ export default async function TodayPage() {
           </div>
           <span className="today-sh-cta">{startHere.cta} →</span>
         </Link>
+
+        {/* Admin (builder) numbers — your processing-fee take + your tickets */}
+        {admin && (
+          <>
+            <div className="today-secrow"><span className="bo-lab">Your numbers</span></div>
+            <div className="today-nums">
+              <div className="today-num">
+                <div className="k">Processing fee earned</div>
+                <div className="v">{money(feeEarned)}</div>
+                <div className="s">{feePct}% of {money(collectedAll)} collected so far</div>
+              </div>
+              <div className="today-num owe">
+                <div className="k">Fee still to come</div>
+                <div className="v">{money(feeOutstanding)}</div>
+                <div className="s">{feePct}% of {money(outstandingAll)} not yet collected</div>
+              </div>
+              <div className="today-num total">
+                <div className="k">Total when all settles</div>
+                <div className="v">{money(r2(feeEarned + feeOutstanding))}</div>
+                <div className="s">earned + outstanding</div>
+              </div>
+              <Link href="/team/tickets" className="today-num link">
+                <div className="k">Tickets on you</div>
+                <div className="v">{openTickets}</div>
+                <div className="s">{openTicketsAll} open across the team →</div>
+              </Link>
+            </div>
+            {feePct === 0 && <p className="today-feenote">Set your platform processing fee % in <Link href="/billing/config">Setup</Link> to see these fill in.</p>}
+          </>
+        )}
 
         {/* Owner money pipeline — swipeable by month */}
         {owner && pipes.length > 0 && <TodayPipeline months={pipes} />}

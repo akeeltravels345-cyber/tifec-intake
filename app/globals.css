@@ -1457,18 +1457,18 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .serif { font-family: "Newsreader", Georgia, serif; }
 .bo-side { width: 242px; flex: none; background: #fff; border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .bo-brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 26px; }
-/* Persistent Messages + Notifications, pinned to the top-right of every page. */
-.app-topright { position: fixed; top: 14px; right: 20px; z-index: 60; display: flex; align-items: center; gap: 8px; }
-.app-tricon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; background: #fff; border: 1px solid var(--edge, #ECE6DA); color: var(--muted, #6a6f66); text-decoration: none; box-shadow: 0 1px 3px rgba(35,42,61,.06); }
-.app-tricon:hover { color: var(--indigo, #2E3192); border-color: var(--indigo, #2E3192); }
-.app-tridot { position: absolute; top: -6px; right: -6px; background: var(--teal, #2F8E93); color: #fff; border-radius: 999px; font: 700 10px "Open Sans", system-ui, sans-serif; padding: 1px 5px; min-width: 16px; text-align: center; border: 2px solid #fff; }
-/* The bell inside the cluster gets the same pill treatment as the message icon. */
-.app-topright .tm-bell { width: 38px; height: 38px; justify-content: center; background: #fff; border: 1px solid var(--edge, #ECE6DA); border-radius: 11px; padding: 0; box-shadow: 0 1px 3px rgba(35,42,61,.06); }
-.app-topright .tm-bell:hover { border-color: var(--indigo, #2E3192); color: var(--indigo, #2E3192); background: #fff; }
-/* The page headers no longer carry their own message/bell — the fixed cluster
-   replaces them everywhere. */
+/* Brand row: logo/name on the left, the notification bell tucked to the right. */
+.bo-brandrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.bo-brandrow .bo-brand { padding-bottom: 20px; flex: 1; min-width: 0; }
+.bo-brandrow .tm-bellwrap { margin-bottom: 20px; }
+.bo-brandrow .tm-bell { border: 1px solid var(--edge, #ECE6DA); border-radius: 10px; padding: 7px; }
+.bo-brandrow .tm-bell:hover { border-color: var(--indigo, #2E3192); color: var(--indigo, #2E3192); background: #fff; }
+/* In the sidebar the bell sits near the left edge, so open its panel rightward. */
+.bo-brandrow .tm-bellpanel { right: auto; left: 0; }
+/* Page headers no longer carry their own bell — it lives in the sidebar now. */
 .dm-topbar .dm-msglink, .dm-topbar .tm-bellwrap, .tm-topright .tm-bellwrap { display: none; }
-@media (max-width: 820px) { .app-topright { top: 10px; right: 12px; } }
+/* Chat banner variant (teal accent) vs the amber announcement banner. */
+.tm-banner.message { }
 /* Admin "Viewing as" role switcher pinned above the menu. */
 .bo-switch { margin: -14px 0 16px; padding: 10px; border: 1px solid var(--edge, #E1D9C8); border-radius: 12px; background: #faf8f3; }
 .bo-switch-lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b3aa98; font-weight: 700; margin: 0 2px 7px; }
@@ -2265,8 +2265,21 @@ body:has(.biz) { background: #F8F9F8; }
 .today-attn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); flex: none; }
 .today-attn-row.warn .today-attn-dot { background: var(--amber); }
 .today-attn-go { margin-left: auto; color: var(--muted); }
+/* Admin's own numbers (processing fee + tickets) on Today. */
+.today-nums { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 10px; }
+.today-num { background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 16px 16px; display: flex; flex-direction: column; gap: 3px; text-decoration: none; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 8px 20px rgba(70,55,25,.04); }
+.today-num .k { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--faint, #8a93a3); }
+.today-num .v { font: 700 26px "Fraunces", Georgia, serif; color: var(--ink); line-height: 1.1; }
+.today-num .s { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.today-num.owe .v { color: var(--amber, #b8791f); }
+.today-num.total .v { color: var(--teal-deep, #1f6b6f); }
+.today-num.link { transition: transform .1s ease, box-shadow .1s ease; }
+.today-num.link:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(70,55,25,.05), 0 14px 30px rgba(70,55,25,.08); }
+.today-num.link .v { color: var(--indigo); }
+.today-feenote { font-size: 12.5px; color: var(--muted); margin: 0 2px 20px; }
 @media (max-width: 760px) {
   .today-areas { grid-template-columns: repeat(2,1fr); }
+  .today-nums { grid-template-columns: repeat(2,1fr); }
   .today-pipe-cells { grid-template-columns: 1fr; }
   .today-starthere { flex-direction: column; align-items: flex-start; }
 }

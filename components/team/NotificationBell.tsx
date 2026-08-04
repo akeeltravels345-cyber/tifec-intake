@@ -33,14 +33,25 @@ const ago = (iso: string) => {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-export default function NotificationBell({ initialUnread }: { initialUnread: number }) {
+interface Banner { kind: "notice" | "message"; body: string; href: string }
+
+export default function NotificationBell({ initialUnread, unreadMessages = 0 }: { initialUnread: number; unreadMessages?: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(initialUnread);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [banner, setBanner] = useState<Note | null>(null);
+  const [banner, setBanner] = useState<Banner | null>(null);
+  const [dismissed, setDismissed] = useState(false);
   const [muted, setMuted] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+
+  // Persist a "new chat" banner while there are unread messages, until it's
+  // acknowledged (dismissed here, or read in Messages which clears the count).
+  useEffect(() => {
+    if (unreadMessages > 0 && !dismissed) {
+      setBanner({ kind: "message", body: `${unreadMessages} unread message${unreadMessages === 1 ? "" : "s"} — open your chats`, href: "/team/messages" });
+    }
+  }, [unreadMessages, dismissed]);
 
   // Ids already accounted for. Seeded on the first poll so arriving at the page
   // doesn't replay a chime for everything waiting.
@@ -67,14 +78,17 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
 
       if (seen.current === null) {
         seen.current = new Set(list.map((n) => n.id));
-        // Surface an announcement that arrived while they were away.
+        // The unread-message banner is handled by its own effect; here surface an
+        // announcement that arrived while they were away (if no chat banner yet).
         const notice = list.find((n) => n.kind === "notice" && !n.readAt);
-        if (notice) setBanner(notice);
+        if (notice && unreadMessages === 0) setBanner({ kind: "notice", body: notice.body, href: notice.href });
       } else {
         const fresh = list.filter((n) => !seen.current!.has(n.id));
         fresh.forEach((n) => seen.current!.add(n.id));
         const notice = fresh.find((n) => n.kind === "notice");
-        if (notice) { setBanner(notice); chime("notice"); }
+        const msg = fresh.find((n) => n.kind === "message");
+        if (notice) { setBanner({ kind: "notice", body: notice.body, href: notice.href }); setDismissed(false); chime("notice"); }
+        else if (msg) { setBanner({ kind: "message", body: msg.body, href: msg.href }); setDismissed(false); chime("message"); }
         else if (fresh.length > 0) chime("message");
       }
       return list;
@@ -129,13 +143,15 @@ export default function NotificationBell({ initialUnread }: { initialUnread: num
   return (
     <>
       {banner && (
-        <div className="tm-banner" role="status">
-          <span className="ic" aria-hidden="true">📣</span>
+        <div className={`tm-banner ${banner.kind}`} role="status">
+          <span className="ic" aria-hidden="true">{banner.kind === "message" ? "💬" : "📣"}</span>
           <span className="tx">
-            <b>New announcement</b> — {banner.body.replace(/ posted a notice$/, " posted to the notice board")}
+            {banner.kind === "message"
+              ? <><b>New message</b> — {banner.body}</>
+              : <><b>New announcement</b> — {banner.body.replace(/ posted a notice$/, " posted to the notice board")}</>}
           </span>
-          <Link href="/team/notices" className="go" onClick={() => setBanner(null)}>Read it</Link>
-          <button className="x" onClick={() => setBanner(null)} aria-label="Dismiss">✕</button>
+          <Link href={banner.href} className="go" onClick={() => { setBanner(null); setDismissed(true); }}>{banner.kind === "message" ? "Open chat" : "Read it"}</Link>
+          <button className="x" onClick={() => { setBanner(null); setDismissed(true); }} aria-label="Dismiss">✕</button>
         </div>
       )}
 
