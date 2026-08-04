@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
-import { addStagedBatch, batchCount, getStaged, updateStaged, setStagedStatus, type StagedInput } from "@/lib/importStaging";
+import { addStagedBatch, listStaged, getStaged, updateStaged, setStagedStatus, type StagedInput } from "@/lib/importStaging";
 import { resolveClient } from "@/lib/clients";
 import { insertSession, listCptCodes } from "@/lib/billing";
 
@@ -23,10 +23,12 @@ export async function POST(req: Request) {
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
   const action = String(body.action ?? "");
 
-  // Load the bundled PRC batch into the review queue (idempotent).
+  // Load the bundled PRC batch into the review queue. Idempotent per RECORD, not
+  // per batch — so re-loading after a partial/older load tops up only the records
+  // that aren't already staged (e.g. the travel-time rows added later), without
+  // touching or duplicating ones already staged or accepted.
   if (action === "load") {
     const batch = "prc-latty-2026-08";
-    if ((await batchCount(batch)) > 0) return NextResponse.json({ ok: true, already: true });
     let data: { records: Record<string, unknown>[] };
     try {
       data = JSON.parse(fs.readFileSync(path.join(process.cwd(), "db", "prc-latty-batch.json"), "utf8"));
@@ -35,13 +37,17 @@ export async function POST(req: Request) {
     }
     const cpts = await listCptCodes();
     const hrsFor = (code: string) => cpts.find((c) => c.code === code)?.hrs ?? 1;
+    const key = (r: { clientFirst: string; clientLast: string; cpt: string; dateOfService: string; invNo: string; fee: number }) =>
+      `${r.clientLast}|${r.clientFirst}|${r.cpt}|${r.dateOfService}|${r.invNo}|${r.fee}`;
+    const have = new Set((await listStaged()).filter((e) => e.batch === batch).map(key));
     const rows: StagedInput[] = data.records.map((r) => ({
       clinicianId: "joan-latty",
       clientFirst: String(r.clientFirst ?? ""), clientLast: String(r.clientLast ?? ""),
       dob: String(r.dob ?? ""), insurerName: String(r.insurerName ?? ""),
       cpt: String(r.cpt ?? ""), fee: Number(r.fee ?? 0), durationHours: hrsFor(String(r.cpt ?? "")),
       dateOfService: String(r.dateOfService ?? ""), billedDate: String(r.billedDate ?? ""), invNo: String(r.invNo ?? ""),
-    }));
+    })).filter((r) => !have.has(key(r)));
+    if (!rows.length) return NextResponse.json({ ok: true, already: true, loaded: 0 });
     const n = await addStagedBatch(batch, rows, new Date().toISOString());
     return NextResponse.json({ ok: true, loaded: n });
   }

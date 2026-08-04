@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import IdleLogout from "@/components/IdleLogout";
 import Tour from "@/components/Tour";
-import NotificationBell from "@/components/team/NotificationBell";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import type { SidebarData } from "@/lib/sidebarData";
 
@@ -69,9 +68,6 @@ const shield = (
 // Account-menu glyphs (inherit colour from the row).
 const icCompass = (
   <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" {...S}><circle cx="12" cy="12" r="10" /><polygon points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8" /></svg>
-);
-const icChat = (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
 );
 const icLock = (
   <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" {...S}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -209,11 +205,6 @@ export default function DashboardShell({
                 />
               </div>
               <button type="button" className="dm-iconbtn" onClick={() => window.dispatchEvent(new Event("tifec-tour"))} title="Take a tour" aria-label="Take a tour">{icCompass}</button>
-              <Link href="/team/messages" className="dm-msglink" title="Messages" aria-label={`Messages${teamUnread > 0 ? ` (${teamUnread} unread)` : ""}`}>
-                {icChat}
-                {teamUnread > 0 && <span className="dm-msgdot">{teamUnread > 9 ? "9+" : teamUnread}</span>}
-              </Link>
-              <NotificationBell initialUnread={noteCount} />
               <div className="dm-avatar-sq">{initials}</div>
             </div>
 
@@ -312,11 +303,6 @@ export default function DashboardShell({
                 </div>
               </div>
               <div className="dm-pill-note">{shield} Consent included in every form</div>
-              <Link href="/team/messages" className="dm-msglink" title="Messages" aria-label={`Messages${teamUnread > 0 ? ` (${teamUnread} unread)` : ""}`}>
-                {icChat}
-                {teamUnread > 0 && <span className="dm-msgdot">{teamUnread > 9 ? "9+" : teamUnread}</span>}
-              </Link>
-              <NotificationBell initialUnread={noteCount} />
               <div className="dm-avatar-sq">{initials}</div>
             </div>
             <div className="dm-content">{formsSlot}</div>
