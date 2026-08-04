@@ -63,6 +63,14 @@ export default function WorklistClient({ rows }: { rows: FeatureRow[] }) {
 
   async function startRec() {
     setError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("This browser can't record audio here. Voice notes need a secure (https) page and a supported browser.");
+      return;
+    }
+    if (typeof MediaRecorder === "undefined") {
+      setError("This browser doesn't support in-page recording (older Safari). Try Chrome, or attach an audio file instead.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
@@ -79,8 +87,11 @@ export default function WorklistClient({ rows }: { rows: FeatureRow[] }) {
       recRef.current = mr;
       mr.start();
       setRecording(true);
-    } catch {
-      setError("Couldn't access the microphone. Check your browser's mic permission.");
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") setError("Microphone blocked. Click the site's lock/permissions icon in the address bar and allow the microphone, then try again.");
+      else if (name === "NotFoundError" || name === "DevicesNotFoundError") setError("No microphone was found on this device.");
+      else setError("Couldn't start recording. Check your browser's mic permission and try again.");
     }
   }
   function stopRec() { recRef.current?.stop(); }

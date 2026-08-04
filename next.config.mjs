@@ -24,7 +24,9 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   // Secure links can carry tokens in the URL - never leak them via Referer.
   { key: "Referrer-Policy", value: "no-referrer" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Allow the mic on our own origin (voice notes on the worklist); camera and
+  // geolocation stay fully disabled.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
 ];
 
 const nextConfig = {
