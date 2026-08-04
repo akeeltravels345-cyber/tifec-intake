@@ -2497,6 +2497,10 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .bo-acctlink:hover { color: var(--indigo, #2E3192); }
 .dm-iconbtn { background: none; border: 1px solid var(--edge, #ECE6DA); border-radius: 10px; padding: 8px; cursor: pointer; color: var(--muted, #6B7580); display: inline-flex; align-items: center; }
 .dm-iconbtn:hover { color: var(--indigo, #2E3192); border-color: var(--indigo, #2E3192); }
+/* Messages shortcut in the top bar, with an unread badge. */
+.dm-msglink { position: relative; background: none; border: 1px solid var(--edge, #ECE6DA); border-radius: 10px; padding: 8px; cursor: pointer; color: var(--muted, #6B7580); display: inline-flex; align-items: center; text-decoration: none; }
+.dm-msglink:hover { color: var(--indigo, #2E3192); border-color: var(--indigo, #2E3192); }
+.dm-msgdot { position: absolute; top: -6px; right: -6px; background: var(--teal, #2F8E93); color: #fff; border-radius: 999px; font: 700 10px "Open Sans", system-ui, sans-serif; padding: 1px 5px; min-width: 16px; text-align: center; border: 2px solid #fff; }
 
 /* Legibility floor: a visible keyboard focus ring on every interactive element
    (low specificity via :where so any bespoke focus style still wins). */
