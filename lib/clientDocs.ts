@@ -80,6 +80,21 @@ export async function deleteDocFile(docId: string): Promise<void> {
   if (all[docId]) { delete all[docId]; writeLocal(all); }
 }
 
+/** List the files stored under one owner id (e.g. a ticket's images), lightest
+ *  metadata only — no bytes. Used to show a ticket's / worklist item's images. */
+export async function listDocMetaForClient(clientId: string): Promise<{ docId: string; mime: string; size: number }[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT id, mime, size FROM billing_client_docs WHERE client_id = ${clientId} ORDER BY created_at`) as Record<string, unknown>[];
+    return rows.map((r) => ({ docId: String(r.id), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0) }));
+  }
+  const all = readLocal();
+  return Object.entries(all)
+    .filter(([, v]) => v.clientId === clientId)
+    .sort((a, b) => (a[1].createdAt ?? "").localeCompare(b[1].createdAt ?? ""))
+    .map(([docId, v]) => ({ docId, mime: v.mime, size: v.size }));
+}
+
 /** Remove every stored file for a client (used when the client is deleted). */
 export async function deleteDocFilesForClient(clientId: string): Promise<void> {
   if (usePostgres) {

@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
 import { getTicket, listMessages, ticketThreadId, markThreadRead } from "@/lib/comms";
+import { listDocMetaForClient } from "@/lib/clientDocs";
 import TicketDetail from "@/components/team/TicketDetail";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +22,14 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const threadId = ticketThreadId(t.id);
   const replies = await listMessages(threadId);
   await markThreadRead(threadId, me.id);
+  const images = (await listDocMetaForClient(`ticket:${t.id}`))
+    .filter((d) => d.mime.startsWith("image/"))
+    .map((d) => d.docId);
 
   return (
     <TicketDetail
       threadId={threadId}
+      images={images}
       canManage={t.assignees.includes(me.id) || seesAll}
       contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}
       ticket={{

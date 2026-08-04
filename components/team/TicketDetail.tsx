@@ -21,8 +21,8 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed");
 }
 
-export default function TicketDetail({ ticket, replies, threadId, canManage, contacts }: {
-  ticket: Ticket; replies: Reply[]; threadId: string; canManage: boolean; contacts: Contact[];
+export default function TicketDetail({ ticket, replies, threadId, canManage, contacts, images = [] }: {
+  ticket: Ticket; replies: Reply[]; threadId: string; canManage: boolean; contacts: Contact[]; images?: string[];
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -96,6 +96,15 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
       <div className="tm-card tm-first">
         <div className="tm-rwho">{ticket.raisedBy}</div>
         <p className="tm-nb">{ticket.body}</p>
+        {images.length > 0 && (
+          <div className="tm-imgs">
+            {images.map((docId) => (
+              <a key={docId} href={`/api/comms/ticket-image/${docId}`} target="_blank" rel="noreferrer" className="tm-imgwrap">
+                <img src={`/api/comms/ticket-image/${docId}`} alt="Ticket attachment" className="tm-img" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="tm-replies">

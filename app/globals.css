@@ -2417,6 +2417,14 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-av.grp { background: linear-gradient(135deg, #2E8E93, #2E3192); font-size: 15px; }
 .tm-everyone { border-top: none; }
 .tm-bwho { font-size: 11px; font-weight: 700; color: var(--teal-deep, #1f6b6f); margin-bottom: 2px; }
+/* Ticket images */
+.tm-imgbtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px dashed var(--line, #d9e1e5); border-radius: 9px; font: 600 13px "Open Sans", system-ui, sans-serif; color: var(--muted); cursor: pointer; width: fit-content; }
+.tm-imgbtn:hover { border-color: var(--brand, #2E3192); color: var(--ink); }
+.tm-imgdrafts, .tm-imgs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.tm-imgdraft { position: relative; }
+.tm-imgdraft img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line, #d9e1e5); display: block; }
+.tm-imgdraft button { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #a5432f; color: #fff; cursor: pointer; font-size: 13px; line-height: 1; display: grid; place-items: center; }
+.tm-imgwrap img.tm-img { max-width: 180px; max-height: 180px; border-radius: 10px; border: 1px solid var(--line, #d9e1e5); display: block; object-fit: cover; }
 .tm-pmid { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .tm-pname { font: 600 13px "Open Sans"; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tm-plast, .tm-prole { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -17,6 +17,16 @@ const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:
 const nameList = (names: string[]) =>
   names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
+interface ImgDraft { name: string; mime: string; base64: string; url: string }
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
 export default function TicketList({ tickets, contacts, areas, seesAll }: {
   tickets: T[]; contacts: Contact[]; areas: string[]; seesAll: boolean;
 }) {
@@ -31,6 +41,19 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [images, setImages] = useState<ImgDraft[]>([]);
+
+  async function onImages(list: FileList | null) {
+    if (!list) return;
+    setError("");
+    for (const f of Array.from(list)) {
+      if (!f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
+      if (f.size > 4 * 1024 * 1024) { setError(`"${f.name}" is over 4 MB.`); continue; }
+      const base64 = await fileToBase64(f);
+      setImages((im) => [...im, { name: f.name, mime: f.type, base64, url: URL.createObjectURL(f) }]);
+    }
+  }
+  const removeImage = (i: number) => setImages((im) => im.filter((_, idx) => idx !== i));
 
   const shown = tickets
     .filter((t) => (filter === "done" ? t.status === "resolved" : t.status !== "resolved"))
@@ -44,11 +67,11 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
     try {
       const res = await fetch("/api/comms", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body }),
+        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body, images: images.map((im) => ({ base64: im.base64, mime: im.mime })) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Failed");
-      setSubject(""); setBody(""); setOpen(false);
+      setSubject(""); setBody(""); setImages([]); setOpen(false);
       router.refresh();
       router.push(`/team/tickets/${j.id}`);
     } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
@@ -93,6 +116,21 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
           <label className="tm-l" htmlFor="tb">What's going on?</label>
           <textarea id="tb" className="tm-in" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Give enough detail to act on it." />
           <p className="tm-hint">Please don&apos;t include client names or clinical detail.</p>
+
+          <label className="tm-l">Screenshots <span className="tm-opt">optional — images up to 4 MB each</span></label>
+          <label className="tm-imgbtn">🖼 Add image
+            <input type="file" accept="image/*" multiple onChange={(e) => { onImages(e.target.files); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+          </label>
+          {images.length > 0 && (
+            <div className="tm-imgdrafts">
+              {images.map((im, i) => (
+                <span key={i} className="tm-imgdraft">
+                  <img src={im.url} alt={im.name} />
+                  <button type="button" onClick={() => removeImage(i)} aria-label="Remove">×</button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {error && <p className="tm-err">{error}</p>}
           <div className="tm-actions">

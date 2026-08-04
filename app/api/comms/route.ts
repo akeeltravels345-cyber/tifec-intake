@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { getClinician, isContact, isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { sendTeamEmail } from "@/lib/email";
+import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
+import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, GROUP_THREAD_ID,
   createTicket, updateTicket, getTicket,
@@ -120,6 +122,18 @@ export async function POST(req: Request) {
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
 
       const t = await createTicket({ createdBy: me.id, assignees, area: area as TicketArea, subject, body: text });
+      // Optional images (screenshots) — stored in the shared doc store, tagged to
+      // this ticket so the detail page can list them. Base64 in, pointers kept by
+      // owner id "ticket:<id>".
+      const imgs: { base64?: string; mime?: string }[] = Array.isArray(body.images) ? (body.images as []).slice(0, 6) : [];
+      for (const im of imgs) {
+        const base64 = typeof im.base64 === "string" ? im.base64 : "";
+        if (!base64) continue;
+        const size = Math.floor((base64.length * 3) / 4);
+        if (size > MAX_DOC_BYTES) continue;
+        const mime = (im.mime || "image/png").slice(0, 80);
+        try { await saveDocFile(randomId(), `ticket:${t.id}`, base64, mime, size); } catch (e) { console.error("ticket image save failed", e); }
+      }
       const newFor = assignees.filter((a) => a !== me.id);
       await notify(newFor, "ticket_new",
         `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
