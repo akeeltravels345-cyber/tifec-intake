@@ -115,6 +115,9 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
           {canManage && ticket.status !== "resolved" && (
             <button type="button" className="tm-ghost" onClick={() => set({ status: "resolved" })}>Mark done</button>
           )}
+          {canManage && ticket.status === "resolved" && (
+            <button type="button" className="tm-ghost" onClick={() => set({ status: "open" })}>Reopen</button>
+          )}
           <button className="tm-cta" type="submit" disabled={busy || !text.trim()}>{busy ? "Sending..." : "Reply"}</button>
         </div>
       </form>

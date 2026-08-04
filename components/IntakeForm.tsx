@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { fieldVisible } from "@/lib/forms";
 import type { FormField, FormSection } from "@/lib/forms";
+import DobInput from "@/components/billing/DobInput";
 
 export interface ClinicianForm {
   key: string;
@@ -387,7 +388,18 @@ export function Field({
     );
   }
 
-  // text / email / tel / date / number
+  // Date of birth: three Month / Day / Year dropdowns instead of the native
+  // date picker, which "sticks" for people (hard to reach the birth year).
+  if (f.type === "date") {
+    return wrap(
+      <>
+        {labelEl}
+        <DobInput value={value} onChange={(v) => onChange(f.name, v)} />
+      </>
+    );
+  }
+
+  // text / email / tel / number
   return wrap(
     <>
       {labelEl}
