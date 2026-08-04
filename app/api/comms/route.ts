@@ -3,7 +3,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { getClinician, isContact, isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { sendTeamEmail } from "@/lib/email";
 import {
-  sendMessage, markThreadRead, dmThreadId, dmPartner,
+  sendMessage, markThreadRead, dmThreadId, dmPartner, GROUP_THREAD_ID,
   createTicket, updateTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
@@ -26,20 +26,23 @@ async function emailTeam(userIds: string[], build: (name: string) => Parameters<
   }));
 }
 
-/** Validate an assignee list: one or more real contacts (owner / biller /
- *  admin), deduped. Returns null if it isn't usable, so a ticket can never end
- *  up with nobody responsible for it or assigned to someone arbitrary. */
+/** Validate an assignee list: one or more real team members, deduped. Anyone
+ *  on the team can be added to a ticket now (not just owner/biller/admin), but
+ *  every id must be a real clinician so a ticket is never assigned to nobody or
+ *  to someone arbitrary. */
 function readAssignees(raw: unknown): string[] | null {
   const list = (Array.isArray(raw) ? raw : [raw]).map((x) => String(x ?? "")).filter(Boolean);
   const unique = [...new Set(list)];
   if (unique.length === 0) return null;
-  if (!unique.every((id) => isContact(id))) return null;
+  if (!unique.every((id) => !!getClinician(id))) return null;
   return unique;
 }
 
 /** Can this person post into this thread? DMs: only the two people in it.
  *  Tickets: whoever raised it, or whoever it's assigned to. */
 async function canPost(threadId: string, me: string): Promise<boolean> {
+  // The team-wide channel: any signed-in team member may post and read.
+  if (threadId === GROUP_THREAD_ID) return !!getClinician(me);
   if (threadId.startsWith("dm:")) {
     const partner = dmPartner(threadId, me);
     return !!partner && dmThreadId(me, partner) === threadId && !!getClinician(partner);
@@ -74,14 +77,24 @@ export async function POST(req: Request) {
       const m = await sendMessage(threadId, me.id, text);
 
       // Tell the other side. Never quote the message itself — see notify().
-      if (threadId.startsWith("dm:")) {
+      if (threadId === GROUP_THREAD_ID) {
+        // Team channel: nudge everyone else in-app (no email — that'd be noisy).
+        const team = CLINICIANS.filter((c) => (!c.intakeHidden || isContact(c.id)) && c.id !== me.id).map((c) => c.id);
+        await notify(team, "message", `${me.name} posted in the team channel`, `/team/messages?to=all`);
+      } else if (threadId.startsWith("dm:")) {
         const partner = dmPartner(threadId, me.id);
         if (partner) await notify([partner], "message", `${me.name} sent you a message`, `/team/messages?to=${me.id}`);
       } else {
         const t = await getTicket(threadId.slice("ticket:".length));
         if (t) {
-          const others = [t.createdBy, ...t.assignees].filter((u) => u !== me.id);
+          const others = [...new Set([t.createdBy, ...t.assignees])].filter((u) => u !== me.id);
           await notify(others, "ticket_reply", `${me.name} replied on ticket #${t.ref}`, `/team/tickets/${t.id}`);
+          // Comments now email too (previously only raise + resolved did), so a
+          // reply isn't missed when someone isn't in the app.
+          await emailTeam(others, () => ({
+            to: "", recipientName: "", kind: "ticket_reply" as const,
+            actorName: me.name, ticketRef: t.ref, path: `/team/tickets/${t.id}`,
+          }));
         }
       }
       return NextResponse.json({ ok: true, id: m.id });

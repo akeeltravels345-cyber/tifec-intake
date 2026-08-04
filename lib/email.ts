@@ -220,7 +220,7 @@ export async function sendFeedback(args: {
 // whole practice by definition and "someone posted a notice" is useless.
 // =============================================================================
 
-export type TeamEmailKind = "notice" | "ticket_new" | "ticket_resolved";
+export type TeamEmailKind = "notice" | "ticket_new" | "ticket_resolved" | "ticket_reply";
 
 export interface TeamEmailArgs {
   to: string;
@@ -247,6 +247,7 @@ export function buildTeamEmail(args: TeamEmailArgs): { subject: string; text: st
     notice:          { accent: "#2F8E93", tint: "#E4F0EF", mark: "📣", band: "linear-gradient(90deg,#2E3192,#2F8E93)" },
     ticket_new:      { accent: "#BE8127", tint: "#F8EEDC", mark: "🎫", band: "linear-gradient(90deg,#BE8127,#D9A441)" },
     ticket_resolved: { accent: "#2c7a55", tint: "#DFF0E5", mark: "✅", band: "linear-gradient(90deg,#2c7a55,#43a9ae)" },
+    ticket_reply:    { accent: "#2E3192", tint: "#E6E7F4", mark: "💬", band: "linear-gradient(90deg,#2E3192,#2F8E93)" },
   }[args.kind];
 
   let subject: string, eyebrow: string, headline: string, line: string, cta: string;
@@ -264,6 +265,13 @@ export function buildTeamEmail(args: TeamEmailArgs): { subject: string; text: st
       headline = "Something needs you";
       line = `${args.actorName} raised a ticket for you${args.ticketArea ? ` under ${args.ticketArea}` : ""}. The details are waiting in the app.`;
       cta = "Open the ticket";
+      break;
+    case "ticket_reply":
+      subject = `💬 New comment on ticket #${args.ticketRef}`;
+      eyebrow = `Ticket #${args.ticketRef}`;
+      headline = "New comment";
+      line = `${args.actorName} added a comment on ticket #${args.ticketRef}. Open it in the app to read and reply.`;
+      cta = "Read the comment";
       break;
     default:
       subject = `✅ Ticket #${args.ticketRef} sorted`;

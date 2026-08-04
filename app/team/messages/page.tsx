@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
-import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead } from "@/lib/comms";
+import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor } from "@/lib/comms";
 import Messages from "@/components/team/Messages";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +22,11 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     }));
 
   const threads = await listThreadsFor(me.id);
-  const withWhom = sp.to && getClinician(sp.to) && sp.to !== me.id ? sp.to : "";
-  const activeThread = withWhom ? dmThreadId(me.id, withWhom) : "";
+  const group = await groupSummaryFor(me.id);
+  // "all" opens the team-wide channel; otherwise a normal DM.
+  const isGroup = sp.to === "all";
+  const withWhom = !isGroup && sp.to && getClinician(sp.to) && sp.to !== me.id ? sp.to : "";
+  const activeThread = isGroup ? GROUP_THREAD_ID : withWhom ? dmThreadId(me.id, withWhom) : "";
   const messages = activeThread ? await listMessages(activeThread) : [];
   if (activeThread) await markThreadRead(activeThread, me.id);
 
@@ -31,7 +34,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     <Messages
       meId={me.id}
       people={people}
-      activeWith={withWhom}
+      everyone={{ unread: group.unread, lastBody: group.lastBody, lastAt: group.lastAt }}
+      activeWith={isGroup ? "all" : withWhom}
       threads={threads.map((t) => {
         const other = dmPartner(t.threadId, me.id) ?? "";
         return {

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { CONTACTS, CONTACT_LABEL, getClinician } from "@/lib/clinicians";
+import { CLINICIANS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
 import { listTickets, TICKET_AREAS } from "@/lib/comms";
 import TicketList from "@/components/team/TicketList";
 
@@ -20,7 +20,7 @@ export default async function TicketsPage() {
     <TicketList
       seesAll={seesAll}
       areas={[...TICKET_AREAS]}
-      contacts={CONTACTS.map((c) => ({ id: c.id, name: c.name, label: CONTACT_LABEL[c.contact!] }))}
+      contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}
       tickets={mine.map((t) => ({
         id: t.id, ref: t.ref, subject: t.subject, area: t.area, status: t.status,
         createdAt: t.createdAt, updatedAt: t.updatedAt,

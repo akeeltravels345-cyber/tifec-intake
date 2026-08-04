@@ -31,8 +31,9 @@ const brief = (iso: string) => {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-export default function Messages({ meId, people, threads, messages, activeWith, threadId }: {
+export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone }: {
   meId: string; people: Person[]; threads: Thread[]; messages: Msg[]; activeWith: string; threadId: string;
+  everyone?: { unread: number; lastBody: string; lastAt: string };
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -63,7 +64,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
         const j = await res.json();
         setLive(j.messages.map((m: { id: string; body: string; createdAt: string; senderId: string }) => ({
           id: m.id, body: m.body, at: m.createdAt, mine: m.senderId === meId,
-          who: m.senderId === meId ? "You" : (threads.find((t) => t.id === activeWith)?.name ?? ""),
+          who: m.senderId === meId ? "You" : (people.find((p) => p.id === m.senderId)?.name ?? threads.find((t) => t.id === activeWith)?.name ?? ""),
         })));
       } catch { /* offline: the next tick will catch up */ }
     };
@@ -93,7 +94,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
     } finally { setBusy(false); }
   }
 
-  const active = people.find((p) => p.id === activeWith) ?? threads.find((t) => t.id === activeWith);
+  const isGroup = activeWith === "all";
+  const active = isGroup
+    ? { id: "all", name: "Everyone", role: `Whole team · ${people.length + 1} people` }
+    : people.find((p) => p.id === activeWith) ?? threads.find((t) => t.id === activeWith);
   const started = new Set(threads.map((t) => t.id));
   const notStarted = people.filter((p) => !started.has(p.id));
 
@@ -108,6 +112,17 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
 
       <div className="tm-chat">
         <aside className="tm-people">
+          <Link href="/team/messages?to=all" className={`tm-person tm-everyone ${isGroup ? "on" : ""}`}>
+            <span className="tm-av grp">★</span>
+            <span className="tm-pmid">
+              <span className="tm-pname">Everyone</span>
+              <span className="tm-plast">{everyone?.lastBody ? everyone.lastBody : "Message the whole team"}</span>
+            </span>
+            <span className="tm-pright">
+              {everyone?.lastAt ? <span className="tm-pwhen">{brief(everyone.lastAt)}</span> : null}
+              {everyone && everyone.unread > 0 ? <span className="tm-badge">{everyone.unread}</span> : null}
+            </span>
+          </Link>
           {threads.length > 0 && <div className="tm-plabel">Conversations</div>}
           {threads.map((t) => (
             <Link key={t.id} href={`/team/messages?to=${t.id}`} className={`tm-person ${activeWith === t.id ? "on" : ""}`}>
@@ -159,6 +174,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                     <div key={m.id}>
                       {showDay && <div className="tm-day"><span>{dayLabel(m.at)}</span></div>}
                       <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
+                        {isGroup && !m.mine && m.who && <div className="tm-bwho">{m.who}</div>}
                         <div className="tm-btext">{m.body}</div>
                         <div className="tm-btime">{clock(m.at)}</div>
                       </div>

@@ -215,10 +215,22 @@ export async function markThreadRead(threadId: string, me: string): Promise<void
   writeJson(READ_FILE, all);
 }
 
-/** Unread direct messages, for the nav badge. */
+// A single team-wide channel everyone shares ("start a conversation with all").
+export const GROUP_THREAD_ID = "group:all";
+
+/** Summary of the team-wide channel for one person (last message + unread). */
+export async function groupSummaryFor(me: string): Promise<{ lastAt: string; lastBody: string; lastSender: string; unread: number }> {
+  const [msgs, reads] = await Promise.all([listMessages(GROUP_THREAD_ID), getReads(me)]);
+  const since = reads[GROUP_THREAD_ID] ?? "";
+  const unread = msgs.filter((m) => m.senderId !== me && m.createdAt > since).length;
+  const last = msgs[msgs.length - 1];
+  return { lastAt: last?.createdAt ?? "", lastBody: last?.body ?? "", lastSender: last?.senderId ?? "", unread };
+}
+
+/** Unread direct messages + the team channel, for the nav badge. */
 export async function unreadCount(me: string): Promise<number> {
-  const threads = await listThreadsFor(me);
-  return threads.reduce((t, x) => t + x.unread, 0);
+  const [threads, group] = await Promise.all([listThreadsFor(me), groupSummaryFor(me)]);
+  return threads.reduce((t, x) => t + x.unread, 0) + group.unread;
 }
 
 // ============================ Tickets =======================================
