@@ -30,10 +30,21 @@ const brief = (iso: string) => {
   if (min < 1440) return `${Math.floor(min / 60)}h`;
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
+// Online if active within the last 3 minutes.
+const isOnline = (iso?: string) => !!iso && Date.now() - new Date(iso).getTime() < 3 * 60000;
+const lastSeen = (iso?: string) => {
+  if (!iso) return "offline";
+  if (isOnline(iso)) return "online";
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 60) return `last seen ${min}m ago`;
+  if (min < 1440) return `last seen ${Math.floor(min / 60)}h ago`;
+  return `last seen ${new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+};
 
-export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone }: {
+export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone, presence = {} }: {
   meId: string; people: Person[]; threads: Thread[]; messages: Msg[]; activeWith: string; threadId: string;
   everyone?: { unread: number; lastBody: string; lastAt: string };
+  presence?: Record<string, string>;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -44,6 +55,13 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
 
   useEffect(() => { setLive(messages); }, [messages]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [live.length]);
+  // Presence heartbeat: stay "online" while this tab is open and visible.
+  useEffect(() => {
+    const ping = () => { if (!document.hidden) fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "ping" }) }).catch(() => {}); };
+    ping();
+    const h = setInterval(ping, 45000);
+    return () => clearInterval(h);
+  }, []);
   // Grow the compose box with the text (up to a few lines), shrink back on send.
   useEffect(() => {
     const el = taRef.current;
@@ -126,7 +144,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           {threads.length > 0 && <div className="tm-plabel">Conversations</div>}
           {threads.map((t) => (
             <Link key={t.id} href={`/team/messages?to=${t.id}`} className={`tm-person ${activeWith === t.id ? "on" : ""}`}>
-              <span className="tm-av">{initials(t.name)}</span>
+              <span className="tm-avwrap"><span className="tm-av">{initials(t.name)}</span>{isOnline(presence[t.id]) && <span className="tm-dot" title="Online" />}</span>
               <span className="tm-pmid">
                 <span className="tm-pname">{t.name}</span>
                 <span className="tm-plast">{t.fromMe && "You: "}{t.lastBody}</span>
@@ -141,10 +159,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           {notStarted.length > 0 && <div className="tm-plabel">Start a conversation</div>}
           {notStarted.map((p) => (
             <Link key={p.id} href={`/team/messages?to=${p.id}`} className={`tm-person ${activeWith === p.id ? "on" : ""}`}>
-              <span className="tm-av">{initials(p.name)}</span>
+              <span className="tm-avwrap"><span className="tm-av">{initials(p.name)}</span>{isOnline(presence[p.id]) && <span className="tm-dot" title="Online" />}</span>
               <span className="tm-pmid">
                 <span className="tm-pname">{p.name}</span>
-                <span className="tm-plast">{p.role}</span>
+                <span className="tm-plast">{isOnline(presence[p.id]) ? "online" : p.role}</span>
               </span>
             </Link>
           ))}
@@ -159,10 +177,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           ) : (
             <>
               <div className="tm-thead">
-                <span className="tm-av">{initials(active?.name ?? "")}</span>
+                <span className="tm-avwrap"><span className="tm-av">{initials(active?.name ?? "")}</span>{!isGroup && isOnline(presence[activeWith]) && <span className="tm-dot" title="Online" />}</span>
                 <div>
                   <div className="tm-pname">{active?.name}</div>
-                  <div className="tm-prole">{"role" in (active ?? {}) ? (active as Person).role : ""}</div>
+                  <div className="tm-prole">{isGroup ? (active as Person).role : (isOnline(presence[activeWith]) ? "Online now" : lastSeen(presence[activeWith]))}</div>
                 </div>
               </div>
 

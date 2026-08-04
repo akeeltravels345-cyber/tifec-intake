@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
-import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor } from "@/lib/comms";
+import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor, getPresence } from "@/lib/comms";
 import Messages from "@/components/team/Messages";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
 
   const threads = await listThreadsFor(me.id);
   const group = await groupSummaryFor(me.id);
+  const presence = await getPresence();
   // "all" opens the team-wide channel; otherwise a normal DM.
   const isGroup = sp.to === "all";
   const withWhom = !isGroup && sp.to && getClinician(sp.to) && sp.to !== me.id ? sp.to : "";
@@ -34,6 +35,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     <Messages
       meId={me.id}
       people={people}
+      presence={presence}
       everyone={{ unread: group.unread, lastBody: group.lastBody, lastAt: group.lastAt }}
       activeWith={isGroup ? "all" : withWhom}
       threads={threads.map((t) => {

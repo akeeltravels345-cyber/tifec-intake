@@ -8,6 +8,7 @@ import { listSessions } from "@/lib/billing";
 import { billingRoleOf, hasBillingBeta } from "@/lib/billingRole";
 import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import { getViewAsState } from "@/lib/auth";
+import { touchPresence } from "@/lib/comms";
 
 export interface SidebarData {
   role: "owner" | "biller" | "clinician";
@@ -29,6 +30,7 @@ export interface SidebarData {
 }
 
 export async function getSidebarData(me: Clinician): Promise<SidebarData> {
+  void touchPresence(me.id); // stamp "active now" on every navigation (fire-and-forget)
   const hasBilling = hasBillingBeta(me);
   const [subs, teamUnread, tickets, sessions, view] = await Promise.all([
     getSubmissionsByClinician(me.id),

@@ -5,7 +5,7 @@ import { sendTeamEmail } from "@/lib/email";
 import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
 import { randomId } from "@/lib/crypto";
 import {
-  sendMessage, markThreadRead, dmThreadId, dmPartner, GROUP_THREAD_ID,
+  sendMessage, markThreadRead, dmThreadId, dmPartner, GROUP_THREAD_ID, touchPresence,
   createTicket, updateTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
@@ -106,6 +106,12 @@ export async function POST(req: Request) {
       const threadId = String(body.threadId ?? "");
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       await markThreadRead(threadId, me.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Presence heartbeat: keep the user "online" while a tab is open.
+    if (action === "ping") {
+      await touchPresence(me.id);
       return NextResponse.json({ ok: true });
     }
 

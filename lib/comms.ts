@@ -215,6 +215,29 @@ export async function markThreadRead(threadId: string, me: string): Promise<void
   writeJson(READ_FILE, all);
 }
 
+// Presence: reuse the reads table (no migration) with a reserved thread id. Each
+// request/heartbeat stamps the user's last-active time; everyone's is read back
+// to show online dots + "last seen" in the chat.
+const PRESENCE_THREAD = "presence:online";
+/** Stamp this user as active now. */
+export async function touchPresence(me: string): Promise<void> {
+  try { await markThreadRead(PRESENCE_THREAD, me); } catch { /* presence is best-effort */ }
+}
+/** Everyone's last-active time, as { clinicianId: ISO }. */
+export async function getPresence(): Promise<Record<string, string>> {
+  try {
+    if (usePostgres) {
+      const sql = await pg();
+      const rows = (await sql`SELECT clinician_id, last_read_at FROM comms_reads WHERE thread_id = ${PRESENCE_THREAD}`) as Record<string, unknown>[];
+      return Object.fromEntries(rows.map((r) => [str(r.clinician_id), iso(r.last_read_at)]));
+    }
+    const all = readJson<Reads>(READ_FILE, {});
+    const out: Record<string, string> = {};
+    for (const [uid, threads] of Object.entries(all)) { if (threads[PRESENCE_THREAD]) out[uid] = threads[PRESENCE_THREAD]; }
+    return out;
+  } catch { return {}; }
+}
+
 // A single team-wide channel everyone shares ("start a conversation with all").
 export const GROUP_THREAD_ID = "group:all";
 
