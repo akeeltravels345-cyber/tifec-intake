@@ -5,6 +5,7 @@ import { listSessions, getClinicianSettings, getPracticeConfig, type BillingSess
 import { computeClinicianMonth } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
+import Foldable from "@/components/billing/Foldable";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
         <MonthNav year={year} month={month} path="/billing/clinicians" />
       </div>
 
+      <Foldable rowSelector=".bo-clrow" unit="clinicians">
       <div className="bo-clin">
         {rows.map(({ c, m }) => {
           const total = m.collected + m.outstandingThisMonth;
@@ -60,6 +62,7 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
           );
         })}
       </div>
+      </Foldable>
     </>
   );
 }

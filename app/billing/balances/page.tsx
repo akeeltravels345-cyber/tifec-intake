@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listSessions } from "@/lib/billing";
 import { selfPayOutstanding, uncollectedCopay } from "@/lib/billingCalc";
+import Foldable from "@/components/billing/Foldable";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function BalancesPage() {
       {rows.length === 0 ? (
         <div className="bq-empty" style={{ padding: 28 }}><div className="big">Nothing outstanding</div><div className="small">Every self-pay balance is settled and every co-pay was collected.</div></div>
       ) : (
+        <Foldable unit="clients">
         <table className="su-tbl bal-tbl">
           <thead>
             <tr><th>Client</th><th className="r">Self-pay owed</th><th className="r">Co-pay not collected</th><th className="r">Total owed</th><th>Oldest</th><th></th></tr>
@@ -74,6 +76,7 @@ export default async function BalancesPage() {
             ))}
           </tbody>
         </table>
+        </Foldable>
       )}
     </>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Foldable from "./Foldable";
 
 type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
@@ -120,7 +121,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {isBillerUser && (
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">My rates{billerName ? ` · ${billerName}` : ""}</h2><span className="su-hint">Your % per clinician. It&apos;s always charged on what each clinician <b>retains after the company&apos;s cut</b> (never on their co-pays) — so you only set the rate; the base is handled for you.</span></div>
-        <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
+        <div className="su-card"><Foldable unit="clinicians"><div className="su-tblwrap"><table className="su-tbl">
           <thead><tr><th>Clinician</th><th className="num">My %</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
@@ -131,7 +132,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
               </tr>
             ); })}
           </tbody>
-        </table></div></div>
+        </table></div></Foldable></div>
       </div>
       )}
 
@@ -240,7 +241,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         {/* Insurers */}
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Insurers &amp; co-pay</h2></div>
-          <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
+          <div className="su-card"><Foldable unit="insurers" rowSelector="tbody > tr:not(:last-child)"><div className="su-tblwrap"><table className="su-tbl">
             <thead><tr><th className="grow">Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th></th></tr></thead>
             <tbody>
               {ins.map((x, i) => (
@@ -260,13 +261,13 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, claimCode: newIns.claimCode ?? "", active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
               </tr>
             </tbody>
-          </table></div></div>
+          </table></div></Foldable></div>
         </div>
 
         {/* Service codes */}
         <div className="su-sec">
-          <div className="su-sechead"><h2 className="su-sech">Service codes</h2></div>
-          <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
+          <div className="su-sechead"><h2 className="su-sech">Service codes</h2><span className="su-hint">Over 6 codes collapse — Show all to see or add.</span></div>
+          <div className="su-card"><Foldable unit="codes" rowSelector="tbody > tr:not(:last-child)"><div className="su-tblwrap"><table className="su-tbl">
             <thead><tr><th>Code</th><th className="grow">Description</th><th className="num">Fee</th><th className="num">Hrs</th><th></th></tr></thead>
             <tbody>
               {cpt.map((x, i) => (
@@ -286,7 +287,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td><div className="su-actions"><button className="su-save" disabled={!newCpt.code.trim()} onClick={() => { run({ entity: "cpt", code: newCpt.code, description: newCpt.description, fee: newCpt.fee, hrs: newCpt.hrs, active: true }, "Added"); setNewCpt({ code: "", description: "", fee: 0, hrs: 1, active: true }); }}>Add</button></div></td>
               </tr>
             </tbody>
-          </table></div></div>
+          </table></div></Foldable></div>
         </div>
       </div>
 
@@ -294,7 +295,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {canManageMoney && (
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Base %</b> is the share the biller rate is charged on — leave <b>0</b> for auto (the clinician&apos;s after-retention share, i.e. what they actually receive), or set an explicit % for a special deal (Nick bills Joan on 70% of hers). <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies. All come out of the company&apos;s share, never a clinician&apos;s payout.</span></div>
-        <div className="su-card"><div className="su-tblwrap"><table className="su-tbl">
+        <div className="su-card"><Foldable unit="clinicians"><div className="su-tblwrap"><table className="su-tbl">
           <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension (KYD)</th><th className="num">Biller %</th><th className="num">Base %</th><th className="num">Practice {billerPct}%</th><th className="num">No payout</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
@@ -312,7 +313,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
               </tr>
             ); })}
           </tbody>
-        </table></div></div>
+        </table></div></Foldable></div>
       </div>
       )}
 

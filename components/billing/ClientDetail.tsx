@@ -7,6 +7,7 @@ import type { ClientProfile } from "@/lib/clients";
 import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
 import DobInput from "./DobInput";
+import Foldable from "./Foldable";
 
 const randId = () => Math.random().toString(36).slice(2, 10);
 
@@ -607,6 +608,7 @@ export default function ClientDetail({
           {activity.length === 0 ? (
             <div className="bq-empty" style={{ padding: 24 }}><div className="big">No charges yet</div><div className="small">Add a date of service above, or they&apos;ll appear here once logged.</div></div>
           ) : (
+            <Foldable unit="charges">
             <div className="su-tblwrap">
               <table className="su-tbl" style={{ minWidth: 700 }}>
                 <thead><tr>
@@ -701,6 +703,7 @@ export default function ClientDetail({
                 </tfoot>
               </table>
             </div>
+            </Foldable>
           )}
         </div>
       </div>
