@@ -2417,6 +2417,24 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-av.grp { background: linear-gradient(135deg, #2E8E93, #2E3192); font-size: 15px; }
 .tm-avwrap { position: relative; display: inline-flex; flex-shrink: 0; }
 .tm-dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #2eae52; border: 2px solid #fff; }
+/* Import review queue */
+.biz .ir-counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.biz .ir-chip { font: 700 12px "Open Sans", system-ui, sans-serif; border-radius: 999px; padding: 5px 12px; }
+.biz .ir-chip.pending { background: var(--amber-bg, #f6ecd6); color: var(--amber, #b8791f); }
+.biz .ir-chip.done { background: #e3f3e8; color: #1f7a44; }
+.biz .ir-chip.rej { background: #fbe6e0; color: #9a3b2a; }
+.biz .ir-group { margin-bottom: 16px; }
+.biz .ir-ghead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 2px 8px; }
+.biz .ir-ghead .nm { font-weight: 700; font-size: 15px; color: var(--ink); }
+.biz .ir-ghead .ct { font-size: 12.5px; color: var(--muted); }
+.biz .ir-rows { display: flex; flex-direction: column; gap: 10px; }
+.biz .ir-row { background: #fff; border: 1px solid var(--edge); border-radius: 12px; padding: 12px 14px; }
+.biz .ir-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.biz .ir-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
+.biz .ir-fields .ls-in { min-width: 90px; padding: 8px 10px; font-size: 13px; }
+.biz .ir-fields input[type="number"] { max-width: 90px; }
+.biz .ir-meta { font-size: 12px; color: var(--faint); margin-top: 8px; }
+.biz .ir-acts { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--edge); }
 .tm-everyone { border-top: none; }
 .tm-bwho { font-size: 11px; font-weight: 700; color: var(--teal-deep, #1f6b6f); margin-bottom: 2px; }
 /* Ticket images */

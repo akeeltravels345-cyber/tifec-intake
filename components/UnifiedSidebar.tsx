@@ -32,7 +32,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const owner = role === "owner", biller = role === "biller";
 
 
@@ -72,6 +72,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+            { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
           ]
         : biller
           ? [
@@ -80,7 +81,8 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
               { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-              { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
+              { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
+              { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p === "/billing/import" },
             ]
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician") },
