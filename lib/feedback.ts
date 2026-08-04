@@ -55,7 +55,16 @@ export async function insertFeedback(category: string, message: string, clinicia
 export async function listFeedback(limit = 50): Promise<FeedbackRow[]> {
   if (usePostgres) {
     const sql = await pgClient();
-    return (await sql`SELECT * FROM feedback ORDER BY created_at DESC LIMIT ${limit}`) as FeedbackRow[];
+    const rows = (await sql`SELECT * FROM feedback ORDER BY created_at DESC LIMIT ${limit}`) as Record<string, unknown>[];
+    // Postgres returns timestamp columns as JS Date objects; callers expect an
+    // ISO string (they call .slice/.localeCompare on it), so coerce every row.
+    return rows.map((r) => ({
+      id: String(r.id),
+      clinician_id: String(r.clinician_id),
+      category: String(r.category),
+      message: String(r.message),
+      created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+    }));
   }
   try {
     const rows: FeedbackRow[] = JSON.parse(fs.readFileSync(LOCAL_FILE, "utf8"));

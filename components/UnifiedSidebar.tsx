@@ -38,9 +38,10 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets } = data;
   const owner = role === "owner", biller = role === "biller";
 
-  // Which collapsible role sections (admin builder view) are folded away. Owner
-  // view starts open; the other two start collapsed. Choice persists per browser.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ "Biller view": true, "Clinician view": true });
+  // Which collapsible role sections (admin builder view) are folded away. The
+  // flat "all my pages" menu is the admin's day-to-day view, so the three
+  // role-inspection sections start collapsed. Choice persists per browser.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ "Owner view": true, "Biller view": true, "Clinician view": true });
   useEffect(() => {
     try { const raw = localStorage.getItem("bo-collapsed"); if (raw) setCollapsed(JSON.parse(raw)); } catch {}
   }, []);
@@ -92,13 +93,33 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       uNotices, uMessages, uTickets,
       { href: "/billing/me/setup", label: "My setup", icon: IcSetup, match: (p) => p.startsWith("/billing/me/setup") },
     ];
+    // The admin's own menu: one flat, deduped list of every page they can reach —
+    // "all my pages" — grouped by area. The three role-replica sections stay
+    // below as a collapsible builder tool for inspecting exactly what each role
+    // sees, but they start folded so this clean menu is what shows by default.
+    const adminItems: Item[] = [
+      { href: "/billing/overview", label: "Overview", icon: IcOverview, match: (p) => p === "/billing/overview" || p === "/billing" },
+      { href: "/billing/biller", label: "Biller dashboard", icon: IcBoard, match: (p) => p === "/billing/biller" },
+      { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
+      { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
+      { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
+      { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+      { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
+      { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p.startsWith("/billing/import") },
+    ];
     groups = [
+      { label: "", items: [uToday] },
+      { label: "Intake", items: [uDash, uForms] },
+      { label: "Billing", items: adminItems },
+      { label: "Team", items: [uNotices, uMessages, uTickets] },
+      { label: "Admin", items: [
+        { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
+        { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
+        { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
+      ] },
       { label: "Owner view", items: ownerItems, collapsible: true },
       { label: "Biller view", items: billerItems, collapsible: true },
       { label: "Clinician view", items: clinicianItems, collapsible: true },
-      { label: "System admin", items: [
-        { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
-      ] },
     ];
   } else {
     groups = [
