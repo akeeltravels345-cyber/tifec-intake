@@ -311,7 +311,7 @@ export const CLINICIANS: Clinician[] = [
     id: "akeel-test",
     billingBeta: true, // BETA billing access
     contact: "admin",
-    name: "Akeel (Test)",
+    name: "Akeel",
     credentials: "Practice Administrator",
     email: "admin@caymanessentialcare.com",
     forms: [
