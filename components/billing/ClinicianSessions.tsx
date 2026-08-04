@@ -3,6 +3,7 @@
 import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Foldable from "./Foldable";
 
 export interface SessionRow {
   id: string;
@@ -103,6 +104,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
   }
 
   return (
+    <Foldable unit="sessions">
     <div className="cd-tblwrap">
       {msg && <div className="ls-err" style={{ margin: "0 0 10px" }}>{msg}</div>}
       <table className="cd-tbl">
@@ -188,5 +190,6 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
         </tbody>
       </table>
     </div>
+    </Foldable>
   );
 }

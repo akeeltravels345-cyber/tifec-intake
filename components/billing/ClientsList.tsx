@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Foldable from "./Foldable";
 
 export interface ClientRow {
   id: string; first: string; last: string; dob: string | null; age: number | null;
@@ -109,6 +110,7 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
         ) : filtered.length === 0 ? (
           <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients match your filters</div><div className="small">Try clearing a filter or searching a different name.</div></div>
         ) : (
+          <Foldable unit="clients">
           <div className="su-tblwrap">
             <table className="su-tbl su-tbl-sort" style={{ minWidth: 740 }}>
               <thead>
@@ -139,6 +141,7 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
               </tbody>
             </table>
           </div>
+          </Foldable>
         )}
       </div>
 
