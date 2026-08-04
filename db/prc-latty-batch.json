@@ -133,6 +133,196 @@
       "invNo": "5087"
     },
     {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-02-12",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-02-19",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-02-26",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-03-05",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-03-12",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-03-26",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-04-02",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-04-09",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-04-20",
+      "invNo": "4611"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-06-10",
+      "invNo": "4851"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-06-10",
+      "invNo": "4851"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-10",
+      "invNo": "4851"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-10",
+      "invNo": "4851"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-06-04",
+      "billedDate": "2026-06-10",
+      "invNo": "4851"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-20",
+      "invNo": "5018"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-06-25",
+      "billedDate": "2026-07-20",
+      "invNo": "5018"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-20",
+      "invNo": "5018"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-07-16",
+      "billedDate": "2026-07-20",
+      "invNo": "5018"
+    },
+    {
+      "clientFirst": "Travel time",
+      "clientLast": "(Dr. Latty)",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "TRAVEL-TRAVEL",
+      "fee": 175.0,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5088"
+    },
+    {
       "clientFirst": "Consuelo",
       "clientLast": "Miller",
       "insurerName": "Poinciana Rehabilitation Centre",

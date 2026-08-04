@@ -5,7 +5,7 @@ import { sendTeamEmail } from "@/lib/email";
 import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
 import { randomId } from "@/lib/crypto";
 import {
-  sendMessage, markThreadRead, dmThreadId, dmPartner, GROUP_THREAD_ID, touchPresence,
+  sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
   createTicket, updateTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
@@ -91,9 +91,11 @@ export async function POST(req: Request) {
         if (t) {
           const others = [...new Set([t.createdBy, ...t.assignees])].filter((u) => u !== me.id);
           await notify(others, "ticket_reply", `${me.name} replied on ticket #${t.ref}`, `/team/tickets/${t.id}`);
-          // Comments now email too (previously only raise + resolved did), so a
-          // reply isn't missed when someone isn't in the app.
-          await emailTeam(others, () => ({
+          // Comments email too, but throttled: once someone's been emailed about
+          // this ticket, hold off for 30 min so a back-and-forth isn't one email
+          // per message. In-app notifications above still fire every time.
+          const dueReply = await claimEmailWindow(threadId, others);
+          if (dueReply.length) await emailTeam(dueReply, () => ({
             to: "", recipientName: "", kind: "ticket_reply" as const,
             actorName: me.name, ticketRef: t.ref, path: `/team/tickets/${t.id}`,
           }));
@@ -143,7 +145,10 @@ export async function POST(req: Request) {
       const newFor = assignees.filter((a) => a !== me.id);
       await notify(newFor, "ticket_new",
         `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
-      await emailTeam(newFor, () => ({
+      // First email of the thread; also opens the 30-min throttle window so an
+      // immediate follow-up comment doesn't send a second email.
+      const dueNew = await claimEmailWindow(ticketThreadId(t.id), newFor);
+      if (dueNew.length) await emailTeam(dueNew, () => ({
         to: "", recipientName: "", kind: "ticket_new" as const,
         actorName: me.name, ticketRef: t.ref, ticketArea: t.area, path: `/team/tickets/${t.id}`,
       }));

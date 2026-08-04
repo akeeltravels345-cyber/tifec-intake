@@ -3,7 +3,7 @@
 // role gating in one place so the sidebar renders identically everywhere.
 
 import { getSubmissionsByClinician } from "@/lib/db";
-import { unreadCount, listTickets } from "@/lib/comms";
+import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { billingRoleOf, hasBillingBeta } from "@/lib/billingRole";
 import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
@@ -22,6 +22,7 @@ export interface SidebarData {
   teamUnread: number;
   openTickets: number;
   importPending: number;
+  noteCount: number;
   // "Viewing as" switcher (system admin only). canSwitchViews = the REAL user is
   // the admin; viewingAsRole = the role currently being impersonated (null when
   // the admin is on their own menu); switchTargets = who to impersonate per role.
@@ -34,13 +35,14 @@ export interface SidebarData {
 export async function getSidebarData(me: Clinician): Promise<SidebarData> {
   void touchPresence(me.id); // stamp "active now" on every navigation (fire-and-forget)
   const hasBilling = hasBillingBeta(me);
-  const [subs, teamUnread, tickets, sessions, view, staged] = await Promise.all([
+  const [subs, teamUnread, tickets, sessions, view, staged, noteCount] = await Promise.all([
     getSubmissionsByClinician(me.id),
     unreadCount(me.id),
     listTickets(),
     hasBilling ? listSessions() : Promise.resolve([]),
     getViewAsState(),
     hasBilling ? listStaged("pending") : Promise.resolve([]),
+    unreadNotifications(me.id),
   ]);
   const canSwitchViews = !!view && isSystemAdmin(view.real);
   const impersonating = canSwitchViews && !!view && view.impersonating;
@@ -66,5 +68,6 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     teamUnread,
     openTickets: tickets.filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length,
     importPending: staged.length,
+    noteCount,
   };
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { SidebarData } from "@/lib/sidebarData";
+import NotificationBell from "@/components/team/NotificationBell";
 
 const S = (d: React.ReactNode) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{d}</svg>);
 const IcToday = () => S(<><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></>);
@@ -32,7 +33,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const owner = role === "owner", biller = role === "biller";
 
 
@@ -140,10 +141,19 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   return (
     <>
       <aside className="bo-side">
-        <Link href="/today" className="bo-brand">
-          <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
-          <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
-        </Link>
+        <div className="bo-topbar">
+          <Link href="/today" className="bo-brand">
+            <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
+            <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
+          </Link>
+          <div className="bo-topicons">
+            <Link href="/team/messages" className="bo-topicon" title="Messages" aria-label={`Messages${teamUnread > 0 ? ` (${teamUnread} unread)` : ""}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              {teamUnread > 0 && <span className="bo-topdot">{teamUnread > 9 ? "9+" : teamUnread}</span>}
+            </Link>
+            <NotificationBell initialUnread={noteCount} />
+          </div>
+        </div>
 
         {canSwitchViews && (
           <div className="bo-switch">

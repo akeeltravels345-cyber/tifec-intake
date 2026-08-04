@@ -223,6 +223,26 @@ const PRESENCE_THREAD = "presence:online";
 export async function touchPresence(me: string): Promise<void> {
   try { await markThreadRead(PRESENCE_THREAD, me); } catch { /* presence is best-effort */ }
 }
+
+// Email throttle: for a chatty thread (ticket comments), only email each person
+// once per window. Returns the subset of userIds that are "due" for an email
+// (none within the window) AND stamps them, so the caller just emails those.
+// Reuses the reads table with an `emailed:<thread>` key — no new table.
+export async function claimEmailWindow(threadId: string, userIds: string[], windowMs = 30 * 60 * 1000): Promise<string[]> {
+  const key = `emailed:${threadId}`;
+  const now = Date.now();
+  const due: string[] = [];
+  for (const uid of userIds) {
+    try {
+      const last = (await getReads(uid))[key];
+      if (!last || now - new Date(last).getTime() > windowMs) {
+        due.push(uid);
+        await markThreadRead(key, uid);
+      }
+    } catch { due.push(uid); } // if the check fails, don't swallow the notification
+  }
+  return due;
+}
 /** Everyone's last-active time, as { clinicianId: ISO }. */
 export async function getPresence(): Promise<Record<string, string>> {
   try {

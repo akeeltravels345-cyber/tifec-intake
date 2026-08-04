@@ -1457,6 +1457,18 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .serif { font-family: "Newsreader", Georgia, serif; }
 .bo-side { width: 242px; flex: none; background: #fff; border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .bo-brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 26px; }
+/* Top row: brand on the left, persistent Messages + Notifications on the right. */
+.bo-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.bo-topbar .bo-brand { padding: 4px 0 20px; }
+.bo-topicons { display: flex; align-items: center; gap: 6px; padding-top: 4px; }
+.bo-topicon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; color: var(--muted, #6a6f66); text-decoration: none; }
+.bo-topicon:hover { background: #f3f0e8; color: var(--indigo, #2E3192); }
+.bo-topdot { position: absolute; top: 0; right: 0; background: var(--teal, #2F8E93); color: #fff; border-radius: 999px; font: 700 9.5px "Open Sans", system-ui, sans-serif; padding: 1px 4px; min-width: 15px; text-align: center; border: 2px solid #fff; }
+/* On desktop the sidebar carries these, so drop the duplicates from the page
+   headers; on mobile (sidebar hidden) the header icons stay. */
+@media (min-width: 821px) {
+  .dm-topbar .dm-msglink, .dm-topbar .tm-bellwrap, .tm-topright .tm-bellwrap { display: none; }
+}
 /* Admin "Viewing as" role switcher pinned above the menu. */
 .bo-switch { margin: -14px 0 16px; padding: 10px; border: 1px solid var(--edge, #E1D9C8); border-radius: 12px; background: #faf8f3; }
 .bo-switch-lab { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #b3aa98; font-weight: 700; margin: 0 2px 7px; }

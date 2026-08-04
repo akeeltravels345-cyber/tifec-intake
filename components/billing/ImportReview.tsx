@@ -103,7 +103,7 @@ export default function ImportReview({ rows, counts, insurers, cptCodes, canLoad
           </div>
           {canLoad && counts.accepted + counts.rejected === 0 && (
             <button className="ls-save" style={{ marginTop: 14 }} disabled={busy === "load"} onClick={loadBatch}>
-              {busy === "load" ? "Loading…" : "Load the PRC · Dr. Latty batch (71 records)"}
+              {busy === "load" ? "Loading…" : "Load the PRC · Dr. Latty batch (90 records · $18,206.01)"}
             </button>
           )}
         </div>
