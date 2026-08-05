@@ -6,7 +6,8 @@ import Foldable from "./Foldable";
 
 type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
-interface Cpt { code: string; description: string; fee: number; hrs: number; active: boolean; }
+interface CptVar { label: string; minutes: number; fee: number; }
+interface Cpt { code: string; description: string; active: boolean; variants: CptVar[]; }
 interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; billerBasePct: number; billerCommissionApplies: boolean; noPayout: boolean; }
 
 /** A number field that holds its own text so you can fully clear it — fixes the
@@ -108,7 +109,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [ins, setIns] = useState<Insurer[]>(insIn);
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
-  const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", fee: 0, hrs: 1, active: true });
+  const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", active: true, variants: [{ label: "", minutes: 60, fee: 0 }] });
   const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
@@ -271,30 +272,60 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           </table></div></Foldable></div>
         </div>
 
-        {/* Service codes */}
+        {/* Service codes — each can hold several time / value options */}
         <div className="su-sec">
-          <div className="su-sechead"><h2 className="su-sech">Service codes</h2><span className="su-hint">Over 6 codes collapse — Show all to see or add.</span></div>
-          <div className="su-card"><Foldable unit="codes" rowSelector="tbody > tr:not(:last-child)"><div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th>Code</th><th className="grow">Description</th><th className="num">Fee</th><th className="num">Hrs</th><th></th></tr></thead>
-            <tbody>
-              {cpt.map((x, i) => (
-                <tr key={x.code}>
-                  <td className="nm">{x.code}</td>
-                  <td className="grow"><input className="su-in" value={x.description} onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} /></td>
-                  <td className="num"><NumInput className="su-in numwide" value={x.fee} onChange={(v) => setCpt(upd(cpt, i, { fee: v }))} /></td>
-                  <td className="num"><NumInput style={{ minWidth: 62, maxWidth: 78 }} value={x.hrs} onChange={(v) => setCpt(upd(cpt, i, { hrs: v }))} /></td>
-                  <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "cpt", code: x.code, description: x.description, fee: x.fee, hrs: x.hrs, active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "cpt", action: "delete", code: x.code }, "Removed")}>×</button></div></td>
-                </tr>
-              ))}
-              <tr>
-                <td><input className="su-in short" placeholder="90XXX" value={newCpt.code} onChange={(e) => setNewCpt({ ...newCpt, code: e.target.value })} /></td>
-                <td className="grow"><input className="su-in" placeholder="Description" value={newCpt.description} onChange={(e) => setNewCpt({ ...newCpt, description: e.target.value })} /></td>
-                <td className="num"><NumInput className="su-in numwide" value={newCpt.fee} onChange={(v) => setNewCpt({ ...newCpt, fee: v })} /></td>
-                <td className="num"><NumInput style={{ minWidth: 62, maxWidth: 78 }} value={newCpt.hrs} onChange={(v) => setNewCpt({ ...newCpt, hrs: v })} /></td>
-                <td><div className="su-actions"><button className="su-save" disabled={!newCpt.code.trim()} onClick={() => { run({ entity: "cpt", code: newCpt.code, description: newCpt.description, fee: newCpt.fee, hrs: newCpt.hrs, active: true }, "Added"); setNewCpt({ code: "", description: "", fee: 0, hrs: 1, active: true }); }}>Add</button></div></td>
-              </tr>
-            </tbody>
-          </table></div></Foldable></div>
+          <div className="su-sechead"><h2 className="su-sech">Service codes</h2><span className="su-hint">A code can hold several time &amp; value options (e.g. 90834 at 45 min and a 15-min slot). The first is the default.</span></div>
+          <div className="su-card">
+            <Foldable unit="codes" rowSelector=".su-cptcard">
+              <div className="su-cptlist">
+                {cpt.map((x, i) => {
+                  const setVar = (vi: number, patch: Partial<CptVar>) => setCpt(upd(cpt, i, { variants: x.variants.map((v, k) => (k === vi ? { ...v, ...patch } : v)) }));
+                  return (
+                    <div className="su-cptcard" key={x.code}>
+                      <div className="su-cpttop">
+                        <span className="su-cptcode">{x.code}</span>
+                        <input className="su-in" value={x.description} placeholder="Description" onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} />
+                        <div className="su-actions">
+                          <button className="su-save" onClick={() => run({ entity: "cpt", code: x.code, description: x.description, active: true, variants: x.variants }, "Saved")}>Save</button>
+                          <button className="su-del" onClick={() => run({ entity: "cpt", action: "delete", code: x.code }, "Removed")}>×</button>
+                        </div>
+                      </div>
+                      <div className="su-cptvars">
+                        {x.variants.map((v, vi) => (
+                          <div className="su-cptvar" key={vi}>
+                            <input className="su-in" placeholder="Label (e.g. 45 min)" value={v.label} onChange={(e) => setVar(vi, { label: e.target.value })} />
+                            <label className="su-varlab">min<NumInput style={{ minWidth: 60, maxWidth: 74 }} value={v.minutes} onChange={(n) => setVar(vi, { minutes: n })} /></label>
+                            <label className="su-varlab">$<NumInput className="su-in numwide" value={v.fee} onChange={(n) => setVar(vi, { fee: n })} /></label>
+                            {vi === 0 ? <span className="su-vardefault">default</span> : <button className="su-del" onClick={() => setCpt(upd(cpt, i, { variants: x.variants.filter((_, k) => k !== vi) }))}>×</button>}
+                          </div>
+                        ))}
+                        <button className="su-add sm" onClick={() => setCpt(upd(cpt, i, { variants: [...x.variants, { label: "", minutes: 30, fee: 0 }] }))}>+ time / value option</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Foldable>
+            {/* Add a new code */}
+            <div className="su-cptcard new">
+              <div className="su-cpttop">
+                <input className="su-in short" placeholder="90XXX" value={newCpt.code} onChange={(e) => setNewCpt({ ...newCpt, code: e.target.value })} />
+                <input className="su-in" placeholder="Description" value={newCpt.description} onChange={(e) => setNewCpt({ ...newCpt, description: e.target.value })} />
+                <button className="su-save" disabled={!newCpt.code.trim()} onClick={() => { run({ entity: "cpt", code: newCpt.code, description: newCpt.description, active: true, variants: newCpt.variants }, "Added"); setNewCpt({ code: "", description: "", active: true, variants: [{ label: "", minutes: 60, fee: 0 }] }); }}>Add</button>
+              </div>
+              <div className="su-cptvars">
+                {newCpt.variants.map((v, vi) => (
+                  <div className="su-cptvar" key={vi}>
+                    <input className="su-in" placeholder="Label (e.g. 45 min)" value={v.label} onChange={(e) => setNewCpt({ ...newCpt, variants: newCpt.variants.map((y, k) => (k === vi ? { ...y, label: e.target.value } : y)) })} />
+                    <label className="su-varlab">min<NumInput style={{ minWidth: 60, maxWidth: 74 }} value={v.minutes} onChange={(n) => setNewCpt({ ...newCpt, variants: newCpt.variants.map((y, k) => (k === vi ? { ...y, minutes: n } : y)) })} /></label>
+                    <label className="su-varlab">$<NumInput className="su-in numwide" value={v.fee} onChange={(n) => setNewCpt({ ...newCpt, variants: newCpt.variants.map((y, k) => (k === vi ? { ...y, fee: n } : y)) })} /></label>
+                    {vi === 0 ? <span className="su-vardefault">default</span> : <button className="su-del" onClick={() => setNewCpt({ ...newCpt, variants: newCpt.variants.filter((_, k) => k !== vi) })}>×</button>}
+                  </div>
+                ))}
+                <button className="su-add sm" onClick={() => setNewCpt({ ...newCpt, variants: [...newCpt.variants, { label: "", minutes: 30, fee: 0 }] })}>+ time / value option</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -30,12 +30,24 @@ export interface ExternalClinician {
   active: boolean;
 }
 
+/** One time/value option on a service code (e.g. "15 min" @ $57.11). */
+export interface CptVariant { label: string; minutes: number; fee: number }
+
 export interface CptCode {
   code: string;
   description: string;
   active: boolean;
-  fee?: number;   // default service fee for this code (KYD)
-  hrs?: number;   // duration in hours
+  fee?: number;   // default service fee for this code (KYD) = primary variant fee
+  hrs?: number;   // duration in hours = primary variant minutes / 60
+  variants?: CptVariant[]; // extra time/value options; [0] is the default
+}
+
+/** The code's options, always as a non-empty list. A code with no explicit
+ *  variants yields one synthesized from its fee/hrs, so callers never special-case. */
+export function cptVariantList(c: CptCode): CptVariant[] {
+  if (c.variants && c.variants.length) return c.variants;
+  const minutes = Math.round((c.hrs ?? 1) * 60);
+  return [{ label: `${minutes} min`, minutes, fee: c.fee ?? 0 }];
 }
 
 // Practice-wide money rules the owner controls in Setup.
@@ -265,23 +277,47 @@ export async function deleteExternalClinician(id: string): Promise<void> {
 }
 
 // ============================ CPT codes =====================================
+function parseVariants(v: unknown): CptVariant[] | undefined {
+  const arr = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return null; } })() : v;
+  if (!Array.isArray(arr)) return undefined;
+  const clean = arr
+    .map((x) => ({ label: String((x as CptVariant).label ?? ""), minutes: Number((x as CptVariant).minutes) || 0, fee: Number((x as CptVariant).fee) || 0 }))
+    .filter((x) => x.minutes > 0 || x.fee > 0);
+  return clean.length ? clean : undefined;
+}
+
 export async function listCptCodes(): Promise<CptCode[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_cpt_codes ORDER BY code`) as Record<string, unknown>[];
-    return rows.map((r) => ({ code: r.code as string, description: (r.description as string) || "", active: !!r.active, fee: r.fee == null ? undefined : num(r.fee), hrs: r.hrs == null ? undefined : num(r.hrs) }));
+    return rows.map((r) => ({ code: r.code as string, description: (r.description as string) || "", active: !!r.active, fee: r.fee == null ? undefined : num(r.fee), hrs: r.hrs == null ? undefined : num(r.hrs), variants: parseVariants(r.variants) }));
   }
   return readJson<CptCode[]>(CPT_FILE, []);
 }
 
 export async function upsertCptCode(c: CptCode): Promise<CptCode> {
-  const row: CptCode = { code: c.code, description: c.description || "", active: c.active ?? true, fee: c.fee, hrs: c.hrs };
+  // Keep the base fee/hrs in step with the primary (first) variant so every
+  // existing reader (session form, importers) still works unchanged.
+  const variants = c.variants && c.variants.length ? c.variants : undefined;
+  const primary = variants?.[0];
+  const fee = primary ? primary.fee : c.fee;
+  const hrs = primary ? primary.minutes / 60 : c.hrs;
+  const row: CptCode = { code: c.code, description: c.description || "", active: c.active ?? true, fee, hrs, variants };
   if (usePostgres) {
     const sql = await pg();
-    await sql`
-      INSERT INTO billing_cpt_codes (code, description, active, fee, hrs)
-      VALUES (${row.code}, ${row.description}, ${row.active}, ${row.fee ?? null}, ${row.hrs ?? null})
-      ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active, fee = EXCLUDED.fee, hrs = EXCLUDED.hrs`;
+    const vjson = variants ? JSON.stringify(variants) : null;
+    try {
+      await sql`
+        INSERT INTO billing_cpt_codes (code, description, active, fee, hrs, variants)
+        VALUES (${row.code}, ${row.description}, ${row.active}, ${fee ?? null}, ${hrs ?? null}, ${vjson}::jsonb)
+        ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active, fee = EXCLUDED.fee, hrs = EXCLUDED.hrs, variants = EXCLUDED.variants`;
+    } catch {
+      // variants column not migrated yet — save the base code so nothing breaks.
+      await sql`
+        INSERT INTO billing_cpt_codes (code, description, active, fee, hrs)
+        VALUES (${row.code}, ${row.description}, ${row.active}, ${fee ?? null}, ${hrs ?? null})
+        ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active, fee = EXCLUDED.fee, hrs = EXCLUDED.hrs`;
+    }
     return row;
   }
   const all = readJson<CptCode[]>(CPT_FILE, []);

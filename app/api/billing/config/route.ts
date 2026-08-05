@@ -60,7 +60,13 @@ export async function POST(req: Request) {
       }
       const code = String(body.code ?? "").trim();
       if (!code) return NextResponse.json({ error: "A CPT code is required." }, { status: 400 });
-      await upsertCptCode({ code, description: String(body.description ?? "").trim(), active: body.active !== false, fee: n(body.fee), hrs: n(body.hrs) });
+      // Multiple time/value options per code. Sanitised; the first is the default.
+      const variants = Array.isArray(body.variants)
+        ? (body.variants as { label?: unknown; minutes?: unknown; fee?: unknown }[])
+            .map((v) => ({ label: String(v.label ?? "").trim(), minutes: Number(v.minutes) || 0, fee: Number(v.fee) || 0 }))
+            .filter((v) => v.minutes > 0 || v.fee > 0)
+        : undefined;
+      await upsertCptCode({ code, description: String(body.description ?? "").trim(), active: body.active !== false, fee: n(body.fee), hrs: n(body.hrs), variants: variants && variants.length ? variants : undefined });
       return NextResponse.json({ ok: true });
     }
 

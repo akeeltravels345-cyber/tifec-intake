@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
-import { listInsurers, listCptCodes, listSessions } from "@/lib/billing";
+import { listInsurers, listCptCodes, listSessions, cptVariantList } from "@/lib/billing";
 import { listClients } from "@/lib/clients";
 import SessionForm from "@/components/billing/SessionForm";
 
@@ -18,7 +18,7 @@ export default async function NewSessionPage() {
     listClients(user.clinician.id),
   ]);
   const activeInsurers = insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, copayType: i.copayType, copayRate: i.copayRate }));
-  const activeCpt = cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1 }));
+  const activeCpt = cptCodes.filter((c) => c.active).map((c) => { const vs = cptVariantList(c); return { code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, variants: vs }; });
 
   // Distinct clients this clinician has seen before, most recent first, with the
   // insurer they last used — so a returning client is one click, not a re-type.

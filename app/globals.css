@@ -2315,6 +2315,21 @@ body:has(.biz) { background: #F8F9F8; }
 .su-comm .ratebox input { border: none; background: transparent; font: 500 22px/1.3 "Newsreader", serif; width: 46px; height: auto; padding: 0; text-align: right; color: var(--ink); }
 .su-comm .ratebox input:focus { outline: none; }
 .su-comm .ratebox.readonly { font: 500 22px/1.3 "Newsreader", serif; color: var(--ink); background: #faf8f3; }
+/* Service codes as cards, each with several time/value options. */
+.su-cptlist { display: flex; flex-direction: column; }
+.su-cptcard { padding: 14px 16px; border-bottom: 1px solid var(--hair, #F0EADE); }
+.su-cptcard.new { background: #faf8f3; border-bottom: none; border-top: 1px solid var(--edge, #ECE6DA); }
+.su-cpttop { display: flex; align-items: center; gap: 10px; }
+.su-cptcode { font: 700 14px "Open Sans", system-ui, sans-serif; color: var(--ink); min-width: 62px; }
+.su-cpttop .su-in { flex: 1; min-width: 0; }
+.su-cpttop .su-in.short { flex: none; width: 88px; }
+.su-cpttop .su-actions { margin-left: auto; }
+.su-cptvars { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px; padding-left: 10px; border-left: 2px solid var(--edge, #ECE6DA); }
+.su-cptvar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.su-cptvar .su-in { flex: 1; min-width: 120px; }
+.su-varlab { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.su-vardefault { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-deep, #1f6b6f); background: #e7f2f1; border-radius: 999px; padding: 3px 9px; }
+.su-add.sm { align-self: flex-start; padding: 5px 12px; font-size: 12px; }
 .su-comm .pct { font: 500 20px "Newsreader", serif; color: var(--muted); }
 .su-comm .basis { font-size: 12px; color: var(--faint); margin-top: 4px; }
 .su-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
@@ -2750,6 +2765,9 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 5px 8px 5px 12px; font: 600 12.5px "Open Sans"; cursor: pointer; }
 .biz .ls-selchip:hover { background: #e0efef; }
 .biz .ls-selchip .x { font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); }
+/* A selected code + (when it has options) its time/value picker. */
+.biz .ls-selitem { display: inline-flex; align-items: center; gap: 6px; }
+.biz .ls-varsel { width: auto; padding: 6px 10px; font-size: 12.5px; }
 .biz .ls-more { background: none; border: none; color: var(--teal-deep); font: 600 12.5px "Open Sans"; cursor: pointer; padding: 10px 2px 0; }
 .biz .ls-more:hover { color: var(--indigo); }
 

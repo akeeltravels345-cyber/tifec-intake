@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import DobInput from "./DobInput";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
-interface CptOpt { code: string; description: string; fee: number; hrs: number; }
+interface CptVar { label: string; minutes: number; fee: number; }
+interface CptOpt { code: string; description: string; fee: number; hrs: number; variants?: CptVar[]; }
 interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; referralEnd?: string | null; }
 const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
@@ -81,6 +82,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [dos, setDos] = useState(today);
   const [insurerId, setInsurerId] = useState("");
   const [codes, setCodes] = useState<string[]>([]);
+  // Which time/value option is chosen for each selected code (index into its
+  // variants; defaults to 0 = the code's default option).
+  const [variantByCode, setVariantByCode] = useState<Record<string, number>>({});
+  const variantsOf = (code: string) => cptCodes.find((x) => x.code === code)?.variants ?? [];
+  const chosenVariant = (code: string) => { const vs = variantsOf(code); return vs[variantByCode[code] ?? 0] ?? vs[0]; };
   // Co-pay has TWO numbers: what was DUE (the insurer's rule) and what was
   // actually COLLECTED. The gap is a write-off — money not collected that should
   // have been.
@@ -98,8 +104,8 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [error, setError] = useState("");
 
   const insurer = useMemo(() => insurers.find((i) => i.id === insurerId), [insurers, insurerId]);
-  const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.fee || 0), 0)), [codes, cptCodes]);
-  const duration = useMemo(() => round2(codes.reduce((t, c) => t + (cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes]);
+  const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (chosenVariant(c)?.fee ?? cptCodes.find((x) => x.code === c)?.fee ?? 0), 0)), [codes, cptCodes, variantByCode]);
+  const duration = useMemo(() => round2(codes.reduce((t, c) => t + ((chosenVariant(c)?.minutes ?? 0) / 60 || cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes, variantByCode]);
   const suggested = suggestCopay(insurer, totalCost);
   // The co-pay figure the clinician enters is what was DUE (defaults to the
   // insurer's suggested rule). Whether it was collected depends on copayDisp:
@@ -310,11 +316,21 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Tap a selected code again (or its <b>×</b>) to remove it.</p>
             {codes.length > 0 && (
               <div className="ls-selcodes">
-                {codes.map((code) => { const c = cptCodes.find((x) => x.code === code); return (
-                  <button type="button" key={code} className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
-                    <span>{code}{c ? ` · ${money(c.fee)}` : ""}</span><span className="x">×</span>
-                  </button>
-                ); })}
+                {codes.map((code) => {
+                  const vs = variantsOf(code); const cv = chosenVariant(code);
+                  return (
+                    <div className="ls-selitem" key={code}>
+                      <button type="button" className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
+                        <span>{code}{cv ? ` · ${money(cv.fee)}` : ""}</span><span className="x">×</span>
+                      </button>
+                      {vs.length > 1 && (
+                        <select className="ls-in ls-varsel" value={variantByCode[code] ?? 0} onChange={(e) => setVariantByCode((m) => ({ ...m, [code]: Number(e.target.value) }))} aria-label={`Time option for ${code}`}>
+                          {vs.map((v, vi) => <option key={vi} value={vi}>{v.label || `${v.minutes} min`} · {money(v.fee)}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div className="ls-codesearch">
