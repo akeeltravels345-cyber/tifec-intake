@@ -1,6 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
+import { devMode } from "@/lib/billingRole";
+import { getSidebarData } from "@/lib/sidebarData";
+import UnifiedSidebar from "@/components/UnifiedSidebar";
 import AccountClient from "./AccountClient";
 import IdleLogout from "@/components/IdleLogout";
 
@@ -17,24 +19,28 @@ function initials(name: string): string {
 export default async function AccountPage() {
   const me = await getCurrentClinician();
   if (!me) redirect("/login?next=/account");
+  const sidebar = await getSidebarData(me);
 
   return (
-    <div className="container container-narrow">
-      <IdleLogout />
-      <Link href="/dashboard" className="back-link">← Dashboard</Link>
+    <div className="biz">
+      <UnifiedSidebar data={sidebar} isDev={devMode()} />
+      <main className="bo-main">
+        <div className="container container-narrow" style={{ padding: 0 }}>
+          <IdleLogout />
+          <div className="card">
+            <div className="page-head" style={{ marginBottom: 22 }}>
+              <div className="avatar">{initials(me.name)}</div>
+              <div>
+                <div className="greeting">Account</div>
+                <h1 className="who">{me.name}</h1>
+                <p className="who-sub">{me.email}</p>
+              </div>
+            </div>
 
-      <div className="card">
-        <div className="page-head" style={{ marginBottom: 22 }}>
-          <div className="avatar">{initials(me.name)}</div>
-          <div>
-            <div className="greeting">Account</div>
-            <h1 className="who">{me.name}</h1>
-            <p className="who-sub">{me.email}</p>
+            <AccountClient />
           </div>
         </div>
-
-        <AccountClient />
-      </div>
+      </main>
     </div>
   );
 }

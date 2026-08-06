@@ -11,6 +11,9 @@ import {
 import { listFeedback } from "@/lib/feedback";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
+import UnifiedSidebar from "@/components/UnifiedSidebar";
+import { getSidebarData } from "@/lib/sidebarData";
+import { devMode } from "@/lib/billingRole";
 import AdminClient, { type ClinicianAdminInfo } from "./AdminClient";
 
 export const dynamic = "force-dynamic";
@@ -127,8 +130,12 @@ export default async function AdminPage({
   const logHref = (v: string | number) => `/admin?${key ? `key=${encodeURIComponent(key)}&` : ""}log=${v}#activity`;
   const reports = await listFeedback(15).catch(() => []);
 
+  const sidebar = await getSidebarData(me!);
   return (
-    <div className="container">
+    <div className="biz">
+      <UnifiedSidebar data={sidebar} isDev={devMode()} />
+      <main className="bo-main">
+      <div className="container" style={{ padding: 0, maxWidth: "none" }}>
       <IdleLogout />
       <div className="card">
         <div className="page-head">
@@ -256,6 +263,8 @@ export default async function AdminPage({
         <p className="section-desc">{withLoginCount} of {clinicianInfos.length} clinicians have an active login. Create or reset passwords below.</p>
       </div>
       <AdminClient clinicians={clinicianInfos} adminKey="" />
+      </div>
+      </main>
     </div>
   );
 }
