@@ -2765,9 +2765,11 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 5px 8px 5px 12px; font: 600 12.5px "Open Sans"; cursor: pointer; }
 .biz .ls-selchip:hover { background: #e0efef; }
 .biz .ls-selchip .x { font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); }
-/* A selected code + (when it has options) its time/value picker. */
-.biz .ls-selitem { display: inline-flex; align-items: center; gap: 6px; }
-.biz .ls-varsel { width: auto; padding: 6px 10px; font-size: 12.5px; }
+/* Time/value pickers, shown in the duration section for codes with options. */
+.biz .ls-varpickers { display: flex; flex-direction: column; gap: 8px; }
+.biz .ls-varpicker { display: flex; align-items: center; gap: 10px; }
+.biz .ls-varpicker .lbl { font-weight: 700; font-size: 13px; color: var(--ink); min-width: 62px; }
+.biz .ls-varpicker .ls-in { flex: 1; min-width: 0; }
 .biz .ls-more { background: none; border: none; color: var(--teal-deep); font: 600 12.5px "Open Sans"; cursor: pointer; padding: 10px 2px 0; }
 .biz .ls-more:hover { color: var(--indigo); }
 

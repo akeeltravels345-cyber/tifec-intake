@@ -316,21 +316,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Tap a selected code again (or its <b>×</b>) to remove it.</p>
             {codes.length > 0 && (
               <div className="ls-selcodes">
-                {codes.map((code) => {
-                  const vs = variantsOf(code); const cv = chosenVariant(code);
-                  return (
-                    <div className="ls-selitem" key={code}>
-                      <button type="button" className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
-                        <span>{code}{cv ? ` · ${money(cv.fee)}` : ""}</span><span className="x">×</span>
-                      </button>
-                      {vs.length > 1 && (
-                        <select className="ls-in ls-varsel" value={variantByCode[code] ?? 0} onChange={(e) => setVariantByCode((m) => ({ ...m, [code]: Number(e.target.value) }))} aria-label={`Time option for ${code}`}>
-                          {vs.map((v, vi) => <option key={vi} value={vi}>{v.label || `${v.minutes} min`} · {money(v.fee)}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  );
-                })}
+                {codes.map((code) => { const cv = chosenVariant(code); return (
+                  <button type="button" key={code} className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
+                    <span>{code}{cv ? ` · ${money(cv.fee)}` : ""}</span><span className="x">×</span>
+                  </button>
+                ); })}
               </div>
             )}
             <div className="ls-codesearch">
@@ -381,6 +371,22 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             )}
             <p className="ls-help">Total cost and duration fill in automatically from the codes you pick.</p>
           </div>
+          {codes.some((c) => variantsOf(c).length > 1) && (
+            <div className="ls-field">
+              <label className="ls-q">Time &amp; value</label>
+              <p className="ls-help" style={{ marginTop: 0 }}>Some codes have more than one length — pick which one applies.</p>
+              <div className="ls-varpickers">
+                {codes.filter((c) => variantsOf(c).length > 1).map((code) => (
+                  <label className="ls-varpicker" key={code}>
+                    <span className="lbl">{code}</span>
+                    <select className="ls-in" value={variantByCode[code] ?? 0} onChange={(e) => setVariantByCode((m) => ({ ...m, [code]: Number(e.target.value) }))} aria-label={`Time option for ${code}`}>
+                      {variantsOf(code).map((v, vi) => <option key={vi} value={vi}>{v.label || `${v.minutes} min`} · {money(v.fee)}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="ls-field">
             <div className="ls-row2">
               <div style={{ flex: 1 }}>
