@@ -1490,7 +1490,9 @@ body:has(.biz) { background: #F8F9F8; }
 .bo-navl-btn svg { transition: transform .15s ease; flex: none; }
 .bo-navl-btn:not(.open) svg { transform: rotate(-90deg); }
 .bo-brand { text-decoration: none; color: inherit; }
-.bo-nav { display: flex; flex-direction: column; gap: 3px; }
+/* Let the menu scroll within the rail so no links get clipped on short screens;
+   brand + footer stay put. */
+.bo-nav { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .bo-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 10px; color: #6a6f66; font-size: 14px; font-weight: 600; text-decoration: none; }
 .bo-nav a:hover { background: #f3f0e8; }
 .bo-nav a.on { background: #eef4f3; color: var(--teal-deep); font-weight: 700; }
@@ -2853,3 +2855,7 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 /* Make room for the fixed announcement banner instead of covering the header. */
 html.tm-banner-open body { padding-top: 74px; }
 @media (max-width: 620px) { html.tm-banner-open body { padding-top: 104px; } }
+/* The banner pushes the page down; keep the full-height sidebar within view so
+   its footer (and last links) don't fall off the bottom. */
+html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
+@media (max-width: 620px) { html.tm-banner-open .bo-side { height: calc(100vh - 104px); } }
