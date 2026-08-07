@@ -642,6 +642,34 @@ export async function markSessionPaid(id: string, paid: boolean, paidDate: strin
   return true;
 }
 
+/** Settle an insurance claim with a contractual write-off / write-down: record
+ *  the cash collected, mark it settled (paidDate = settle date), and store the
+ *  disposition so its adjustment lands in the write-off/down bucket. */
+export async function markSessionAdjusted(id: string, disposition: "writeoff" | "writedown", collected: number, settleDate: string | null): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`
+      UPDATE billing_sessions
+      SET insurance_paid = false,
+          paid_date = ${settleDate},
+          billed_date = COALESCE(billed_date, ${settleDate})
+      WHERE id = ${id} RETURNING id`) as { id: string }[];
+    if (res.length === 0) return false;
+    await writeInsuranceAdjust(sql, id, disposition, collected);
+    return true;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return false;
+  s.insurancePaid = false;
+  s.paidDate = settleDate;
+  if (!s.billedDate) s.billedDate = settleDate;
+  s.insuranceDisposition = disposition;
+  s.insuranceCollected = collected;
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
 /** Edit a logged session (fix a mistake). Updates the money-bearing fields; the
  *  caller resolves the final values (defaulting to the existing ones) so nothing
  *  is wiped. Every view recomputes from sessions, so the fix propagates. */

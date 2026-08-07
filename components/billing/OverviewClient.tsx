@@ -27,6 +27,8 @@ export interface OverviewData {
   appointments: number;
   uncollectedCopay: number; // practice-wide co-pays due but not collected — still owed
   waivedCopay: number;      // practice-wide co-pays deliberately waived (written off)
+  contractualWriteoff: number; // practice-wide insurance contractual write-offs
+  writeDown: number;           // practice-wide insurance write-downs
 }
 
 function TrendChart({ pts }: { pts: { label: string; value: number; current: boolean }[] }) {
@@ -120,7 +122,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
 
       <div className="bo-bridge"><span className="line" /><span className="txt">Earned is the work you did · Collected is the cash in the door. They differ by what insurers still owe you.</span><span className="line" /></div>
 
-      {(data.uncollectedCopay > 0 || data.waivedCopay > 0) && (
+      {(data.uncollectedCopay > 0 || data.waivedCopay > 0 || data.contractualWriteoff > 0 || data.writeDown > 0) && (
         <div className="bo-uncollected">
           <div>
             <span className="lab">Co-pays not collected · {data.monthName}</span>
@@ -131,6 +133,18 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--edge)" }}>
               <span className="lab" style={{ margin: 0 }}>Co-pays waived · {data.monthName}</span>
               <span className="amt" style={{ color: "var(--muted)" }}>{money(data.waivedCopay)}</span>
+            </div>
+          )}
+          {data.contractualWriteoff > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--edge)" }}>
+              <span className="lab" style={{ margin: 0 }}>Contractual write-offs · {data.monthName}</span>
+              <span className="amt" style={{ color: "var(--muted)" }}>{money(data.contractualWriteoff)}</span>
+            </div>
+          )}
+          {data.writeDown > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--edge)" }}>
+              <span className="lab" style={{ margin: 0 }}>Write-downs · {data.monthName}</span>
+              <span className="amt" style={{ color: "var(--muted)" }}>{money(data.writeDown)}</span>
             </div>
           )}
         </div>

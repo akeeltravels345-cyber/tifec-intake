@@ -86,6 +86,8 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     clinicians, appointments: biz.appointments,
     uncollectedCopay: biz.uncollectedCopay,
     waivedCopay: biz.waivedCopay,
+    contractualWriteoff: biz.contractualWriteoff,
+    writeDown: biz.writeDown,
     isAdmin,
   };
 

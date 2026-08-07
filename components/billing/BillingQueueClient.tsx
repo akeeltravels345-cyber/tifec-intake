@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -51,6 +51,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const toggleCollapse = (key: string) => setCollapsed((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   const [batchDate, setBatchDate] = useState(data.today);
   const [busy, setBusy] = useState(false);
+  // Per-claim write-off / write-down inline form.
+  const [adjustId, setAdjustId] = useState<string | null>(null);
+  const [adjDisp, setAdjDisp] = useState<"writeoff" | "writedown">("writeoff");
+  const [adjMode, setAdjMode] = useState<"adjusted" | "collected">("adjusted");
+  const [adjAmt, setAdjAmt] = useState("");
+  const [adjDate, setAdjDate] = useState(data.today);
 
   // The open list the current tab works on (paid is a read-only history tab).
   const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : tab === "selfpay" ? data.selfPay : data.paid;
@@ -105,6 +111,13 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const markPaid = (ids: string[], date: string) => post(ids, { action: "paid", paid: true, paidDate: date });
   const unbill = (id: string) => post([id], { action: "billed", billed: false });
   const unpay = (id: string) => post([id], { action: "paid", paid: false });
+  const openAdjust = (id: string) => { setAdjustId(id); setAdjDisp("writeoff"); setAdjMode("adjusted"); setAdjAmt(""); setAdjDate(data.today); };
+  async function submitAdjust(id: string, billedAmt: number) {
+    const amt = Number(adjAmt) || 0;
+    const collected = Math.max(0, Math.min(billedAmt, adjMode === "collected" ? amt : billedAmt - amt));
+    await post([id], { action: "adjust", disposition: adjDisp, insuranceCollected: collected, paidDate: adjDate });
+    setAdjustId(null);
+  }
   // Correct the date on a record that's already billed/paid — a claim that came
   // in last week but got marked today should read last week. Only fires on a
   // real, changed date.
@@ -190,8 +203,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                     <div className="bq-gright"><div className="bq-gtot">{money(g.total)}</div><div className="bq-gcomm">+{money(comm(g.claims))} to you</div></div>
                     <span className={`bq-gchev ${open ? "open" : ""}`} aria-hidden="true">›</span>
                   </div>
-                  {open && g.claims.map((c) => (
-                    <div className={`bq-row ${selected.has(c.id) ? "sel" : ""} ${tab === "awaiting" ? "act" : ""}`} key={c.id}>
+                  {open && g.claims.map((c) => {
+                    const amt = Number(adjAmt) || 0;
+                    const adjCollected = Math.max(0, Math.min(c.amount, adjMode === "collected" ? amt : c.amount - amt));
+                    return (
+                    <Fragment key={c.id}>
+                    <div className={`bq-row ${selected.has(c.id) ? "sel" : ""} ${tab === "awaiting" ? "act" : ""}`}>
                       <input type="checkbox" className="bq-check" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
                       <div className={`dos ${tab === "awaiting" && c.insurerId !== "self" ? "bq-leaddate" : ""}`}>{tab === "awaiting" && c.insurerId !== "self"
                         ? <input type="date" className="bq-dateedit lead" value={c.billedDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editBilled(c.id, c.billedDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Billed date — back-date to when the claim actually came in" />
@@ -200,9 +217,21 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
                       <div className="amt">{money(c.amount)}</div>
                       <div className="comm">+{money(c.commission)}</div>
-                      {tab === "awaiting" && c.insurerId !== "self" && <button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button>}
+                      {tab === "awaiting" && c.insurerId !== "self" && <div className="bq-rowacts"><button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button><button className="bq-undo" disabled={busy} onClick={() => (adjustId === c.id ? setAdjustId(null) : openAdjust(c.id))} title="Settle with a contractual write-off or write-down">Write off/down</button></div>}
                     </div>
-                  ))}
+                    {adjustId === c.id && (
+                      <div className="bq-adjustrow">
+                        <select className="ls-in" value={adjDisp} onChange={(e) => setAdjDisp(e.target.value as typeof adjDisp)}><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select>
+                        <select className="ls-in" value={adjMode} onChange={(e) => setAdjMode(e.target.value as typeof adjMode)}><option value="adjusted">{adjDisp === "writeoff" ? "Amount written off" : "Amount written down"}</option><option value="collected">Amount collected</option></select>
+                        <input type="number" step="0.01" min="0" className="ls-in" style={{ maxWidth: 110 }} value={adjAmt} placeholder="0.00" onChange={(e) => setAdjAmt(e.target.value)} />
+                        <input type="date" className="ls-in" style={{ maxWidth: 150 }} value={adjDate} max={data.today} onChange={(e) => setAdjDate(e.target.value)} title="Settled date" />
+                        <span className="bq-adjnote">of {money(c.amount)}: collected <b>{money(adjCollected)}</b>, {adjDisp === "writeoff" ? "written off" : "written down"} <b>{money(c.amount - adjCollected)}</b></span>
+                        <button className="go sm" disabled={busy} onClick={() => submitAdjust(c.id, c.amount)}>Settle</button>
+                        <button className="bq-undo" disabled={busy} onClick={() => setAdjustId(null)}>Cancel</button>
+                      </div>
+                    )}
+                    </Fragment>
+                  ); })}
                 </div>
               );
             })}

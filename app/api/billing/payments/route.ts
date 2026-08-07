@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkPaid } from "@/lib/billingRole";
-import { markSessionPaid, markSessionBilled, markSelfPayPaid, getSession } from "@/lib/billing";
+import { markSessionPaid, markSessionBilled, markSelfPayPaid, markSessionAdjusted, getSession } from "@/lib/billing";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -32,6 +32,17 @@ export async function POST(req: Request) {
     if (billed && (!billedDate || !isDate(billedDate)))
       return NextResponse.json({ error: "A valid billed date is required." }, { status: 400 });
     const ok = await markSessionBilled(sessionId, billed, billed ? billedDate : null);
+    if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
+
+  // action "adjust" → settle a claim as a contractual write-off / write-down.
+  if (action === "adjust") {
+    const disposition = body.disposition === "writedown" ? "writedown" : "writeoff";
+    const collected = Number.isFinite(Number(body.insuranceCollected)) ? Math.max(0, Number(body.insuranceCollected)) : 0;
+    const settleDate = body.paidDate ? String(body.paidDate) : null;
+    if (!settleDate || !isDate(settleDate)) return NextResponse.json({ error: "A valid settled date is required." }, { status: 400 });
+    const ok = await markSessionAdjusted(sessionId, disposition, collected, settleDate);
     if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
     return NextResponse.json({ ok: true });
   }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
-import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex } from "@/lib/billingCalc";
+import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex, insuranceSettled, insuranceCash } from "@/lib/billingCalc";
 import { listAllClients } from "@/lib/clients";
 import { chargeAfterReferral } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
@@ -79,10 +79,13 @@ export default async function BillingQueuePage() {
   const selfOwing = selfPay.filter((s) => selfPayOutstanding(s) > 0).map((s) => toSelfClaim(s, selfPayOutstanding(s)));
   const selfPaidClaims = selfPay.filter((s) => selfPayOutstanding(s) <= 0 && (s.copayCollected || 0) > 0 && s.paidDate).map((s) => toSelfClaim(s, s.totalCost || 0));
 
-  const toBill = insured.filter((s) => !s.insurancePaid && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
-  const awaiting = insured.filter((s) => !s.insurancePaid && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
+  // A settled claim (paid OR written-off / written-down) is off the open list.
+  const toBill = insured.filter((s) => !insuranceSettled(s) && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
+  const awaiting = insured.filter((s) => !insuranceSettled(s) && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
   const selfPayClaims = selfOwing.sort((a, b) => b.age - a.age); // self-pay balances owed by clients — their own tab
-  const paid = [...insured.filter((s) => s.insurancePaid).map(toClaim), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
+  // Paid tab shows every settled claim; for a write-off/down the amount is the
+  // cash actually collected (not the full billed portion).
+  const paid = [...insured.filter(insuranceSettled).map((s) => ({ ...toClaim(s), amount: r2(insuranceCash(s)) })), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
   // Everything not yet collected (both open stages) drives the outstanding total
   // and the aging chips.
