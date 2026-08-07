@@ -7,7 +7,9 @@ import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
 import { findIntakeForClient } from "@/lib/intakeLink";
 import { selfPayOutstanding } from "@/lib/billingCalc";
+import { listNotesForClient } from "@/lib/sessionNotes";
 import ClientDetail, { type Activity } from "@/components/billing/ClientDetail";
+import SessionNotes from "@/components/billing/SessionNotes";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,14 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s), insuranceCollected: s.insuranceCollected,
     }));
 
+  // Clinical notes: only clinicians linked to this client (never biller/admin).
+  const linked = await clinicianSeesClient(id, user.clinician.id);
+  const canSeeNotes = !isBiller(user.role) && user.clinician.contact !== "admin" && linked;
+  const noteRows = canSeeNotes
+    ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
+    : [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   return (
     <>
       <Link href="/billing/clients" className="ls-back">← All clients</Link>
@@ -69,6 +79,13 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         currentUserRole={user.clinician.contact === "admin" ? "admin" : user.role}
         cptCodes={cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0 }))}
       />
+      {canSeeNotes && (
+        <div className="su-card" style={{ marginTop: 20, padding: "18px 20px" }}>
+          <h2 className="su-sech" style={{ margin: "0 0 3px" }}>Session notes</h2>
+          <p className="su-sub" style={{ margin: "0 0 14px" }}>Encrypted SOAP notes — visible only to this client&apos;s clinicians.</p>
+          <SessionNotes clientId={client.id} notes={noteRows} meId={user.clinician.id} today={todayStr} />
+        </div>
+      )}
     </>
   );
 }

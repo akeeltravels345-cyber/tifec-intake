@@ -2043,6 +2043,37 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-editform .ls-in { min-width: 120px; }
 .cd-editform input[type="number"] { max-width: 110px; }
 .cd-adjnote { flex-basis: 100%; font-size: 12.5px; color: var(--muted); background: #faf8f3; border: 1px solid var(--edge); border-radius: 9px; padding: 9px 12px; line-height: 1.5; }
+/* Clinical session notes (SOAP) */
+.sn-add { border: 1px dashed var(--teal, #2F8E93); background: #eef5f5; color: var(--teal-deep, #1f6b6f); border-radius: 10px; padding: 10px 16px; font: 600 13px "Open Sans", system-ui, sans-serif; cursor: pointer; }
+.sn-add:hover { background: #e3efef; }
+.sn-editor { border: 1px solid var(--edge); border-radius: 12px; padding: 14px 16px; background: #faf9f6; display: flex; flex-direction: column; gap: 12px; margin: 4px 0 14px; }
+.sn-datelab { display: flex; flex-direction: column; gap: 5px; font: 700 11px "Open Sans"; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); max-width: 200px; }
+.sn-field { display: flex; flex-direction: column; gap: 5px; }
+.sn-flab { font: 700 11.5px "Open Sans"; letter-spacing: .03em; text-transform: uppercase; color: var(--ink); }
+.sn-flab .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--faint, #8a93a3); }
+.sn-field textarea { resize: vertical; line-height: 1.55; }
+.sn-acts { display: flex; gap: 8px; }
+.sn-empty { font-size: 13.5px; color: var(--muted); }
+.sn-list { display: flex; flex-direction: column; gap: 12px; }
+.sn-note { border: 1px solid var(--edge); border-radius: 12px; padding: 14px 16px; background: #fff; }
+.sn-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--hair, #F0EADE); margin-bottom: 10px; }
+.sn-date { font-weight: 700; color: var(--ink); }
+.sn-by { font-size: 12.5px; color: var(--muted); }
+.sn-noteacts { margin-left: auto; display: flex; gap: 12px; }
+.sn-link { background: none; border: none; padding: 0; font: 600 12.5px "Open Sans"; color: var(--indigo, #2E3192); cursor: pointer; }
+.sn-link.del { color: var(--neg, #a5432f); }
+.sn-body { display: flex; flex-direction: column; gap: 10px; }
+.sn-seg .sn-seglab { font: 700 10.5px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: var(--teal-deep, #1f6b6f); }
+.sn-seg p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink); line-height: 1.55; white-space: pre-wrap; }
+/* Dedicated Session-notes workspace */
+.notes-layout { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+.notes-clients { background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.notes-clientlink { display: block; padding: 9px 11px; border-radius: 9px; text-decoration: none; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.notes-clientlink:hover { background: #f3f0e8; color: var(--ink); }
+.notes-clientlink.on { background: #EDF5F5; color: var(--teal-deep, #1f6b6f); }
+.notes-main { background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+.notes-clienthead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--hair, #F0EADE); }
+@media (max-width: 760px) { .notes-layout { grid-template-columns: 1fr; } .notes-clients { position: static; max-height: 210px; } }
 /* Service (CPT) code editor inside the edit-charge form. */
 .cd-editcodes { display: flex; flex-direction: column; gap: 6px; flex-basis: 100%; }
 .cd-editcodes .cd-lab { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
