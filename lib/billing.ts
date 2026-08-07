@@ -139,7 +139,13 @@ export interface SessionInput {
   billedDate?: string | null;
   insurancePaid?: boolean;
   paidDate?: string | null;
+  // Claim settled with an adjustment: a contractual write-off or a write-down.
+  // insuranceCollected is the cash actually collected on it (rest = the adjustment).
+  insuranceDisposition?: InsuranceDisposition;
+  insuranceCollected?: number | null;
 }
+
+export type InsuranceDisposition = "writeoff" | "writedown" | null;
 
 export interface BillingSession {
   id: string;
@@ -158,6 +164,8 @@ export interface BillingSession {
   billedDate: string | null;   // submitted to insurer (null = not yet billed)
   insurancePaid: boolean;      // insurer has settled (= collected)
   paidDate: string | null;
+  insuranceDisposition: InsuranceDisposition; // writeoff | writedown | null
+  insuranceCollected: number | null;          // cash collected when adjusted (null = n/a)
   notes: string;
   createdBy: string;
   createdAt: string;
@@ -436,6 +444,8 @@ interface StoredSession {
   billedDate: string | null;
   insurancePaid: boolean;
   paidDate: string | null;
+  insuranceDisposition?: InsuranceDisposition;
+  insuranceCollected?: number | null;
   notes: string;
   createdBy: string;
   createdAt: string;
@@ -455,7 +465,10 @@ function decryptSession(s: StoredSession): BillingSession {
     dateOfService: s.dateOfService, cptCodes: s.cptCodes || [], durationHours: num(s.durationHours), totalCost: num(s.totalCost),
     copayCollected: num(s.copayCollected), copayDue: s.copayDue == null ? num(s.copayCollected) : num(s.copayDue),
     selfPayStatus: s.selfPayStatus === "owing" || s.selfPayStatus === "waived" ? s.selfPayStatus : null,
-    billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate, notes: s.notes || "",
+    billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate,
+    insuranceDisposition: s.insuranceDisposition === "writeoff" || s.insuranceDisposition === "writedown" ? s.insuranceDisposition : null,
+    insuranceCollected: s.insuranceCollected == null ? null : num(s.insuranceCollected),
+    notes: s.notes || "",
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -472,7 +485,9 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
   const clientId = input.clientId ?? null;
   const copayDue = input.copayDue == null ? input.copayCollected : input.copayDue;
   const selfPayStatus = input.selfPayStatus ?? null;
-  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
+  const insuranceDisposition = input.insuranceDisposition ?? null;
+  const insuranceCollected = input.insuranceCollected ?? null;
+  const stored: StoredSession = { id, clinicianId: input.clinicianId, clientEnc, clientId, insurerId: input.insurerId, dateOfService: input.dateOfService, cptCodes: input.cptCodes, durationHours: input.durationHours, totalCost: input.totalCost, copayCollected: input.copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, insuranceDisposition, insuranceCollected, notes: input.notes ?? "", createdBy: input.createdBy, createdAt };
   if (usePostgres) {
     const sql = await pg();
     try {
@@ -488,12 +503,22 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
     for (const code of input.cptCodes) {
       await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
     }
+    // Insurance adjustment (write-off / write-down) — a separate guarded write so
+    // it's independent of the self_pay migration and a no-op before its own runs.
+    if (insuranceDisposition) await writeInsuranceAdjust(sql, id, insuranceDisposition, insuranceCollected);
   } else {
     const all = readJson<StoredSession[]>(SESS_FILE, []);
     all.push(stored);
     writeJson(SESS_FILE, all);
   }
   return decryptSession(stored);
+}
+
+/** Write the insurance-adjustment columns; no-op if the migration hasn't run. */
+async function writeInsuranceAdjust(sql: Awaited<ReturnType<typeof pg>>, id: string, disposition: InsuranceDisposition, collected: number | null): Promise<void> {
+  try {
+    await sql`UPDATE billing_sessions SET insurance_disposition = ${disposition}, insurance_collected = ${collected} WHERE id = ${id}`;
+  } catch { /* column not migrated yet */ }
 }
 
 async function loadStored(): Promise<StoredSession[]> {
@@ -512,6 +537,13 @@ async function loadStored(): Promise<StoredSession[]> {
     const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
     const byId: Record<string, string[]> = {};
     for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
+    // Insurance adjustments live in their own (optionally-migrated) columns; read
+    // them separately so a missing column never breaks the main session read.
+    const adj: Record<string, { disposition: InsuranceDisposition; collected: number | null }> = {};
+    try {
+      const arows = (await sql`SELECT id, insurance_disposition, insurance_collected FROM billing_sessions WHERE insurance_disposition IS NOT NULL`) as Record<string, unknown>[];
+      for (const a of arows) adj[a.id as string] = { disposition: (a.insurance_disposition === "writeoff" || a.insurance_disposition === "writedown" ? a.insurance_disposition : null) as InsuranceDisposition, collected: a.insurance_collected == null ? null : num(a.insurance_collected) };
+    } catch { /* columns not migrated yet */ }
     return rows.map((r) => ({
       id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, clientId: (r.client_id as string) ?? null, insurerId: (r.insurer_id as string) ?? null,
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
@@ -520,7 +552,9 @@ async function loadStored(): Promise<StoredSession[]> {
       totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), copayDue: r.copay_due == null ? undefined : num(r.copay_due),
       selfPayStatus: r.self_pay_status === "owing" || r.self_pay_status === "waived" ? r.self_pay_status : null,
       billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
-      paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null, notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
+      paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null,
+      insuranceDisposition: adj[r.id as string]?.disposition ?? null, insuranceCollected: adj[r.id as string]?.collected ?? null,
+      notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }
   return readJson<StoredSession[]>(SESS_FILE, []).sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
@@ -616,9 +650,13 @@ export async function updateSession(id: string, f: {
   copayCollected: number; copayDue: number; billedDate: string | null;
   insurancePaid: boolean; paidDate: string | null; notes: string;
   selfPayStatus?: SelfPayStatus;
+  insuranceDisposition?: InsuranceDisposition;
+  insuranceCollected?: number | null;
   cptCodes?: string[];
 }): Promise<boolean> {
   const selfPayStatus = f.selfPayStatus ?? null;
+  const insuranceDisposition = f.insuranceDisposition ?? null;
+  const insuranceCollected = f.insuranceCollected ?? null;
   if (usePostgres) {
     const sql = await pg();
     let ok = false;
@@ -650,6 +688,7 @@ export async function updateSession(id: string, f: {
         await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
       }
     }
+    if (ok) await writeInsuranceAdjust(sql, id, insuranceDisposition, insuranceCollected);
     return ok;
   }
   const all = readJson<StoredSession[]>(SESS_FILE, []);
@@ -658,6 +697,7 @@ export async function updateSession(id: string, f: {
   s.dateOfService = f.dateOfService; s.insurerId = f.insurerId; s.totalCost = f.totalCost;
   s.copayCollected = f.copayCollected; s.copayDue = f.copayDue; s.selfPayStatus = selfPayStatus;
   s.billedDate = f.billedDate; s.insurancePaid = f.insurancePaid; s.paidDate = f.paidDate; s.notes = f.notes;
+  s.insuranceDisposition = insuranceDisposition; s.insuranceCollected = insuranceCollected;
   if (f.cptCodes) s.cptCodes = f.cptCodes;
   writeJson(SESS_FILE, all);
   return true;

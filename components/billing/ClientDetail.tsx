@@ -14,8 +14,8 @@ const randId = () => Math.random().toString(36).slice(2, 10);
 export interface Activity {
   id: string; date: string; clinician: string; codes: string[]; codeLabel: string;
   insurer: string; insurerId: string | null; total: number; copay: number; copayDue: number;
-  stage: "self" | "logged" | "billed" | "paid"; paidDate: string | null; billedDate: string | null;
-  selfPayStatus?: "owing" | "waived" | null; selfPayOwed?: number;
+  stage: "self" | "logged" | "billed" | "paid" | "writeoff" | "writedown"; paidDate: string | null; billedDate: string | null;
+  selfPayStatus?: "owing" | "waived" | null; selfPayOwed?: number; insuranceCollected?: number | null;
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -27,6 +27,8 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
   logged: { label: "To bill", cls: "logged" },
   billed: { label: "Awaiting payment", cls: "billed" },
   paid: { label: "Paid", cls: "paid" },
+  writeoff: { label: "Write-off", cls: "paid" },
+  writedown: { label: "Write-down", cls: "paid" },
 };
 
 export default function ClientDetail({
@@ -53,7 +55,11 @@ export default function ClientDetail({
   const [ecInsurer, setEcInsurer] = useState("");
   const [ecCopay, setEcCopay] = useState("");
   const [ecDue, setEcDue] = useState("");
-  const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+  const [ecStage, setEcStage] = useState<"tobill" | "awaiting" | "paid" | "writeoff" | "writedown">("awaiting");
+  // For a write-off / write-down: the amount, and whether it's the collected cash
+  // or the adjusted-off amount (the biller can enter either).
+  const [ecAdjAmt, setEcAdjAmt] = useState("");
+  const [ecAdjMode, setEcAdjMode] = useState<"collected" | "adjusted">("adjusted");
   const [ecBilled, setEcBilled] = useState("");
   const [ecPaid, setEcPaid] = useState("");
   const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived">("paid");
@@ -89,10 +95,14 @@ export default function ClientDetail({
     setEcInsurer(a.insurerId ?? "");
     setEcCopay(String(a.copay));
     setEcDue(String(a.copayDue));
-    setEcStage(a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
+    setEcStage(a.stage === "writeoff" || a.stage === "writedown" ? a.stage : a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
     setEcBilled(a.billedDate ?? "");
     setEcPaid(a.paidDate ?? "");
     setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
+    // Seed the adjustment amount from the stored collected amount (as the "adjusted" figure).
+    const billedIns = round2(Math.max(0, (a.total || 0) - (a.copayDue || 0)));
+    setEcAdjMode("adjusted");
+    setEcAdjAmt(a.insuranceCollected != null ? String(round2(Math.max(0, billedIns - a.insuranceCollected))) : "");
     setEcCodes(a.codes ?? []);
   }
   // Add/remove a service code; when codes change, re-suggest the fee as their sum
@@ -107,10 +117,19 @@ export default function ClientDetail({
       return next;
     });
   }
+  // The insurance billed to the payer on the currently-edited charge.
+  const ecBilledInsurance = round2(Math.max(0, (Number(ecTotal) || 0) - (Number(ecDue) || 0)));
+  // For a write-off/write-down, resolve the cash collected from what the biller typed.
+  const ecInsuranceCollected = () => {
+    const amt = Number(ecAdjAmt) || 0;
+    const collected = ecAdjMode === "collected" ? amt : ecBilledInsurance - amt;
+    return round2(Math.min(ecBilledInsurance, Math.max(0, collected)));
+  };
   async function saveEditCharge(sid: string) {
     if (!ecDate || ecTotal === "") { setMsg("Enter a date and amount."); return; }
     setBusy(true); setMsg("");
     try {
+      const adjusting = ecInsurer && (ecStage === "writeoff" || ecStage === "writedown");
       const res = await fetch(`/api/billing/sessions/${sid}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,6 +141,7 @@ export default function ClientDetail({
           selfPayStatus: ecInsurer ? null : (ecSelfPay === "paid" ? null : ecSelfPay),
           billedDate: ecBilled || null,
           paidDate: ecPaid || null,
+          insuranceCollected: adjusting ? ecInsuranceCollected() : null,
           cptCodes: ecCodes,
         }),
       });
@@ -682,9 +702,15 @@ export default function ClientDetail({
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
-                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
                                 {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer — back-date to the real date if needed" /></label>}
                                 {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer actually settled — this drives the payout month" /></label>}
+                                {(ecStage === "writeoff" || ecStage === "writedown") && <>
+                                  <label>Amount is<select className="ls-in" value={ecAdjMode} onChange={(e) => setEcAdjMode(e.target.value as typeof ecAdjMode)}><option value="adjusted">{ecStage === "writeoff" ? "Written off" : "Written down"}</option><option value="collected">Collected</option></select></label>
+                                  <label>{ecAdjMode === "adjusted" ? (ecStage === "writeoff" ? "Written off" : "Written down") : "Collected"}<input type="number" step="0.01" min="0" className="ls-in" value={ecAdjAmt} onChange={(e) => setEcAdjAmt(e.target.value)} placeholder="0.00" /></label>
+                                  <label>Settled date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When this claim was settled — drives the month it lands in" /></label>
+                                  <div className="cd-adjnote">Of {money(ecBilledInsurance)} billed: collected <b>{money(ecInsuranceCollected())}</b>, {ecStage === "writeoff" ? "written off" : "written down"} <b>{money(round2(ecBilledInsurance - ecInsuranceCollected()))}</b>. Only the collected part pays out; the rest tracks in its own bucket, not with waived co-pays.</div>
+                                </>}
                               </>}
                               <div className="cd-editactions">
                                 <button className="ls-save sm" disabled={busy} onClick={() => saveEditCharge(a.id)}>{busy ? "Saving…" : "Save change"}</button>

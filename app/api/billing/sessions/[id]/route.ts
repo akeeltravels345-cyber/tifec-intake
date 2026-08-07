@@ -28,17 +28,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const copayDue = Number.isFinite(Number(body.copayDue)) && Number(body.copayDue) >= 0 ? Number(body.copayDue) : session.copayDue;
   const notes = typeof body.notes === "string" ? body.notes : session.notes;
 
-  // Stage: to bill -> awaiting (billed) -> paid. Derive the lifecycle dates so the
-  // three states stay consistent (paid implies billed).
-  const curStage = !insurerId ? "paid" : session.insurancePaid ? "paid" : session.billedDate ? "awaiting" : "tobill";
-  const stage = ["tobill", "awaiting", "paid"].includes(String(body.stage)) ? String(body.stage) : curStage;
+  // Stage: to bill -> awaiting (billed) -> paid, or settled with an adjustment
+  // (contractual write-off / write-down). Derive the lifecycle dates so the
+  // states stay consistent (paid/adjusted imply billed).
+  const curStage = !insurerId ? "paid" : session.insuranceDisposition ? session.insuranceDisposition : session.insurancePaid ? "paid" : session.billedDate ? "awaiting" : "tobill";
+  const stage = ["tobill", "awaiting", "paid", "writeoff", "writedown"].includes(String(body.stage)) ? String(body.stage) : curStage;
+  const adjusted = insurerId ? (stage === "writeoff" || stage === "writedown") : false;
   const paid = stage === "paid";
+  const settled = paid || adjusted; // off the outstanding list, has a settle date
+  const insuranceDisposition = adjusted ? (stage as "writeoff" | "writedown") : null;
+  // For an adjustment, the cash actually collected (the rest is the write-off/down).
+  const insuranceCollected = adjusted
+    ? (Number.isFinite(Number(body.insuranceCollected)) ? Math.max(0, Number(body.insuranceCollected)) : 0)
+    : null;
   // Explicit billed/paid dates can be supplied (e.g. the biller back-dating from
   // a client record); otherwise keep the existing date, or fall back to the DOS.
   const bodyBilled = isDate(body.billedDate) ? String(body.billedDate) : null;
   const bodyPaid = isDate(body.paidDate) ? String(body.paidDate) : null;
   const billedDate = stage === "tobill" ? null : (bodyBilled ?? session.billedDate ?? dateOfService);
-  const paidDate = paid ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
+  const paidDate = settled ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
   // Uncollected-amount disposition: self-pay owing/waived, or an insured co-pay
   // waived (write-off). Anything else is null (collected / didn't-collect-owed).
   const selfPayStatus = insurerId
@@ -51,7 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     ? body.cptCodes.map((c) => String(c).trim()).filter(Boolean)
     : undefined;
 
-  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, notes, ...(cptCodes && cptCodes.length ? { cptCodes } : {}) });
+  const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, insuranceDisposition, insuranceCollected, notes, ...(cptCodes && cptCodes.length ? { cptCodes } : {}) });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

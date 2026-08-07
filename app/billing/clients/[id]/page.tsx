@@ -43,9 +43,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       id: s.id, date: s.dateOfService, clinician: clinName(s.clinicianId),
       codes: s.cptCodes, codeLabel: s.cptCodes.map((c) => cptDesc(c)).filter(Boolean).join(", "),
       insurer: insName(s.insurerId), insurerId: s.insurerId, total: s.totalCost, copay: s.copayCollected, copayDue: s.copayDue,
-      stage: !s.insurerId ? "self" : s.insurancePaid ? "paid" : s.billedDate ? "billed" : "logged",
+      stage: !s.insurerId ? "self" : s.insuranceDisposition ? s.insuranceDisposition : s.insurancePaid ? "paid" : s.billedDate ? "billed" : "logged",
       paidDate: s.paidDate, billedDate: s.billedDate,
-      selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s),
+      selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s), insuranceCollected: s.insuranceCollected,
     }));
 
   return (

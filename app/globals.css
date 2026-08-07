@@ -2036,6 +2036,7 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-editform label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }
 .cd-editform .ls-in { min-width: 120px; }
 .cd-editform input[type="number"] { max-width: 110px; }
+.cd-adjnote { flex-basis: 100%; font-size: 12.5px; color: var(--muted); background: #faf8f3; border: 1px solid var(--edge); border-radius: 9px; padding: 9px 12px; line-height: 1.5; }
 /* Service (CPT) code editor inside the edit-charge form. */
 .cd-editcodes { display: flex; flex-direction: column; gap: 6px; flex-basis: 100%; }
 .cd-editcodes .cd-lab { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--faint, #8a93a3); }

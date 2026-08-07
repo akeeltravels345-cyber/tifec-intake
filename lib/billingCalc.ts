@@ -63,6 +63,28 @@ export function waivedCopay(s: BillingSession): number {
   const due = s.copayDue == null ? s.copayCollected : s.copayDue;
   return round2(Math.max(0, (due || 0) - (s.copayCollected || 0)));
 }
+/** A claim is settled (off the outstanding list) when it's paid OR adjusted with
+ *  a contractual write-off / write-down. */
+export function insuranceSettled(s: BillingSession): boolean {
+  return !!s.insurerId && (s.insurancePaid || !!s.insuranceDisposition);
+}
+/** Cash actually collected from the insurer on this claim: the whole billed
+ *  portion if paid in full, the allowed amount on a write-off/write-down, else 0. */
+export function insuranceCash(s: BillingSession): number {
+  if (!s.insurerId) return 0;
+  if (s.insuranceDisposition) return round2(Math.max(0, s.insuranceCollected ?? 0));
+  return s.insurancePaid ? insurancePortion(s) : 0;
+}
+/** The contractual write-off on a claim (billed portion minus what was collected). */
+export function contractualWriteoff(s: BillingSession): number {
+  if (!s.insurerId || s.insuranceDisposition !== "writeoff") return 0;
+  return round2(Math.max(0, insurancePortion(s) - (s.insuranceCollected ?? 0)));
+}
+/** The write-down on a claim (billed portion minus what was collected). */
+export function writeDown(s: BillingSession): number {
+  if (!s.insurerId || s.insuranceDisposition !== "writedown") return 0;
+  return round2(Math.max(0, insurancePortion(s) - (s.insuranceCollected ?? 0)));
+}
 
 const sumBy = (arr: BillingSession[], f: (s: BillingSession) => number) => round2(arr.reduce((t, s) => t + f(s), 0));
 
@@ -79,7 +101,9 @@ export interface ClinicianMonth {
   uncollectedCopay: number;      // co-pay due at this month's visits, not collected, still OWED (invoice)
   waivedCopay: number;           // co-pay due at this month's visits, deliberately WAIVED (written off)
   // cashflow ("money actually in this month" — drives payout)
-  insuranceBilledThisMonth: number; // insurance portions billed this month (any visit month)
+  insuranceBilledThisMonth: number; // insurance cash collected this month (any visit month)
+  contractualWriteoff: number;      // billed amount written off (contractual) this month
+  writeDown: number;                // billed amount written down this month
   collected: number;                // copayThisMonth + insuranceBilledThisMonth
   // running
   outstanding: number;              // insurance portion of ALL un-billed sessions
@@ -114,10 +138,12 @@ export function computeClinicianMonth(
   billerCommissionPct = 0
 ): ClinicianMonth {
   const visits = sessions.filter((s) => inMonth(s.dateOfService, year, month));
-  const billedThisMonth = sessions.filter((s) => s.insurancePaid && inMonth(s.paidDate, year, month));
-  const unbilled = sessions.filter((s) => s.insurerId && !s.insurancePaid);
-  const visitsBilled = visits.filter((s) => s.insurancePaid);
-  const visitsUnbilled = visits.filter((s) => s.insurerId && !s.insurancePaid);
+  // Settled this month = paid or adjusted (write-off / write-down) this month.
+  const billedThisMonth = sessions.filter((s) => insuranceSettled(s) && inMonth(s.paidDate, year, month));
+  // Outstanding = insured, not yet settled (adjusted claims are settled, not owed).
+  const unbilled = sessions.filter((s) => s.insurerId && !insuranceSettled(s));
+  const visitsBilled = visits.filter((s) => insuranceSettled(s));
+  const visitsUnbilled = visits.filter((s) => s.insurerId && !insuranceSettled(s));
 
   const revenueGenerated = sumBy(visits, (s) => s.totalCost || 0);
   // Co-pays are taken at the visit, so they count in the visit month. Self-pay
@@ -128,7 +154,12 @@ export function computeClinicianMonth(
   const selfPayCollectedSessions = sessions.filter((s) => !s.insurerId && inMonth(s.paidDate || s.dateOfService, year, month));
   const selfPayCollected = sumBy(selfPayCollectedSessions, collectedAtVisit);
   const copayThisMonth = round2(insuredCopay + selfPayCollected);
-  const insuranceBilledThisMonth = sumBy(billedThisMonth, insurancePortion);
+  // Collected insurance = the actual cash (full portion when paid; the allowed
+  // amount on a write-off / write-down). The rest is the adjustment, tracked in
+  // its own buckets below — never counted as collected, so it never pays out.
+  const insuranceBilledThisMonth = sumBy(billedThisMonth, insuranceCash);
+  const contractualWriteoffThisMonth = sumBy(billedThisMonth, contractualWriteoff);
+  const writeDownThisMonth = sumBy(billedThisMonth, writeDown);
   const collected = round2(copayThisMonth + insuranceBilledThisMonth);
 
   // An owner who draws no payout: their collections stay with the practice, with
@@ -178,6 +209,8 @@ export function computeClinicianMonth(
     uncollectedCopay: sumBy(visits, uncollectedCopay),
     waivedCopay: sumBy(visits, waivedCopay),
     insuranceBilledThisMonth,
+    contractualWriteoff: contractualWriteoffThisMonth,
+    writeDown: writeDownThisMonth,
     collected,
     outstanding: sumBy(unbilled, insurancePortion),
     retentionPct: pct,
@@ -209,6 +242,8 @@ export interface BusinessMonth {
   copays: number;             // co-pays collected this month
   uncollectedCopay: number;   // co-pay due this month, not collected, still owed (invoice)
   waivedCopay: number;        // co-pay due this month, deliberately waived (written off)
+  contractualWriteoff: number; // insurance billed written off (contractual) this month
+  writeDown: number;          // insurance billed written down this month
   outstanding: number;        // total not yet paid by insurance (running)
   totalPayout: number;        // sum of clinician payouts
   billerCommission: number;   // total the biller earns across the practice
@@ -233,6 +268,8 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
     copays: s((c) => c.copayThisMonth),
     uncollectedCopay: s((c) => c.uncollectedCopay),
     waivedCopay: s((c) => c.waivedCopay),
+    contractualWriteoff: s((c) => c.contractualWriteoff),
+    writeDown: s((c) => c.writeDown),
     outstanding: s((c) => c.outstanding),
     totalPayout,
     billerCommission: s((c) => c.billerCommission),
