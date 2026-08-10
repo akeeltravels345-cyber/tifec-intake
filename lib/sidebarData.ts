@@ -10,6 +10,7 @@ import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import { getViewAsState } from "@/lib/auth";
 import { touchPresence } from "@/lib/comms";
 import { listStaged } from "@/lib/importStaging";
+import { NOTES_ENABLED } from "@/lib/sessionNotes";
 
 export interface SidebarData {
   role: "owner" | "biller" | "clinician";
@@ -23,6 +24,7 @@ export interface SidebarData {
   openTickets: number;
   importPending: number;
   noteCount: number;
+  notesEnabled: boolean;
   // "Viewing as" switcher (system admin only). canSwitchViews = the REAL user is
   // the admin; viewingAsRole = the role currently being impersonated (null when
   // the admin is on their own menu); switchTargets = who to impersonate per role.
@@ -69,5 +71,6 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     openTickets: tickets.filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length,
     importPending: staged.length,
     noteCount,
+    notesEnabled: NOTES_ENABLED,
   };
 }

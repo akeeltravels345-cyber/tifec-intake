@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, devMode } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { listClients } from "@/lib/clients";
-import { listNotesForClient } from "@/lib/sessionNotes";
+import { listNotesForClient, NOTES_ENABLED } from "@/lib/sessionNotes";
 import { getSidebarData } from "@/lib/sidebarData";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import SessionNotes from "@/components/billing/SessionNotes";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 /** A clinician's session-notes workspace: pick a client, read + write SOAP notes.
  *  Clinicians only — the biller and system admin never see clinical content. */
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ client?: string }> }) {
+  if (!NOTES_ENABLED) redirect("/today");
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/notes");
   if (isBiller(user.role) || isSystemAdmin(user.clinician)) redirect("/today");

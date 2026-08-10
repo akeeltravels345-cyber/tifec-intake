@@ -7,7 +7,7 @@ import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
 import { findIntakeForClient } from "@/lib/intakeLink";
 import { selfPayOutstanding } from "@/lib/billingCalc";
-import { listNotesForClient } from "@/lib/sessionNotes";
+import { listNotesForClient, NOTES_ENABLED } from "@/lib/sessionNotes";
 import ClientDetail, { type Activity } from "@/components/billing/ClientDetail";
 import SessionNotes from "@/components/billing/SessionNotes";
 
@@ -52,7 +52,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
 
   // Clinical notes: only clinicians linked to this client (never biller/admin).
   const linked = await clinicianSeesClient(id, user.clinician.id);
-  const canSeeNotes = !isBiller(user.role) && user.clinician.contact !== "admin" && linked;
+  const canSeeNotes = NOTES_ENABLED && !isBiller(user.role) && user.clinician.contact !== "admin" && linked;
   const noteRows = canSeeNotes
     ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
     : [];

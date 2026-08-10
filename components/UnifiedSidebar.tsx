@@ -33,7 +33,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const owner = role === "owner", biller = role === "biller";
 
 
@@ -73,7 +73,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-            { href: "/notes", label: "Session notes", icon: IcDoc, match: (p) => p.startsWith("/notes") },
+            ...(notesEnabled ? [{ href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") }] : []),
             { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
           ]
         : biller
@@ -89,7 +89,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician") },
               { href: "/billing/clients", label: "My clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-              { href: "/notes", label: "Session notes", icon: IcDoc, match: (p) => p.startsWith("/notes") },
+              ...(notesEnabled ? [{ href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") }] : []),
               { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
             ];
       groups.push({ label: "Billing", items: billing });
