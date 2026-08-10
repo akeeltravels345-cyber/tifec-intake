@@ -168,9 +168,9 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
             {data.bottom.processingFeePct > 0 && (
               <div className="bo-adminfee">
-                <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />😁😁😁 Platform Processing Fee ({data.bottom.processingFeePct}% of collected)</span><span className="v">−{money(data.bottom.processingFee)}</span></div>
-                <div className="bo-wftot"><span className="k">Net after platform fee</span><span className="v" style={{ color: data.bottom.netAfterProcessing < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.netAfterProcessing)}</span></div>
-                <div className="bo-adminnote">Platform processing fee — <b>{money(data.bottom.processingFee)}</b> ({data.bottom.processingFeePct}% of the {money(data.bottom.cashCollected)} collected this month), taken from the practice&apos;s net.</div>
+                <div className="bo-wfl"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />Platform processing fee <span className="bo-illus">illustrative</span> ({data.bottom.processingFeePct}% of collected)</span><span className="v" style={{ color: "var(--muted)" }}>{money(data.bottom.processingFee)}</span></div>
+                <div className="bo-wfl"><span className="k">Net if it applied</span><span className="v" style={{ color: "var(--muted)" }}>{money0(data.bottom.netAfterProcessing)}</span></div>
+                <div className="bo-adminnote">For reference only — what a <b>{data.bottom.processingFeePct}%</b> platform fee on the {money(data.bottom.cashCollected)} collected would look like ({money(data.bottom.processingFee)}). It is <b>not</b> deducted from your net above.</div>
               </div>
             )}
           </div>
