@@ -335,14 +335,26 @@ export async function lastTicketCommenters(): Promise<Record<string, string>> {
 /** Whose turn it is on a ticket — the people it's waiting on. The ball follows the
  *  last comment: the raiser opening it (or speaking) puts it on the assignees; an
  *  assignee replying puts it back on the raiser; a resolved ticket waits on no one.
- *  So making a comment hands the ball over instead of leaving it flagged as yours. */
+ *
+ *  Whoever just replied is NEVER shown as still owing a reply — so even if a
+ *  person is on both sides (they raised it AND it's assigned to them), their own
+ *  comment always hands the ball to the other side. */
 export function ticketWaitingOn(
   t: { createdBy: string; assignees: string[]; status: TicketStatus },
   lastCommenterId: string | null,
 ): string[] {
   if (t.status === "resolved") return [];
-  if (!lastCommenterId || lastCommenterId === t.createdBy) return t.assignees;
-  return [t.createdBy];
+  const raiserSpokeLast = !lastCommenterId || lastCommenterId === t.createdBy;
+  // The ball sits on the OTHER side from whoever spoke last.
+  let ball = raiserSpokeLast ? t.assignees.slice() : [t.createdBy];
+  ball = ball.filter((id) => id && id !== lastCommenterId);
+  // If that left no one (e.g. the raiser is also the sole assignee), fall back to
+  // the side that just spoke — still never the last speaker themselves.
+  if (ball.length === 0) {
+    const other = raiserSpokeLast ? [t.createdBy] : t.assignees;
+    ball = other.filter((id) => id && id !== lastCommenterId);
+  }
+  return [...new Set(ball)];
 }
 
 export async function createTicket(input: {
