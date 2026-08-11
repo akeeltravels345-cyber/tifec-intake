@@ -330,20 +330,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
-            <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Need the same code more than once (e.g. two extended assessment hours)? Add it, then use <b>−&nbsp;/&nbsp;+</b> to set the number of units.</p>
+            <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Tap a selected code again (or its <b>×</b>) to remove it. Set the length and number of units for each below.</p>
             {codes.length > 0 && (
               <div className="ls-selcodes">
-                {codes.map((code) => { const u = unitsOf(code); const line = round2(feeOf(code) * u); return (
-                  <div key={code} className="ls-selchip">
-                    <span className="cc">{code}</span>
-                    <span className="qty">
-                      <button type="button" className="qb" onClick={() => setUnits(code, u - 1)} disabled={u <= 1} aria-label={`Fewer units of ${code}`}>−</button>
-                      <span className="qn">×{u}</span>
-                      <button type="button" className="qb" onClick={() => setUnits(code, u + 1)} aria-label={`More units of ${code}`}>+</button>
-                    </span>
-                    <span className="cf">{money(line)}</span>
-                    <button type="button" className="x" onClick={() => toggle(code)} aria-label={`Remove ${code}`} title="Remove this code">×</button>
-                  </div>
+                {codes.map((code) => { const u = unitsOf(code); return (
+                  <button type="button" key={code} className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
+                    <span>{code}{u > 1 ? ` ×${u}` : ""}</span><span className="x">×</span>
+                  </button>
                 ); })}
               </div>
             )}
@@ -395,19 +388,37 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
             )}
             <p className="ls-help">Total cost and duration fill in automatically from the codes you pick.</p>
           </div>
-          {codes.some((c) => variantsOf(c).length > 1) && (
+          {codes.length > 0 && (
             <div className="ls-field">
               <label className="ls-q">Time &amp; value</label>
-              <p className="ls-help" style={{ marginTop: 0 }}>Some codes have more than one length — pick which one applies.</p>
+              <p className="ls-help" style={{ marginTop: 0 }}>Pick the length where a code has options, and set how many units — e.g. a second extended assessment hour.</p>
               <div className="ls-varpickers">
-                {codes.filter((c) => variantsOf(c).length > 1).map((code) => (
-                  <label className="ls-varpicker" key={code}>
+                {codes.map((code) => {
+                  const vs = variantsOf(code);
+                  const u = unitsOf(code);
+                  const line = round2(feeOf(code) * u);
+                  // Drop a trailing "… 60 mins" from the name when the code has a
+                  // length dropdown — the dropdown already carries the length.
+                  const name = (cptCodes.find((x) => x.code === code)?.description || "").replace(vs.length > 1 ? /,?\s*\d+\s*mins?\.?$/i : /$^/, "").trim();
+                  return (
+                  <div className="ls-varrow" key={code}>
                     <span className="lbl">{code}</span>
-                    <select className="ls-in" value={variantByCode[code] ?? 0} onChange={(e) => setVariantByCode((m) => ({ ...m, [code]: Number(e.target.value) }))} aria-label={`Time option for ${code}`}>
-                      {variantsOf(code).map((v, vi) => <option key={vi} value={vi}>{v.label || `${v.minutes} min`} · {money(v.fee)}</option>)}
-                    </select>
-                  </label>
-                ))}
+                    <span className="vmid">
+                      <span className="vdesc">{name}</span>
+                      {vs.length > 1 && (
+                        <select className="vsel" value={variantByCode[code] ?? 0} onChange={(e) => setVariantByCode((m) => ({ ...m, [code]: Number(e.target.value) }))} aria-label={`Time option for ${code}`}>
+                          {vs.map((v, vi) => <option key={vi} value={vi}>{v.label || `${v.minutes} min`}</option>)}
+                        </select>
+                      )}
+                    </span>
+                    <span className="ls-units">
+                      <button type="button" className="qb" onClick={() => setUnits(code, u - 1)} disabled={u <= 1} aria-label={`Fewer units of ${code}`}>−</button>
+                      <span className="qn">×{u}</span>
+                      <button type="button" className="qb" onClick={() => setUnits(code, u + 1)} aria-label={`More units of ${code}`}>+</button>
+                    </span>
+                    <span className="vfee">{money(line)}</span>
+                  </div>
+                ); })}
               </div>
             </div>
           )}
