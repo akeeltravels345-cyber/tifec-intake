@@ -95,6 +95,22 @@ export async function listDocMetaForClient(clientId: string): Promise<{ docId: s
     .map(([docId, v]) => ({ docId, mime: v.mime, size: v.size }));
 }
 
+/** List files whose owner id STARTS WITH a prefix — e.g. every attachment on a
+ *  ticket AND its comments (`ticket:<id>` and `ticket:<id>:msg:<mid>`) in one
+ *  query. Returns the owner id too so callers can group by message. */
+export async function listDocMetaByPrefix(prefix: string): Promise<{ docId: string; ownerId: string; mime: string; size: number }[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT id, client_id, mime, size FROM billing_client_docs WHERE client_id LIKE ${prefix + "%"} ORDER BY created_at`) as Record<string, unknown>[];
+    return rows.map((r) => ({ docId: String(r.id), ownerId: String(r.client_id), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0) }));
+  }
+  const all = readLocal();
+  return Object.entries(all)
+    .filter(([, v]) => v.clientId.startsWith(prefix))
+    .sort((a, b) => (a[1].createdAt ?? "").localeCompare(b[1].createdAt ?? ""))
+    .map(([docId, v]) => ({ docId, ownerId: v.clientId, mime: v.mime, size: v.size }));
+}
+
 /** Remove every stored file for a client (used when the client is deleted). */
 export async function deleteDocFilesForClient(clientId: string): Promise<void> {
   if (usePostgres) {

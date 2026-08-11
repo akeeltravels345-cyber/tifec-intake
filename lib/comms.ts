@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 import { encrypt, decrypt, randomId } from "./crypto";
+import type { TicketStatus } from "./ticketStatus";
 
 // A thread is either a direct message pair or the discussion on a ticket, so
 // messages and ticket replies are the same thing in one table.
@@ -22,12 +23,8 @@ export const dmPartner = (threadId: string, me: string): string | null => {
   return a === me ? b : a;
 };
 
-export type TicketStatus = "open" | "in_progress" | "resolved";
-export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
-  open: "Open",
-  in_progress: "In progress",
-  resolved: "Resolved",
-};
+export type { TicketStatus } from "./ticketStatus";
+export { TICKET_STATUS_LABEL, TICKET_STATUSES, isTicketStatus, statusActions, isOpenStatus } from "./ticketStatus";
 
 // Subject areas a ticket can be filed under.
 export const TICKET_AREAS = [
@@ -312,6 +309,40 @@ export async function listTickets(): Promise<Ticket[]> {
 
 export async function getTicket(id: string): Promise<Ticket | undefined> {
   return (await listTickets()).find((t) => t.id === id);
+}
+
+/** Who commented LAST on every ticket, in one pass — used to work out whose turn
+ *  it is (the "ball in court"). Keyed by ticket id. */
+export async function lastTicketCommenters(): Promise<Record<string, string>> {
+  const latest: Record<string, { senderId: string; at: string }> = {};
+  const consider = (threadId: string, senderId: string, at: string) => {
+    if (!threadId.startsWith("ticket:")) return;
+    const tid = threadId.slice("ticket:".length);
+    if (!latest[tid] || at > latest[tid].at) latest[tid] = { senderId, at };
+  };
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT thread_id, sender_id, created_at FROM comms_messages WHERE thread_id LIKE ${"ticket:%"} ORDER BY created_at`) as Record<string, unknown>[];
+    for (const r of rows) consider(str(r.thread_id), str(r.sender_id), iso(r.created_at));
+  } else {
+    for (const m of readJson<StoredMessage[]>(MSG_FILE, [])) consider(m.threadId, m.senderId, m.createdAt);
+  }
+  const out: Record<string, string> = {};
+  for (const [tid, v] of Object.entries(latest)) out[tid] = v.senderId;
+  return out;
+}
+
+/** Whose turn it is on a ticket — the people it's waiting on. The ball follows the
+ *  last comment: the raiser opening it (or speaking) puts it on the assignees; an
+ *  assignee replying puts it back on the raiser; a resolved ticket waits on no one.
+ *  So making a comment hands the ball over instead of leaving it flagged as yours. */
+export function ticketWaitingOn(
+  t: { createdBy: string; assignees: string[]; status: TicketStatus },
+  lastCommenterId: string | null,
+): string[] {
+  if (t.status === "resolved") return [];
+  if (!lastCommenterId || lastCommenterId === t.createdBy) return t.assignees;
+  return [t.createdBy];
 }
 
 export async function createTicket(input: {

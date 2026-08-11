@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { TICKET_STATUS_LABEL } from "@/lib/ticketStatus";
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
   createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean; needsYou: boolean;
+  waitingOn: string[];
 }
 interface Contact { id: string; name: string; label: string }
 
-// Plainer words than the raw statuses (legibility pass).
-const STATUS: Record<string, string> = { open: "Not started", in_progress: "Being sorted", resolved: "Done" };
 const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 /** "Nick", "Nick and Akeel", "Shion, Nick and Akeel" */
 const nameList = (names: string[]) =>
@@ -162,8 +162,12 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
                 </div>
               </div>
               <div className="tm-tright">
-                {t.needsYou && <span className="tm-needsyou">Needs you</span>}
-                <span className={`tm-status ${t.status}`}>{STATUS[t.status]}</span>
+                {t.status !== "resolved" && (
+                  t.needsYou
+                    ? <span className="tm-ball you">Your turn</span>
+                    : t.waitingOn.length > 0 && <span className="tm-ball">Waiting on {nameList(t.waitingOn)}</span>
+                )}
+                <span className={`tm-status ${t.status}`}>{TICKET_STATUS_LABEL[t.status as keyof typeof TICKET_STATUS_LABEL]}</span>
               </div>
             </Link>
           ))}

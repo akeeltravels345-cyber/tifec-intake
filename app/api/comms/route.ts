@@ -8,7 +8,7 @@ import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
   createTicket, updateTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
-  TICKET_AREAS, TICKET_STATUS_LABEL, type TicketArea, type TicketStatus,
+  TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
 const MAX_BODY = 5000;
@@ -51,7 +51,12 @@ async function canPost(threadId: string, me: string): Promise<boolean> {
   }
   if (threadId.startsWith("ticket:")) {
     const t = await getTicket(threadId.slice("ticket:".length));
-    return !!t && (t.createdBy === me || t.assignees.includes(me));
+    if (!t) return false;
+    // The raiser and assignees are on the ticket; the admin/owner oversee every
+    // ticket, so they can comment too (matching who can view it).
+    const c = getClinician(me);
+    const seesAll = c?.contact === "admin" || c?.contact === "owner";
+    return seesAll || t.createdBy === me || t.assignees.includes(me);
   }
   return false;
 }
@@ -73,10 +78,25 @@ export async function POST(req: Request) {
     if (action === "send") {
       const threadId = String(body.threadId ?? "");
       const text = String(body.body ?? "").trim();
-      if (!text) return NextResponse.json({ error: "Write something first." }, { status: 400 });
+      const isTicket = threadId.startsWith("ticket:");
+      // Ticket comments may carry image/voice attachments; other threads are text.
+      const atts: { base64?: string; mime?: string }[] = isTicket && Array.isArray(body.attachments) ? (body.attachments as []).slice(0, 6) : [];
+      if (!text && atts.length === 0) return NextResponse.json({ error: "Write something, or add an image or voice note." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 400 });
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       const m = await sendMessage(threadId, me.id, text);
+      // Save each attachment against this specific comment: owner id
+      // "ticket:<id>:msg:<messageId>" so the detail page can show it under the
+      // right comment. Same encrypted doc store as the ticket's own screenshots.
+      for (const a of atts) {
+        const base64 = typeof a.base64 === "string" ? a.base64 : "";
+        if (!base64) continue;
+        const size = Math.floor((base64.length * 3) / 4);
+        if (size > MAX_DOC_BYTES) continue;
+        const mime = (a.mime || "application/octet-stream").slice(0, 80);
+        if (!mime.startsWith("image/") && !mime.startsWith("audio/")) continue;
+        try { await saveDocFile(randomId(), `${threadId}:msg:${m.id}`, base64, mime, size); } catch (e) { console.error("comment attachment save failed", e); }
+      }
 
       // Tell the other side. Never quote the message itself — see notify().
       if (threadId === GROUP_THREAD_ID) {
@@ -99,6 +119,15 @@ export async function POST(req: Request) {
             to: "", recipientName: "", kind: "ticket_reply" as const,
             actorName: me.name, ticketRef: t.ref, path: `/team/tickets/${t.id}`,
           }));
+          // Auto-progress the status so it stays honest without anyone remembering
+          // to change it: the first reply from the assignee side starts a "Not
+          // started" ticket; the raiser answering a "Needs info" ticket resumes it.
+          const isRaiser = me.id === t.createdBy;
+          const nextStatus: TicketStatus | null =
+            !isRaiser && t.status === "open" ? "in_progress"
+            : isRaiser && t.status === "needs_info" ? "in_progress"
+            : null;
+          if (nextStatus) await updateTicket(t.id, { status: nextStatus });
         }
       }
       return NextResponse.json({ ok: true, id: m.id });
@@ -159,14 +188,17 @@ export async function POST(req: Request) {
       const id = String(body.id ?? "");
       const t = await getTicket(id);
       if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
-      // Anyone it's assigned to owns its state; the raiser may close their own.
-      if (!t.assignees.includes(me.id) && t.createdBy !== me.id) return NextResponse.json({ error: "Not your ticket." }, { status: 403 });
+      // Anyone it's assigned to owns its state; the raiser may close their own;
+      // the admin/owner oversee every ticket.
+      const mc = getClinician(me.id);
+      const oversees = mc?.contact === "admin" || mc?.contact === "owner";
+      if (!oversees && !t.assignees.includes(me.id) && t.createdBy !== me.id) return NextResponse.json({ error: "Not your ticket." }, { status: 403 });
 
       const patch: { status?: TicketStatus; assignees?: string[] } = {};
       if (body.status) {
         const s = String(body.status);
-        if (!["open", "in_progress", "resolved"].includes(s)) return NextResponse.json({ error: "Unknown status." }, { status: 400 });
-        patch.status = s as TicketStatus;
+        if (!isTicketStatus(s)) return NextResponse.json({ error: "Unknown status." }, { status: 400 });
+        patch.status = s;
       }
       if (body.assignees !== undefined) {
         const a = readAssignees(body.assignees);
@@ -177,8 +209,14 @@ export async function POST(req: Request) {
 
       if (patch.status && patch.status !== t.status) {
         const watchers = [t.createdBy, ...t.assignees].filter((u) => u !== me.id);
-        await notify(watchers, "ticket_status",
-          `${me.name} marked ticket #${t.ref} ${TICKET_STATUS_LABEL[patch.status].toLowerCase()}`, `/team/tickets/${t.id}`);
+        const ref = `#${t.ref}`;
+        const msg =
+          patch.status === "resolved" ? `${me.name} marked ${ref} done`
+          : patch.status === "needs_info" ? `${me.name} needs more info on ${ref}`
+          : patch.status === "on_hold" ? `${me.name} put ${ref} on hold`
+          : patch.status === "in_progress" ? `${me.name} is now working on ${ref}`
+          : `${me.name} reopened ${ref}`;
+        await notify(watchers, "ticket_status", msg, `/team/tickets/${t.id}`);
         // Only "resolved" is worth an email — in-progress would just be noise.
         if (patch.status === "resolved" && t.createdBy !== me.id) {
           await emailTeam([t.createdBy], () => ({

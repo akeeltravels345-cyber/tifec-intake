@@ -16,7 +16,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ docId: 
   const file = await getDocFile(docId);
   if (!file || !file.clientId.startsWith("ticket:")) return new Response("Not found", { status: 404 });
 
-  const ticketId = file.clientId.slice("ticket:".length);
+  // Owner id is "ticket:<id>" for the first post, "ticket:<id>:msg:<mid>" for a
+  // comment attachment — the ticket id is the first segment either way.
+  const ticketId = file.clientId.slice("ticket:".length).split(":")[0];
   const t = await getTicket(ticketId);
   const seesAll = me.contact === "admin" || me.contact === "owner";
   const allowed = !!t && (seesAll || t.createdBy === me.id || t.assignees.includes(me.id));
