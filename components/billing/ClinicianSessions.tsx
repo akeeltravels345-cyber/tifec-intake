@@ -4,6 +4,7 @@ import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Foldable from "./Foldable";
+import { collapseUnits } from "@/lib/cptUnits";
 
 export interface SessionRow {
   id: string;
@@ -62,14 +63,28 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
     setEcStage(s.status === "paid" ? "paid" : s.billed ? "awaiting" : "tobill");
     setEcCodes(s.codeList ?? []);
   }
-  // Add/remove a service code; changing the codes re-suggests the fee as their sum.
+  // Re-suggest the fee as the sum over the (possibly repeated) code array.
+  function resuggestFee(next: string[]) {
+    if (cptCodes.length) {
+      const sum = next.reduce((s, c) => s + cptFee(c), 0);
+      if (sum > 0) setEcFee(String(round2(sum)));
+    }
+  }
+  // Add a code (one unit) or remove a code entirely. Codes may repeat = units.
   function toggleEcCode(code: string, on: boolean) {
     setEcCodes((prev) => {
-      const next = on ? (prev.includes(code) ? prev : [...prev, code]) : prev.filter((c) => c !== code);
-      if (cptCodes.length) {
-        const sum = next.reduce((s, c) => s + cptFee(c), 0);
-        if (sum > 0) setEcFee(String(round2(sum)));
-      }
+      const next = on ? [...prev, code] : prev.filter((c) => c !== code);
+      resuggestFee(next);
+      return next;
+    });
+  }
+  // Nudge a code's unit count up (+1 occurrence) or down (remove one occurrence).
+  function bumpEcCode(code: string, delta: number) {
+    setEcCodes((prev) => {
+      const next = [...prev];
+      if (delta > 0) next.push(code);
+      else { const i = next.lastIndexOf(code); if (i >= 0) next.splice(i, 1); }
+      resuggestFee(next);
       return next;
     });
   }
@@ -159,8 +174,16 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
                         <span className="cd-lab">Service codes <span className="opt">changing these re-suggests the fee</span></span>
                         <div className="cd-codechips">
                           {ecCodes.length === 0 && <span className="cd-nocodes">No codes yet</span>}
-                          {ecCodes.map((c) => (
-                            <span className="cd-codechip" key={c} title={cptLabel(c)}>{c}<button type="button" aria-label={`Remove ${c}`} onClick={() => toggleEcCode(c, false)}>×</button></span>
+                          {collapseUnits(ecCodes).map(({ code, units }) => (
+                            <span className="cd-codechip" key={code} title={cptLabel(code)}>
+                              {code}
+                              <span className="cd-qty">
+                                <button type="button" className="qb" aria-label={`Fewer units of ${code}`} onClick={() => bumpEcCode(code, -1)} disabled={units <= 1}>−</button>
+                                <span className="qn">×{units}</span>
+                                <button type="button" className="qb" aria-label={`More units of ${code}`} onClick={() => bumpEcCode(code, 1)}>+</button>
+                              </span>
+                              <button type="button" className="cx" aria-label={`Remove ${code}`} onClick={() => toggleEcCode(code, false)}>×</button>
+                            </span>
                           ))}
                         </div>
                         <select className="ls-in" value="" onChange={(e) => { if (e.target.value) toggleEcCode(e.target.value, true); }}>

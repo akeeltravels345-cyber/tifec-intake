@@ -8,6 +8,7 @@ import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
 import DobInput from "./DobInput";
 import Foldable from "./Foldable";
+import { collapseUnits, codeSummary } from "@/lib/cptUnits";
 
 const randId = () => Math.random().toString(36).slice(2, 10);
 
@@ -105,15 +106,29 @@ export default function ClientDetail({
     setEcAdjAmt(a.insuranceCollected != null ? String(round2(Math.max(0, billedIns - a.insuranceCollected))) : "");
     setEcCodes(a.codes ?? []);
   }
-  // Add/remove a service code; when codes change, re-suggest the fee as their sum
-  // (the clinician can still override the Fee field afterwards).
+  // Re-suggest the fee as the sum over the (possibly repeated) code array; the
+  // clinician can still override the Fee field afterwards.
+  function resuggestFee(next: string[]) {
+    if (cptCodes.length) {
+      const sum = next.reduce((s, c) => s + cptFee(c), 0);
+      if (sum > 0) setEcTotal(String(round2(sum)));
+    }
+  }
+  // Add a code (one unit) or remove a code entirely. Codes may repeat = units.
   function toggleEcCode(code: string, on: boolean) {
     setEcCodes((prev) => {
-      const next = on ? (prev.includes(code) ? prev : [...prev, code]) : prev.filter((c) => c !== code);
-      if (cptCodes.length) {
-        const sum = next.reduce((s, c) => s + cptFee(c), 0);
-        if (sum > 0) setEcTotal(String(round2(sum)));
-      }
+      const next = on ? [...prev, code] : prev.filter((c) => c !== code);
+      resuggestFee(next);
+      return next;
+    });
+  }
+  // Nudge a code's unit count up (+1 occurrence) or down (remove one occurrence).
+  function bumpEcCode(code: string, delta: number) {
+    setEcCodes((prev) => {
+      const next = [...prev];
+      if (delta > 0) next.push(code);
+      else { const i = next.lastIndexOf(code); if (i >= 0) next.splice(i, 1); }
+      resuggestFee(next);
       return next;
     });
   }
@@ -645,7 +660,7 @@ export default function ClientDetail({
                         <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>
-                        <td>{a.codes.join(", ") || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
+                        <td>{codeSummary(a.codes) || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
                         <td>{a.insurer}</td>
                         <td className="num">{money(a.total)}</td>
                         <td>
@@ -681,8 +696,16 @@ export default function ClientDetail({
                                   <span className="cd-lab">Service codes <span className="opt">changing these re-suggests the fee</span></span>
                                   <div className="cd-codechips">
                                     {ecCodes.length === 0 && <span className="cd-nocodes">No codes yet</span>}
-                                    {ecCodes.map((c) => (
-                                      <span className="cd-codechip" key={c} title={cptLabel(c)}>{c}<button type="button" aria-label={`Remove ${c}`} onClick={() => toggleEcCode(c, false)}>×</button></span>
+                                    {collapseUnits(ecCodes).map(({ code, units }) => (
+                                      <span className="cd-codechip" key={code} title={cptLabel(code)}>
+                                        {code}
+                                        <span className="cd-qty">
+                                          <button type="button" className="qb" aria-label={`Fewer units of ${code}`} onClick={() => bumpEcCode(code, -1)} disabled={units <= 1}>−</button>
+                                          <span className="qn">×{units}</span>
+                                          <button type="button" className="qb" aria-label={`More units of ${code}`} onClick={() => bumpEcCode(code, 1)}>+</button>
+                                        </span>
+                                        <button type="button" className="cx" aria-label={`Remove ${code}`} onClick={() => toggleEcCode(code, false)}>×</button>
+                                      </span>
                                     ))}
                                   </div>
                                   <select className="ls-in" value="" onChange={(e) => { if (e.target.value) toggleEcCode(e.target.value, true); }}>

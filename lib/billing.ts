@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import { encrypt, decrypt, randomId } from "./crypto";
+import { collapseUnits, codeSummary } from "./cptUnits";
 
 export type CopayType = "none" | "fixed" | "percentage";
 
@@ -49,6 +50,11 @@ export function cptVariantList(c: CptCode): CptVariant[] {
   const minutes = Math.round((c.hrs ?? 1) * 60);
   return [{ label: `${minutes} min`, minutes, fee: c.fee ?? 0 }];
 }
+
+// A session's cptCodes array carries UNITS as multiplicity: a code billed twice
+// (e.g. two extended assessment hours) appears twice. The pure helpers live in
+// ./cptUnits so client components can share them; re-exported here for callers.
+export { collapseUnits, codeSummary };
 
 // Practice-wide money rules the owner controls in Setup.
 export interface RunningExpense {
@@ -500,9 +506,7 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
         INSERT INTO billing_sessions (id, clinician_id, client_enc, client_id, insurer_id, date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date, insurance_paid, paid_date, notes, created_by, created_at)
         VALUES (${id}, ${input.clinicianId}, ${clientEnc}, ${clientId}, ${input.insurerId}, ${input.dateOfService}, ${input.durationHours}, ${input.totalCost}, ${input.copayCollected}, ${copayDue}, ${billedDate}, ${paid}, ${paidDate}, ${input.notes ?? ""}, ${input.createdBy}, ${createdAt})`;
     }
-    for (const code of input.cptCodes) {
-      await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
-    }
+    await writeSessionCodes(sql, id, input.cptCodes);
     // Insurance adjustment (write-off / write-down) — a separate guarded write so
     // it's independent of the self_pay migration and a no-op before its own runs.
     if (insuranceDisposition) await writeInsuranceAdjust(sql, id, insuranceDisposition, insuranceCollected);
@@ -512,6 +516,26 @@ export async function insertSession(input: SessionInput): Promise<BillingSession
     writeJson(SESS_FILE, all);
   }
   return decryptSession(stored);
+}
+
+/** Persist a session's service codes with their unit counts. Stores one row per
+ *  distinct code with a `units` count (db/migrate-cpt-units.sql). If that column
+ *  isn't there yet, it falls back to the pre-units behaviour: one row per code,
+ *  duplicates collapsed. The money is unaffected either way — total_cost is a
+ *  stored scalar the form already computed with units baked in. */
+async function writeSessionCodes(sql: Awaited<ReturnType<typeof pg>>, id: string, codes: string[]): Promise<void> {
+  const items = collapseUnits(codes);
+  try {
+    for (const { code, units } of items) {
+      await sql`INSERT INTO billing_session_cpt (session_id, code, units) VALUES (${id}, ${code}, ${units})
+                ON CONFLICT (session_id, code) DO UPDATE SET units = EXCLUDED.units`;
+    }
+  } catch {
+    // Pre-migration: no units column. Store distinct codes so logging never breaks.
+    for (const { code } of items) {
+      await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
+    }
+  }
 }
 
 /** Write the insurance-adjustment columns; no-op if the migration hasn't run. */
@@ -534,9 +558,17 @@ async function loadStored(): Promise<StoredSession[]> {
     } catch {
       rows = (await sql`SELECT id, clinician_id, client_enc, client_id, insurer_id, date_of_service::text AS date_of_service, duration_hours, total_cost, copay_collected, copay_due, billed_date::text AS billed_date, insurance_paid, paid_date::text AS paid_date, notes, created_by, created_at FROM billing_sessions ORDER BY date_of_service DESC, created_at DESC`) as Record<string, unknown>[];
     }
-    const cpt = (await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[];
+    // Read codes with their unit counts and re-expand into the flat array the app
+    // uses (two units of 99355 → ["99355","99355"]). Guard the units column so a
+    // pre-migration database still reads (one row per code = one unit).
+    let cpt: { session_id: string; code: string; units: number }[];
+    try {
+      cpt = (await sql`SELECT session_id, code, units FROM billing_session_cpt`) as { session_id: string; code: string; units: number }[];
+    } catch {
+      cpt = ((await sql`SELECT session_id, code FROM billing_session_cpt`) as { session_id: string; code: string }[]).map((c) => ({ ...c, units: 1 }));
+    }
     const byId: Record<string, string[]> = {};
-    for (const c of cpt) (byId[c.session_id] ||= []).push(c.code);
+    for (const c of cpt) { const arr = (byId[c.session_id] ||= []); for (let i = 0; i < Math.max(1, num(c.units) || 1); i++) arr.push(c.code); }
     // Insurance adjustments live in their own (optionally-migrated) columns; read
     // them separately so a missing column never breaks the main session read.
     const adj: Record<string, { disposition: InsuranceDisposition; collected: number | null }> = {};
@@ -709,12 +741,10 @@ export async function updateSession(id: string, f: {
         WHERE id = ${id} RETURNING id`) as { id: string }[];
       ok = res.length > 0;
     }
-    // Replace the service (CPT) codes if the caller changed them.
+    // Replace the service (CPT) codes if the caller changed them (units preserved).
     if (ok && f.cptCodes) {
       await sql`DELETE FROM billing_session_cpt WHERE session_id = ${id}`;
-      for (const code of f.cptCodes) {
-        await sql`INSERT INTO billing_session_cpt (session_id, code) VALUES (${id}, ${code}) ON CONFLICT DO NOTHING`;
-      }
+      await writeSessionCodes(sql, id, f.cptCodes);
     }
     if (ok) await writeInsuranceAdjust(sql, id, insuranceDisposition, insuranceCollected);
     return ok;

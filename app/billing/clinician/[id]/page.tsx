@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, listCptCodes } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, listCptCodes, codeSummary } from "@/lib/billing";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { listClients } from "@/lib/clients";
 import { referralStatus } from "@/lib/referral";
@@ -59,7 +59,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
     date: s.dateOfService,
     clientId: s.clientId,
     client: `${s.clientFirst} ${s.clientLast}`.trim(),
-    codes: s.cptCodes.join(", "),
+    codes: codeSummary(s.cptCodes),
     codeList: s.cptCodes,
     fee: s.totalCost,
     copay: s.copayCollected,

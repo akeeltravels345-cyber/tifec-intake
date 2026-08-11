@@ -85,8 +85,15 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Which time/value option is chosen for each selected code (index into its
   // variants; defaults to 0 = the code's default option).
   const [variantByCode, setVariantByCode] = useState<Record<string, number>>({});
+  // How many UNITS of each code (defaults to 1). Lets a clinician bill the same
+  // code more than once on a visit — e.g. two extended assessment hours — with
+  // each unit adding its fee and its time to the total.
+  const [unitsByCode, setUnitsByCode] = useState<Record<string, number>>({});
+  const unitsOf = (code: string) => Math.max(1, unitsByCode[code] ?? 1);
+  const setUnits = (code: string, n: number) => setUnitsByCode((m) => ({ ...m, [code]: Math.max(1, Math.min(99, Math.round(n) || 1)) }));
   const variantsOf = (code: string) => cptCodes.find((x) => x.code === code)?.variants ?? [];
   const chosenVariant = (code: string) => { const vs = variantsOf(code); return vs[variantByCode[code] ?? 0] ?? vs[0]; };
+  const feeOf = (code: string) => chosenVariant(code)?.fee ?? cptCodes.find((x) => x.code === code)?.fee ?? 0;
   // Co-pay has TWO numbers: what was DUE (the insurer's rule) and what was
   // actually COLLECTED. The gap is a write-off — money not collected that should
   // have been.
@@ -104,8 +111,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [error, setError] = useState("");
 
   const insurer = useMemo(() => insurers.find((i) => i.id === insurerId), [insurers, insurerId]);
-  const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + (chosenVariant(c)?.fee ?? cptCodes.find((x) => x.code === c)?.fee ?? 0), 0)), [codes, cptCodes, variantByCode]);
-  const duration = useMemo(() => round2(codes.reduce((t, c) => t + ((chosenVariant(c)?.minutes ?? 0) / 60 || cptCodes.find((x) => x.code === c)?.hrs || 0), 0)), [codes, cptCodes, variantByCode]);
+  const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + feeOf(c) * unitsOf(c), 0)), [codes, cptCodes, variantByCode, unitsByCode]);
+  const duration = useMemo(() => round2(codes.reduce((t, c) => t + ((chosenVariant(c)?.minutes ?? 0) / 60 || cptCodes.find((x) => x.code === c)?.hrs || 0) * unitsOf(c), 0)), [codes, cptCodes, variantByCode, unitsByCode]);
+  // A short label that shows multiplicity, e.g. "99355 ×2, 90837" — used in the
+  // summary card and the "logged" confirmation so units are always visible.
+  const codeSummary = useMemo(() => codes.map((c) => (unitsOf(c) > 1 ? `${c} ×${unitsOf(c)}` : c)).join(", "), [codes, unitsByCode]);
   const suggested = suggestCopay(insurer, totalCost);
   // The co-pay figure the clinician enters is what was DUE (defaults to the
   // insurer's suggested rule). Whether it was collected depends on copayDisp:
@@ -123,7 +133,11 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     : chargedTotal;
   const billedToInsurance = insurerId ? Math.max(0, round2(totalCost - copayDue)) : 0;
 
-  const toggle = (code: string) => { setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code])); resetCopay(); };
+  const toggle = (code: string) => {
+    setCodes((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code]));
+    setUnitsByCode((m) => { const n = { ...m }; delete n[code]; return n; }); // reset units when a code is added or removed
+    resetCopay();
+  };
   // Close the "all codes" modal on Escape.
   useEffect(() => {
     if (!showAll) return;
@@ -149,19 +163,22 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     // the record shows why the fee was reduced.
     const discountNote = discPct > 0 ? `${discPct}% discount${discountReason.trim() ? ` — ${discountReason.trim()}` : ""} (full fee ${money(totalCost)})` : "";
     const finalNotes = [notes.trim(), discountNote].filter(Boolean).join(" · ");
+    // Expand units into repeated codes — two units of 99355 become ["99355","99355"],
+    // so each unit is a real line the total, duration and claim already reflect.
+    const expandedCodes = codes.flatMap((c) => Array(unitsOf(c)).fill(c));
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: codes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? (copayDisp === "waived" ? "waived" : null) : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: expandedCodes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? (copayDisp === "waived" ? "waived" : null) : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
       if (andAnother) {
         // A clinician logging a day's work does several in a row, so keep the
         // date and clear only what changes from one client to the next.
-        setSaved(`✓ Logged ${codes.join(", ")} for ${first.trim()} ${last.trim()} — ${money(chargedTotal)}${insurerId ? ` · ${insurer?.name}` : " · self-pay"}${dos ? ` · ${dos}` : ""}.`);
+        setSaved(`✓ Logged ${codeSummary} for ${first.trim()} ${last.trim()} — ${money(chargedTotal)}${insurerId ? ` · ${insurer?.name}` : " · self-pay"}${dos ? ` · ${dos}` : ""}.`);
         setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront");
-        setCodes([]); resetCopay(); setNotes(""); setSearch(""); setSelfPay("paid"); setCollectedNow("");
+        setCodes([]); setUnitsByCode({}); resetCopay(); setNotes(""); setSearch(""); setSelfPay("paid"); setCollectedNow("");
         setMode(clients.length > 0 ? "returning" : "new");
         setBusy(false);
         // Deliberately NO router.refresh() here. A full server refetch after every
@@ -313,13 +330,20 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           </div>
           <div className="ls-field">
             <label className="ls-q">Service code(s) <span className="ls-req">*</span></label>
-            <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Tap a selected code again (or its <b>×</b>) to remove it.</p>
+            <p className="ls-help" style={{ marginTop: 0 }}>Type a number or name to find a code, or tap one of your usual ones. Need the same code more than once (e.g. two extended assessment hours)? Add it, then use <b>−&nbsp;/&nbsp;+</b> to set the number of units.</p>
             {codes.length > 0 && (
               <div className="ls-selcodes">
-                {codes.map((code) => { const cv = chosenVariant(code); return (
-                  <button type="button" key={code} className="ls-selchip" onClick={() => toggle(code)} title="Remove this code">
-                    <span>{code}{cv ? ` · ${money(cv.fee)}` : ""}</span><span className="x">×</span>
-                  </button>
+                {codes.map((code) => { const u = unitsOf(code); const line = round2(feeOf(code) * u); return (
+                  <div key={code} className="ls-selchip">
+                    <span className="cc">{code}</span>
+                    <span className="qty">
+                      <button type="button" className="qb" onClick={() => setUnits(code, u - 1)} disabled={u <= 1} aria-label={`Fewer units of ${code}`}>−</button>
+                      <span className="qn">×{u}</span>
+                      <button type="button" className="qb" onClick={() => setUnits(code, u + 1)} aria-label={`More units of ${code}`}>+</button>
+                    </span>
+                    <span className="cf">{money(line)}</span>
+                    <button type="button" className="x" onClick={() => toggle(code)} aria-label={`Remove ${code}`} title="Remove this code">×</button>
+                  </div>
                 ); })}
               </div>
             )}
@@ -479,7 +503,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
       <div className="ls-card ls-sum">
         <span className="lab">This session</span>
         <div className="fee">{money(totalCost)}</div>
-        <div className="feesub">{codes.length ? `${codes.join(", ")} · ${duration} hr${duration === 1 ? "" : "s"}` : "Pick a service code to begin"}</div>
+        <div className="feesub">{codes.length ? `${codeSummary} · ${duration} hr${duration === 1 ? "" : "s"}` : "Pick a service code to begin"}</div>
         <div className="ls-splitbar">
           <i style={{ width: `${pct(collectedAtVisit, totalCost)}%`, background: "var(--teal)" }} />
           <i style={{ width: `${pct(billedToInsurance, totalCost)}%`, background: "var(--indigo)" }} />

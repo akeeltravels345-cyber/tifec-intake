@@ -8,6 +8,7 @@
 import type { Client } from "./clients";
 import type { BillingSession } from "./billing";
 import type { ProviderConfig } from "./billing";
+import { codeSummary } from "./billing";
 
 export interface InvoiceLine {
   date: string;         // date of service, YYYY-MM-DD
@@ -67,7 +68,7 @@ export function buildInvoice(
   const lines: InvoiceLine[] = ordered.map((s) => {
     // The CPT description usually already reads "Psychotherapy, 60 min", so only
     // synthesise a duration when there's no code to describe the service.
-    const cptText = s.cptCodes.map((c) => r.cptDesc(c)).filter(Boolean).join(", ");
+    const cptText = codeSummary(s.cptCodes, r.cptDesc);
     const mins = Math.round((s.durationHours || 0) * 60);
     const description = cptText ? cap(cptText) : mins > 0 ? `Psychotherapy, ${mins} mins` : "Psychotherapy";
     return {

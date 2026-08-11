@@ -2084,6 +2084,12 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-codechip { display: inline-flex; align-items: center; gap: 5px; background: #EAF3F3; color: #1f6b6f; border: 1px solid #cfe6e6; border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 13px; font-weight: 600; }
 .cd-codechip button { border: none; background: rgba(31,107,111,.14); color: #1f6b6f; width: 16px; height: 16px; border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .cd-codechip button:hover { background: rgba(31,107,111,.28); }
+/* Units stepper inside an edit-charge code chip: −/×N/+ then a remove ×. */
+.cd-codechip .cd-qty { display: inline-flex; align-items: center; gap: 3px; background: #fff; border: 1px solid #cfe6e6; border-radius: 999px; padding: 1px; }
+.cd-codechip .cd-qty .qb { width: 17px; height: 17px; background: transparent; }
+.cd-codechip .cd-qty .qb:hover:not(:disabled) { background: rgba(31,107,111,.14); }
+.cd-codechip .cd-qty .qb:disabled { color: #aac7c7; cursor: default; background: transparent; }
+.cd-codechip .cd-qty .qn { min-width: 20px; text-align: center; font-weight: 700; font-size: 12px; }
 .cd-editactions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
 .cd-addform { border: 1px solid var(--hair, #eae6dc); border-radius: 12px; padding: 14px; background: #fbfaf6; }
 .cd-addrow { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -2804,9 +2810,17 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .ls-modal-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--edge); }
 .ls-modal-count { font-size: 13px; color: var(--muted); }
 .ls-modal-done { border: 0; background: var(--indigo); color: #fff; border-radius: 10px; padding: 10px 22px; font-weight: 600; font-size: 14px; cursor: pointer; }
-.biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 5px 8px 5px 12px; font: 600 12.5px "Open Sans"; cursor: pointer; }
-.biz .ls-selchip:hover { background: #e0efef; }
-.biz .ls-selchip .x { font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); }
+.biz .ls-selchip { display: inline-flex; align-items: center; gap: 8px; background: #EDF5F5; border: 1px solid var(--teal); color: var(--ink); border-radius: 999px; padding: 4px 8px 4px 12px; font: 600 12.5px "Open Sans"; }
+.biz .ls-selchip .cc { letter-spacing: .2px; }
+.biz .ls-selchip .cf { color: var(--teal-deep, #2c7a7e); font-weight: 700; }
+/* −/×N/+ units stepper inside a selected-code chip. */
+.biz .ls-selchip .qty { display: inline-flex; align-items: center; gap: 2px; background: #fff; border: 1px solid var(--teal); border-radius: 999px; padding: 1px; }
+.biz .ls-selchip .qb { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; color: var(--teal-deep, #2c7a7e); font-size: 15px; line-height: 1; border-radius: 999px; cursor: pointer; }
+.biz .ls-selchip .qb:hover:not(:disabled) { background: #EDF5F5; }
+.biz .ls-selchip .qb:disabled { color: #b9cccc; cursor: default; }
+.biz .ls-selchip .qn { min-width: 22px; text-align: center; font-weight: 700; font-size: 12px; }
+.biz .ls-selchip .x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: none; background: transparent; font-size: 16px; line-height: 1; color: var(--teal-deep, #2c7a7e); cursor: pointer; border-radius: 999px; }
+.biz .ls-selchip .x:hover { background: #e0efef; }
 /* Time/value pickers, shown in the duration section for codes with options. */
 .biz .ls-varpickers { display: flex; flex-direction: column; gap: 8px; }
 .biz .ls-varpicker { display: flex; align-items: center; gap: 10px; }

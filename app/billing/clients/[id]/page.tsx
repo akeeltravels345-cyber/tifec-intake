@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { listInsurers, listCptCodes, listSessions } from "@/lib/billing";
+import { listInsurers, listCptCodes, listSessions, codeSummary } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
@@ -43,7 +43,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     .sort((a, b) => b.dateOfService.localeCompare(a.dateOfService))
     .map((s) => ({
       id: s.id, date: s.dateOfService, clinician: clinName(s.clinicianId),
-      codes: s.cptCodes, codeLabel: s.cptCodes.map((c) => cptDesc(c)).filter(Boolean).join(", "),
+      codes: s.cptCodes, codeLabel: codeSummary(s.cptCodes, cptDesc),
       insurer: insName(s.insurerId), insurerId: s.insurerId, total: s.totalCost, copay: s.copayCollected, copayDue: s.copayDue,
       stage: !s.insurerId ? "self" : s.insuranceDisposition ? s.insuranceDisposition : s.insurancePaid ? "paid" : s.billedDate ? "billed" : "logged",
       paidDate: s.paidDate, billedDate: s.billedDate,

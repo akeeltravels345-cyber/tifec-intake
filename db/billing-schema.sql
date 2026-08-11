@@ -92,6 +92,7 @@ CREATE INDEX IF NOT EXISTS billing_sessions_client_idx    ON billing_sessions (c
 CREATE TABLE IF NOT EXISTS billing_session_cpt (
   session_id TEXT NOT NULL,
   code       TEXT NOT NULL,
+  units      INTEGER NOT NULL DEFAULT 1,  -- how many of this code on the visit (e.g. extra assessment hours)
   PRIMARY KEY (session_id, code)
 );
 

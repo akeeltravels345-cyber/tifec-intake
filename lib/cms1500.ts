@@ -8,6 +8,7 @@
 
 import type { BillingSession, ProviderConfig } from "./billing";
 import type { ClientProfile } from "./clients";
+import { collapseUnits } from "./cptUnits";
 
 export const CMS_LINES_PER_FORM = 6;
 
@@ -47,19 +48,20 @@ export interface ClaimResolvers {
   carrierCode?: (insurerId: string) => string; // optional payer code for box 10d
 }
 
-/** Expand a session into one service line per CPT code. A single-code session
- *  charges the session total exactly; a multi-code one charges each code its
- *  catalogue fee; a session with no codes (e.g. an imported balance) is one line
- *  at the session total. */
+/** Expand a session into one service line per DISTINCT CPT code, with box 24G
+ *  units set from how many times that code was billed (e.g. two extended
+ *  assessment hours → one 99355 line, units 2). A single-code session charges the
+ *  session total exactly (so a chosen time/value variant is honoured); a
+ *  multi-code one charges each code its catalogue fee × its units; a session with
+ *  no codes (e.g. an imported balance) is one line at the session total. */
 function sessionLines(s: BillingSession, r: ClaimResolvers, dxPointer: string): ClaimLine[] {
   const date = mdy(s.dateOfService);
   const npi = r.renderingNpi(s.clinicianId), name = r.clinName(s.clinicianId);
-  const units = Math.max(1, Math.round(s.durationHours || 1));
-  const base = { date, pos: "11", mod: "", dxPointer, units, renderingNpi: npi, renderingName: name };
-  const codes = s.cptCodes ?? [];
-  if (codes.length === 0) return [{ ...base, cpt: "", charge: r2(s.totalCost) }];
-  if (codes.length === 1) return [{ ...base, cpt: codes[0], charge: r2(s.totalCost) }];
-  return codes.map((c) => ({ ...base, cpt: c, charge: r2(r.cptFee(c)) }));
+  const base = { date, pos: "11", mod: "", dxPointer, renderingNpi: npi, renderingName: name };
+  const grouped = collapseUnits(s.cptCodes ?? []);
+  if (grouped.length === 0) return [{ ...base, units: Math.max(1, Math.round(s.durationHours || 1)), cpt: "", charge: r2(s.totalCost) }];
+  if (grouped.length === 1) return [{ ...base, units: grouped[0].units, cpt: grouped[0].code, charge: r2(s.totalCost) }];
+  return grouped.map(({ code, units }) => ({ ...base, units, cpt: code, charge: r2(r.cptFee(code) * units) }));
 }
 
 /** Build every CMS-1500 form for one client from their billable (insured)
