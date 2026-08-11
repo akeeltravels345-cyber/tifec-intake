@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listSessions, cptVariantList } from "@/lib/billing";
 import { listClients } from "@/lib/clients";
+import { caymanToday } from "@/lib/caymanTime";
 import SessionForm from "@/components/billing/SessionForm";
 
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export default async function NewSessionPage() {
   const alreadyLogged = mySessions.map((s) =>
     `${`${s.clientFirst ?? ""}|${s.clientLast ?? ""}`.toLowerCase().trim()}@${s.dateOfService}`);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = caymanToday();
 
   return (
     <>

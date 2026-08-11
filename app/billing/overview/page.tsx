@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth } from "@/lib/billing";
 import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
@@ -17,12 +18,12 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   if (!canSeeBusiness(user.role)) redirect("/billing/me");
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
   const prevY = month === 1 ? year - 1 : year;
   const prevM = month === 1 ? 12 : month - 1;
-  const today = now.toISOString().slice(0, 10);
+  const today = caymanToday();
 
   const [allSessions, insurerList, cfg] = await Promise.all([listSessions(), listInsurers(), getPracticeConfig()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));

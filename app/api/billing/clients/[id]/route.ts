@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
 import { deleteDocFilesForClient } from "@/lib/clientDocs";
@@ -31,7 +32,7 @@ function parseDocuments(v: unknown): ClientProfile["documents"] {
     return {
       id: s(doc.id) ?? Math.random().toString(36).slice(2),
       name, kind: s(doc.kind) ?? "other", url: s(doc.url), note: s(doc.note),
-      addedAt: isDate(doc.addedAt) ? String(doc.addedAt) : new Date().toISOString().slice(0, 10),
+      addedAt: isDate(doc.addedAt) ? String(doc.addedAt) : caymanToday(),
       // Preserve the uploaded-file markers so a record edit never orphans bytes.
       stored: doc.stored === true || undefined,
       mime: s(doc.mime),

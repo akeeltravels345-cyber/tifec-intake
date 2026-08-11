@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanYearMonth } from "@/lib/caymanTime";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
@@ -83,8 +84,8 @@ export default async function TodayPage() {
     if (owner) {
       // Every month that has activity, plus the current month — newest first,
       // capped so the swipeable card stays manageable.
-      const now = new Date();
-      const keys = new Set<string>([`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`]);
+      const nowYM = caymanYearMonth();
+      const keys = new Set<string>([`${nowYM.year}-${String(nowYM.month).padStart(2, "0")}`]);
       for (const s of all) {
         const d = String(s.dateOfService || "");
         if (d.length >= 7) keys.add(d.slice(0, 7));

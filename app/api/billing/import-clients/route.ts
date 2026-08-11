@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { caymanToday } from "@/lib/caymanTime";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { CLINICIANS, getClinician } from "@/lib/clinicians";
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not read that PDF. Is it the payment report export?" }, { status: 400 });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = caymanToday();
   const parsed = parseArReport(text);
   if (parsed.clients.length === 0) {
     return NextResponse.json({ error: "No clients found in that PDF. Check it's the right report." }, { status: 400 });

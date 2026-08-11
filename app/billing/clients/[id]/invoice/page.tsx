@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanToday } from "@/lib/caymanTime";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listSessions, getPracticeConfig, listExternalClinicians, listCptCodes } from "@/lib/billing";
@@ -43,7 +44,7 @@ export default async function InvoicePage({
 
   const prov = cfg.provider ?? {};
   const now = new Date();
-  const issueDate = now.toISOString().slice(0, 10);
+  const issueDate = caymanToday();
   const printedAt = now.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   const inv = buildInvoice(client, selfPay, prov, issueDate, {

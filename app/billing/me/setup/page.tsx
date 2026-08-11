@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanYearMonth } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { listSessions, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
@@ -27,9 +28,9 @@ export default async function ClinicianSetupPage({ searchParams }: { searchParam
   const id = user.clinician.id;
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
 
   const [sessions, settings, cfg, exp] = await Promise.all([
     listSessions({ clinicianId: id }),

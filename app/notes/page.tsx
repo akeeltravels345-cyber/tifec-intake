@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanToday } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, devMode } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
@@ -23,7 +24,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const roster = [...clients].sort((a, b) => `${a.last}${a.first}`.localeCompare(`${b.last}${b.first}`));
   const activeId = sp.client && roster.some((c) => c.id === sp.client) ? sp.client! : roster[0]?.id;
   const active = roster.find((c) => c.id === activeId);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = caymanToday();
 
   const notes = active
     ? (await listNotesForClient(active.id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: getClinician(n.clinicianId)?.name ?? "Clinician", noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))

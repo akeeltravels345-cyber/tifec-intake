@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, isBiller } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { clinicianSeesClient } from "@/lib/clients";
@@ -30,7 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
-  const noteDate = isDate(body.noteDate) ? String(body.noteDate) : new Date().toISOString().slice(0, 10);
+  const noteDate = isDate(body.noteDate) ? String(body.noteDate) : caymanToday();
   const soap = readSoap(body);
   if (!hasContent(soap)) return NextResponse.json({ error: "Write something in the note first." }, { status: 400 });
 

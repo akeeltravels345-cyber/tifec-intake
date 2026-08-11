@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex, insuranceSettled, insuranceCash } from "@/lib/billingCalc";
@@ -16,8 +17,7 @@ export default async function BillingQueuePage() {
   if (!user) redirect("/login?next=/billing/payments");
   if (!canMarkBilled(user.role)) redirect("/billing/me");
 
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = caymanToday();
   const mKey = today.slice(0, 7);
   const [sessions, insurers, external, settingsList, cfg, allClients] = await Promise.all([listSessions(), listInsurers(), listExternalClinicians(), listClinicianSettings(), getPracticeConfig(), listAllClients()]);
   // client_id → referral end date, to flag claims dated after a referral ended.

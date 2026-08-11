@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { caymanYearMonth } from "@/lib/caymanTime";
 import { getCurrentClinician } from "@/lib/auth";
 import { resolveClinicianExpenses, saveClinicianExpenses, type ClinicianExpense } from "@/lib/clinicianExpenses";
 
@@ -9,9 +10,9 @@ export async function GET(req: Request) {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   const url = new URL(req.url);
-  const now = new Date();
-  const year = Number(url.searchParams.get("y")) || now.getUTCFullYear();
-  const month = Number(url.searchParams.get("m")) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(url.searchParams.get("y")) || nowYM.year;
+  const month = Number(url.searchParams.get("m")) || nowYM.month;
   const res = await resolveClinicianExpenses(me.id, year, month);
   return NextResponse.json(res);
 }

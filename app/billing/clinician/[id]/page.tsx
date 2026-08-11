@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, listCptCodes, codeSummary } from "@/lib/billing";
+import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { computeClinicianMonth, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { listClients } from "@/lib/clients";
 import { referralStatus } from "@/lib/referral";
@@ -30,14 +31,14 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   if (!clinician) redirect(isOwner(user.role) ? "/billing/overview" : "/billing/me");
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
 
   const [all, insurers, settings, cfg, myClients, cptCodes] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig(), listClients(id), listCptCodes()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
   // Referrals that need attention: expired, or expiring within 30 days.
-  const todayISO = now.toISOString().slice(0, 10);
+  const todayISO = caymanToday();
   const referralAlerts = myClients
     .map((cl) => ({ cl, st: referralStatus(cl.profile.referral?.endDate, todayISO) }))
     .filter((x) => x.st.state === "expired" || x.st.state === "expiring")
@@ -72,7 +73,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
   // What's still with the insurers. This is the clinician's future pay — payout
   // follows cash, so this is the "when do I get the rest" question answered.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = caymanToday();
   const owedMap = new Map<string, { name: string; amount: number; count: number; oldest: number }>();
   for (const s of c.outstandingSessions) {
     const k = s.insurerId ?? "self";

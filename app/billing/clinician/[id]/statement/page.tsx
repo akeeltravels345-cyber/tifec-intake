@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser, isOwner, isBiller } from "@/lib/billingRole";
 import { listSessions, getClinicianSettings, getPracticeConfig } from "@/lib/billing";
@@ -21,14 +22,14 @@ export default async function PayoutStatement({ params, searchParams }: { params
   if (!clinician) redirect("/billing/overview");
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
 
   const [all, settings, cfg] = await Promise.all([listSessions({ clinicianId: id }), getClinicianSettings(id), getPracticeConfig()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
 
-  const generated = new Date().toISOString().slice(0, 10);
+  const generated = caymanToday();
   // The biller who takes the clinician's individual % off their insurance collected.
   const biller = CLINICIANS.find((x) => x.billing === "biller");
 

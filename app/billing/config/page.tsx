@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canConfigure, canConfigureBilling, isOwner, isBiller } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listClinicianSettings, getPracticeConfig, cptVariantList } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
@@ -14,8 +15,8 @@ export default async function SetupPage() {
 
   const [insurers, cptCodes, settings, cfg] = await Promise.all([listInsurers(), listCptCodes(), listClinicianSettings(), getPracticeConfig()]);
   const biller = CLINICIANS.find((c) => c.billing === "biller") ?? CLINICIANS[0];
-  const now = new Date();
-  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const nowYM = caymanYearMonth();
+  const currentMonthKey = `${nowYM.year}-${String(nowYM.month).padStart(2, "0")}`;
 
   return (
     <SetupClient

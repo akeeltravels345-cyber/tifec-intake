@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanToday } from "@/lib/caymanTime";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listSessions, codeSummary } from "@/lib/billing";
@@ -56,7 +57,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const noteRows = canSeeNotes
     ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
     : [];
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = caymanToday();
 
   return (
     <>
@@ -73,7 +74,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         activity={activity}
         canEdit
         canDelete={seesAll}
-        today={new Date().toISOString().slice(0, 10)}
+        today={caymanToday()}
         intakeForms={intakeForms}
         currentUserId={user.clinician.id}
         currentUserRole={user.clinician.contact === "admin" ? "admin" : user.role}

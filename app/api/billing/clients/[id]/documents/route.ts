@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, type ClientDocument } from "@/lib/clients";
 import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
@@ -50,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const doc: ClientDocument = {
     id: docId, name, kind, stored: true, mime, size: file.size,
-    addedAt: new Date().toISOString().slice(0, 10),
+    addedAt: caymanToday(),
   };
   const documents = [...(client.profile.documents ?? []), doc];
   await updateClient(id, client.insurerId, { ...client.profile, documents });

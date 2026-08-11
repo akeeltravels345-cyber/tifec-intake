@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians, getPracticeConfig } from "@/lib/billing";
@@ -20,10 +21,10 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   if (!canMarkBilled(user.role)) redirect("/billing/me");
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
-  const today = now.toISOString().slice(0, 10);
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
+  const today = caymanToday();
   const key = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
   const mKey = key(year, month);
   const prevY = month === 1 ? year - 1 : year, prevM = month === 1 ? 12 : month - 1;

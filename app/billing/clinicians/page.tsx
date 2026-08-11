@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { caymanYearMonth } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness, isBiller } from "@/lib/billingRole";
 import { listSessions, getClinicianSettings, getPracticeConfig, type BillingSession } from "@/lib/billing";
@@ -22,9 +23,9 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
   if (!canSeeBusiness(user.role) && !isBiller(user.role)) redirect("/billing/me");
 
   const sp = await searchParams;
-  const now = new Date();
-  const year = Number(sp.y) || now.getUTCFullYear();
-  const month = Number(sp.m) || now.getUTCMonth() + 1;
+  const nowYM = caymanYearMonth();
+  const year = Number(sp.y) || nowYM.year;
+  const month = Number(sp.m) || nowYM.month;
 
   const [all, cfg] = await Promise.all([listSessions(), getPracticeConfig()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
