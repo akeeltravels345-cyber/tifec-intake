@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/ticketStatus";
+import { prepareUpload } from "@/lib/imageUpload";
 
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Ticket {
@@ -75,10 +76,14 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
     setError("");
     for (const f of Array.from(list)) {
       if (asImage && !f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
-      if (f.size > MAX_BYTES) { setError(`"${f.name}" is over 4 MB.`); continue; }
-      const base64 = await blobToBase64(f);
-      const kind = f.type.startsWith("image/") ? "image" : f.type.startsWith("audio/") ? "audio" : "file";
-      setDrafts((d) => [...d, { id: rid(), kind, mime: f.type || "application/octet-stream", base64, url: URL.createObjectURL(f), name: f.name }]);
+      // Non-images are capped up front; images get downscaled first, then checked.
+      if (!f.type.startsWith("image/") && f.size > MAX_BYTES) { setError(`"${f.name}" is over 4 MB.`); continue; }
+      const prepped = await prepareUpload(f);
+      const size = Math.floor((prepped.base64.length * 3) / 4);
+      if (!prepped.base64) { setError(`Couldn't read "${f.name}".`); continue; }
+      if (size > MAX_BYTES) { setError(`"${f.name}" is too large even after shrinking — try a smaller image.`); continue; }
+      const kind = prepped.mime.startsWith("image/") ? "image" : prepped.mime.startsWith("audio/") ? "audio" : "file";
+      setDrafts((d) => [...d, { id: rid(), kind, mime: prepped.mime, base64: prepped.base64, url: `data:${prepped.mime};base64,${prepped.base64}`, name: prepped.name }]);
     }
   }
 

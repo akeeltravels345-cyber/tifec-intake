@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL } from "@/lib/ticketStatus";
+import { prepareUpload } from "@/lib/imageUpload";
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
@@ -23,14 +24,6 @@ const fileIcon = (name?: string | null) => {
   const ext = (name || "").split(".").pop()?.toLowerCase();
   return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
 };
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result).split(",")[1] || "");
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-}
 
 export default function TicketList({ tickets, contacts, areas, seesAll, meId, meName }: {
   tickets: T[]; contacts: Contact[]; areas: string[]; seesAll: boolean; meId: string; meName: string;
@@ -56,9 +49,14 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
     setError("");
     for (const f of Array.from(list)) {
       if (asImage && !f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
-      if (f.size > 4 * 1024 * 1024) { setError(`"${f.name}" is over 4 MB.`); continue; }
-      const base64 = await fileToBase64(f);
-      setAtts((a) => [...a, { name: f.name, mime: f.type || "application/octet-stream", base64, url: URL.createObjectURL(f), kind: f.type.startsWith("image/") ? "image" : "file" }]);
+      // Non-images are capped up front; images get downscaled first, then checked.
+      if (!f.type.startsWith("image/") && f.size > 4 * 1024 * 1024) { setError(`"${f.name}" is over 4 MB.`); continue; }
+      const prepped = await prepareUpload(f);
+      const size = Math.floor((prepped.base64.length * 3) / 4);
+      if (!prepped.base64) { setError(`Couldn't read "${f.name}".`); continue; }
+      if (size > 4 * 1024 * 1024) { setError(`"${f.name}" is too large even after shrinking — try a smaller image.`); continue; }
+      const kind = prepped.mime.startsWith("image/") ? "image" : "file";
+      setAtts((a) => [...a, { name: prepped.name, mime: prepped.mime, base64: prepped.base64, url: `data:${prepped.mime};base64,${prepped.base64}`, kind }]);
     }
   }
   const removeAtt = (i: number) => setAtts((a) => a.filter((_, idx) => idx !== i));

@@ -13,7 +13,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ docId: 
   if (!me) return new Response("Unauthorized", { status: 401 });
 
   const { docId } = await params;
-  const file = await getDocFile(docId);
+  // A read/decrypt failure (e.g. a corrupt or truncated stored blob) must return a
+  // clean 404, not a 500 — so the browser shows a missing image, never a broken app.
+  let file: Awaited<ReturnType<typeof getDocFile>> = null;
+  try { file = await getDocFile(docId); } catch { file = null; }
   if (!file || !file.clientId.startsWith("ticket:")) return new Response("Not found", { status: 404 });
 
   // Owner id is "ticket:<id>" for the first post, "ticket:<id>:msg:<mid>" for a
