@@ -5,6 +5,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/ticketStatus";
 import { prepareUpload } from "@/lib/imageUpload";
+import { formatText } from "@/lib/richText";
+import RichTextArea from "./RichTextArea";
 
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Ticket {
@@ -210,7 +212,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
 
       <div className="tm-card tm-first">
         <div className="tm-rwho">{ticket.raisedBy}</div>
-        <p className="tm-nb">{ticket.body}</p>
+        <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(ticket.body) }} />
         {firstAttachments.length > 0 && (
           <div className="tm-atts">
             {firstAttachments.map((a) => <AttView key={a.docId} a={a} />)}
@@ -222,7 +224,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
         {replies.map((r) => (
           <div key={r.id} className={`tm-card tm-reply ${r.mine ? "me" : ""}`}>
             <div className="tm-rwho">{r.who} <span className="tm-rwhen">{stamp(r.at)}</span></div>
-            {r.body && <p className="tm-nb">{r.body}</p>}
+            {r.body && <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(r.body) }} />}
             {r.attachments.length > 0 && (
               <div className="tm-atts">
                 {r.attachments.map((a) => <AttView key={a.docId} a={a} />)}
@@ -235,7 +237,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       {error && <p className="tm-err">{error}</p>}
       <form className="tm-card tm-form" onSubmit={reply}>
         <label className="tm-l" htmlFor="rp">Reply</label>
-        <textarea id="rp" className="tm-in" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Add an update, attach a screenshot, or record a voice note..." />
+        <RichTextArea id="rp" rows={3} value={text} onChange={setText} placeholder="Add an update, attach a screenshot, or record a voice note..." />
 
         {drafts.length > 0 && (
           <div className="tm-drafts">

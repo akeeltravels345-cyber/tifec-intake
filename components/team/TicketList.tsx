@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL } from "@/lib/ticketStatus";
 import { prepareUpload } from "@/lib/imageUpload";
+import RichTextArea from "./RichTextArea";
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
@@ -130,7 +131,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
           <input id="ts" className="tm-in" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Short summary of the issue" />
 
           <label className="tm-l" htmlFor="tb">What's going on?</label>
-          <textarea id="tb" className="tm-in" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Give enough detail to act on it." />
+          <RichTextArea id="tb" rows={4} value={body} onChange={setBody} placeholder="Give enough detail to act on it." />
           <p className="tm-hint">Please don&apos;t include client names or clinical detail.</p>
 
           <label className="tm-l">Attachments <span className="tm-opt">optional — screenshots or files (PDF, docs) up to 4 MB each</span></label>

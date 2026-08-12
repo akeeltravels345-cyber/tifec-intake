@@ -2658,6 +2658,20 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-del { border: 1px solid #e0b9b0; background: #fff; color: #a5432f; border-radius: 8px; padding: 8px 16px; font: 600 12.5px "Open Sans"; cursor: pointer; }
 .tm-del:hover:not(:disabled) { background: #fbeee9; border-color: #a5432f; }
 .tm-del:disabled { opacity: .5; cursor: default; }
+/* Bold / Italic / Underline toolbar above a ticket text box. */
+.rt-wrap { display: flex; flex-direction: column; }
+.rt-bar { display: flex; gap: 4px; margin-bottom: 6px; }
+.rt-btn { width: 30px; height: 28px; border: 1px solid var(--line, #d9e1e5); background: #fff; border-radius: 7px; cursor: pointer; color: var(--ink); font: 14px "Open Sans"; line-height: 1; }
+.rt-btn:hover { border-color: var(--brand, #2E3192); background: #f6f8fd; }
+.rt-btn.b { font-weight: 800; }
+.rt-btn.i { font-style: italic; font-family: "Newsreader", serif; }
+.rt-btn.u { text-decoration: underline; }
+.rt-btn.s { text-decoration: line-through; }
+/* Formatted ticket text keeps its emphasis but no jarring colours. */
+.tm-nb strong { font-weight: 700; }
+.tm-nb em { font-style: italic; }
+.tm-nb u { text-decoration: underline; }
+.tm-nb s { text-decoration: line-through; opacity: .8; }
 /* Attach controls + pending drafts on the reply box. */
 .tm-attbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .tm-attbtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px dashed var(--line, #d9e1e5); border-radius: 9px; font: 600 13px "Open Sans", system-ui, sans-serif; color: var(--muted); cursor: pointer; background: none; }
