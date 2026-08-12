@@ -34,10 +34,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ docId: 
     "Cache-Control": "private, max-age=3600",
   };
   // Serve inline (images/PDFs open in the tab); attach the original filename so a
-  // download keeps a sensible name. Strip quotes/newlines from the stored name.
+  // download keeps a sensible name. HTTP header values must be ASCII, but real
+  // filenames aren't — macOS screenshots contain a narrow no-break space (U+202F),
+  // and others carry accents/unicode. So give an ASCII-safe `filename` plus an
+  // RFC 5987 `filename*` with the true UTF-8 name.
   if (file.name) {
-    const safe = file.name.replace(/["\r\n]/g, "").slice(0, 200);
-    headers["Content-Disposition"] = `inline; filename="${safe}"`;
+    const ascii = file.name.slice(0, 200).replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "'");
+    headers["Content-Disposition"] = `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(file.name.slice(0, 200))}`;
   }
-  return new Response(bytes, { headers });
+  // Belt and suspenders: a stray header value must never 500 an image request.
+  try {
+    return new Response(bytes, { headers });
+  } catch {
+    return new Response(bytes, { headers: { "Content-Type": file.mime || "application/octet-stream", "Content-Length": String(bytes.length), "Cache-Control": "private, max-age=3600" } });
+  }
 }
