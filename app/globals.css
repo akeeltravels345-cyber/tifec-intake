@@ -1731,6 +1731,7 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-tbl td.nm { font-weight: 600; }
 .cd-pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 11px; white-space: nowrap; }
 .cd-pill.paid { background: #dcefe0; color: #2c7a55; }
+.cd-pill.billed { background: #E9EEF9; color: #2E3192; }
 .cd-pill.pend { background: var(--amber-bg); color: var(--amber); }
 .cd-pill.self { background: #eceae2; color: #7a756a; }
 .cd-empty { text-align: center; color: var(--faint); padding: 36px 16px; font-size: 14px; }

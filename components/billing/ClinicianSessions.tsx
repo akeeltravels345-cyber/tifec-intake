@@ -24,8 +24,14 @@ export interface SessionRow {
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const STATUS: Record<SessionRow["status"], string> = { self: "Self-pay", paid: "Billed", pend: "Outstanding" };
-const pill = (s: SessionRow["status"]) => <span className={`cd-pill ${s}`}>{STATUS[s]}</span>;
+// The pill reflects the real lifecycle: an insured claim is Outstanding (logged,
+// not yet submitted), then Billed (submitted, waiting on the insurer), then Paid
+// once the biller marks the money in. "paid" must never read as "Billed".
+const pill = (s: SessionRow) =>
+  s.status === "self" ? <span className="cd-pill self">Self-pay</span>
+  : s.status === "paid" ? <span className="cd-pill paid">Paid</span>
+  : s.billed ? <span className="cd-pill billed">Billed</span>
+  : <span className="cd-pill pend">Outstanding</span>;
 
 /** The month's sessions. Clicking a client opens their full record; the clinician
  *  (and the owner/biller) can also fix or remove a mistaken entry right here. The
@@ -144,7 +150,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
               <td className="num">{money(s.fee)}</td>
               <td className="num">{money(s.copay)}</td>
               <td className="num">{money(s.insurance)}</td>
-              <td>{pill(s.status)}</td>
+              <td>{pill(s)}</td>
               {canManage && (
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   {delId === s.id ? (
