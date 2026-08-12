@@ -8,7 +8,7 @@ import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/tic
 interface Att { docId: string; kind: "image" | "audio" }
 interface Ticket {
   id: string; ref: number; subject: string; area: string; body: string; status: TicketStatus;
-  createdAt: string; raisedBy: string; assignees: { id: string; name: string }[];
+  createdAt: string; raisedBy: string; enteredBy?: string | null; assignees: { id: string; name: string }[];
 }
 interface Reply { id: string; body: string; at: string; who: string; mine: boolean; attachments: Att[] }
 interface Contact { id: string; name: string; label: string }
@@ -120,7 +120,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
         <div>
           <h1 className="tm-h1"><span className="tm-ref">#{ticket.ref}</span>{ticket.subject}</h1>
           <p className="tm-sub">
-            <span className="tm-area">{ticket.area}</span> raised by {ticket.raisedBy} · {stamp(ticket.createdAt)}
+            <span className="tm-area">{ticket.area}</span> raised by {ticket.raisedBy}{ticket.enteredBy ? ` (logged by ${ticket.enteredBy})` : ""} · {stamp(ticket.createdAt)}
             <br />for {nameList(ticket.assignees.map((a) => a.name))}
           </p>
         </div>

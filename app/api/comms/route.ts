@@ -158,7 +158,18 @@ export async function POST(req: Request) {
       if (!text) return NextResponse.json({ error: "Describe the issue." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
 
-      const t = await createTicket({ createdBy: me.id, assignees, area: area as TicketArea, subject, body: text });
+      // Raising on someone's behalf: when a colleague calls/messages and the
+      // admin or owner logs it for them, the ticket is FROM that person (so
+      // updates and the resolution reach them) and entered_by records who typed
+      // it. Only the admin/owner may attribute a ticket to someone else.
+      const mc = getClinician(me.id);
+      const canDelegate = mc?.contact === "admin" || mc?.contact === "owner";
+      const reportedBy = typeof body.reportedBy === "string" ? body.reportedBy : "";
+      const onBehalf = canDelegate && reportedBy && reportedBy !== me.id && !!getClinician(reportedBy);
+      const createdBy = onBehalf ? reportedBy : me.id;
+      const enteredBy = onBehalf ? me.id : null;
+
+      const t = await createTicket({ createdBy, enteredBy, assignees, area: area as TicketArea, subject, body: text });
       // Optional images (screenshots) — stored in the shared doc store, tagged to
       // this ticket so the detail page can list them. Base64 in, pointers kept by
       // owner id "ticket:<id>".
@@ -174,6 +185,12 @@ export async function POST(req: Request) {
       const newFor = assignees.filter((a) => a !== me.id);
       await notify(newFor, "ticket_new",
         `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
+      // Logged on someone's behalf: tell the person it's from that it's on record,
+      // so they know their call/message became a tracked ticket.
+      if (onBehalf) {
+        await notify([createdBy], "ticket_new",
+          `${me.name} logged your issue as ticket #${t.ref} (${t.area})`, `/team/tickets/${t.id}`);
+      }
       // First email of the thread; also opens the 30-min throttle window so an
       // immediate follow-up comment doesn't send a second email.
       const dueNew = await claimEmailWindow(ticketThreadId(t.id), newFor);

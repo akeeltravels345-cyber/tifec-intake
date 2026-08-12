@@ -15,9 +15,10 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const t = await getTicket(id);
   if (!t) notFound();
 
-  // Yours if you raised it or it's assigned to you; the owner and admin oversee all.
+  // Yours if you raised it, logged it for someone, or it's assigned to you; the
+  // owner and admin oversee all.
   const seesAll = me.contact === "admin" || me.contact === "owner";
-  if (!seesAll && t.createdBy !== me.id && !t.assignees.includes(me.id)) redirect("/team/tickets");
+  if (!seesAll && t.createdBy !== me.id && t.enteredBy !== me.id && !t.assignees.includes(me.id)) redirect("/team/tickets");
 
   const threadId = ticketThreadId(t.id);
   const replies = await listMessages(threadId);
@@ -53,6 +54,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         id: t.id, ref: t.ref, subject: t.subject, area: t.area, body: t.body, status: t.status,
         createdAt: t.createdAt,
         raisedBy: nm(t.createdBy),
+        enteredBy: t.enteredBy ? nm(t.enteredBy) : null,
         assignees: t.assignees.map((id) => ({ id, name: nm(id) })),
       }}
       replies={replies.map((m) => ({

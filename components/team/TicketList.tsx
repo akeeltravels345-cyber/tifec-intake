@@ -8,7 +8,7 @@ import { TICKET_STATUS_LABEL } from "@/lib/ticketStatus";
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
   createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean; needsYou: boolean;
-  waitingOn: string[];
+  waitingOn: string[]; enteredByName?: string | null;
 }
 interface Contact { id: string; name: string; label: string }
 
@@ -27,13 +27,16 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export default function TicketList({ tickets, contacts, areas, seesAll }: {
-  tickets: T[]; contacts: Contact[]; areas: string[]; seesAll: boolean;
+export default function TicketList({ tickets, contacts, areas, seesAll, meId, meName }: {
+  tickets: T[]; contacts: Contact[]; areas: string[]; seesAll: boolean; meId: string; meName: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"open" | "done">("open");
   const [assignees, setAssignees] = useState<string[]>(contacts[0] ? [contacts[0].id] : []);
+  // Who the issue is from. Defaults to you; the admin/owner can log it for someone
+  // who called or messaged them, so the ticket sits with that person.
+  const [reportedBy, setReportedBy] = useState(meId);
   const toggle = (id: string) =>
     setAssignees((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
   const [area, setArea] = useState(areas[0] ?? "");
@@ -67,11 +70,11 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
     try {
       const res = await fetch("/api/comms", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body, images: images.map((im) => ({ base64: im.base64, mime: im.mime })) }),
+        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body, reportedBy, images: images.map((im) => ({ base64: im.base64, mime: im.mime })) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Failed");
-      setSubject(""); setBody(""); setImages([]); setOpen(false);
+      setSubject(""); setBody(""); setImages([]); setReportedBy(meId); setOpen(false);
       router.refresh();
       router.push(`/team/tickets/${j.id}`);
     } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
@@ -90,6 +93,16 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
 
       {open && (
         <form className="tm-card tm-form" onSubmit={submit}>
+          {seesAll && (
+            <>
+              <label className="tm-l" htmlFor="trep">Who&apos;s this from? <span className="tm-opt">logging it for someone who contacted you?</span></label>
+              <select id="trep" className="tm-in" value={reportedBy} onChange={(e) => setReportedBy(e.target.value)}>
+                <option value={meId}>Me ({meName})</option>
+                {contacts.filter((c) => c.id !== meId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              {reportedBy !== meId && <p className="tm-hint">This goes on record as raised by <b>{contacts.find((c) => c.id === reportedBy)?.name}</b>. They&apos;ll be notified and get the updates.</p>}
+            </>
+          )}
           <fieldset className="tm-fs">
             <legend className="tm-l">Who&apos;s this for? <span className="tm-opt">pick one or more</span></legend>
             <div className="tm-picks">
@@ -158,6 +171,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll }: {
                 <div className="tm-tmeta">
                   <span className="tm-area">{t.area}</span>
                   {t.mine ? <>for <b>{nameList(t.assignees)}</b></> : <>from <b>{t.raisedBy}</b></>}
+                  {t.enteredByName && <> · logged by {t.enteredByName}</>}
                   · {when(t.createdAt)}
                 </div>
               </div>

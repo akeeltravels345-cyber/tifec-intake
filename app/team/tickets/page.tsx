@@ -20,6 +20,8 @@ export default async function TicketsPage() {
   return (
     <TicketList
       seesAll={seesAll}
+      meId={me.id}
+      meName={me.name}
       areas={[...TICKET_AREAS]}
       contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}
       tickets={mine.map((t) => {
@@ -28,6 +30,7 @@ export default async function TicketsPage() {
           id: t.id, ref: t.ref, subject: t.subject, area: t.area, status: t.status,
           createdAt: t.createdAt, updatedAt: t.updatedAt,
           raisedBy: nm(t.createdBy),
+          enteredByName: t.enteredBy ? nm(t.enteredBy) : null,
           assignees: t.assignees.map(nm),
           mine: t.createdBy === me.id,
           needsYou: waiting.includes(me.id),

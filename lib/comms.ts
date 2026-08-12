@@ -50,7 +50,12 @@ export interface Message {
 export interface Ticket {
   id: string;
   ref: number; // short human reference, e.g. #7
+  /** Who the ticket is FROM — the person with the issue. Usually whoever typed
+   *  it in, but when a colleague logs it on someone's behalf this is that person. */
   createdBy: string;
+  /** Who actually entered the ticket, when different from createdBy (i.e. it was
+   *  raised on someone's behalf). null when the raiser logged it themselves. */
+  enteredBy: string | null;
   /** One or more contacts. A billing question can need the biller AND the
    *  admin, so a ticket is never limited to a single owner. Always non-empty. */
   assignees: string[];
@@ -293,17 +298,27 @@ function toIds(v: unknown): string[] {
 export async function listTickets(): Promise<Ticket[]> {
   if (usePostgres) {
     const sql = await pg();
-    const rows = (await sql`
-      SELECT id, ref, created_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at
-      FROM comms_tickets ORDER BY created_at DESC`) as Record<string, unknown>[];
+    // entered_by is added by db/migrate-ticket-entered-by.sql; fall back to a read
+    // without it so the app never 500s if that migration hasn't run yet.
+    let rows: Record<string, unknown>[];
+    try {
+      rows = (await sql`
+        SELECT id, ref, created_by, entered_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at
+        FROM comms_tickets ORDER BY created_at DESC`) as Record<string, unknown>[];
+    } catch {
+      rows = (await sql`
+        SELECT id, ref, created_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at
+        FROM comms_tickets ORDER BY created_at DESC`) as Record<string, unknown>[];
+    }
     return rows.map((r) => ({
-      id: str(r.id), ref: Number(r.ref), createdBy: str(r.created_by), assignees: toIds(r.assignees),
+      id: str(r.id), ref: Number(r.ref), createdBy: str(r.created_by), enteredBy: r.entered_by ? str(r.entered_by) : null,
+      assignees: toIds(r.assignees),
       area: str(r.area) as TicketArea, subject: safeDecrypt(r.subject_enc), body: safeDecrypt(r.body_enc),
       status: str(r.status) as TicketStatus, createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
     }));
   }
   return readJson<StoredTicket[]>(TIC_FILE, [])
-    .map((t) => ({ ...t, assignees: toIds(t.assignees), subject: safeDecrypt(t.subjectEnc), body: safeDecrypt(t.bodyEnc) }))
+    .map((t) => ({ ...t, enteredBy: t.enteredBy ?? null, assignees: toIds(t.assignees), subject: safeDecrypt(t.subjectEnc), body: safeDecrypt(t.bodyEnc) }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -358,14 +373,15 @@ export function ticketWaitingOn(
 }
 
 export async function createTicket(input: {
-  createdBy: string; assignees: string[]; area: TicketArea; subject: string; body: string;
+  createdBy: string; enteredBy?: string | null; assignees: string[]; area: TicketArea; subject: string; body: string;
 }): Promise<Ticket> {
   const now = new Date().toISOString();
   const existing = await listTickets();
   const ref = existing.reduce((m, t) => Math.max(m, t.ref), 0) + 1;
   const assignees = [...new Set(input.assignees)];
+  const enteredBy = input.enteredBy && input.enteredBy !== input.createdBy ? input.enteredBy : null;
   const row: StoredTicket = {
-    id: randomId(), ref, createdBy: input.createdBy, assignees,
+    id: randomId(), ref, createdBy: input.createdBy, enteredBy, assignees,
     area: input.area, subjectEnc: encrypt(input.subject), bodyEnc: encrypt(input.body),
     status: "open", createdAt: now, updatedAt: now,
   };
@@ -374,6 +390,8 @@ export async function createTicket(input: {
     await sql`
       INSERT INTO comms_tickets (id, ref, created_by, assignees, area, subject_enc, body_enc, status, created_at, updated_at)
       VALUES (${row.id}, ${ref}, ${row.createdBy}, ${JSON.stringify(assignees)}::jsonb, ${row.area}, ${row.subjectEnc}, ${row.bodyEnc}, ${row.status}, ${now}, ${now})`;
+    // entered_by is a separate guarded write so it's a no-op before its migration.
+    if (enteredBy) { try { await sql`UPDATE comms_tickets SET entered_by = ${enteredBy} WHERE id = ${row.id}`; } catch { /* column not migrated yet */ } }
   } else {
     const all = readJson<StoredTicket[]>(TIC_FILE, []);
     all.push(row);

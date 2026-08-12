@@ -124,7 +124,8 @@ CREATE TABLE IF NOT EXISTS comms_reads (
 CREATE TABLE IF NOT EXISTS comms_tickets (
   id         TEXT PRIMARY KEY,
   ref        INTEGER NOT NULL,       -- short human reference (#7)
-  created_by TEXT NOT NULL,
+  created_by TEXT NOT NULL,          -- who the ticket is FROM (the person with the issue)
+  entered_by TEXT,                   -- who actually logged it, when different (raised on someone's behalf)
   assignees  JSONB NOT NULL DEFAULT '[]',  -- one or more clinician ids: a ticket can need the biller AND the admin
   area       TEXT NOT NULL,          -- subject area
   subject_enc TEXT NOT NULL,       -- encrypted: a subject line will name a client sooner or later
