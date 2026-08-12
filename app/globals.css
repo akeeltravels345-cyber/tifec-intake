@@ -2638,6 +2638,20 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-atts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .tm-audio { height: 38px; max-width: 100%; }
 .tm-atts .tm-audio { min-width: 240px; }
+/* A non-image file attachment: an open/download link showing its filename. */
+.tm-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--line, #d9e1e5); border-radius: 10px; background: #fff; text-decoration: none; color: var(--brand, #2E3192); font: 600 13px "Open Sans"; }
+.tm-file:hover { border-color: var(--brand, #2E3192); background: #f6f8fd; }
+.tm-file .ic { font-size: 18px; line-height: 1; flex: none; }
+.tm-file .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 240px; }
+/* Pending file draft (create + reply forms). */
+.tm-imgdraft.file { border: 1px solid var(--line, #d9e1e5); border-radius: 10px; background: #fff; display: inline-flex; align-items: center; }
+.tm-filechip { display: inline-flex; align-items: center; gap: 6px; padding: 9px 11px; font: 600 12.5px "Open Sans"; color: var(--ink); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-draft.file { position: relative; display: inline-flex; align-items: center; border: 1px solid var(--line, #d9e1e5); border-radius: 10px; background: #fff; }
+/* Delete-ticket action in the manage panel: a quiet danger button. */
+.tm-managefoot { border-top: 1px solid var(--edge); margin-top: 4px; padding-top: 12px; }
+.tm-del { border: 1px solid #e0b9b0; background: #fff; color: #a5432f; border-radius: 8px; padding: 8px 16px; font: 600 12.5px "Open Sans"; cursor: pointer; }
+.tm-del:hover:not(:disabled) { background: #fbeee9; border-color: #a5432f; }
+.tm-del:disabled { opacity: .5; cursor: default; }
 /* Attach controls + pending drafts on the reply box. */
 .tm-attbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .tm-attbtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px dashed var(--line, #d9e1e5); border-radius: 9px; font: 600 13px "Open Sans", system-ui, sans-serif; color: var(--muted); cursor: pointer; background: none; }

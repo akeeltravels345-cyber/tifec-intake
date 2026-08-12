@@ -26,16 +26,17 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
 
   // One pass over every attachment on this ticket and its comments. Owner id is
   // "ticket:<id>" for the first post, "ticket:<id>:msg:<mid>" for a comment.
+  const kindOf = (mime: string): "image" | "audio" | "file" =>
+    mime.startsWith("image/") ? "image" : mime.startsWith("audio/") ? "audio" : "file";
+  const toAtt = (d: { docId: string; mime: string; name: string | null }) => ({ docId: d.docId, kind: kindOf(d.mime), name: d.name });
   const docs = await listDocMetaByPrefix(`ticket:${t.id}`);
-  const firstPost = docs.filter((d) => d.ownerId === `ticket:${t.id}`);
-  const images = firstPost.filter((d) => d.mime.startsWith("image/")).map((d) => d.docId);
-  const attByMsg = new Map<string, { docId: string; kind: "image" | "audio" }[]>();
+  const firstAttachments = docs.filter((d) => d.ownerId === `ticket:${t.id}`).map(toAtt);
+  const attByMsg = new Map<string, ReturnType<typeof toAtt>[]>();
   for (const d of docs) {
     const m = d.ownerId.match(/:msg:(.+)$/);
     if (!m) continue;
-    const kind = d.mime.startsWith("audio/") ? "audio" : "image";
     const list = attByMsg.get(m[1]) ?? [];
-    list.push({ docId: d.docId, kind });
+    list.push(toAtt(d));
     attByMsg.set(m[1], list);
   }
 
@@ -45,8 +46,9 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   return (
     <TicketDetail
       threadId={threadId}
-      images={images}
+      firstAttachments={firstAttachments}
       canManage={t.assignees.includes(me.id) || seesAll}
+      canDelete={seesAll}
       waitingOn={waiting.map(nm)}
       yourTurn={waiting.includes(me.id)}
       contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}

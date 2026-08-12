@@ -26,7 +26,7 @@ async function pg() {
 }
 const dir = (f: string) => path.join(process.cwd(), "data", f);
 const FILE = "billing-client-docs.local.json";
-type LocalStore = Record<string, { clientId: string; contentEnc: string; mime: string; size: number; createdAt: string }>;
+type LocalStore = Record<string, { clientId: string; contentEnc: string; mime: string; size: number; name?: string | null; createdAt: string }>;
 function readLocal(): LocalStore {
   try { return JSON.parse(fs.readFileSync(dir(FILE), "utf8")) as LocalStore; } catch { return {}; }
 }
@@ -35,11 +35,12 @@ function writeLocal(data: LocalStore) {
   fs.writeFileSync(dir(FILE), JSON.stringify(data, null, 2));
 }
 
-export interface DocFile { clientId: string; base64: string; mime: string; size: number }
+export interface DocFile { clientId: string; base64: string; mime: string; size: number; name: string | null }
 
 /** Store (or replace) a document's bytes, encrypted. `base64` is the raw file
- *  content base64-encoded; `size` is the original byte length. */
-export async function saveDocFile(docId: string, clientId: string, base64: string, mime: string, size: number): Promise<void> {
+ *  content base64-encoded; `size` is the original byte length; `name` is the
+ *  original filename (optional — used for ticket attachments). */
+export async function saveDocFile(docId: string, clientId: string, base64: string, mime: string, size: number, name?: string | null): Promise<void> {
   const contentEnc = encrypt(base64);
   const createdAt = new Date().toISOString();
   if (usePostgres) {
@@ -48,10 +49,12 @@ export async function saveDocFile(docId: string, clientId: string, base64: strin
       INSERT INTO billing_client_docs (id, client_id, content_enc, mime, size, created_at)
       VALUES (${docId}, ${clientId}, ${contentEnc}, ${mime}, ${size}, ${createdAt})
       ON CONFLICT (id) DO UPDATE SET content_enc = ${contentEnc}, mime = ${mime}, size = ${size}`;
+    // name is a separate guarded write so it's a no-op before its migration.
+    if (name) { try { await sql`UPDATE billing_client_docs SET name = ${name} WHERE id = ${docId}`; } catch { /* column not migrated yet */ } }
     return;
   }
   const all = readLocal();
-  all[docId] = { clientId, contentEnc, mime, size, createdAt };
+  all[docId] = { clientId, contentEnc, mime, size, name: name ?? null, createdAt };
   writeLocal(all);
 }
 
@@ -59,14 +62,19 @@ export async function saveDocFile(docId: string, clientId: string, base64: strin
 export async function getDocFile(docId: string): Promise<DocFile | null> {
   if (usePostgres) {
     const sql = await pg();
-    const rows = (await sql`SELECT client_id, content_enc, mime, size FROM billing_client_docs WHERE id = ${docId}`) as Record<string, unknown>[];
+    let rows: Record<string, unknown>[];
+    try {
+      rows = (await sql`SELECT client_id, content_enc, mime, size, name FROM billing_client_docs WHERE id = ${docId}`) as Record<string, unknown>[];
+    } catch {
+      rows = (await sql`SELECT client_id, content_enc, mime, size FROM billing_client_docs WHERE id = ${docId}`) as Record<string, unknown>[];
+    }
     if (!rows.length) return null;
     const r = rows[0];
-    return { clientId: String(r.client_id), base64: decrypt(String(r.content_enc)), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0) };
+    return { clientId: String(r.client_id), base64: decrypt(String(r.content_enc)), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0), name: r.name ? String(r.name) : null };
   }
   const d = readLocal()[docId];
   if (!d) return null;
-  return { clientId: d.clientId, base64: decrypt(d.contentEnc), mime: d.mime, size: d.size };
+  return { clientId: d.clientId, base64: decrypt(d.contentEnc), mime: d.mime, size: d.size, name: d.name ?? null };
 }
 
 /** Remove one document's bytes. */
@@ -98,17 +106,36 @@ export async function listDocMetaForClient(clientId: string): Promise<{ docId: s
 /** List files whose owner id STARTS WITH a prefix — e.g. every attachment on a
  *  ticket AND its comments (`ticket:<id>` and `ticket:<id>:msg:<mid>`) in one
  *  query. Returns the owner id too so callers can group by message. */
-export async function listDocMetaByPrefix(prefix: string): Promise<{ docId: string; ownerId: string; mime: string; size: number }[]> {
+export async function listDocMetaByPrefix(prefix: string): Promise<{ docId: string; ownerId: string; mime: string; size: number; name: string | null }[]> {
   if (usePostgres) {
     const sql = await pg();
-    const rows = (await sql`SELECT id, client_id, mime, size FROM billing_client_docs WHERE client_id LIKE ${prefix + "%"} ORDER BY created_at`) as Record<string, unknown>[];
-    return rows.map((r) => ({ docId: String(r.id), ownerId: String(r.client_id), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0) }));
+    let rows: Record<string, unknown>[];
+    try {
+      rows = (await sql`SELECT id, client_id, mime, size, name FROM billing_client_docs WHERE client_id LIKE ${prefix + "%"} ORDER BY created_at`) as Record<string, unknown>[];
+    } catch {
+      rows = (await sql`SELECT id, client_id, mime, size FROM billing_client_docs WHERE client_id LIKE ${prefix + "%"} ORDER BY created_at`) as Record<string, unknown>[];
+    }
+    return rows.map((r) => ({ docId: String(r.id), ownerId: String(r.client_id), mime: String(r.mime ?? "application/octet-stream"), size: Number(r.size ?? 0), name: r.name ? String(r.name) : null }));
   }
   const all = readLocal();
   return Object.entries(all)
     .filter(([, v]) => v.clientId.startsWith(prefix))
     .sort((a, b) => (a[1].createdAt ?? "").localeCompare(b[1].createdAt ?? ""))
-    .map(([docId, v]) => ({ docId, ownerId: v.clientId, mime: v.mime, size: v.size }));
+    .map(([docId, v]) => ({ docId, ownerId: v.clientId, mime: v.mime, size: v.size, name: v.name ?? null }));
+}
+
+/** Remove every stored file whose owner id starts with a prefix (e.g. all of a
+ *  ticket's and its comments' attachments when the ticket is deleted). */
+export async function deleteDocFilesByPrefix(prefix: string): Promise<void> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM billing_client_docs WHERE client_id LIKE ${prefix + "%"}`;
+    return;
+  }
+  const all = readLocal();
+  let changed = false;
+  for (const [k, v] of Object.entries(all)) { if (v.clientId.startsWith(prefix)) { delete all[k]; changed = true; } }
+  if (changed) writeLocal(all);
 }
 
 /** Remove every stored file for a client (used when the client is deleted). */

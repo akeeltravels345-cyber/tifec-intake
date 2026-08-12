@@ -17,7 +17,12 @@ const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:
 const nameList = (names: string[]) =>
   names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
-interface ImgDraft { name: string; mime: string; base64: string; url: string }
+interface AttDraft { name: string; mime: string; base64: string; url: string; kind: "image" | "file" }
+const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
+const fileIcon = (name?: string | null) => {
+  const ext = (name || "").split(".").pop()?.toLowerCase();
+  return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
+};
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -44,19 +49,19 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [images, setImages] = useState<ImgDraft[]>([]);
+  const [atts, setAtts] = useState<AttDraft[]>([]);
 
-  async function onImages(list: FileList | null) {
+  async function addFiles(list: FileList | null, asImage: boolean) {
     if (!list) return;
     setError("");
     for (const f of Array.from(list)) {
-      if (!f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
+      if (asImage && !f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
       if (f.size > 4 * 1024 * 1024) { setError(`"${f.name}" is over 4 MB.`); continue; }
       const base64 = await fileToBase64(f);
-      setImages((im) => [...im, { name: f.name, mime: f.type, base64, url: URL.createObjectURL(f) }]);
+      setAtts((a) => [...a, { name: f.name, mime: f.type || "application/octet-stream", base64, url: URL.createObjectURL(f), kind: f.type.startsWith("image/") ? "image" : "file" }]);
     }
   }
-  const removeImage = (i: number) => setImages((im) => im.filter((_, idx) => idx !== i));
+  const removeAtt = (i: number) => setAtts((a) => a.filter((_, idx) => idx !== i));
 
   const shown = tickets
     .filter((t) => (filter === "done" ? t.status === "resolved" : t.status !== "resolved"))
@@ -70,11 +75,11 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
     try {
       const res = await fetch("/api/comms", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body, reportedBy, images: images.map((im) => ({ base64: im.base64, mime: im.mime })) }),
+        body: JSON.stringify({ action: "ticket:create", assignees, area, subject, body, reportedBy, attachments: atts.map((a) => ({ base64: a.base64, mime: a.mime, name: a.name })) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Failed");
-      setSubject(""); setBody(""); setImages([]); setReportedBy(meId); setOpen(false);
+      setSubject(""); setBody(""); setAtts([]); setReportedBy(meId); setOpen(false);
       router.refresh();
       router.push(`/team/tickets/${j.id}`);
     } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
@@ -130,16 +135,21 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
           <textarea id="tb" className="tm-in" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Give enough detail to act on it." />
           <p className="tm-hint">Please don&apos;t include client names or clinical detail.</p>
 
-          <label className="tm-l">Screenshots <span className="tm-opt">optional — images up to 4 MB each</span></label>
-          <label className="tm-imgbtn">🖼 Add image
-            <input type="file" accept="image/*" multiple onChange={(e) => { onImages(e.target.files); e.currentTarget.value = ""; }} style={{ display: "none" }} />
-          </label>
-          {images.length > 0 && (
+          <label className="tm-l">Attachments <span className="tm-opt">optional — screenshots or files (PDF, docs) up to 4 MB each</span></label>
+          <div className="tm-attbar">
+            <label className="tm-imgbtn">🖼 Add image
+              <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+            </label>
+            <label className="tm-imgbtn">📎 Add file
+              <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+            </label>
+          </div>
+          {atts.length > 0 && (
             <div className="tm-imgdrafts">
-              {images.map((im, i) => (
-                <span key={i} className="tm-imgdraft">
-                  <img src={im.url} alt={im.name} />
-                  <button type="button" onClick={() => removeImage(i)} aria-label="Remove">×</button>
+              {atts.map((a, i) => (
+                <span key={i} className={`tm-imgdraft ${a.kind}`}>
+                  {a.kind === "image" ? <img src={a.url} alt={a.name} /> : <span className="tm-filechip">{fileIcon(a.name)} {a.name}</span>}
+                  <button type="button" onClick={() => removeAtt(i)} aria-label="Remove">×</button>
                 </span>
               ))}
             </div>

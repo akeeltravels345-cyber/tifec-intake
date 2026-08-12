@@ -25,11 +25,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ docId: 
   if (!allowed || !getClinician(me.id)) return new Response("Forbidden", { status: 403 });
 
   const bytes = Buffer.from(file.base64, "base64");
-  return new Response(bytes, {
-    headers: {
-      "Content-Type": file.mime || "application/octet-stream",
-      "Content-Length": String(bytes.length),
-      "Cache-Control": "private, max-age=3600",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": file.mime || "application/octet-stream",
+    "Content-Length": String(bytes.length),
+    "Cache-Control": "private, max-age=3600",
+  };
+  // Serve inline (images/PDFs open in the tab); attach the original filename so a
+  // download keeps a sensible name. Strip quotes/newlines from the stored name.
+  if (file.name) {
+    const safe = file.name.replace(/["\r\n]/g, "").slice(0, 200);
+    headers["Content-Disposition"] = `inline; filename="${safe}"`;
+  }
+  return new Response(bytes, { headers });
 }

@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/ticketStatus";
 
-interface Att { docId: string; kind: "image" | "audio" }
+interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Ticket {
   id: string; ref: number; subject: string; area: string; body: string; status: TicketStatus;
   createdAt: string; raisedBy: string; enteredBy?: string | null; assignees: { id: string; name: string }[];
@@ -23,8 +23,27 @@ async function post(body: Record<string, unknown>) {
 }
 
 // A pending attachment on the reply being typed (not yet sent).
-interface Draft { id: string; kind: "image" | "audio"; mime: string; base64: string; url: string; name?: string }
+interface Draft { id: string; kind: "image" | "audio" | "file"; mime: string; base64: string; url: string; name?: string }
 const MAX_BYTES = 4 * 1024 * 1024;
+// Document types allowed alongside images/voice notes.
+const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
+const fileIcon = (name?: string | null) => {
+  const ext = (name || "").split(".").pop()?.toLowerCase();
+  return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
+};
+
+// Render one saved attachment: image inline, voice note as a player, any other
+// file as an open/download link with its filename.
+function AttView({ a }: { a: Att }) {
+  const src = `/api/comms/ticket-image/${a.docId}`;
+  if (a.kind === "audio") return <audio controls preload="none" className="tm-audio" src={src} />;
+  if (a.kind === "file") return (
+    <a href={src} target="_blank" rel="noreferrer" className="tm-file"><span className="ic">{fileIcon(a.name)}</span><span className="nm">{a.name || "Attachment"}</span></a>
+  );
+  return (
+    <a href={src} target="_blank" rel="noreferrer" className="tm-imgwrap"><img src={src} alt={a.name || "Attachment"} className="tm-img" /></a>
+  );
+}
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -35,9 +54,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 const rid = () => Math.random().toString(36).slice(2);
 
-export default function TicketDetail({ ticket, replies, threadId, canManage, contacts, images = [], waitingOn = [], yourTurn = false }: {
-  ticket: Ticket; replies: Reply[]; threadId: string; canManage: boolean; contacts: Contact[];
-  images?: string[]; waitingOn?: string[]; yourTurn?: boolean;
+export default function TicketDetail({ ticket, replies, threadId, canManage, canDelete = false, contacts, firstAttachments = [], waitingOn = [], yourTurn = false }: {
+  ticket: Ticket; replies: Reply[]; threadId: string; canManage: boolean; canDelete?: boolean; contacts: Contact[];
+  firstAttachments?: Att[]; waitingOn?: string[]; yourTurn?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -51,14 +70,15 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ids = ticket.assignees.map((a) => a.id);
 
-  async function addImages(list: FileList | null) {
+  async function addFiles(list: FileList | null, asImage: boolean) {
     if (!list) return;
     setError("");
     for (const f of Array.from(list)) {
-      if (!f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
+      if (asImage && !f.type.startsWith("image/")) { setError(`"${f.name}" isn't an image.`); continue; }
       if (f.size > MAX_BYTES) { setError(`"${f.name}" is over 4 MB.`); continue; }
       const base64 = await blobToBase64(f);
-      setDrafts((d) => [...d, { id: rid(), kind: "image", mime: f.type, base64, url: URL.createObjectURL(f), name: f.name }]);
+      const kind = f.type.startsWith("image/") ? "image" : f.type.startsWith("audio/") ? "audio" : "file";
+      setDrafts((d) => [...d, { id: rid(), kind, mime: f.type || "application/octet-stream", base64, url: URL.createObjectURL(f), name: f.name }]);
     }
   }
 
@@ -98,7 +118,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
     if (!body && drafts.length === 0) return;
     setBusy(true); setError("");
     try {
-      await post({ action: "send", threadId, body, attachments: drafts.map((d) => ({ base64: d.base64, mime: d.mime })) });
+      await post({ action: "send", threadId, body, attachments: drafts.map((d) => ({ base64: d.base64, mime: d.mime, name: d.name })) });
       setText(""); setDrafts([]); router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
     finally { setBusy(false); }
@@ -109,6 +129,13 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
     try { await post({ action: "ticket:update", id: ticket.id, ...patch }); router.refresh(); }
     catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
   };
+
+  async function del() {
+    if (!window.confirm(`Delete ticket #${ticket.ref} for good? This removes it, its whole thread and any attachments for everyone. This cannot be undone.`)) return;
+    setBusy(true); setError("");
+    try { await post({ action: "ticket:delete", id: ticket.id }); router.push("/team/tickets"); router.refresh(); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed"); setBusy(false); }
+  }
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -168,19 +195,20 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
               );
             })}
           </div>
+          {canDelete && (
+            <div className="tm-managefoot">
+              <button type="button" className="tm-del" onClick={del} disabled={busy}>Delete ticket</button>
+            </div>
+          )}
         </div>
       )}
 
       <div className="tm-card tm-first">
         <div className="tm-rwho">{ticket.raisedBy}</div>
         <p className="tm-nb">{ticket.body}</p>
-        {images.length > 0 && (
-          <div className="tm-imgs">
-            {images.map((docId) => (
-              <a key={docId} href={`/api/comms/ticket-image/${docId}`} target="_blank" rel="noreferrer" className="tm-imgwrap">
-                <img src={`/api/comms/ticket-image/${docId}`} alt="Ticket attachment" className="tm-img" />
-              </a>
-            ))}
+        {firstAttachments.length > 0 && (
+          <div className="tm-atts">
+            {firstAttachments.map((a) => <AttView key={a.docId} a={a} />)}
           </div>
         )}
       </div>
@@ -192,13 +220,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
             {r.body && <p className="tm-nb">{r.body}</p>}
             {r.attachments.length > 0 && (
               <div className="tm-atts">
-                {r.attachments.map((a) => a.kind === "audio" ? (
-                  <audio key={a.docId} controls preload="none" className="tm-audio" src={`/api/comms/ticket-image/${a.docId}`} />
-                ) : (
-                  <a key={a.docId} href={`/api/comms/ticket-image/${a.docId}`} target="_blank" rel="noreferrer" className="tm-imgwrap">
-                    <img src={`/api/comms/ticket-image/${a.docId}`} alt="Attachment" className="tm-img" />
-                  </a>
-                ))}
+                {r.attachments.map((a) => <AttView key={a.docId} a={a} />)}
               </div>
             )}
           </div>
@@ -216,7 +238,9 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
               <span key={d.id} className={`tm-draft ${d.kind}`}>
                 {d.kind === "image"
                   ? <img src={d.url} alt={d.name || "image"} />
-                  : <audio controls preload="metadata" src={d.url} />}
+                  : d.kind === "audio"
+                    ? <audio controls preload="metadata" src={d.url} />
+                    : <span className="tm-filechip">{fileIcon(d.name)} {d.name}</span>}
                 <button type="button" onClick={() => removeDraft(d.id)} aria-label="Remove">×</button>
               </span>
             ))}
@@ -225,7 +249,10 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, con
 
         <div className="tm-attbar">
           <label className="tm-attbtn">🖼 Image
-            <input type="file" accept="image/*" multiple onChange={(e) => { addImages(e.target.files); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+            <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+          </label>
+          <label className="tm-attbtn">📎 File
+            <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
           </label>
           {recording ? (
             <button type="button" className="tm-attbtn rec" onClick={stopRec}>⏹ Stop · {mmss(recSecs)}</button>

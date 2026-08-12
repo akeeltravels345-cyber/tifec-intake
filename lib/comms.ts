@@ -416,6 +416,20 @@ export async function updateTicket(id: string, patch: { status?: TicketStatus; a
   writeJson(TIC_FILE, all);
 }
 
+/** Permanently remove a ticket and its whole comment thread. Attachments in the
+ *  doc store are cleaned up separately by the caller. */
+export async function deleteTicket(id: string): Promise<void> {
+  const threadId = ticketThreadId(id);
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM comms_messages WHERE thread_id = ${threadId}`;
+    await sql`DELETE FROM comms_tickets WHERE id = ${id}`;
+    return;
+  }
+  writeJson(TIC_FILE, readJson<StoredTicket[]>(TIC_FILE, []).filter((t) => t.id !== id));
+  writeJson(MSG_FILE, readJson<StoredMessage[]>(MSG_FILE, []).filter((m) => m.threadId !== threadId));
+}
+
 // ============================ Notices =======================================
 interface StoredNotice extends Omit<Notice, "body" | "title" | "askAck" | "acks"> { bodyEnc: string; titleEnc: string }
 

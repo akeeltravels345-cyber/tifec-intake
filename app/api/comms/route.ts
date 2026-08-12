@@ -2,16 +2,41 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { getClinician, isContact, isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { sendTeamEmail } from "@/lib/email";
-import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
+import { saveDocFile, MAX_DOC_BYTES, deleteDocFilesByPrefix } from "@/lib/clientDocs";
 import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
-  createTicket, updateTicket, getTicket,
+  createTicket, updateTicket, deleteTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
 
 const MAX_BODY = 5000;
+
+// What can be attached to a ticket: images, voice notes, and common document
+// files (PDF, Word, Excel, text). Anything else is rejected.
+const ATTACH_DOC_MIMES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain", "text/csv",
+]);
+const attachAllowed = (mime: string) => mime.startsWith("image/") || mime.startsWith("audio/") || ATTACH_DOC_MIMES.has(mime);
+/** Persist one attachment (base64) under an owner id, if it's an allowed type and
+ *  within the size cap. Returns true if saved. */
+async function saveAttachment(owner: string, a: { base64?: string; mime?: string; name?: string }): Promise<boolean> {
+  const base64 = typeof a.base64 === "string" ? a.base64 : "";
+  if (!base64) return false;
+  const size = Math.floor((base64.length * 3) / 4);
+  if (size > MAX_DOC_BYTES) return false;
+  const mime = (a.mime || "application/octet-stream").slice(0, 80);
+  if (!attachAllowed(mime)) return false;
+  const name = typeof a.name === "string" && a.name.trim() ? a.name.trim().slice(0, 200) : null;
+  try { await saveDocFile(randomId(), owner, base64, mime, size, name); return true; }
+  catch (e) { console.error("attachment save failed", e); return false; }
+}
 
 /** Email the people an in-app notification just went to. Deliberately fire and
  *  forget: a mail outage must never fail the action that triggered it. */
@@ -79,24 +104,16 @@ export async function POST(req: Request) {
       const threadId = String(body.threadId ?? "");
       const text = String(body.body ?? "").trim();
       const isTicket = threadId.startsWith("ticket:");
-      // Ticket comments may carry image/voice attachments; other threads are text.
-      const atts: { base64?: string; mime?: string }[] = isTicket && Array.isArray(body.attachments) ? (body.attachments as []).slice(0, 6) : [];
-      if (!text && atts.length === 0) return NextResponse.json({ error: "Write something, or add an image or voice note." }, { status: 400 });
+      // Ticket comments may carry image / voice / file attachments; other threads are text.
+      const atts: { base64?: string; mime?: string; name?: string }[] = isTicket && Array.isArray(body.attachments) ? (body.attachments as []).slice(0, 6) : [];
+      if (!text && atts.length === 0) return NextResponse.json({ error: "Write something, or add an image, file or voice note." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 400 });
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       const m = await sendMessage(threadId, me.id, text);
       // Save each attachment against this specific comment: owner id
       // "ticket:<id>:msg:<messageId>" so the detail page can show it under the
       // right comment. Same encrypted doc store as the ticket's own screenshots.
-      for (const a of atts) {
-        const base64 = typeof a.base64 === "string" ? a.base64 : "";
-        if (!base64) continue;
-        const size = Math.floor((base64.length * 3) / 4);
-        if (size > MAX_DOC_BYTES) continue;
-        const mime = (a.mime || "application/octet-stream").slice(0, 80);
-        if (!mime.startsWith("image/") && !mime.startsWith("audio/")) continue;
-        try { await saveDocFile(randomId(), `${threadId}:msg:${m.id}`, base64, mime, size); } catch (e) { console.error("comment attachment save failed", e); }
-      }
+      for (const a of atts) await saveAttachment(`${threadId}:msg:${m.id}`, a);
 
       // Tell the other side. Never quote the message itself — see notify().
       if (threadId === GROUP_THREAD_ID) {
@@ -170,18 +187,14 @@ export async function POST(req: Request) {
       const enteredBy = onBehalf ? me.id : null;
 
       const t = await createTicket({ createdBy, enteredBy, assignees, area: area as TicketArea, subject, body: text });
-      // Optional images (screenshots) — stored in the shared doc store, tagged to
-      // this ticket so the detail page can list them. Base64 in, pointers kept by
-      // owner id "ticket:<id>".
-      const imgs: { base64?: string; mime?: string }[] = Array.isArray(body.images) ? (body.images as []).slice(0, 6) : [];
-      for (const im of imgs) {
-        const base64 = typeof im.base64 === "string" ? im.base64 : "";
-        if (!base64) continue;
-        const size = Math.floor((base64.length * 3) / 4);
-        if (size > MAX_DOC_BYTES) continue;
-        const mime = (im.mime || "image/png").slice(0, 80);
-        try { await saveDocFile(randomId(), `ticket:${t.id}`, base64, mime, size); } catch (e) { console.error("ticket image save failed", e); }
-      }
+      // Optional attachments (screenshots, PDFs, documents) — stored in the shared
+      // encrypted doc store under owner id "ticket:<id>". Accepts `images` (legacy)
+      // and `attachments`.
+      const raw = [
+        ...(Array.isArray(body.images) ? (body.images as []) : []),
+        ...(Array.isArray(body.attachments) ? (body.attachments as []) : []),
+      ].slice(0, 8);
+      for (const a of raw) await saveAttachment(`ticket:${t.id}`, a);
       const newFor = assignees.filter((a) => a !== me.id);
       await notify(newFor, "ticket_new",
         `${me.name} raised ticket #${t.ref} (${t.area}) for you`, `/team/tickets/${t.id}`);
@@ -247,6 +260,18 @@ export async function POST(req: Request) {
         const added = patch.assignees.filter((a) => !t.assignees.includes(a) && a !== me.id);
         await notify(added, "ticket_new", `${me.name} assigned ticket #${t.ref} to you`, `/team/tickets/${t.id}`);
       }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "ticket:delete") {
+      const id = String(body.id ?? "");
+      const t = await getTicket(id);
+      if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
+      // Deleting removes the ticket for everyone, so only the admin/owner may.
+      const c = getClinician(me.id);
+      if (!(c?.contact === "admin" || c?.contact === "owner")) return NextResponse.json({ error: "Only an admin or owner can delete a ticket." }, { status: 403 });
+      await deleteTicket(id);
+      await deleteDocFilesByPrefix(`ticket:${id}`);
       return NextResponse.json({ ok: true });
     }
 
