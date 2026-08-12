@@ -16,7 +16,7 @@ export interface SessionRow {
   fee: number;
   copay: number;
   insurance: number;
-  status: "self" | "paid" | "pend";
+  status: "self" | "paid" | "pend" | "writeoff" | "writedown";
   insurerId: string | null;
   copayDue: number;
   billed: boolean;
@@ -26,9 +26,12 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 // The pill reflects the real lifecycle: an insured claim is Outstanding (logged,
 // not yet submitted), then Billed (submitted, waiting on the insurer), then Paid
-// once the biller marks the money in. "paid" must never read as "Billed".
+// once the biller marks the money in. A claim the biller settles WITHOUT payment
+// reads as Written off / Written down — never Paid, and it doesn't pay out.
 const pill = (s: SessionRow) =>
   s.status === "self" ? <span className="cd-pill self">Self-pay</span>
+  : s.status === "writeoff" ? <span className="cd-pill adjusted" title="Contractual write-off — not collected, not paid to you">Written off</span>
+  : s.status === "writedown" ? <span className="cd-pill adjusted" title="Written down — not collected, not paid to you">Written down</span>
   : s.status === "paid" ? <span className="cd-pill paid">Paid</span>
   : s.billed ? <span className="cd-pill billed">Billed</span>
   : <span className="cd-pill pend">Outstanding</span>;

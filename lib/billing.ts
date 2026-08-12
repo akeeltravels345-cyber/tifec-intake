@@ -702,6 +702,27 @@ export async function markSessionAdjusted(id: string, disposition: "writeoff" | 
   return true;
 }
 
+/** Undo a write-off / write-down: clear the adjustment so the claim goes back to
+ *  Awaiting payment (still billed, not settled). */
+export async function markSessionUnadjusted(id: string): Promise<boolean> {
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`UPDATE billing_sessions SET insurance_paid = false, paid_date = null WHERE id = ${id} RETURNING id`) as { id: string }[];
+    if (res.length === 0) return false;
+    try { await sql`UPDATE billing_sessions SET insurance_disposition = null, insurance_collected = null WHERE id = ${id}`; } catch { /* columns not migrated */ }
+    return true;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return false;
+  s.insurancePaid = false;
+  s.paidDate = null;
+  s.insuranceDisposition = null;
+  s.insuranceCollected = null;
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
 /** Edit a logged session (fix a mistake). Updates the money-bearing fields; the
  *  caller resolves the final values (defaulting to the existing ones) so nothing
  *  is wiped. Every view recomputes from sessions, so the fix propagates. */

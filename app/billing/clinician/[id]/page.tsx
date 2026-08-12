@@ -65,7 +65,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
     fee: s.totalCost,
     copay: s.copayCollected,
     insurance: insurancePortion(s),
-    status: !s.insurerId ? "self" : s.insurancePaid ? "paid" : "pend",
+    status: !s.insurerId ? "self" : s.insuranceDisposition ? s.insuranceDisposition : s.insurancePaid ? "paid" : "pend",
     insurerId: s.insurerId,
     copayDue: s.copayDue,
     billed: !!s.billedDate,
@@ -102,7 +102,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
       <div className="cd-kpis">
         <div className="cd-kpi" title="How many sessions you logged this month."><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
-        <div className="cd-kpi" title="The full value of the work you did this month, before anything is taken out — whether or not the money has arrived yet."><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
+        <div className="cd-kpi" title="The realizable value of this month's work, before deductions — whether or not the money has arrived yet. Excludes anything written off or written down (those are shown separately and never pay out)."><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
         {/* Money taken at the appointment itself: the co-pay on an insured
             visit, or the whole fee when the client is self-pay. Sits with the
             insurance figures, since together they are the cash that arrived. */}

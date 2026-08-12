@@ -18,11 +18,15 @@ export interface Claim {
   commission: number;
   /** Date of service is after the client's referral end — insurer won't pay. */
   afterReferral?: boolean;
+  /** On the Written off / down tab: the amount written off/down, and which. */
+  off?: number;
+  disposition?: "writeoff" | "writedown";
 }
 export interface QueueData {
-  toBill: Claim[]; awaiting: Claim[]; selfPay: Claim[]; paid: Claim[];
+  toBill: Claim[]; awaiting: Claim[]; selfPay: Claim[]; paid: Claim[]; adjusted: Claim[];
   commissionThisMonth: number; waitingCommission: number;
   outstandingTotal: number; awaitingTotal: number; collectedThisMonth: number;
+  writeOffThisMonth: number; writeDownThisMonth: number;
   toBillCount: number; awaitingCount: number; oldestDays: number;
   buckets: { label: string; color: string; amount: number; count: number }[];
   clinicians: { id: string; name: string }[];
@@ -33,7 +37,7 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const money0 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2 : 3);
 
-type Tab = "tobill" | "awaiting" | "selfpay" | "paid";
+type Tab = "tobill" | "awaiting" | "selfpay" | "paid" | "adjusted";
 
 export default function BillingQueueClient({ data }: { data: QueueData }) {
   const router = useRouter();
@@ -58,9 +62,9 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const [adjAmt, setAdjAmt] = useState("");
   const [adjDate, setAdjDate] = useState(data.today);
 
-  // The open list the current tab works on (paid is a read-only history tab).
-  const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : tab === "selfpay" ? data.selfPay : data.paid;
-  const isOpen = tab !== "paid";
+  // The open list the current tab works on (paid + adjusted are read-only history).
+  const active = tab === "tobill" ? data.toBill : tab === "awaiting" ? data.awaiting : tab === "selfpay" ? data.selfPay : tab === "adjusted" ? data.adjusted : data.paid;
+  const isOpen = tab === "tobill" || tab === "awaiting" || tab === "selfpay";
 
   const filtered = useMemo(() => active.filter((c) =>
     (!q || c.clientName.toLowerCase().includes(q.toLowerCase())) &&
@@ -111,6 +115,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const markPaid = (ids: string[], date: string) => post(ids, { action: "paid", paid: true, paidDate: date });
   const unbill = (id: string) => post([id], { action: "billed", billed: false });
   const unpay = (id: string) => post([id], { action: "paid", paid: false });
+  const unadjust = (id: string) => post([id], { action: "unadjust" });
   const openAdjust = (id: string) => { setAdjustId(id); setAdjDisp("writeoff"); setAdjMode("adjusted"); setAdjAmt(""); setAdjDate(data.today); };
   async function submitAdjust(id: string, billedAmt: number) {
     const amt = Number(adjAmt) || 0;
@@ -140,6 +145,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         <div className="bq-wstat"><span className="bq-wk">To bill</span><span className="bq-wv mono">{data.toBillCount} <small>claim{data.toBillCount === 1 ? "" : "s"}</small></span></div>
         <div className="bq-wstat"><span className="bq-wk">Awaiting payment</span><span className="bq-wv mono">{money0(data.awaitingTotal)}</span></div>
         <div className="bq-wstat"><span className="bq-wk">Collected this month</span><span className="bq-wv mono">{money0(data.collectedThisMonth)}</span></div>
+        {(data.writeOffThisMonth > 0 || data.writeDownThisMonth > 0) && (
+          <div className="bq-wstat" title="Written off (contractual) and written down this month — not collected, never paid out. Reported separately.">
+            <span className="bq-wk">Written off / down this month</span>
+            <span className="bq-wv mono">{money0(data.writeOffThisMonth + data.writeDownThisMonth)}</span>
+          </div>
+        )}
         <div className="bq-wstat"><span className="bq-wk">Oldest open</span><span className={`bq-wv mono ${data.oldestDays >= 15 ? "warn" : ""}`}>{data.oldestDays} day{data.oldestDays === 1 ? "" : "s"}</span></div>
         <span className="bq-wspace" />
         <div className="bq-wcut">
@@ -168,6 +179,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           <button className={`bq-tab ${tab === "awaiting" ? "on" : ""}`} onClick={() => switchTab("awaiting")}>Awaiting payment ({data.awaiting.length})</button>
           {data.selfPay.length > 0 && <button className={`bq-tab ${tab === "selfpay" ? "on" : ""}`} onClick={() => switchTab("selfpay")}>Self-pay ({data.selfPay.length})</button>}
           <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Paid ({data.paid.length})</button>
+          {data.adjusted.length > 0 && <button className={`bq-tab ${tab === "adjusted" ? "on" : ""}`} onClick={() => switchTab("adjusted")}>Written off / down ({data.adjusted.length})</button>}
         </div>
         <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
@@ -237,6 +249,39 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
             })}
           </div>
         )
+      ) : tab === "adjusted" ? (
+        <div className="bq-billed">
+          <div className="bq-thead"><span>Settled</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Collected</span><span className="r">Off</span><span className="r"></span></div>
+          {data.adjusted.length === 0 ? (
+            <div className="bq-empty"><div className="big">No write-offs or write-downs</div><div className="small">These never count as collected and never pay out — they&apos;re reported here separately.</div></div>
+          ) : groups.length === 0 ? (
+            <div className="bq-empty"><div className="big">None match your filters</div></div>
+          ) : groups.map((g) => {
+            const open = !collapsed.has(g.key);
+            const offTot = g.claims.reduce((t, c) => t + (c.off ?? 0), 0);
+            return (
+            <div key={g.key}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)", cursor: "pointer" }} onClick={() => toggleCollapse(g.key)} role="button" aria-expanded={open} title={open ? "Collapse" : "Expand"}>
+                <span className="bq-gname">{g.name}</span>
+                <span className="bq-gmeta">{g.claims.length} settled</span>
+                <span style={{ flex: 1 }} />
+                <span className="bq-gtot">{money(offTot)} off</span>
+                <span className={`bq-gchev ${open ? "open" : ""}`} aria-hidden="true">›</span>
+              </div>
+              {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
+                <div className="bq-brow adj" key={c.id}>
+                  <span className={`bq-adjpill ${c.disposition}`}>{c.disposition === "writeoff" ? "Write-off" : "Write-down"}<small>{c.paidDate ?? ""}</small></span>
+                  <span><ClientName id={c.clientId} name={c.clientName} /></span>
+                  <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
+                  <span className="amt">{money(c.amount)}</span>
+                  <span className="amt off">{money(c.off ?? 0)}</span>
+                  <button className="bq-undo" disabled={busy} onClick={() => unadjust(c.id)} title="Undo — send this claim back to Awaiting payment">Undo</button>
+                </div>
+              ))}
+            </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="bq-billed">
           <div className="bq-thead"><span>Paid</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>

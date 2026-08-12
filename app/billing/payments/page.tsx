@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listExternalClinicians, listClinicianSettings, getPracticeConfig } from "@/lib/billing";
-import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex, insuranceSettled, insuranceCash } from "@/lib/billingCalc";
+import { insurancePortion, selfPayOutstanding, ageDays, AGING_BUCKETS, agingBucketIndex, insuranceSettled, insuranceCash, contractualWriteoff, writeDown } from "@/lib/billingCalc";
 import { listAllClients } from "@/lib/clients";
 import { chargeAfterReferral } from "@/lib/referral";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
@@ -83,27 +83,42 @@ export default async function BillingQueuePage() {
   const toBill = insured.filter((s) => !insuranceSettled(s) && !s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
   const awaiting = insured.filter((s) => !insuranceSettled(s) && !!s.billedDate).map(toClaim).sort((a, b) => b.age - a.age);
   const selfPayClaims = selfOwing.sort((a, b) => b.age - a.age); // self-pay balances owed by clients — their own tab
-  // Paid tab shows every settled claim; for a write-off/down the amount is the
-  // cash actually collected (not the full billed portion).
-  const paid = [...insured.filter(insuranceSettled).map((s) => ({ ...toClaim(s), amount: r2(insuranceCash(s)) })), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
+
+  const settled = insured.filter(insuranceSettled);
+  // PAID = the insurer actually paid (no adjustment). Cash = the collected amount.
+  const paidInFull = settled.filter((s) => !s.insuranceDisposition);
+  const paid = [...paidInFull.map((s) => ({ ...toClaim(s), amount: r2(insuranceCash(s)) })), ...selfPaidClaims].sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
+  // WRITTEN OFF / DOWN = settled by an adjustment, NOT paid income. Its own tab.
+  // amount = the cash actually collected (a copay, usually 0); off = the amount
+  // written off (contractual) or written down (uncollectable / not chased). The
+  // written amount never counts as collected and never pays the clinician.
+  const adjusted = settled.filter((s) => !!s.insuranceDisposition)
+    .map((s) => ({ ...toClaim(s), amount: r2(insuranceCash(s)), commission: r2(commissionOn(s.clinicianId, insuranceCash(s))), off: r2(contractualWriteoff(s) + writeDown(s)), disposition: (s.insuranceDisposition === "writedown" ? "writedown" : "writeoff") as "writeoff" | "writedown" }))
+    .sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || ""));
 
   // Everything not yet collected (both open stages) drives the outstanding total
   // and the aging chips.
   const open = [...toBill, ...awaiting, ...selfPayClaims];
   const outstandingTotal = r2(open.reduce((t, c) => t + c.amount, 0));
   const awaitingTotal = r2(awaiting.reduce((t, c) => t + c.amount, 0));
-  const paidThisMonthClaims = paid.filter((c) => c.paidDate?.slice(0, 7) === mKey);
-  const collectedThisMonth = r2(paidThisMonthClaims.reduce((t, c) => t + c.amount, 0));
+  // Collected = cash that actually arrived this month: paid claims + the collected
+  // part of adjusted claims. The written-off/down portion is reported separately.
+  const cashThisMonth = [...paid, ...adjusted].filter((c) => c.paidDate?.slice(0, 7) === mKey);
+  const paidThisMonthClaims = cashThisMonth;
+  const collectedThisMonth = r2(cashThisMonth.reduce((t, c) => t + c.amount, 0));
+  const adjustedThisMonth = adjusted.filter((c) => c.paidDate?.slice(0, 7) === mKey);
+  const writeOffThisMonth = r2(adjustedThisMonth.filter((c) => c.disposition === "writeoff").reduce((t, c) => t + c.off, 0));
+  const writeDownThisMonth = r2(adjustedThisMonth.filter((c) => c.disposition === "writedown").reduce((t, c) => t + c.off, 0));
   const buckets = AGING_BUCKETS.map((b, i) => {
     const inB = open.filter((c) => agingBucketIndex(c.age) === i);
     return { label: b.label, color: BUCKET_COLORS[i], amount: r2(inB.reduce((t, c) => t + c.amount, 0)), count: inB.length };
   });
 
   const data: QueueData = {
-    toBill, awaiting, selfPay: selfPayClaims, paid,
+    toBill, awaiting, selfPay: selfPayClaims, paid, adjusted,
     commissionThisMonth: r2(paidThisMonthClaims.reduce((t, c) => t + c.commission, 0)),
     waitingCommission: r2(open.reduce((t, c) => t + c.commission, 0)),
-    outstandingTotal, awaitingTotal, collectedThisMonth,
+    outstandingTotal, awaitingTotal, collectedThisMonth, writeOffThisMonth, writeDownThisMonth,
     toBillCount: toBill.length,
     awaitingCount: awaiting.length,
     oldestDays: open.length ? Math.max(...open.map((c) => c.age)) : 0,

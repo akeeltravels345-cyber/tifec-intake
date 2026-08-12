@@ -145,7 +145,10 @@ export function computeClinicianMonth(
   const visitsBilled = visits.filter((s) => insuranceSettled(s));
   const visitsUnbilled = visits.filter((s) => s.insurerId && !insuranceSettled(s));
 
-  const revenueGenerated = sumBy(visits, (s) => s.totalCost || 0);
+  // Realizable production: the value of this month's visits LESS anything written
+  // off (contractual) or written down (uncollectable). A written-off/down amount
+  // is never revenue for the clinician, so it never counts as earned.
+  const revenueGenerated = sumBy(visits, (s) => (s.totalCost || 0) - contractualWriteoff(s) - writeDown(s));
   // Co-pays are taken at the visit, so they count in the visit month. Self-pay
   // counts when the money is actually COLLECTED — its paid date, or the visit if
   // paid then — the same rollover rule insurance follows. So back-dating a
@@ -204,7 +207,7 @@ export function computeClinicianMonth(
     appointments: visits.length,
     revenueGenerated,
     copayThisMonth,
-    billedFromThisMonth: sumBy(visitsBilled, (s) => s.totalCost || 0),
+    billedFromThisMonth: sumBy(visitsBilled, (s) => (s.totalCost || 0) - contractualWriteoff(s) - writeDown(s)),
     outstandingThisMonth: sumBy(visitsUnbilled, insurancePortion),
     uncollectedCopay: sumBy(visits, uncollectedCopay),
     waivedCopay: sumBy(visits, waivedCopay),
