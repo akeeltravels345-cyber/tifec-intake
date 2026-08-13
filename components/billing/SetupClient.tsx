@@ -110,6 +110,12 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const [newIns, setNewIns] = useState<Insurer>({ id: "", name: "", copayType: "none", copayRate: 0, active: true });
   const [cpt, setCpt] = useState<Cpt[]>(cptIn);
   const [newCpt, setNewCpt] = useState<Cpt>({ code: "", description: "", active: true, variants: [{ label: "", minutes: 60, fee: 0 }] });
+  // Service-codes navigation: a search filter + which code is expanded to edit.
+  const [cptQ, setCptQ] = useState("");
+  const [openCode, setOpenCode] = useState<string | null>(null);
+  const cptShown = cptQ.trim()
+    ? cpt.filter((x) => x.code.toLowerCase().includes(cptQ.toLowerCase()) || x.description.toLowerCase().includes(cptQ.toLowerCase()))
+    : cpt;
   const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
@@ -279,36 +285,52 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Service codes</h2><span className="su-hint">A code can hold several time &amp; value options (e.g. 90834 at 45 min and a 15-min slot). The first is the default.</span></div>
           <div className="su-card">
-            <Foldable unit="codes" rowSelector=".su-cptcard">
-              <div className="su-cptlist">
-                {cpt.map((x, i) => {
-                  const setVar = (vi: number, patch: Partial<CptVar>) => setCpt(upd(cpt, i, { variants: x.variants.map((v, k) => (k === vi ? { ...v, ...patch } : v)) }));
-                  return (
-                    <div className="su-cptcard" key={x.code}>
-                      <div className="su-cpttop">
-                        <span className="su-cptcode">{x.code}</span>
-                        <input className="su-in" value={x.description} placeholder="Description" onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} />
-                        <div className="su-actions">
-                          <button className="su-save" onClick={() => run({ entity: "cpt", code: x.code, description: x.description, active: true, variants: x.variants }, "Saved")}>Save</button>
-                          <button className="su-del" onClick={() => run({ entity: "cpt", action: "delete", code: x.code }, "Removed")}>×</button>
+            <div className="su-cpttools">
+              <input className="su-in su-cptsearch" placeholder={`Search ${cpt.length} codes — number or name`} value={cptQ} onChange={(e) => setCptQ(e.target.value)} />
+            </div>
+            <div className="su-cptscroll">
+              {cptShown.length === 0 ? (
+                <div className="su-expempty">No code matches &ldquo;{cptQ}&rdquo;.</div>
+              ) : cptShown.map((x) => {
+                const i = cpt.indexOf(x);
+                const setVar = (vi: number, patch: Partial<CptVar>) => setCpt(upd(cpt, i, { variants: x.variants.map((v, k) => (k === vi ? { ...v, ...patch } : v)) }));
+                const open = openCode === x.code;
+                const def = x.variants[0];
+                return (
+                  <div className={`su-cptrow ${open ? "open" : ""}`} key={x.code}>
+                    <button type="button" className="su-cpthead" onClick={() => setOpenCode(open ? null : x.code)} aria-expanded={open}>
+                      <span className="su-cptcode">{x.code}</span>
+                      <span className="su-cptdesc">{x.description || <span className="su-cptdesc-empty">No description</span>}</span>
+                      {x.variants.length > 1 && <span className="su-cptopts">{x.variants.length} options</span>}
+                      <span className="su-cptfee">{money(def?.fee || 0)}</span>
+                      <span className="su-cptchev" aria-hidden="true">›</span>
+                    </button>
+                    {open && (
+                      <div className="su-cptedit">
+                        <label className="su-editlab">Description</label>
+                        <input className="su-in" value={x.description} placeholder="e.g. Psychotherapy, 60 min" onChange={(e) => setCpt(upd(cpt, i, { description: e.target.value }))} />
+                        <label className="su-editlab">Time &amp; value options <span className="su-editnote">first is the default</span></label>
+                        <div className="su-cptvars">
+                          {x.variants.map((v, vi) => (
+                            <div className="su-cptvar" key={vi}>
+                              <input className="su-in" placeholder="Label (e.g. 45 min)" value={v.label} onChange={(e) => setVar(vi, { label: e.target.value })} />
+                              <label className="su-varlab">Minutes<NumInput className="su-varnum" value={v.minutes} onChange={(n) => setVar(vi, { minutes: n })} /></label>
+                              <label className="su-varlab">Fee<span className="su-money sm"><span className="cur">$</span><NumInput className="su-moneyin" value={v.fee} onChange={(n) => setVar(vi, { fee: n })} /></span></label>
+                              {vi === 0 ? <span className="su-vardefault">default</span> : <button className="su-rm" onClick={() => setCpt(upd(cpt, i, { variants: x.variants.filter((_, k) => k !== vi) }))}>Remove</button>}
+                            </div>
+                          ))}
+                          <button className="su-add sm" onClick={() => setCpt(upd(cpt, i, { variants: [...x.variants, { label: "", minutes: 30, fee: 0 }] }))}>+ add an option</button>
+                        </div>
+                        <div className="su-cptedit-actions">
+                          <button className="su-rm" onClick={() => run({ entity: "cpt", action: "delete", code: x.code }, "Removed")}>Delete code</button>
+                          <button className="su-save" onClick={() => run({ entity: "cpt", code: x.code, description: x.description, active: true, variants: x.variants }, "Saved")}>Save changes</button>
                         </div>
                       </div>
-                      <div className="su-cptvars">
-                        {x.variants.map((v, vi) => (
-                          <div className="su-cptvar" key={vi}>
-                            <input className="su-in" placeholder="Label (e.g. 45 min)" value={v.label} onChange={(e) => setVar(vi, { label: e.target.value })} />
-                            <label className="su-varlab">min<NumInput style={{ minWidth: 60, maxWidth: 74 }} value={v.minutes} onChange={(n) => setVar(vi, { minutes: n })} /></label>
-                            <label className="su-varlab">$<NumInput className="su-in numwide" value={v.fee} onChange={(n) => setVar(vi, { fee: n })} /></label>
-                            {vi === 0 ? <span className="su-vardefault">default</span> : <button className="su-del" onClick={() => setCpt(upd(cpt, i, { variants: x.variants.filter((_, k) => k !== vi) }))}>×</button>}
-                          </div>
-                        ))}
-                        <button className="su-add sm" onClick={() => setCpt(upd(cpt, i, { variants: [...x.variants, { label: "", minutes: 30, fee: 0 }] }))}>+ time / value option</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Foldable>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             {/* Add a new code */}
             <div className="su-cptcard new">
               <div className="su-cpttop">
