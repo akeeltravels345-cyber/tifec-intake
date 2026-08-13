@@ -226,15 +226,18 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 : "Showing the default set — Save to make it this month's own"}
             </span>
           </div>
-          <div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th>Expense</th><th>Detail</th><th className="num">Monthly</th><th></th></tr></thead>
+          <div className="su-tblwrap"><table className="su-tbl su-exptbl">
+            <thead><tr><th>Expense</th><th>Detail</th><th className="num">Monthly</th><th aria-label="Remove"></th></tr></thead>
             <tbody>
+              {expenses.length === 0 && (
+                <tr><td colSpan={4} className="su-expempty">No costs yet — add your rent, software, utilities and so on below.</td></tr>
+              )}
               {expenses.map((e, i) => (
                 <tr key={e.id}>
-                  <td className="nm"><input className="su-in" value={e.name} onChange={(ev) => setExpenses(upd(expenses, i, { name: ev.target.value }))} /></td>
-                  <td><input className="su-in" value={e.detail} onChange={(ev) => setExpenses(upd(expenses, i, { detail: ev.target.value }))} /></td>
-                  <td className="num"><NumInput className="su-in numwide" value={e.amount} onChange={(v) => setExpenses(upd(expenses, i, { amount: v }))} /></td>
-                  <td><div className="su-actions"><button className="su-del" onClick={() => { const next = expenses.filter((_, k) => k !== i); setExpenses(next); saveExpenses(next); }}>Remove</button></div></td>
+                  <td className="nm"><input className="su-in" placeholder="e.g. Rent" value={e.name} onChange={(ev) => setExpenses(upd(expenses, i, { name: ev.target.value }))} /></td>
+                  <td><input className="su-in" placeholder="optional note" value={e.detail} onChange={(ev) => setExpenses(upd(expenses, i, { detail: ev.target.value }))} /></td>
+                  <td className="num"><div className="su-money"><span className="cur">$</span><NumInput className="su-moneyin" value={e.amount} onChange={(v) => setExpenses(upd(expenses, i, { amount: v }))} /></div></td>
+                  <td className="act"><button className="su-rm" aria-label={`Remove ${e.name || "cost"}`} title="Remove" onClick={() => { const next = expenses.filter((_, k) => k !== i); setExpenses(next); saveExpenses(next); }}>Remove</button></td>
                 </tr>
               ))}
             </tbody>
