@@ -25,16 +25,18 @@ export interface ClaimLine {
   pos: string; cpt: string; mod: string; dxPointer: string;
   charge: number; units: number; renderingNpi: string; renderingName: string;
 }
+export interface Addr { street?: string; city?: string; state?: string; zip?: string }
 export interface ClaimForm {
   key: string;
   payerName: string;
-  carrierCode: string;           // box 10d / header (e.g. "362")
+  carrierCode: string;           // box 11c-ish / header (e.g. "362")
   page: number; pages: number;   // "form 1 of 2" when a payer has >6 lines
   patientName: string; insuredName: string;
-  dob?: string; sex?: string; relationship: string; insuredDob?: string;
+  dob?: string; sex?: string; relationship: string; insuredDob?: string; insuredSex?: string;
   memberId?: string; groupNo?: string; planName: string;
   address: string; phone?: string;
-  diagnosis: string[];
+  patientAddr: Addr; insuredAddr: Addr; // box 5 / box 7, split for City/State/ZIP
+  diagnosis: string[];           // box 21 A-L (ICD-10)
   lines: ClaimLine[];
   total: number; amountPaid: number; balanceDue: number;
   signature: string;             // box 31 — rendering provider on this form
@@ -86,7 +88,10 @@ export function buildClaimForms(
     p.address?.country,
   ].filter(Boolean).join(" · ");
   const dx = p.diagnosis ?? [];
-  const dxPointer = dx.length ? "1" : ""; // 08-05 form uses numeric pointers 1-4
+  const dxPointer = dx.length ? "A" : ""; // 02/12 relates 24E to box 21 by letter A-L
+  const patientAddr = { street: [p.address?.line1, p.address?.line2].filter(Boolean).join(" "), city: p.address?.city, state: p.address?.region, zip: p.address?.postal };
+  const insuredAddr = selfInsured ? patientAddr : {};
+  const insuredSex = selfInsured ? p.sex : undefined;
 
   // One payer at a time, in a stable order.
   const byPayer = new Map<string, BillingSession[]>();
@@ -112,10 +117,10 @@ export function buildClaimForms(
         page: page + 1, pages,
         patientName, insuredName,
         dob: mdy(p.dob), sex: p.sex, relationship: p.insurance?.relationship ?? "self",
-        insuredDob: mdy(selfInsured ? p.dob : p.insurance?.insuredDob),
+        insuredDob: mdy(selfInsured ? p.dob : p.insurance?.insuredDob), insuredSex,
         memberId: p.insurance?.memberId, groupNo: p.insurance?.groupNo,
         planName: p.insurance?.planName || r.insName(insurerId),
-        address, phone: p.phone,
+        address, phone: p.phone, patientAddr, insuredAddr,
         diagnosis: dx,
         lines,
         total, amountPaid: 0, balanceDue: total,
