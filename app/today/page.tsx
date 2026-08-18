@@ -8,7 +8,8 @@ import { isSystemAdmin } from "@/lib/clinicians";
 import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions, getPracticeConfig } from "@/lib/billing";
-import { insurancePortion, collectedAtVisit, selfPayOutstanding } from "@/lib/billingCalc";
+import { insurancePortion, collectedAtVisit, selfPayOutstanding, insuranceCash } from "@/lib/billingCalc";
+import BookingValue from "@/components/billing/BookingValue";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
 import { getSidebarData } from "@/lib/sidebarData";
@@ -57,6 +58,7 @@ export default async function TodayPage() {
   // Admin (builder) processing-fee numbers: the platform fee is a % of cash
   // collected, so "outstanding" is that % of money still to be collected.
   let feePct = 0, collectedAll = 0, outstandingAll = 0;
+  let avgPerClient = 0, payingClients = 0;
   if (hasBilling) {
     const all = await listSessions();
     for (const s of all) {
@@ -70,6 +72,9 @@ export default async function TodayPage() {
 
     if (admin) {
       feePct = (await getPracticeConfig()).processingFeePct ?? 0;
+      // Cash collected per client → average revenue per paying client, the input
+      // to the "value per booking" readout below.
+      const byClient = new Map<string, number>();
       for (const s of all) {
         // Cash already collected (drives the fee earned).
         collectedAll += collectedAtVisit(s);
@@ -77,8 +82,12 @@ export default async function TodayPage() {
         // Money still to come in (will generate fee when it lands).
         if (s.insurerId && !s.insurancePaid) outstandingAll += insurancePortion(s);
         outstandingAll += selfPayOutstanding(s);
+        if (s.clientId) byClient.set(s.clientId, (byClient.get(s.clientId) ?? 0) + collectedAtVisit(s) + insuranceCash(s));
       }
       collectedAll = r2(collectedAll); outstandingAll = r2(outstandingAll);
+      const paying = [...byClient.values()].filter((v) => v > 0);
+      payingClients = paying.length;
+      avgPerClient = paying.length ? r2(paying.reduce((t, v) => t + v, 0) / paying.length) : 0;
     }
 
     if (owner) {
@@ -190,6 +199,7 @@ export default async function TodayPage() {
               </Link>
             </div>
             {feePct === 0 && <p className="today-feenote">Set your platform processing fee % in <Link href="/billing/config">Setup</Link> to see these fill in.</p>}
+            <BookingValue avgPerClient={avgPerClient} payingClients={payingClients} />
           </>
         )}
 
