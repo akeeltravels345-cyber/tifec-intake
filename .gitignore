@@ -12,8 +12,10 @@ PRODUCTION-SECRETS.local.txt
 
 vercel-import.env
 
-# local billing dev data
-data/billing-*.local.json
+# local dev data — never commit anything under data/ (real records live in the
+# database, these are local working/seed copies and can contain PHI)
+data/*.local.json
+data/*.json
 .vercel
 .env*
 
