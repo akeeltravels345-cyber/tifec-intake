@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS billing_sessions (
   total_cost      NUMERIC NOT NULL DEFAULT 0,
   copay_collected NUMERIC NOT NULL DEFAULT 0,
   copay_due       NUMERIC,                        -- co-pay that SHOULD have been collected (uncollected = due - collected)
+  copay_paid_date TEXT,                           -- when the co-pay actually came in (null = not collected yet)
   billed_date     DATE,                          -- when the claim was submitted to the insurer
   insurance_paid  BOOLEAN NOT NULL DEFAULT false,
   paid_date       DATE,                          -- when insurance payment confirmed (= collected)
