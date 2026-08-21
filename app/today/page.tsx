@@ -10,7 +10,6 @@ import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, collectedAtVisit, selfPayOutstanding, insuranceCash } from "@/lib/billingCalc";
 import BookingValue from "@/components/billing/BookingValue";
-import FeatureSpotlight from "@/components/billing/FeatureSpotlight";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
 import { getSidebarData } from "@/lib/sidebarData";
@@ -162,16 +161,6 @@ export default async function TodayPage() {
             <p className="today-sub">Here&apos;s your day across intake, billing and the team.</p>
           </div>
         </header>
-
-        {hasBilling && (
-          <FeatureSpotlight
-            id="copays"
-            title="New: record co-pays as they come in"
-            body="See every co-pay that's owed and tick it off when the money lands — it books to the month received. Clinicians handle their own visits."
-            href="/billing/copays"
-            cta="Open outstanding co-pays"
-          />
-        )}
 
         {/* Start here */}
         <Link href={startHere.href} className="today-starthere">
