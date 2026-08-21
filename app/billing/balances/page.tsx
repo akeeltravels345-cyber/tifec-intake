@@ -4,6 +4,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listSessions } from "@/lib/billing";
 import { selfPayOutstanding, uncollectedCopay } from "@/lib/billingCalc";
 import Foldable from "@/components/billing/Foldable";
+import NewGlow from "@/components/billing/NewGlow";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export default async function BalancesPage() {
       <div className="bal-kpis">
         <div className="bal-kpi"><div className="k">Total owed</div><div className="v">{money(totalOwed)}</div></div>
         <div className="bal-kpi"><div className="k">Self-pay balances</div><div className="v">{money(totalSelfPay)}</div></div>
-        <Link href="/billing/copays" className="bal-kpi bal-kpilink"><div className="k">Co-pays not collected</div><div className="v">{money(totalCopay)}</div><div className="bal-kpicta">Record co-pays →</div></Link>
+        <NewGlow id="copaynav"><Link href="/billing/copays" className="bal-kpi bal-kpilink"><div className="k">Co-pays not collected</div><div className="v">{money(totalCopay)}</div><div className="bal-kpicta">Record co-pays →</div></Link></NewGlow>
       </div>
 
       {rows.length === 0 ? (

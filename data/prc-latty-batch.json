@@ -1,0 +1,716 @@
+{
+  "batch": "prc-latty-2026-08",
+  "provider": "Dr. Joan Latty",
+  "records": [
+    {
+      "clientFirst": "Anice",
+      "clientLast": "Collahoun",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4837"
+    },
+    {
+      "clientFirst": "Anice",
+      "clientLast": "Collahoun",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4837"
+    },
+    {
+      "clientFirst": "Anice",
+      "clientLast": "Collahoun",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4949"
+    },
+    {
+      "clientFirst": "Anice",
+      "clientLast": "Collahoun",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "4998"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-03-05",
+      "billedDate": "2026-04-20",
+      "invNo": "4603"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4669"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4669"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4753"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4836"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4836"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4950"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "4999"
+    },
+    {
+      "clientFirst": "Veronica",
+      "clientLast": "Ebanks",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5087"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4667"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4667"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4754"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4835"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4835"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4951"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "5000"
+    },
+    {
+      "clientFirst": "Consuelo",
+      "clientLast": "Miller",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5089"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4666"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4755"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4834"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-22",
+      "billedDate": "2026-05-26",
+      "invNo": "4755"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4834"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4952"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-25",
+      "billedDate": "2026-07-03",
+      "invNo": "4952"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "5001"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-16",
+      "billedDate": "2026-07-18",
+      "invNo": "5001"
+    },
+    {
+      "clientFirst": "Ella",
+      "clientLast": "Powery",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5090"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4665"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4665"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4756"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-05-26",
+      "invNo": "4756"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4833"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "5002"
+    },
+    {
+      "clientFirst": "Eunice",
+      "clientLast": "Smith",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5091"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-04-20",
+      "invNo": "4606"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4664"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4757"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4832"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-04",
+      "billedDate": "2026-06-08",
+      "invNo": "4832"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-25",
+      "billedDate": "2026-07-03",
+      "invNo": "4953"
+    },
+    {
+      "clientFirst": "Daniel",
+      "clientLast": "THOMPSON",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-16",
+      "billedDate": "2026-07-18",
+      "invNo": "5003"
+    },
+    {
+      "clientFirst": "Lorna",
+      "clientLast": "Webb",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4831"
+    },
+    {
+      "clientFirst": "Lorna",
+      "clientLast": "Webb",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-28",
+      "billedDate": "2026-06-08",
+      "invNo": "4831"
+    },
+    {
+      "clientFirst": "Lorna",
+      "clientLast": "Webb",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4954"
+    },
+    {
+      "clientFirst": "Lorna",
+      "clientLast": "Webb",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "5004"
+    },
+    {
+      "clientFirst": "Lorna",
+      "clientLast": "Webb",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5092"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90832",
+      "fee": 57.11,
+      "dateOfService": "2026-02-26",
+      "billedDate": "2026-04-20",
+      "invNo": "4607"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4663"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4663"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4758"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4830"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-04",
+      "billedDate": "2026-06-08",
+      "invNo": "4830"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-11",
+      "billedDate": "2026-07-03",
+      "invNo": "4955"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-25",
+      "billedDate": "2026-07-03",
+      "invNo": "4955"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-31",
+      "invNo": "5093"
+    },
+    {
+      "clientFirst": "Karl",
+      "clientLast": "Wedderburn",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-16",
+      "billedDate": "2026-07-18",
+      "invNo": "5005"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-09",
+      "billedDate": "2026-05-08",
+      "invNo": "4662"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-16",
+      "billedDate": "2026-05-08",
+      "invNo": "4662"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-04-30",
+      "billedDate": "2026-05-08",
+      "invNo": "4662"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-14",
+      "billedDate": "2026-05-26",
+      "invNo": "4759"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-21",
+      "billedDate": "2026-06-08",
+      "invNo": "4829"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-05-27",
+      "billedDate": "2026-06-08",
+      "invNo": "4829"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-04",
+      "billedDate": "2026-06-08",
+      "invNo": "4829"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-06-25",
+      "billedDate": "2026-07-03",
+      "invNo": "4956"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-09",
+      "billedDate": "2026-07-18",
+      "invNo": "5006"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-16",
+      "billedDate": "2026-07-18",
+      "invNo": "5006"
+    },
+    {
+      "clientFirst": "Shaquilla",
+      "clientLast": "Woodman",
+      "insurerName": "Poinciana Rehabilitation Centre",
+      "cpt": "90837",
+      "fee": 211.77,
+      "dateOfService": "2026-07-23",
+      "billedDate": "2026-07-31",
+      "invNo": "5094"
+    }
+  ]
+}

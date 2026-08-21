@@ -9,9 +9,9 @@
     "area": "Billing & claims",
     "subjectEnc": "U4OK+QejiCyTzoEY:1R/v2kH7uNtGWi5JUgz+/Q==:lIFbeHkmFVLZJBEa1gSuRCDrIR+DonAO8vcVyHLbA5rHQOLh",
     "bodyEnc": "1P8/bdWGjFqgkHcd:UdTl9i7PEGhVAfJLAErZKA==:L0WpwvKYnVaWIg5IC9Xke/WFGct2keAFziVmXK/HFw9vxXPDDSyQoBbLLjTQ7gqBGSNrdnYAnM+9sclUi5qpEsWjWNu4H6PHVD+ykmybbTkz+mkjd9MQ6jD5KTiewV+KdlOlf+MdflJrS+TgHIRZaGDOJkj0ZP43eFlf8o2iEret85xSMq6PbfPz/pBwcJhcCoEXBac69FE=",
-    "status": "open",
+    "status": "in_progress",
     "createdAt": "2026-07-17T13:52:45.931Z",
-    "updatedAt": "2026-07-17T13:55:41.774Z"
+    "updatedAt": "2026-08-11T04:56:34.605Z"
   },
   {
     "id": "a3c26298ada2c8e2fd82b0048295ee6a",
@@ -40,5 +40,49 @@
     "status": "resolved",
     "createdAt": "2026-07-21T18:10:08.209Z",
     "updatedAt": "2026-07-21T18:10:08.432Z"
+  },
+  {
+    "id": "1cebeca5b57f905d9eedb4694e10b851",
+    "ref": 4,
+    "createdBy": "shion-oconnor",
+    "assignees": [
+      "shion-oconnor"
+    ],
+    "area": "IT & access",
+    "subjectEnc": "duIL7LOQIEa1EWNU:pi/347BiGm8EwNGirrDWqQ==:ec6fSor/FOMDHYiN+XkF7nz8L74=",
+    "bodyEnc": "dcZySroSnUQqfAFP:AfmHcI30m9489NpwAWjl4A==:1vWxv014zrIReB4EScF0ixNFqm6X2rD8OLLPZB12uOaXC5OzDw103sacY+idyg==",
+    "status": "resolved",
+    "createdAt": "2026-08-11T18:26:13.409Z",
+    "updatedAt": "2026-08-11T18:27:21.982Z"
+  },
+  {
+    "id": "3524f0cba198cf25aae56b0a602e6884",
+    "ref": 5,
+    "createdBy": "shion-oconnor",
+    "assignees": [
+      "shion-oconnor",
+      "nick-oconnor"
+    ],
+    "area": "IT & access",
+    "subjectEnc": "AQXwkDPizvw7HJMA:NbV/0+2NwYhiGJtsf5hgQA==:U2ES/ahklS++O6fjeKlft1GM",
+    "bodyEnc": "YNFWyR5GYPNpGqW0:lN+qnJXiyU9dP3SM45ARKg==:SgTHEUyO35AmYGrSp5wGxqbb+848HfaHkOTWbtMbHNE64k/uE7M=",
+    "status": "resolved",
+    "createdAt": "2026-08-11T18:26:41.427Z",
+    "updatedAt": "2026-08-11T18:27:21.989Z"
+  },
+  {
+    "id": "06147332db71aad526134f6b63c4f9fb",
+    "ref": 6,
+    "createdBy": "shion-oconnor",
+    "enteredBy": null,
+    "assignees": [
+      "nick-oconnor"
+    ],
+    "area": "IT & access",
+    "subjectEnc": "SXJNtz2qEWa0gVMr:yBq8OHYPGlR7E0aI51Q3XQ==:0u9NN87sTqtmI60xdLgW6KoihcE33A==",
+    "bodyEnc": "4al+j8xGlN7xtXi5:/IKMXwXQgdOSMtiSwhtAFA==:r6/kJuWo995ZNRIg4wjvP+ZdnehTYv1m",
+    "status": "open",
+    "createdAt": "2026-08-12T21:54:38.606Z",
+    "updatedAt": "2026-08-12T21:54:38.606Z"
   }
 ]

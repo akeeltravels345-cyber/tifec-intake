@@ -10,6 +10,7 @@ import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
 import StatGlossary from "@/components/billing/StatGlossary";
+import NewGlow from "@/components/billing/NewGlow";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
         <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
-        <Link href="/billing/copays" className="cd-kpi cd-kpilink" title="Co-pays due at your visits that weren't taken but are STILL OWED. Click to record them as they come in."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div><div className="cd-kpicta">Record →</div></Link>
+        <NewGlow id="copaynav"><Link href="/billing/copays" className="cd-kpi cd-kpilink" title="Co-pays due at your visits that weren't taken but are STILL OWED. Click to record them as they come in."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div><div className="cd-kpicta">Record →</div></Link></NewGlow>
         <div className="cd-kpi" title="Co-pays deliberately WAIVED this month — written off, never chased."><div className="k">Co-pays waived</div><div className="v">{money0(c.waivedCopay)}</div></div>
         {c.contractualWriteoff > 0 && <div className="cd-kpi" title="Insurance billed amount settled with a contractual write-off this month — its own bucket, not counted as collected and not paid out."><div className="k">Contractual write-offs</div><div className="v">{money0(c.contractualWriteoff)}</div></div>}
         {c.writeDown > 0 && <div className="cd-kpi" title="Insurance billed amount written down this month — its own bucket, not counted as collected and not paid out."><div className="k">Write-downs</div><div className="v">{money0(c.writeDown)}</div></div>}
