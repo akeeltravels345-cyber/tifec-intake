@@ -2297,6 +2297,7 @@ body:has(.biz) { background: #F8F9F8; }
 .agr-cell { background: #fff; padding: 14px 18px; }
 .agr-k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
 .agr-v { font: 400 22px "Newsreader", serif; margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.agr-sub { font-size: 11.5px; color: var(--muted, #6a6f66); margin-top: 3px; }
 .agr-note { margin-top: 12px; font-size: 13px; color: var(--muted, #5c636e); }
 @media (max-width: 640px) { .agr-grid { grid-template-columns: 1fr; } }
 
@@ -2514,6 +2515,7 @@ body:has(.biz) { background: #F8F9F8; }
 .su-expsrc { font-size: 12px; color: var(--faint, #8a93a3); }
 .su-check { width: 17px; height: 17px; accent-color: var(--teal, #43A9AE); cursor: pointer; }
 .su-na { color: var(--faint, #b8bec9); }
+.su-auto { font-size: 12px; font-weight: 600; color: var(--teal-deep, #2b6d70); }
 
 /* ============ Record / submission detail — harmonized to the billing family ======= */
 body:has(.rec) .brandbar { display: none; }

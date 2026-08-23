@@ -83,7 +83,7 @@ export default async function PayoutStatement({ params, searchParams }: { params
               {c.billerFromClinician > 0 && <tr><td>Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</td><td className="num minus">−{money(c.billerFromClinician)}</td></tr>}
               {c.otherDeductionPct > 0 && <tr><td>Other deduction ({c.otherDeductionPct}%)</td><td className="num minus">−{money(c.otherDeductionPctAmount)}</td></tr>}
               {c.healthDeduction > 0 && <tr><td>Health insurance</td><td className="num minus">−{money(c.healthDeduction)}</td></tr>}
-              {c.pension > 0 && <tr><td>Pension</td><td className="num minus">−{money(c.pension)}</td></tr>}
+              {c.pension > 0 && <tr><td>Pension ({c.pensionPct}% of after-retention share)</td><td className="num minus">−{money(c.pension)}</td></tr>}
               <tr className="total"><td>Net payout</td><td className="num">{money(c.payout)}</td></tr>
             </tbody>
           </table>

@@ -163,7 +163,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
               )}
               {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
               {c.healthDeduction > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Health insurance</span><span className="amt">−{money(c.healthDeduction)}</span></div>}
-              {c.pension > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Pension</span><span className="amt">−{money(c.pension)}</span></div>}
+              {c.pension > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Pension ({c.pensionPct}% of after-retention share)</span><span className="amt">−{money(c.pension)}</span></div>}
               <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
               <p className="cd-note">
                 Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
