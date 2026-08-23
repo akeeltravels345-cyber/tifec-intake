@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS billing_session_cpt (
 ALTER TABLE billing_cpt_codes ADD COLUMN IF NOT EXISTS fee NUMERIC;
 ALTER TABLE billing_cpt_codes ADD COLUMN IF NOT EXISTS hrs NUMERIC;
 ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS biller_pct NUMERIC;
+ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS pension_pct NUMERIC NOT NULL DEFAULT 10;
 
 -- ---------- 2. Schema: team comms ----------
 -- TIFEC team comms schema (ADDITIVE).

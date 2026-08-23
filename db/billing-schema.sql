@@ -39,11 +39,12 @@ CREATE TABLE IF NOT EXISTS billing_clinician_settings (
   retention_pct         NUMERIC NOT NULL DEFAULT 0, -- % of revenue the company keeps
   other_deduction_pct   NUMERIC NOT NULL DEFAULT 0, -- additional % deduction
   other_deduction_fixed NUMERIC NOT NULL DEFAULT 0, -- flat deduction per payout (health)
-  pension               NUMERIC NOT NULL DEFAULT 0, -- flat pension deduction per payout
+  pension               NUMERIC NOT NULL DEFAULT 0, -- legacy flat pension (unused)
+  pension_pct           NUMERIC NOT NULL DEFAULT 10, -- pension rate: % of the after-retention share
   biller_pct            NUMERIC,                   -- biller commission % on this clinician's insurance
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
--- Existing installs: ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS biller_pct NUMERIC, ADD COLUMN IF NOT EXISTS pension NUMERIC NOT NULL DEFAULT 0;
+-- Existing installs: ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS biller_pct NUMERIC, ADD COLUMN IF NOT EXISTS pension NUMERIC NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS pension_pct NUMERIC NOT NULL DEFAULT 10;
 
 -- Clinicians OUTSIDE the practice whose billing the biller handles privately.
 -- No intake login, and deliberately NOT part of TIFEC's revenue or payouts:

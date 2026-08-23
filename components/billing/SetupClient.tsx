@@ -8,7 +8,7 @@ type CopayType = "none" | "fixed" | "percentage";
 interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; }
 interface CptVar { label: string; minutes: number; fee: number; }
 interface Cpt { code: string; description: string; active: boolean; variants: CptVar[]; }
-interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; billerPct: number; billerBasePct: number; billerCommissionApplies: boolean; noPayout: boolean; }
+interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; pensionPct: number; billerPct: number; billerBasePct: number; billerCommissionApplies: boolean; noPayout: boolean; }
 
 /** A number field that holds its own text so you can fully clear it — fixes the
  *  "a 0 appears and won't delete" bug of a controlled type=number bound to a
@@ -116,7 +116,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   const cptShown = cptQ.trim()
     ? cpt.filter((x) => x.code.toLowerCase().includes(cptQ.toLowerCase()) || x.description.toLowerCase().includes(cptQ.toLowerCase()))
     : cpt;
-  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
+  const [sets, setSets] = useState<Record<string, Setting>>(Object.fromEntries(clinicians.map((c) => { const f = setIn.find((s) => s.clinicianId === c.id); return [c.id, { clinicianId: c.id, retentionPct: f?.retentionPct ?? 40, otherDeductionPct: f?.otherDeductionPct ?? 0, otherDeductionFixed: f?.otherDeductionFixed ?? 0, pension: f?.pension ?? 0, pensionPct: f?.pensionPct ?? 10, billerPct: f?.billerPct ?? 0, billerBasePct: f?.billerBasePct ?? 0, billerCommissionApplies: f?.billerCommissionApplies ?? false, noPayout: f?.noPayout ?? false }]; })));
 
   const upd = <T,>(arr: T[], i: number, patch: Partial<T>) => arr.map((x, k) => (k === i ? { ...x, ...patch } : x));
 
@@ -357,9 +357,9 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
       {/* Clinician splits — owner only */}
       {canManageMoney && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Base %</b> is the share the biller rate is charged on — leave <b>0</b> for auto (the clinician&apos;s after-retention share, i.e. what they actually receive), or set an explicit % for a special deal (Nick bills Joan on 70% of hers). <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies. All come out of the company&apos;s share, never a clinician&apos;s payout. <b>Pension</b> is automatic — 10% of each clinician&apos;s after-retention share — so there&apos;s nothing to type.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Clinician splits</h2><span className="su-hint">What the company keeps and what&apos;s deducted, per clinician. Payout = collected − retention − deductions. <b>Biller %</b> is this clinician&apos;s individual rate for the biller, charged on their insurance collected. <b>Base %</b> is the share the biller rate is charged on — leave <b>0</b> for auto (the clinician&apos;s after-retention share, i.e. what they actually receive), or set an explicit % for a special deal (Nick bills Joan on 70% of hers). <b>Practice {billerPct}%</b> ticks whether the practice-wide biller commission also applies. All come out of the company&apos;s share, never a clinician&apos;s payout. <b>Pension %</b> is charged on each clinician&apos;s after-retention share (what they keep once the company retention comes out), so the dollar figure moves with what they collect. Default 10 — change it here per clinician.</span></div>
         <div className="su-card"><Foldable unit="clinicians"><div className="su-tblwrap"><table className="su-tbl">
-          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension</th><th className="num">Biller %</th><th className="num">Base %</th><th className="num">Practice {billerPct}%</th><th className="num">No payout</th><th></th></tr></thead>
+          <thead><tr><th>Clinician</th><th className="num">Retention %</th><th className="num">Other %</th><th className="num">Health (KYD)</th><th className="num">Pension %</th><th className="num">Biller %</th><th className="num">Base %</th><th className="num">Practice {billerPct}%</th><th className="num">No payout</th><th></th></tr></thead>
           <tbody>
             {clinicians.map((c) => { const s = sets[c.id]; return (
               <tr key={c.id}>
@@ -367,12 +367,12 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.retentionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, retentionPct: v } })} />}</td>
                 <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.otherDeductionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionPct: v } })} />}</td>
                 <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.otherDeductionFixed} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, otherDeductionFixed: v } })} />}</td>
-                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <span className="su-auto" title="Pension is 10% of the clinician's after-retention share — automatic, not typed in.">10% auto</span>}</td>
+                <td className="num">{s.noPayout ? <span className="su-na">—</span> : <NumInput value={s.pensionPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, pensionPct: v } })} />}</td>
                 <td className="num"><NumInput value={s.billerPct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, billerPct: v } })} /></td>
                 <td className="num"><NumInput value={s.billerBasePct} onChange={(v) => setSets({ ...sets, [c.id]: { ...s, billerBasePct: v } })} /></td>
                 <td className="num"><input type="checkbox" className="su-check" checked={s.billerCommissionApplies} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, billerCommissionApplies: e.target.checked } })} /></td>
                 <td className="num"><input type="checkbox" className="su-check" checked={s.noPayout} onChange={(e) => setSets({ ...sets, [c.id]: { ...s, noPayout: e.target.checked } })} title="Owner draws no payout — collections stay with the practice" /></td>
-                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, billerPct: s.billerPct, billerBasePct: s.billerBasePct, billerCommissionApplies: s.billerCommissionApplies, noPayout: s.noPayout }, "Saved")}>Save</button></div></td>
+                <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "settings", clinicianId: c.id, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension, pensionPct: s.pensionPct, billerPct: s.billerPct, billerBasePct: s.billerBasePct, billerCommissionApplies: s.billerCommissionApplies, noPayout: s.noPayout }, "Saved")}>Save</button></div></td>
               </tr>
             ); })}
           </tbody>

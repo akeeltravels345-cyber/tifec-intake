@@ -2515,7 +2515,6 @@ body:has(.biz) { background: #F8F9F8; }
 .su-expsrc { font-size: 12px; color: var(--faint, #8a93a3); }
 .su-check { width: 17px; height: 17px; accent-color: var(--teal, #43A9AE); cursor: pointer; }
 .su-na { color: var(--faint, #b8bec9); }
-.su-auto { font-size: 12px; font-weight: 600; color: var(--teal-deep, #2b6d70); }
 
 /* ============ Record / submission detail — harmonized to the billing family ======= */
 body:has(.rec) .brandbar { display: none; }

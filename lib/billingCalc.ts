@@ -17,8 +17,9 @@ import type { BillingSession, ClinicianBillingSettings } from "./billing";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-// Pension is 10% of what a clinician keeps AFTER the company's retention cut — a
-// dynamic figure that moves with what they collect, never a flat amount.
+// Default pension rate: a % of what a clinician keeps AFTER the company's
+// retention cut — a dynamic figure, never a flat amount. The owner/admin can
+// override this per clinician in Setup (settings.pensionPct).
 export const PENSION_PCT = 10;
 
 const monthKey = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
@@ -118,8 +119,8 @@ export interface ClinicianMonth {
   otherDeductionPct: number;
   otherDeductionPctAmount: number;
   healthDeduction: number;          // fixed KYD (settings.otherDeductionFixed)
-  pension: number;                  // 10% of the after-retention share (dynamic)
-  pensionPct: number;               // the pension rate applied (10)
+  pension: number;                  // pensionPct% of the after-retention share (dynamic)
+  pensionPct: number;               // the pension rate applied (editable, default 10)
   payout: number;
   noPayout: boolean;                // owner draws nothing; collections stay with the practice
   companyKeeps: number;
@@ -179,10 +180,12 @@ export function computeClinicianMonth(
   const retentionAmount = noPayout ? 0 : round2((collected * pct) / 100);
   const otherPctAmount = noPayout ? 0 : round2((collected * settings.otherDeductionPct) / 100);
   const health = noPayout ? 0 : settings.otherDeductionFixed;
-  // Pension = 10% of the clinician's after-retention share (what they keep once
-  // the company has taken its retention %), not the legacy flat settings.pension.
+  // Pension = a % of the clinician's after-retention share (what they keep once
+  // the company has taken its retention %). The rate is editable per clinician by
+  // the owner/admin and defaults to 10; the legacy flat settings.pension is unused.
   const afterRetentionShare = round2(collected - retentionAmount);
-  const pension = noPayout ? 0 : round2((afterRetentionShare * PENSION_PCT) / 100);
+  const pensionPct = settings.pensionPct ?? PENSION_PCT;
+  const pension = noPayout ? 0 : round2((afterRetentionShare * pensionPct) / 100);
   // The biller has two SEPARATE agreements, and they are paid by different
   // parties — this is the whole point, so keep them apart:
   //   1. with the clinician — their own rate, out of their share, and
@@ -232,7 +235,7 @@ export function computeClinicianMonth(
     otherDeductionPctAmount: otherPctAmount,
     healthDeduction: health,
     pension,
-    pensionPct: PENSION_PCT,
+    pensionPct,
     payout,
     noPayout,
     companyKeeps: noPayout ? round2(collected - billerFromClinician) : round2(retentionAmount + otherPctAmount + health + pension),

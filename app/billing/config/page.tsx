@@ -23,7 +23,7 @@ export default async function SetupPage() {
       insurers={insurers}
       cptCodes={cptCodes.map((c) => ({ code: c.code, description: c.description, active: c.active, variants: cptVariantList(c) }))}
       clinicians={CLINICIANS.map((c) => ({ id: c.id, name: c.name }))}
-      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, billerPct: s.billerPct ?? 0, billerBasePct: s.billerBasePct ?? 0, billerCommissionApplies: s.billerCommissionApplies ?? false, noPayout: s.noPayout ?? false }))}
+      settings={settings.map((s) => ({ clinicianId: s.clinicianId, retentionPct: s.retentionPct, otherDeductionPct: s.otherDeductionPct, otherDeductionFixed: s.otherDeductionFixed, pension: s.pension ?? 0, pensionPct: s.pensionPct ?? 10, billerPct: s.billerPct ?? 0, billerBasePct: s.billerBasePct ?? 0, billerCommissionApplies: s.billerCommissionApplies ?? false, noPayout: s.noPayout ?? false }))}
       canManageMoney={isOwner(user.role)}
       isBillerUser={isBiller(user.role)}
       canSeeProvider={isBiller(user.role)}

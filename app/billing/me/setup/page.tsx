@@ -73,7 +73,7 @@ export default async function ClinicianSetupPage({ searchParams }: { searchParam
           <div className="agr-cell"><div className="agr-k">Company retention</div><div className="agr-v">{settings.retentionPct}%</div></div>
           <div className="agr-cell"><div className="agr-k">Billing rate</div><div className="agr-v">{settings.billerPct ?? 0}%</div></div>
           <div className="agr-cell"><div className="agr-k">Health deduction</div><div className="agr-v">{money(settings.otherDeductionFixed)}</div></div>
-          <div className="agr-cell"><div className="agr-k">Pension</div><div className="agr-v">10%</div><div className="agr-sub">of your share after the {settings.retentionPct}% retention</div></div>
+          <div className="agr-cell"><div className="agr-k">Pension</div><div className="agr-v">{settings.pensionPct ?? 10}%</div><div className="agr-sub">of your share after the {settings.retentionPct}% retention</div></div>
         </div>
         <p className="agr-note">Only the owner can change these. If something looks wrong, raise it with {ownerName}.</p>
       </div>

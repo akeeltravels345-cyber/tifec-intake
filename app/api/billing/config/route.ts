@@ -119,6 +119,7 @@ export async function POST(req: Request) {
         otherDeductionPct: n(body.otherDeductionPct),
         otherDeductionFixed: n(body.otherDeductionFixed),
         pension: n(body.pension),
+        pensionPct: body.pensionPct === undefined ? 10 : n(body.pensionPct),
         billerPct: n(body.billerPct),
         billerBasePct: body.billerBasePct === undefined ? 0 : n(body.billerBasePct),
         billerCommissionApplies: body.billerCommissionApplies === true,
