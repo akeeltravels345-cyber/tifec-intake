@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 interface Person { id: string; name: string; role: string }
 interface Thread { id: string; name: string; lastBody: string; lastAt: string; unread: number; fromMe: boolean }
 interface Msg { id: string; body: string; at: string; mine: boolean; who: string }
+interface GroupThread { threadId: string; name: string; lastBody: string; lastAt: string; unread: number; memberCount: number }
+interface ActiveGroup { threadId: string; name: string; memberNames: string[] }
 
 const initials = (n: string) => {
   // Drop titles and anything parenthetical ("Akeel (Test)" must not give "A(").
@@ -41,15 +43,23 @@ const lastSeen = (iso?: string) => {
   return `last seen ${new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 };
 
-export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone, presence = {} }: {
+export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone, groups = [], activeGroup = null, presence = {} }: {
   meId: string; people: Person[]; threads: Thread[]; messages: Msg[]; activeWith: string; threadId: string;
   everyone?: { unread: number; lastBody: string; lastAt: string };
+  groups?: GroupThread[];
+  activeGroup?: ActiveGroup | null;
   presence?: Record<string, string>;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [live, setLive] = useState<Msg[]>(messages);
+  // "New group" creation state.
+  const [creating, setCreating] = useState(false);
+  const [gName, setGName] = useState("");
+  const [gMembers, setGMembers] = useState<string[]>([]);
+  const [gBusy, setGBusy] = useState(false);
+  const [gErr, setGErr] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -112,10 +122,33 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
     } finally { setBusy(false); }
   }
 
-  const isGroup = activeWith === "all";
-  const active = isGroup
+  async function createGroup() {
+    const name = gName.trim();
+    if (!name) { setGErr("Give the group a name."); return; }
+    if (gMembers.length === 0) { setGErr("Add at least one other person."); return; }
+    setGBusy(true); setGErr("");
+    try {
+      const res = await fetch("/api/comms", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "group:create", name, memberIds: gMembers }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not create the group.");
+      setCreating(false); setGName(""); setGMembers([]);
+      router.push(`/team/messages?to=${j.threadId}`);
+    } catch (e) { setGErr(e instanceof Error ? e.message : "Could not create the group."); }
+    finally { setGBusy(false); }
+  }
+  const toggleMember = (id: string) => setGMembers((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]));
+
+  const isTeam = activeWith === "all";
+  const isCustomGroup = activeWith.startsWith("group:");
+  const isGroupLike = isTeam || isCustomGroup;
+  const active = isTeam
     ? { id: "all", name: "Everyone", role: `Whole team · ${people.length + 1} people` }
-    : people.find((p) => p.id === activeWith) ?? threads.find((t) => t.id === activeWith);
+    : isCustomGroup && activeGroup
+      ? { id: activeGroup.threadId, name: activeGroup.name, role: `${activeGroup.memberNames.length} people · ${activeGroup.memberNames.join(", ")}` }
+      : people.find((p) => p.id === activeWith) ?? threads.find((t) => t.id === activeWith);
   const started = new Set(threads.map((t) => t.id));
   const notStarted = people.filter((p) => !started.has(p.id));
 
@@ -124,13 +157,13 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
       <div className="tm-head">
         <div>
           <h1 className="tm-h1">Messages</h1>
-          <p className="tm-sub">Private, one to one. Please keep client names and clinical detail out of here.</p>
+          <p className="tm-sub">Direct chats and groups. Please keep client names and clinical detail out of here.</p>
         </div>
       </div>
 
       <div className="tm-chat">
         <aside className="tm-people">
-          <Link href="/team/messages?to=all" className={`tm-person tm-everyone ${isGroup ? "on" : ""}`}>
+          <Link href="/team/messages?to=all" className={`tm-person tm-everyone ${isTeam ? "on" : ""}`}>
             <span className="tm-av grp">★</span>
             <span className="tm-pmid">
               <span className="tm-pname">Everyone</span>
@@ -141,6 +174,25 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
               {everyone && everyone.unread > 0 ? <span className="tm-badge">{everyone.unread}</span> : null}
             </span>
           </Link>
+          <button type="button" className="tm-newgrp" onClick={() => { setCreating(true); setGErr(""); }}>
+            <span className="tm-newgrp-ic">＋</span> New group
+          </button>
+
+          {groups.length > 0 && <div className="tm-plabel">Groups</div>}
+          {groups.map((g) => (
+            <Link key={g.threadId} href={`/team/messages?to=${g.threadId}`} className={`tm-person ${activeWith === g.threadId ? "on" : ""}`}>
+              <span className="tm-av grp">◇</span>
+              <span className="tm-pmid">
+                <span className="tm-pname">{g.name}</span>
+                <span className="tm-plast">{g.lastBody ? g.lastBody : `${g.memberCount} people`}</span>
+              </span>
+              <span className="tm-pright">
+                {g.lastAt ? <span className="tm-pwhen">{brief(g.lastAt)}</span> : null}
+                {g.unread > 0 ? <span className="tm-badge">{g.unread}</span> : null}
+              </span>
+            </Link>
+          ))}
+
           {threads.length > 0 && <div className="tm-plabel">Conversations</div>}
           {threads.map((t) => (
             <Link key={t.id} href={`/team/messages?to=${t.id}`} className={`tm-person ${activeWith === t.id ? "on" : ""}`}>
@@ -169,18 +221,42 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
         </aside>
 
         <section className="tm-thread">
-          {!activeWith ? (
+          {creating ? (
+            <div className="tm-newgroup">
+              <div className="tm-ng-head">
+                <div className="tm-ng-title">New group chat</div>
+                <button type="button" className="tm-ng-x" onClick={() => setCreating(false)} aria-label="Cancel">×</button>
+              </div>
+              <label className="tm-ng-label">Group name</label>
+              <input className="tm-in" value={gName} onChange={(e) => setGName(e.target.value)} placeholder="e.g. Billing team" maxLength={80} autoFocus />
+              <label className="tm-ng-label">Add people <span className="tm-ng-count">{gMembers.length} selected</span></label>
+              <div className="tm-ng-people">
+                {people.map((p) => (
+                  <label key={p.id} className={`tm-ng-person ${gMembers.includes(p.id) ? "on" : ""}`}>
+                    <input type="checkbox" checked={gMembers.includes(p.id)} onChange={() => toggleMember(p.id)} />
+                    <span className="tm-av sm">{initials(p.name)}</span>
+                    <span className="tm-ng-pn"><span className="tm-pname">{p.name}</span><span className="tm-plast">{p.role}</span></span>
+                  </label>
+                ))}
+              </div>
+              {gErr && <div className="tm-ng-err">{gErr}</div>}
+              <div className="tm-ng-actions">
+                <button type="button" className="tm-ng-cancel" onClick={() => setCreating(false)}>Cancel</button>
+                <button type="button" className="tm-cta" onClick={createGroup} disabled={gBusy || !gName.trim() || gMembers.length === 0}>{gBusy ? "Creating…" : "Create group"}</button>
+              </div>
+            </div>
+          ) : !activeWith ? (
             <div className="tm-empty">
               <div className="big">Pick someone to talk to</div>
-              <div className="small">Your conversations stay private between the two of you.</div>
+              <div className="small">Your conversations stay private. Start a group with the ＋ button.</div>
             </div>
           ) : (
             <>
               <div className="tm-thead">
-                <span className="tm-avwrap"><span className="tm-av">{initials(active?.name ?? "")}</span>{!isGroup && isOnline(presence[activeWith]) && <span className="tm-dot" title="Online" />}</span>
+                <span className="tm-avwrap"><span className={`tm-av ${isGroupLike ? "grp" : ""}`}>{isTeam ? "★" : isCustomGroup ? "◇" : initials(active?.name ?? "")}</span>{!isGroupLike && isOnline(presence[activeWith]) && <span className="tm-dot" title="Online" />}</span>
                 <div>
                   <div className="tm-pname">{active?.name}</div>
-                  <div className="tm-prole">{isGroup ? (active as Person).role : (isOnline(presence[activeWith]) ? "Online now" : lastSeen(presence[activeWith]))}</div>
+                  <div className="tm-prole">{isGroupLike ? (active as Person).role : (isOnline(presence[activeWith]) ? "Online now" : lastSeen(presence[activeWith]))}</div>
                 </div>
               </div>
 
@@ -192,7 +268,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                     <div key={m.id}>
                       {showDay && <div className="tm-day"><span>{dayLabel(m.at)}</span></div>}
                       <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
-                        {isGroup && !m.mine && m.who && <div className="tm-bwho">{m.who}</div>}
+                        {isGroupLike && !m.mine && m.who && <div className="tm-bwho">{m.who}</div>}
                         <div className="tm-btext">{m.body}</div>
                         <div className="tm-btime">{clock(m.at)}</div>
                       </div>

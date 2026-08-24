@@ -6,6 +6,7 @@ import { saveDocFile, MAX_DOC_BYTES, deleteDocFilesByPrefix } from "@/lib/client
 import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
+  isCustomGroup, getGroup, createGroup,
   createTicket, updateTicket, deleteTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
@@ -70,6 +71,11 @@ function readAssignees(raw: unknown): string[] | null {
 async function canPost(threadId: string, me: string): Promise<boolean> {
   // The team-wide channel: any signed-in team member may post and read.
   if (threadId === GROUP_THREAD_ID) return !!getClinician(me);
+  // A custom group: only its members.
+  if (isCustomGroup(threadId)) {
+    const g = await getGroup(threadId);
+    return !!g && g.memberIds.includes(me);
+  }
   if (threadId.startsWith("dm:")) {
     const partner = dmPartner(threadId, me);
     return !!partner && dmThreadId(me, partner) === threadId && !!getClinician(partner);
@@ -120,6 +126,13 @@ export async function POST(req: Request) {
         // Team channel: nudge everyone else in-app (no email — that'd be noisy).
         const team = CLINICIANS.filter((c) => (!c.intakeHidden || isContact(c.id)) && c.id !== me.id).map((c) => c.id);
         await notify(team, "message", `${me.name} posted in the team channel`, `/team/messages?to=all`);
+      } else if (isCustomGroup(threadId)) {
+        // A custom group: nudge the other members in-app.
+        const g = await getGroup(threadId);
+        if (g) {
+          const others = g.memberIds.filter((u) => u !== me.id);
+          await notify(others, "message", `${me.name} posted in ${g.name}`, `/team/messages?to=${threadId}`);
+        }
       } else if (threadId.startsWith("dm:")) {
         const partner = dmPartner(threadId, me.id);
         if (partner) await notify([partner], "message", `${me.name} sent you a message`, `/team/messages?to=${me.id}`);
@@ -155,6 +168,20 @@ export async function POST(req: Request) {
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       await markThreadRead(threadId, me.id);
       return NextResponse.json({ ok: true });
+    }
+
+    // Create a custom group chat: a name + chosen members (the creator is always
+    // included). Any signed-in team member may start one.
+    if (action === "group:create") {
+      const name = String(body.name ?? "").trim().slice(0, 80);
+      if (!name) return NextResponse.json({ error: "Give the group a name." }, { status: 400 });
+      const picked = Array.isArray(body.memberIds) ? body.memberIds.map(String) : [];
+      // Keep only real team members other than the creator; need at least one.
+      const members = [...new Set(picked)].filter((id) => id !== me.id && !!getClinician(id));
+      if (members.length === 0) return NextResponse.json({ error: "Add at least one other person." }, { status: 400 });
+      const g = await createGroup(name, members, me.id);
+      await notify(members, "message", `${me.name} added you to ${g.name}`, `/team/messages?to=${g.threadId}`);
+      return NextResponse.json({ ok: true, threadId: g.threadId });
     }
 
     // Presence heartbeat: keep the user "online" while a tab is open.

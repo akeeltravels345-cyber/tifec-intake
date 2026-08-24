@@ -272,10 +272,64 @@ export async function groupSummaryFor(me: string): Promise<{ lastAt: string; las
   return { lastAt: last?.createdAt ?? "", lastBody: last?.body ?? "", lastSender: last?.senderId ?? "", unread };
 }
 
-/** Unread direct messages + the team channel, for the nav badge. */
+// -------- Custom group chats: named, member-picked conversations -------------
+// Thread id is `group:<id>` (the reserved team-wide channel is `group:all`). The
+// messages themselves live in comms_messages like every other thread; only the
+// name + membership are stored here.
+const GROUP_FILE = "comms-groups.local.json";
+interface StoredGroup { id: string; nameEnc: string; memberIds: string[]; createdBy: string; createdAt: string }
+export interface Group { threadId: string; name: string; memberIds: string[]; createdBy: string; createdAt: string }
+export const isCustomGroup = (threadId: string) => threadId.startsWith("group:") && threadId !== GROUP_THREAD_ID;
+
+async function allGroups(): Promise<Group[]> {
+  if (usePostgres) {
+    const sql = await pg();
+    let rows: Record<string, unknown>[] = [];
+    // Guarded so the app still works before the comms_groups migration is run.
+    try { rows = (await sql`SELECT id, name_enc, member_ids, created_by, created_at FROM comms_groups`) as Record<string, unknown>[]; } catch { return []; }
+    return rows.map((r) => ({ threadId: `group:${str(r.id)}`, name: safeDecrypt(r.name_enc), memberIds: toIds(r.member_ids), createdBy: str(r.created_by), createdAt: iso(r.created_at) }));
+  }
+  return readJson<StoredGroup[]>(GROUP_FILE, []).map((g) => ({ threadId: `group:${g.id}`, name: safeDecrypt(g.nameEnc), memberIds: g.memberIds, createdBy: g.createdBy, createdAt: g.createdAt }));
+}
+
+export async function getGroup(threadId: string): Promise<Group | null> {
+  if (!isCustomGroup(threadId)) return null;
+  return (await allGroups()).find((g) => g.threadId === threadId) ?? null;
+}
+
+export async function createGroup(name: string, memberIds: string[], createdBy: string): Promise<Group> {
+  const id = randomId();
+  const members = Array.from(new Set([createdBy, ...memberIds])).filter(Boolean);
+  const nameEnc = encrypt(name);
+  const createdAt = new Date().toISOString();
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`INSERT INTO comms_groups (id, name_enc, member_ids, created_by, created_at) VALUES (${id}, ${nameEnc}, ${JSON.stringify(members)}, ${createdBy}, ${createdAt})`;
+  } else {
+    const all = readJson<StoredGroup[]>(GROUP_FILE, []);
+    all.push({ id, nameEnc, memberIds: members, createdBy, createdAt });
+    writeJson(GROUP_FILE, all);
+  }
+  return { threadId: `group:${id}`, name, memberIds: members, createdBy, createdAt };
+}
+
+/** Custom group threads this person is a member of, newest activity first. */
+export async function listGroupsForMember(me: string): Promise<{ threadId: string; name: string; memberIds: string[]; lastAt: string; lastBody: string; lastSender: string; unread: number }[]> {
+  const groups = (await allGroups()).filter((g) => g.memberIds.includes(me));
+  const reads = await getReads(me);
+  const out = await Promise.all(groups.map(async (g) => {
+    const msgs = await listMessages(g.threadId);
+    const since = reads[g.threadId] ?? "";
+    const last = msgs[msgs.length - 1];
+    return { threadId: g.threadId, name: g.name, memberIds: g.memberIds, lastAt: last?.createdAt ?? g.createdAt, lastBody: last?.body ?? "", lastSender: last?.senderId ?? "", unread: msgs.filter((m) => m.senderId !== me && m.createdAt > since).length };
+  }));
+  return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+}
+
+/** Unread direct messages + the team channel + custom groups, for the nav badge. */
 export async function unreadCount(me: string): Promise<number> {
-  const [threads, group] = await Promise.all([listThreadsFor(me), groupSummaryFor(me)]);
-  return threads.reduce((t, x) => t + x.unread, 0) + group.unread;
+  const [threads, group, groups] = await Promise.all([listThreadsFor(me), groupSummaryFor(me), listGroupsForMember(me)]);
+  return threads.reduce((t, x) => t + x.unread, 0) + group.unread + groups.reduce((t, x) => t + x.unread, 0);
 }
 
 // ============================ Tickets =======================================

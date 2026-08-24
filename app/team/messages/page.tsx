@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
-import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor, getPresence } from "@/lib/comms";
+import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor, listGroupsForMember, getPresence } from "@/lib/comms";
 import Messages from "@/components/team/Messages";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +23,15 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
 
   const threads = await listThreadsFor(me.id);
   const group = await groupSummaryFor(me.id);
+  const myGroups = await listGroupsForMember(me.id);
   const presence = await getPresence();
-  // "all" opens the team-wide channel; otherwise a normal DM.
-  const isGroup = sp.to === "all";
-  const withWhom = !isGroup && sp.to && getClinician(sp.to) && sp.to !== me.id ? sp.to : "";
-  const activeThread = isGroup ? GROUP_THREAD_ID : withWhom ? dmThreadId(me.id, withWhom) : "";
+  // "all" opens the team-wide channel; "group:<id>" a custom group I'm in;
+  // otherwise a normal DM.
+  const isTeam = sp.to === "all";
+  const openGroup = sp.to && sp.to.startsWith("group:") && sp.to !== "group:all" ? myGroups.find((g) => g.threadId === sp.to) : undefined;
+  const withWhom = !isTeam && !openGroup && sp.to && getClinician(sp.to) && sp.to !== me.id ? sp.to : "";
+  const activeThread = isTeam ? GROUP_THREAD_ID : openGroup ? openGroup.threadId : withWhom ? dmThreadId(me.id, withWhom) : "";
+  const activeWith = isTeam ? "all" : openGroup ? openGroup.threadId : withWhom;
   const messages = activeThread ? await listMessages(activeThread) : [];
   if (activeThread) await markThreadRead(activeThread, me.id);
 
@@ -37,7 +41,9 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       people={people}
       presence={presence}
       everyone={{ unread: group.unread, lastBody: group.lastBody, lastAt: group.lastAt }}
-      activeWith={isGroup ? "all" : withWhom}
+      groups={myGroups.map((g) => ({ threadId: g.threadId, name: g.name, lastBody: g.lastBody, lastAt: g.lastAt, unread: g.unread, memberCount: g.memberIds.length }))}
+      activeGroup={openGroup ? { threadId: openGroup.threadId, name: openGroup.name, memberNames: openGroup.memberIds.map((id) => (id === me.id ? "You" : getClinician(id)?.name ?? id)) } : null}
+      activeWith={activeWith}
       threads={threads.map((t) => {
         const other = dmPartner(t.threadId, me.id) ?? "";
         return {

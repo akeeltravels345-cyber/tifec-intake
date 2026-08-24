@@ -154,6 +154,16 @@ CREATE TABLE IF NOT EXISTS comms_notices (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Custom group chats: named, member-picked conversations (messages live in
+-- comms_messages under thread_id 'group:<id>').
+CREATE TABLE IF NOT EXISTS comms_groups (
+  id          TEXT PRIMARY KEY,
+  name_enc    TEXT NOT NULL,
+  member_ids  JSONB NOT NULL DEFAULT '[]',
+  created_by  TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 
 -- If an earlier version of the comms schema was run, move single -> multiple assignees.
 DO $$

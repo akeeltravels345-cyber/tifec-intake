@@ -85,3 +85,13 @@ CREATE TABLE IF NOT EXISTS comms_email_log (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS comms_email_log_at ON comms_email_log (created_at DESC);
+
+-- Custom group chats: named, member-picked conversations. Messages live in
+-- comms_messages under thread_id 'group:<id>'.
+CREATE TABLE IF NOT EXISTS comms_groups (
+  id          TEXT PRIMARY KEY,
+  name_enc    TEXT NOT NULL,
+  member_ids  JSONB NOT NULL DEFAULT '[]',
+  created_by  TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
