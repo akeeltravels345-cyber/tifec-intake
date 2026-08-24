@@ -116,7 +116,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
             visit, or the whole fee when the client is self-pay. Sits with the
             insurance figures, since together they are the cash that arrived. */}
         <div className="cd-kpi" title="Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. Money in hand."><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
-        <InsuranceCollectedKpi total={c.insuranceBilledThisMonth} thisMonth={c.insuranceThisMonthVisits} prior={c.insurancePriorVisits} monthLabel={MONTHS[month - 1]} rows={insRows} />
+        <NewGlow id="insbreakdown"><InsuranceCollectedKpi total={c.insuranceBilledThisMonth} thisMonth={c.insuranceThisMonthVisits} prior={c.insurancePriorVisits} monthLabel={MONTHS[month - 1]} rows={insRows} /></NewGlow>
         <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
