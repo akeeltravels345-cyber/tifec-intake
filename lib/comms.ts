@@ -314,16 +314,51 @@ export async function createGroup(name: string, memberIds: string[], createdBy: 
 }
 
 /** Custom group threads this person is a member of, newest activity first. */
-export async function listGroupsForMember(me: string): Promise<{ threadId: string; name: string; memberIds: string[]; lastAt: string; lastBody: string; lastSender: string; unread: number }[]> {
+export async function listGroupsForMember(me: string): Promise<{ threadId: string; name: string; memberIds: string[]; createdBy: string; lastAt: string; lastBody: string; lastSender: string; unread: number }[]> {
   const groups = (await allGroups()).filter((g) => g.memberIds.includes(me));
   const reads = await getReads(me);
   const out = await Promise.all(groups.map(async (g) => {
     const msgs = await listMessages(g.threadId);
     const since = reads[g.threadId] ?? "";
     const last = msgs[msgs.length - 1];
-    return { threadId: g.threadId, name: g.name, memberIds: g.memberIds, lastAt: last?.createdAt ?? g.createdAt, lastBody: last?.body ?? "", lastSender: last?.senderId ?? "", unread: msgs.filter((m) => m.senderId !== me && m.createdAt > since).length };
+    return { threadId: g.threadId, name: g.name, memberIds: g.memberIds, createdBy: g.createdBy, lastAt: last?.createdAt ?? g.createdAt, lastBody: last?.body ?? "", lastSender: last?.senderId ?? "", unread: msgs.filter((m) => m.senderId !== me && m.createdAt > since).length };
   }));
   return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+}
+
+// Update a group's membership or name. Returns the updated group, or null if it
+// no longer exists.
+async function writeGroup(threadId: string, patch: { memberIds?: string[]; name?: string }): Promise<Group | null> {
+  const g = await getGroup(threadId);
+  if (!g) return null;
+  const id = threadId.slice("group:".length);
+  const memberIds = patch.memberIds ? Array.from(new Set(patch.memberIds)).filter(Boolean) : g.memberIds;
+  const name = patch.name !== undefined ? patch.name : g.name;
+  if (usePostgres) {
+    const sql = await pg();
+    if (patch.memberIds) await sql`UPDATE comms_groups SET member_ids = ${JSON.stringify(memberIds)} WHERE id = ${id}`;
+    if (patch.name !== undefined) await sql`UPDATE comms_groups SET name_enc = ${encrypt(name)} WHERE id = ${id}`;
+  } else {
+    const all = readJson<StoredGroup[]>(GROUP_FILE, []);
+    const row = all.find((x) => x.id === id);
+    if (!row) return null;
+    if (patch.memberIds) row.memberIds = memberIds;
+    if (patch.name !== undefined) row.nameEnc = encrypt(name);
+    writeJson(GROUP_FILE, all);
+  }
+  return { ...g, memberIds, name };
+}
+export const setGroupMembers = (threadId: string, memberIds: string[]) => writeGroup(threadId, { memberIds });
+export const renameGroup = (threadId: string, name: string) => writeGroup(threadId, { name });
+
+export async function deleteGroup(threadId: string): Promise<void> {
+  const id = threadId.slice("group:".length);
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM comms_groups WHERE id = ${id}`;
+  } else {
+    writeJson(GROUP_FILE, readJson<StoredGroup[]>(GROUP_FILE, []).filter((x) => x.id !== id));
+  }
 }
 
 /** Unread direct messages + the team channel + custom groups, for the nav badge. */

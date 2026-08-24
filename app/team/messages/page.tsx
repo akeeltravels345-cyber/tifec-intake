@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
+import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact, isSystemAdmin } from "@/lib/clinicians";
 import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor, listGroupsForMember, getPresence } from "@/lib/comms";
 import Messages from "@/components/team/Messages";
 
@@ -42,7 +42,12 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       presence={presence}
       everyone={{ unread: group.unread, lastBody: group.lastBody, lastAt: group.lastAt }}
       groups={myGroups.map((g) => ({ threadId: g.threadId, name: g.name, lastBody: g.lastBody, lastAt: g.lastAt, unread: g.unread, memberCount: g.memberIds.length }))}
-      activeGroup={openGroup ? { threadId: openGroup.threadId, name: openGroup.name, memberNames: openGroup.memberIds.map((id) => (id === me.id ? "You" : getClinician(id)?.name ?? id)) } : null}
+      activeGroup={openGroup ? {
+        threadId: openGroup.threadId,
+        name: openGroup.name,
+        canModerate: openGroup.createdBy === me.id || me.contact === "owner" || isSystemAdmin(me),
+        members: openGroup.memberIds.map((id) => ({ id, name: id === me.id ? "You" : getClinician(id)?.name ?? id, isMe: id === me.id, isCreator: id === openGroup.createdBy })),
+      } : null}
       activeWith={activeWith}
       threads={threads.map((t) => {
         const other = dmPartner(t.threadId, me.id) ?? "";

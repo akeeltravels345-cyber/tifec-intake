@@ -6,7 +6,7 @@ import { saveDocFile, MAX_DOC_BYTES, deleteDocFilesByPrefix } from "@/lib/client
 import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
-  isCustomGroup, getGroup, createGroup,
+  isCustomGroup, getGroup, createGroup, setGroupMembers, renameGroup, deleteGroup,
   createTicket, updateTicket, deleteTicket, getTicket,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
@@ -182,6 +182,43 @@ export async function POST(req: Request) {
       const g = await createGroup(name, members, me.id);
       await notify(members, "message", `${me.name} added you to ${g.name}`, `/team/messages?to=${g.threadId}`);
       return NextResponse.json({ ok: true, threadId: g.threadId });
+    }
+
+    // Manage a group's members / name. Must be a member. Adding people and
+    // renaming are open to any member; removing someone else is limited to the
+    // creator or an owner/admin. Anyone can leave.
+    if (action === "group:addMembers" || action === "group:removeMember" || action === "group:rename" || action === "group:leave") {
+      const threadId = String(body.threadId ?? "");
+      const g = await getGroup(threadId);
+      if (!g) return NextResponse.json({ error: "Group not found." }, { status: 404 });
+      if (!g.memberIds.includes(me.id)) return NextResponse.json({ error: "You're not in this group." }, { status: 403 });
+      const mc = getClinician(me.id);
+      const canModerate = g.createdBy === me.id || mc?.contact === "owner" || (mc ? isSystemAdmin(mc) : false);
+
+      if (action === "group:addMembers") {
+        const picked = (Array.isArray(body.memberIds) ? body.memberIds.map(String) : []).filter((id: string) => !!getClinician(id) && !g.memberIds.includes(id));
+        if (picked.length === 0) return NextResponse.json({ error: "Pick someone to add." }, { status: 400 });
+        await setGroupMembers(threadId, [...g.memberIds, ...picked]);
+        await notify(picked, "message", `${me.name} added you to ${g.name}`, `/team/messages?to=${threadId}`);
+        return NextResponse.json({ ok: true });
+      }
+
+      if (action === "group:rename") {
+        const name = String(body.name ?? "").trim().slice(0, 80);
+        if (!name) return NextResponse.json({ error: "Give the group a name." }, { status: 400 });
+        await renameGroup(threadId, name);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Leave = remove self; removeMember = remove someone else (moderators only).
+      const target = action === "group:leave" ? me.id : String(body.memberId ?? "");
+      if (!target || !g.memberIds.includes(target)) return NextResponse.json({ error: "Not a member." }, { status: 400 });
+      if (target !== me.id && !canModerate) return NextResponse.json({ error: "Only the group's creator or an owner can remove people." }, { status: 403 });
+      const remaining = g.memberIds.filter((id) => id !== target);
+      // Last person out: retire the group so it doesn't linger unreachable.
+      if (remaining.length === 0) await deleteGroup(threadId);
+      else await setGroupMembers(threadId, remaining);
+      return NextResponse.json({ ok: true, left: target === me.id, deleted: remaining.length === 0 });
     }
 
     // Presence heartbeat: keep the user "online" while a tab is open.

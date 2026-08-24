@@ -8,7 +8,8 @@ interface Person { id: string; name: string; role: string }
 interface Thread { id: string; name: string; lastBody: string; lastAt: string; unread: number; fromMe: boolean }
 interface Msg { id: string; body: string; at: string; mine: boolean; who: string }
 interface GroupThread { threadId: string; name: string; lastBody: string; lastAt: string; unread: number; memberCount: number }
-interface ActiveGroup { threadId: string; name: string; memberNames: string[] }
+interface GroupMember { id: string; name: string; isMe: boolean; isCreator: boolean }
+interface ActiveGroup { threadId: string; name: string; canModerate: boolean; members: GroupMember[] }
 
 const initials = (n: string) => {
   // Drop titles and anything parenthetical ("Akeel (Test)" must not give "A(").
@@ -60,6 +61,12 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
   const [gMembers, setGMembers] = useState<string[]>([]);
   const [gBusy, setGBusy] = useState(false);
   const [gErr, setGErr] = useState("");
+  // "Manage group" state.
+  const [managing, setManaging] = useState(false);
+  const [mBusy, setMBusy] = useState(false);
+  const [mErr, setMErr] = useState("");
+  const [renaming, setRenaming] = useState("");
+  useEffect(() => { setManaging(false); }, [threadId]);
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -141,14 +148,32 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
   }
   const toggleMember = (id: string) => setGMembers((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id]));
 
+  // Manage members: add / remove / rename / leave. Each posts then refreshes.
+  async function manageAction(payload: Record<string, unknown>, onOk?: () => void) {
+    setMBusy(true); setMErr("");
+    try {
+      const res = await fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not update the group.");
+      if (onOk) onOk(); else router.refresh();
+      return j;
+    } catch (e) { setMErr(e instanceof Error ? e.message : "Could not update the group."); }
+    finally { setMBusy(false); }
+  }
+  const addToGroup = (id: string) => manageAction({ action: "group:addMembers", threadId, memberIds: [id] });
+  const removeFromGroup = (id: string) => manageAction({ action: "group:removeMember", threadId, memberId: id });
+  const renameGroupChat = () => { const name = renaming.trim(); if (name) manageAction({ action: "group:rename", threadId, name }); };
+  const leaveGroup = () => manageAction({ action: "group:leave", threadId }, () => { setManaging(false); router.push("/team/messages"); });
+
   const isTeam = activeWith === "all";
   const isCustomGroup = activeWith.startsWith("group:");
   const isGroupLike = isTeam || isCustomGroup;
   const active = isTeam
     ? { id: "all", name: "Everyone", role: `Whole team · ${people.length + 1} people` }
     : isCustomGroup && activeGroup
-      ? { id: activeGroup.threadId, name: activeGroup.name, role: `${activeGroup.memberNames.length} people · ${activeGroup.memberNames.join(", ")}` }
+      ? { id: activeGroup.threadId, name: activeGroup.name, role: `${activeGroup.members.length} people · ${activeGroup.members.map((m) => m.name).join(", ")}` }
       : people.find((p) => p.id === activeWith) ?? threads.find((t) => t.id === activeWith);
+  const nonMembers = activeGroup ? people.filter((p) => !activeGroup.members.some((m) => m.id === p.id)) : [];
   const started = new Set(threads.map((t) => t.id));
   const notStarted = people.filter((p) => !started.has(p.id));
 
@@ -258,7 +283,44 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   <div className="tm-pname">{active?.name}</div>
                   <div className="tm-prole">{isGroupLike ? (active as Person).role : (isOnline(presence[activeWith]) ? "Online now" : lastSeen(presence[activeWith]))}</div>
                 </div>
+                {isCustomGroup && activeGroup && (
+                  <button type="button" className="tm-manage" onClick={() => { setManaging((v) => !v); setRenaming(activeGroup.name); setMErr(""); }}>
+                    {managing ? "Done" : "Manage"}
+                  </button>
+                )}
               </div>
+
+              {managing && isCustomGroup && activeGroup && (
+                <div className="tm-manage-panel">
+                  <div className="tm-mp-row">
+                    <input className="tm-in" value={renaming} onChange={(e) => setRenaming(e.target.value)} maxLength={80} aria-label="Group name" />
+                    <button type="button" className="tm-mp-btn" onClick={renameGroupChat} disabled={mBusy || !renaming.trim() || renaming.trim() === activeGroup.name}>Rename</button>
+                  </div>
+
+                  <div className="tm-mp-label">Members</div>
+                  {activeGroup.members.map((m) => (
+                    <div key={m.id} className="tm-mp-member">
+                      <span className="tm-av sm">{initials(m.isMe ? "You" : m.name)}</span>
+                      <span className="tm-mp-name">{m.name}{m.isCreator && <span className="tm-mp-tag">creator</span>}</span>
+                      {!m.isMe && activeGroup.canModerate && <button type="button" className="tm-mp-x" onClick={() => removeFromGroup(m.id)} disabled={mBusy} aria-label={`Remove ${m.name}`}>Remove</button>}
+                    </div>
+                  ))}
+
+                  {nonMembers.length > 0 && <div className="tm-mp-label">Add people</div>}
+                  {nonMembers.map((p) => (
+                    <div key={p.id} className="tm-mp-member">
+                      <span className="tm-av sm">{initials(p.name)}</span>
+                      <span className="tm-mp-name">{p.name}<span className="tm-mp-role">{p.role}</span></span>
+                      <button type="button" className="tm-mp-add" onClick={() => addToGroup(p.id)} disabled={mBusy}>Add</button>
+                    </div>
+                  ))}
+
+                  {mErr && <div className="tm-ng-err">{mErr}</div>}
+                  <div className="tm-mp-foot">
+                    <button type="button" className="tm-mp-leave" onClick={leaveGroup} disabled={mBusy}>Leave group</button>
+                  </div>
+                </div>
+              )}
 
               <div className="tm-msgs">
                 {live.length === 0 && <p className="tm-none">No messages yet. Say hello.</p>}
