@@ -94,6 +94,18 @@ export function writeDown(s: BillingSession): number {
 
 const sumBy = (arr: BillingSession[], f: (s: BillingSession) => number) => round2(arr.reduce((t, s) => t + f(s), 0));
 
+// One insurance payment that landed this month, tagged by whether it paid for a
+// visit in this month or an earlier one. Names are resolved in the UI layer.
+export interface InsuranceCollectedItem {
+  sessionId: string;
+  clientId: string | null;
+  dateOfService: string;
+  paidDate: string | null;
+  insurerId: string | null;
+  amount: number;
+  fromThisMonth: boolean;
+}
+
 export interface ClinicianMonth {
   clinicianId: string;
   year: number;
@@ -108,6 +120,9 @@ export interface ClinicianMonth {
   waivedCopay: number;           // co-pay due at this month's visits, deliberately WAIVED (written off)
   // cashflow ("money actually in this month" — drives payout)
   insuranceBilledThisMonth: number; // insurance cash collected this month (any visit month)
+  insuranceThisMonthVisits: number; // of that, the part for THIS month's visits
+  insurancePriorVisits: number;     // of that, the part for EARLIER months' visits (the lag)
+  insuranceCollectedItems: InsuranceCollectedItem[]; // per-payment detail for the breakdown
   contractualWriteoff: number;      // billed amount written off (contractual) this month
   writeDown: number;                // billed amount written down this month
   collected: number;                // copayThisMonth + insuranceBilledThisMonth
@@ -169,6 +184,15 @@ export function computeClinicianMonth(
   // amount on a write-off / write-down). The rest is the adjustment, tracked in
   // its own buckets below — never counted as collected, so it never pays out.
   const insuranceBilledThisMonth = sumBy(billedThisMonth, insuranceCash);
+  // Break the insurance cash down by WHICH visit it paid for: money for a visit
+  // in this same month, versus money that landed now for an older visit (the
+  // insurance lag). The itemised list backs an expandable breakdown in the UI.
+  const insuranceThisMonthVisits = sumBy(billedThisMonth.filter((s) => inMonth(s.dateOfService, year, month)), insuranceCash);
+  const insurancePriorVisits = round2(insuranceBilledThisMonth - insuranceThisMonthVisits);
+  const insuranceCollectedItems: InsuranceCollectedItem[] = billedThisMonth
+    .map((s) => ({ sessionId: s.id, clientId: s.clientId, dateOfService: s.dateOfService, paidDate: s.paidDate ?? null, insurerId: s.insurerId ?? null, amount: insuranceCash(s), fromThisMonth: inMonth(s.dateOfService, year, month) }))
+    .filter((it) => it.amount > 0)
+    .sort((a, b) => (a.paidDate || "").localeCompare(b.paidDate || "") || (a.dateOfService || "").localeCompare(b.dateOfService || ""));
   const contractualWriteoffThisMonth = sumBy(billedThisMonth, contractualWriteoff);
   const writeDownThisMonth = sumBy(billedThisMonth, writeDown);
   const collected = round2(copayThisMonth + insuranceBilledThisMonth);
@@ -225,6 +249,9 @@ export function computeClinicianMonth(
     uncollectedCopay: sumBy(visits, uncollectedCopay),
     waivedCopay: sumBy(visits, waivedCopay),
     insuranceBilledThisMonth,
+    insuranceThisMonthVisits,
+    insurancePriorVisits,
+    insuranceCollectedItems,
     contractualWriteoff: contractualWriteoffThisMonth,
     writeDown: writeDownThisMonth,
     collected,

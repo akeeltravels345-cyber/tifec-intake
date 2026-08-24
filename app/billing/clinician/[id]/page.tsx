@@ -11,6 +11,7 @@ import MonthNav from "@/components/billing/MonthNav";
 import ClinicianSessions, { type SessionRow } from "@/components/billing/ClinicianSessions";
 import StatGlossary from "@/components/billing/StatGlossary";
 import NewGlow from "@/components/billing/NewGlow";
+import InsuranceCollectedKpi, { type InsRow } from "@/components/billing/InsuranceCollectedKpi";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,13 @@ export default async function ClinicianDetail({ params, searchParams }: { params
   const insurerName = (iid: string | null) =>
     insurers.find((i) => i.id === iid)?.name ?? (iid ? "Unknown insurer" : "Self-pay");
   const isSelf = id === user.clinician.id;
+  // Rows for the "Insurance collected" breakdown: each payment that landed this
+  // month, with the client + insurer resolved, tagged this-month vs earlier.
+  const sessById = new Map(all.map((s) => [s.id, s] as const));
+  const insRows: InsRow[] = c.insuranceCollectedItems.map((it) => {
+    const s = sessById.get(it.sessionId);
+    return { client: s ? `${s.clientFirst} ${s.clientLast}`.trim() : "", insurer: insurerName(it.insurerId), dateOfService: it.dateOfService, paidDate: it.paidDate, amount: it.amount, fromThisMonth: it.fromThisMonth };
+  });
   const visits = [...c.visitSessions].sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
   const otherDeductions = c.otherDeductionPctAmount + c.healthDeduction + c.pension;
   // The clinician's own agreement with the biller — settled from their share,
@@ -108,7 +116,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
             visit, or the whole fee when the client is self-pay. Sits with the
             insurance figures, since together they are the cash that arrived. */}
         <div className="cd-kpi" title="Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. Money in hand."><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
-        <div className="cd-kpi" title="Insurance payments that have actually landed this month."><div className="k">Insurance collected</div><div className="v">{money0(c.insuranceBilledThisMonth)}</div></div>
+        <InsuranceCollectedKpi total={c.insuranceBilledThisMonth} thisMonth={c.insuranceThisMonthVisits} prior={c.insurancePriorVisits} monthLabel={MONTHS[month - 1]} rows={insRows} />
         <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
