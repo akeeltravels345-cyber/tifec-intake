@@ -1982,6 +1982,63 @@ body:has(.biz) { background: #F8F9F8; }
 .cp-acts { display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .cp-invoice { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--indigo); text-decoration: none; white-space: nowrap; }
 .cp-invoice:hover { background: #f2f0fb; }
+
+/* ---- Aged insurance claims report ---- */
+.ac-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.ac-card { display: block; background: #fff; border: 1px solid var(--edge); border-radius: 14px; padding: 16px 18px; text-decoration: none; color: inherit; transition: box-shadow .15s, transform .1s, border-color .15s; }
+.ac-card:hover { border-color: var(--teal, #2E8E93); box-shadow: 0 6px 20px rgba(70,55,25,.07); transform: translateY(-1px); }
+.ac-cardhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ac-cardname { font: 600 15px "Open Sans"; color: var(--ink); }
+.ac-flag { font: 700 10.5px "Open Sans"; letter-spacing: .03em; text-transform: uppercase; color: #b3261e; background: #fbeceb; border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+.ac-cardtotal { font: 400 26px "Newsreader", serif; color: var(--ink); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.ac-cardmeta { font-size: 12.5px; color: var(--muted, #6a6f66); margin-top: 3px; }
+.ac-cardaged { font-size: 12.5px; color: #b3261e; margin-top: 6px; }
+.ac-cardcta { font: 600 12.5px "Open Sans"; color: var(--indigo); margin-top: 12px; }
+
+.ac-page { background: #eef1f4; margin: -24px; padding: 24px; min-height: 100%; }
+.ac-back { width: 210mm; max-width: 96%; margin: 0 auto 14px; }
+.ac-wrap { width: 210mm; max-width: 96%; margin: 0 auto; }
+.ac-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.ac-toggle { display: inline-flex; gap: 2px; background: #e3e8ec; border-radius: 999px; padding: 3px; }
+.ac-tbtn { padding: 6px 14px; border: 0; background: none; border-radius: 999px; font: 600 12.5px "Open Sans"; color: #5f6a72; cursor: pointer; }
+.ac-tbtn.on { background: #fff; color: var(--teal-deep, #1f6d70); box-shadow: 0 1px 2px rgba(70,55,25,.1); }
+
+.ac-sheet { background: #fff; border-radius: 6px; padding: 24mm 20mm; box-shadow: 0 6px 30px rgba(20,30,55,.10); color: #1a1d24; font: 10.5pt/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.ac-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 14px; border-bottom: 1.5px solid #1a1d24; margin-bottom: 20px; }
+.ac-practice { font-size: 15pt; font-weight: 600; letter-spacing: -.2px; }
+.ac-sub { font-size: 9pt; color: #5c636e; margin-top: 2px; }
+.ac-headright { text-align: right; }
+.ac-insurer { font-size: 13pt; font-weight: 600; }
+.ac-code { font-size: 8.5pt; color: #5c636e; margin-top: 2px; }
+.ac-asof { font-size: 8.5pt; color: #8a909b; margin-top: 4px; }
+.ac-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+.ac-sumcell { border: 1px solid #e3e7ec; border-radius: 8px; padding: 9px 11px; }
+.ac-sumcell.late { border-color: #f0c0bc; background: #fdf2f1; }
+.ac-sumk { font-size: 7.6pt; text-transform: uppercase; letter-spacing: .5px; color: #8a909b; }
+.ac-sumcell.late .ac-sumk { color: #b3261e; }
+.ac-sumv { font-size: 12.5pt; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+.ac-sumc { font-size: 8pt; color: #8a909b; margin-top: 1px; }
+.ac-total { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 2px; border-top: 1px solid #cfd4dc; border-bottom: 1px solid #cfd4dc; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.ac-tbl { width: 100%; border-collapse: collapse; }
+.ac-tbl thead th { text-align: left; font-size: 7.8pt; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: #8a909b; padding: 8px 8px; border-bottom: 1px solid #cfd4dc; }
+.ac-tbl thead th.num, .ac-tbl td.num { text-align: right; }
+.ac-tbl tbody td { padding: 8px; font-size: 9.4pt; border-bottom: 1px solid #edeff3; vertical-align: top; }
+.ac-tbl tbody tr.aged td { background: #fdf5f4; }
+.ac-tbl tbody tr.aged .ac-days { color: #b3261e; font-weight: 700; }
+.ac-nm { font-weight: 600; }
+.ac-days { font-variant-numeric: tabular-nums; }
+.ac-muted { color: #a2a8b3; }
+.ac-empty { text-align: center; color: #8a909b; padding: 20px; font-size: 9.4pt; }
+.ac-foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid #edeff3; font-size: 7.8pt; color: #a2a8b3; }
+
+@media print {
+  .ac-noprint, .ac-back, .bo-side, .bo-mobtabs, .tm-banner { display: none !important; }
+  html, body, .bo-main, .biz { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  .ac-page { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .ac-wrap { width: auto !important; max-width: none !important; margin: 0 !important; }
+  .ac-sheet { box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
+  @page { size: A4; margin: 16mm 14mm; }
+}
 .cp-date { display: inline-flex; align-items: center; gap: 8px; font: 600 12.5px "Open Sans"; color: var(--muted); }
 .cp-date input { border: 1px solid var(--line, #E1D9C8); border-radius: 8px; padding: 7px 10px; font: 14px "Open Sans"; color: var(--ink); }
 .cp-search { flex: 1; min-width: 160px; max-width: 320px; border: 1px solid var(--line, #E1D9C8); border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; }
