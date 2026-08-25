@@ -1975,6 +1975,10 @@ body:has(.biz) { background: #F8F9F8; }
 .biz .bal-kpicta { font-size: 12px; font-weight: 600; color: var(--indigo); margin-top: 6px; }
 /* Outstanding co-pays list: a shared "received on" date + per-row Collect. */
 .cp-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.cp-scope { display: inline-flex; gap: 2px; margin-top: 14px; background: #f2efe8; border-radius: 999px; padding: 3px; }
+.cp-scopebtn { padding: 6px 16px; border-radius: 999px; font: 600 13px "Open Sans"; color: var(--muted, #6a6f66); text-decoration: none; }
+.cp-scopebtn:hover { color: var(--ink); }
+.cp-scopebtn.on { background: #fff; color: var(--teal-deep, #1f6d70); box-shadow: 0 1px 2px rgba(70,55,25,.08); }
 .cp-date { display: inline-flex; align-items: center; gap: 8px; font: 600 12.5px "Open Sans"; color: var(--muted); }
 .cp-date input { border: 1px solid var(--line, #E1D9C8); border-radius: 8px; padding: 7px 10px; font: 14px "Open Sans"; color: var(--ink); }
 .cp-search { flex: 1; min-width: 160px; max-width: 320px; border: 1px solid var(--line, #E1D9C8); border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; }

@@ -9,16 +9,24 @@ import OutstandingCopays, { type CopayRow } from "@/components/billing/Outstandi
 export const dynamic = "force-dynamic";
 
 /** Every visit with a co-pay that was due but not collected, so it can be
- *  recorded when it comes in. Clinicians see only their own visits; the biller /
- *  owner / admin see everyone's. */
-export default async function CopaysPage() {
+ *  recorded when it comes in. Clinicians see only their own visits. The owner —
+ *  who also carries his own clients — lands on his own and can toggle to see
+ *  everyone; the biller / admin land on everyone. */
+export default async function CopaysPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/copays");
   const isAdmin = user.clinician.contact === "admin";
-  const seesAll = isBiller(user.role) || isOwner(user.role) || isAdmin;
+  const canSeeAll = isBiller(user.role) || isOwner(user.role) || isAdmin;
+
+  const sp = await searchParams;
+  // The owner starts on his own clients; biller/admin start on everyone. Anyone
+  // who canSeeAll may switch; a plain clinician is always scoped to themselves.
+  const defaultScope = isOwner(user.role) && !isAdmin ? "mine" : canSeeAll ? "all" : "mine";
+  const wanted = sp.scope === "all" || sp.scope === "mine" ? sp.scope : defaultScope;
+  const scope: "all" | "mine" = wanted === "all" && canSeeAll ? "all" : "mine";
 
   const [sessions, external] = await Promise.all([
-    seesAll ? listSessions() : listSessions({ clinicianId: user.clinician.id }),
+    scope === "all" ? listSessions() : listSessions({ clinicianId: user.clinician.id }),
     listExternalClinicians(),
   ]);
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
@@ -37,6 +45,6 @@ export default async function CopaysPage() {
     .sort((a, b) => a.date.localeCompare(b.date)); // oldest owed first
 
   return (
-    <OutstandingCopays rows={rows} today={caymanToday()} showClinician={seesAll} />
+    <OutstandingCopays rows={rows} today={caymanToday()} showClinician={scope === "all"} canToggle={canSeeAll} scope={scope} />
   );
 }
