@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { prepareUpload } from "@/lib/imageUpload";
+import { IcoImage, IcoFile, IcoMic, IcoStop, IcoSend } from "./attachIcons";
 
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Person { id: string; name: string; role: string }
@@ -16,12 +17,6 @@ const MAX_BYTES = 4 * 1024 * 1024;
 const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
 const rid = () => Math.random().toString(36).slice(2);
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-const svg = (d: React.ReactNode) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
-const IcoImage = svg(<><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.6" /><path d="M21 15l-4.5-4.5L6 21" /></>);
-const IcoFile = svg(<path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.48" />);
-const IcoMic = svg(<><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></>);
-const IcoStop = svg(<rect x="6" y="6" width="12" height="12" rx="2.5" />);
-const IcoSend = svg(<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />);
 const fileIcon = (name?: string | null) => {
   const ext = (name || "").split(".").pop()?.toLowerCase();
   return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
@@ -413,17 +408,25 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
               <div className="tm-msgs">
                 {live.length === 0 && <p className="tm-none">No messages yet. Say hello.</p>}
                 {live.map((m, i) => {
-                  const showDay = i === 0 || dayLabel(m.at) !== dayLabel(live[i - 1].at);
+                  const prev = live[i - 1];
+                  const showDay = i === 0 || dayLabel(m.at) !== dayLabel(prev.at);
+                  // First message of a consecutive run from the same sender: it
+                  // carries the name + avatar; the rest of the run indents under it.
+                  const firstOfRun = showDay || !prev || prev.mine !== m.mine || prev.who !== m.who;
+                  const avatar = isGroupLike && !m.mine;
                   return (
                     <div key={m.id}>
                       {showDay && <div className="tm-day"><span>{dayLabel(m.at)}</span></div>}
-                      <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
-                        {isGroupLike && !m.mine && m.who && <div className="tm-bwho">{m.who}</div>}
-                        {m.body && <div className="tm-btext">{m.body}</div>}
-                        {m.attachments && m.attachments.length > 0 && (
-                          <div className="tm-batts">{m.attachments.map((a) => <AttView key={a.docId} a={a} />)}</div>
-                        )}
-                        <div className="tm-btime">{clock(m.at)}</div>
+                      <div className={`tm-row ${m.mine ? "me" : ""} ${firstOfRun ? "runtop" : ""}`}>
+                        {avatar && (firstOfRun ? <span className="tm-bav">{initials(m.who)}</span> : <span className="tm-bav ph" />)}
+                        <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
+                          {isGroupLike && !m.mine && firstOfRun && m.who && <div className="tm-bwho">{m.who}</div>}
+                          {m.body && <div className="tm-btext">{m.body}</div>}
+                          {m.attachments && m.attachments.length > 0 && (
+                            <div className="tm-batts">{m.attachments.map((a) => <AttView key={a.docId} a={a} />)}</div>
+                          )}
+                          <div className="tm-btime">{clock(m.at)}</div>
+                        </div>
                       </div>
                     </div>
                   );

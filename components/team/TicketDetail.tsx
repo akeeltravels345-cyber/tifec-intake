@@ -7,6 +7,7 @@ import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/tic
 import { prepareUpload } from "@/lib/imageUpload";
 import { formatText } from "@/lib/richText";
 import RichTextArea from "./RichTextArea";
+import { IcoImage, IcoFile, IcoMic, IcoStop } from "./attachIcons";
 
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Ticket {
@@ -254,21 +255,21 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
           </div>
         )}
 
-        <div className="tm-attbar">
-          <label className="tm-attbtn">🖼 Image
-            <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
-          </label>
-          <label className="tm-attbtn">📎 File
-            <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
-          </label>
-          {recording ? (
-            <button type="button" className="tm-attbtn rec" onClick={stopRec}>⏹ Stop · {mmss(recSecs)}</button>
-          ) : (
-            <button type="button" className="tm-attbtn" onClick={startRec}>🎤 Voice note</button>
-          )}
-        </div>
-
-        <div className="tm-actions">
+        <div className="tm-formfoot">
+          <div className="tm-formtools">
+            <label className="tm-icobtn" title="Add photo">
+              {IcoImage}
+              <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+            </label>
+            <label className="tm-icobtn" title="Attach file">
+              {IcoFile}
+              <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+            </label>
+            <button type="button" className={`tm-icobtn ${recording ? "rec" : ""}`} title={recording ? "Stop recording" : "Record voice note"} onClick={recording ? stopRec : startRec}>
+              {recording ? IcoStop : IcoMic}
+            </button>
+            {recording && <span className="tm-rectime">{mmss(recSecs)}</span>}
+          </div>
           <button className="tm-cta" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)}>{busy ? "Sending..." : "Reply"}</button>
         </div>
       </form>

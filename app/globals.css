@@ -2747,8 +2747,17 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-none { font-size: 13px; color: var(--muted); text-align: center; margin: auto; }
 .tm-day { text-align: center; margin: 14px 0 8px; }
 .tm-day span { font: 600 11px "Open Sans"; color: var(--muted); background: #f0f4f5; border-radius: 999px; padding: 3px 10px; }
-.tm-bubble { max-width: 74%; margin: 3px 0; padding: 9px 13px; border-radius: 14px; background: #F1F5F6; border-bottom-left-radius: 4px; }
-.tm-bubble.me { margin-left: auto; background: var(--brand); border-radius: 14px; border-bottom-right-radius: 4px; }
+/* Row = optional avatar + bubble. Extra top margin starts a new sender's run. */
+.tm-row { display: flex; align-items: flex-end; gap: 8px; }
+.tm-row.me { justify-content: flex-end; }
+.tm-row.runtop { margin-top: 10px; }
+.tm-bav { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #2E8E93, #2E3192); color: #fff; display: grid; place-items: center; font: 700 10.5px "Open Sans"; flex-shrink: 0; margin-bottom: 2px; }
+.tm-bav.ph { background: none; }
+.tm-bubble { max-width: 74%; margin: 2px 0; padding: 9px 13px; border-radius: 16px; background: #eef2f4; border-bottom-left-radius: 5px; }
+.tm-bubble.me { margin-left: auto; background: var(--brand); border-radius: 16px; border-bottom-right-radius: 5px; }
+/* Within a run, soften the tail so stacked bubbles read as one group. */
+.tm-row:not(.runtop) .tm-bubble { border-bottom-left-radius: 16px; border-top-left-radius: 6px; }
+.tm-row.me:not(.runtop) .tm-bubble { border-bottom-right-radius: 16px; border-top-right-radius: 6px; }
 .tm-btext { font-size: 13.5px; line-height: 1.5; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
 .tm-bubble.me .tm-btext { color: #fff; }
 .tm-btime { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
@@ -2774,6 +2783,9 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-send:active:not(:disabled) { transform: scale(.93); }
 .tm-send:disabled { background: #d3d8df; color: #f4f6f8; cursor: default; }
 .tm-send svg { transform: translateX(-1px); }
+/* Ticket reply footer: attach icons on the left, Reply button on the right. */
+.tm-formfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.tm-formtools { display: flex; align-items: center; gap: 2px; }
 
 /* --- tickets --------------------------------------------------------------- */
 .tm-tabs2 { display: flex; gap: 6px; margin-bottom: 14px; }
