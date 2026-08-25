@@ -3,10 +3,40 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { prepareUpload } from "@/lib/imageUpload";
 
+interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Person { id: string; name: string; role: string }
 interface Thread { id: string; name: string; lastBody: string; lastAt: string; unread: number; fromMe: boolean }
-interface Msg { id: string; body: string; at: string; mine: boolean; who: string }
+interface Msg { id: string; body: string; at: string; mine: boolean; who: string; attachments?: Att[] }
+
+// A pending attachment on the message being typed (not yet sent).
+interface Draft { id: string; kind: "image" | "audio" | "file"; mime: string; base64: string; url: string; name?: string }
+const MAX_BYTES = 4 * 1024 * 1024;
+const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
+const rid = () => Math.random().toString(36).slice(2);
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const fileIcon = (name?: string | null) => {
+  const ext = (name || "").split(".").pop()?.toLowerCase();
+  return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
+};
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+// One saved attachment: image inline, voice note as a player, else a file link.
+function AttView({ a }: { a: Att }) {
+  const src = `/api/comms/ticket-image/${a.docId}`;
+  if (a.kind === "audio") return <audio controls preload="none" className="tm-audio" src={src} />;
+  if (a.kind === "file") return (
+    <a href={src} target="_blank" rel="noreferrer" className="tm-file"><span className="ic">{fileIcon(a.name)}</span><span className="nm">{a.name || "Attachment"}</span></a>
+  );
+  return <a href={src} target="_blank" rel="noreferrer" className="tm-imgwrap"><img src={src} alt={a.name || "Attachment"} className="tm-img" /></a>;
+}
 interface GroupThread { threadId: string; name: string; lastBody: string; lastAt: string; unread: number; memberCount: number }
 interface GroupMember { id: string; name: string; isMe: boolean; isCreator: boolean }
 interface ActiveGroup { threadId: string; name: string; canModerate: boolean; members: GroupMember[] }
@@ -67,6 +97,55 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
   const [mErr, setMErr] = useState("");
   const [renaming, setRenaming] = useState("");
   useEffect(() => { setManaging(false); }, [threadId]);
+  // Attachments being composed (images / files / voice notes).
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [attErr, setAttErr] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => { setDrafts([]); setAttErr(""); }, [threadId]);
+
+  async function addFiles(list: FileList | null, asImage: boolean) {
+    if (!list) return;
+    setAttErr("");
+    for (const f of Array.from(list)) {
+      if (asImage && !f.type.startsWith("image/")) { setAttErr(`"${f.name}" isn't an image.`); continue; }
+      if (!f.type.startsWith("image/") && f.size > MAX_BYTES) { setAttErr(`"${f.name}" is over 4 MB.`); continue; }
+      const prepped = await prepareUpload(f);
+      const size = Math.floor((prepped.base64.length * 3) / 4);
+      if (!prepped.base64) { setAttErr(`Couldn't read "${f.name}".`); continue; }
+      if (size > MAX_BYTES) { setAttErr(`"${f.name}" is too large even after shrinking. Try a smaller image.`); continue; }
+      const kind = prepped.mime.startsWith("image/") ? "image" : prepped.mime.startsWith("audio/") ? "audio" : "file";
+      setDrafts((d) => [...d, { id: rid(), kind, mime: prepped.mime, base64: prepped.base64, url: `data:${prepped.mime};base64,${prepped.base64}`, name: prepped.name }]);
+    }
+  }
+  async function startRec() {
+    setAttErr("");
+    if (!navigator.mediaDevices?.getUserMedia) { setAttErr("This browser can't record audio."); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        stream.getTracks().forEach((t) => t.stop());
+        const mime = rec.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mime });
+        if (blob.size > MAX_BYTES) { setAttErr("That voice note is over 4 MB. Keep it shorter."); return; }
+        const base64 = await blobToBase64(blob);
+        setDrafts((d) => [...d, { id: rid(), kind: "audio", mime, base64, url: URL.createObjectURL(blob) }]);
+      };
+      rec.start();
+      recRef.current = rec;
+      setRecording(true); setRecSecs(0);
+      timerRef.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch { setAttErr("Couldn't reach the microphone. Allow mic access for this site and try again."); }
+  }
+  function stopRec() { recRef.current?.stop(); setRecording(false); }
+  const removeDraft = (id: string) => setDrafts((d) => d.filter((x) => x.id !== id));
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -97,9 +176,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
         const res = await fetch(`/api/comms?thread=${encodeURIComponent(threadId)}`);
         if (!res.ok) return;
         const j = await res.json();
-        setLive(j.messages.map((m: { id: string; body: string; createdAt: string; senderId: string }) => ({
+        setLive(j.messages.map((m: { id: string; body: string; createdAt: string; senderId: string; attachments?: Att[] }) => ({
           id: m.id, body: m.body, at: m.createdAt, mine: m.senderId === meId,
           who: m.senderId === meId ? "You" : (people.find((p) => p.id === m.senderId)?.name ?? threads.find((t) => t.id === activeWith)?.name ?? ""),
+          attachments: m.attachments ?? [],
         })));
       } catch { /* offline: the next tick will catch up */ }
     };
@@ -110,22 +190,24 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
   function onSubmit(e: React.FormEvent) { e.preventDefault(); send(); }
   async function send() {
     const body = text.trim();
-    if (!body || busy || !threadId) return;
+    const atts = drafts.map((d) => ({ base64: d.base64, mime: d.mime, name: d.name }));
+    if ((!body && atts.length === 0) || busy || recording || !threadId) return;
     setBusy(true);
-    // Show it straight away; the refresh below reconciles with the server.
+    // Show text straight away; the refresh below reconciles with the server (and
+    // brings the saved attachments in). Attachment-only sends just wait for it.
     const optimistic: Msg = { id: `tmp-${Date.now()}`, body, at: new Date().toISOString(), mine: true, who: "You" };
-    setLive((l) => [...l, optimistic]);
-    setText("");
+    if (body) setLive((l) => [...l, optimistic]);
+    setText(""); setDrafts([]);
     try {
       const res = await fetch("/api/comms", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", threadId, body }),
+        body: JSON.stringify({ action: "send", threadId, body, attachments: atts }),
       });
       if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      setLive((l) => l.filter((m) => m.id !== optimistic.id));
-      setText(body); // give them their words back rather than losing them
+      if (body) setLive((l) => l.filter((m) => m.id !== optimistic.id));
+      setText(body); setDrafts(drafts); // give them their words and files back
     } finally { setBusy(false); }
   }
 
@@ -331,7 +413,10 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                       {showDay && <div className="tm-day"><span>{dayLabel(m.at)}</span></div>}
                       <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
                         {isGroupLike && !m.mine && m.who && <div className="tm-bwho">{m.who}</div>}
-                        <div className="tm-btext">{m.body}</div>
+                        {m.body && <div className="tm-btext">{m.body}</div>}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div className="tm-batts">{m.attachments.map((a) => <AttView key={a.docId} a={a} />)}</div>
+                        )}
                         <div className="tm-btime">{clock(m.at)}</div>
                       </div>
                     </div>
@@ -341,8 +426,32 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
               </div>
 
               <div className="tm-msgnote">
-                <span>Encrypted, but not a clinical record — use initials, not client names.</span>
+                <span>Encrypted, but not a clinical record. Use initials, not client names.</span>
                 <Link href="/team/tickets" className="tm-msgticket">Need it tracked (payout, HR)? Raise a ticket instead →</Link>
+              </div>
+              {attErr && <p className="tm-err" style={{ margin: "0 0 8px" }}>{attErr}</p>}
+              {drafts.length > 0 && (
+                <div className="tm-drafts">
+                  {drafts.map((d) => (
+                    <span key={d.id} className={`tm-draft ${d.kind}`}>
+                      {d.kind === "image" ? <img src={d.url} alt={d.name || "image"} />
+                        : d.kind === "audio" ? <audio controls preload="metadata" src={d.url} />
+                          : <span className="tm-filechip">{fileIcon(d.name)} {d.name}</span>}
+                      <button type="button" onClick={() => removeDraft(d.id)} aria-label="Remove">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="tm-attbar">
+                <label className="tm-attbtn">🖼 Image
+                  <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+                </label>
+                <label className="tm-attbtn">📎 File
+                  <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
+                </label>
+                {recording
+                  ? <button type="button" className="tm-attbtn rec" onClick={stopRec}>⏹ Stop · {mmss(recSecs)}</button>
+                  : <button type="button" className="tm-attbtn" onClick={startRec}>🎤 Voice note</button>}
               </div>
               <form className="tm-compose" onSubmit={onSubmit}>
                 <textarea
@@ -351,7 +460,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder={`Message ${active?.name?.split(" ")[0] ?? ""}...`} aria-label="Message"
                 />
-                <button className="tm-cta" type="submit" disabled={busy || !text.trim()}>Send</button>
+                <button className="tm-cta" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)}>Send</button>
               </form>
             </>
           )}

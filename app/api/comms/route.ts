@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { getClinician, isContact, isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { sendTeamEmail } from "@/lib/email";
-import { saveDocFile, MAX_DOC_BYTES, deleteDocFilesByPrefix } from "@/lib/clientDocs";
+import { saveDocFile, MAX_DOC_BYTES, deleteDocFilesByPrefix, listDocMetaByPrefix } from "@/lib/clientDocs";
 import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
@@ -109,9 +109,8 @@ export async function POST(req: Request) {
     if (action === "send") {
       const threadId = String(body.threadId ?? "");
       const text = String(body.body ?? "").trim();
-      const isTicket = threadId.startsWith("ticket:");
-      // Ticket comments may carry image / voice / file attachments; other threads are text.
-      const atts: { base64?: string; mime?: string; name?: string }[] = isTicket && Array.isArray(body.attachments) ? (body.attachments as []).slice(0, 6) : [];
+      // Any thread (DM, group, team channel, ticket) may carry image / voice / file attachments.
+      const atts: { base64?: string; mime?: string; name?: string }[] = Array.isArray(body.attachments) ? (body.attachments as []).slice(0, 6) : [];
       if (!text && atts.length === 0) return NextResponse.json({ error: "Write something, or add an image, file or voice note." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 400 });
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
@@ -421,8 +420,19 @@ export async function GET(req: Request) {
   if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
   const { listMessages } = await import("@/lib/comms");
   const msgs = await listMessages(threadId);
+  // Attach each message's files so the live poll shows images / voice notes too.
+  const kindOf = (mime: string) => (mime.startsWith("image/") ? "image" : mime.startsWith("audio/") ? "audio" : "file");
+  const docs = await listDocMetaByPrefix(`${threadId}:msg:`);
+  const attByMsg = new Map<string, { docId: string; kind: string; name: string | null }[]>();
+  for (const d of docs) {
+    const mid = d.ownerId.slice(`${threadId}:msg:`.length);
+    if (!mid) continue;
+    const list = attByMsg.get(mid) ?? [];
+    list.push({ docId: d.docId, kind: kindOf(d.mime), name: d.name });
+    attByMsg.set(mid, list);
+  }
   await markThreadRead(threadId, me.id);
-  return NextResponse.json({ ok: true, messages: msgs });
+  return NextResponse.json({ ok: true, messages: msgs.map((m) => ({ ...m, attachments: attByMsg.get(m.id) ?? [] })) });
 }
 
 export const dynamic = "force-dynamic";
