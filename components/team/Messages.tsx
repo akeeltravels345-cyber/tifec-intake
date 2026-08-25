@@ -16,6 +16,12 @@ const MAX_BYTES = 4 * 1024 * 1024;
 const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
 const rid = () => Math.random().toString(36).slice(2);
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const svg = (d: React.ReactNode) => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
+const IcoImage = svg(<><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.6" /><path d="M21 15l-4.5-4.5L6 21" /></>);
+const IcoFile = svg(<path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.48" />);
+const IcoMic = svg(<><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></>);
+const IcoStop = svg(<rect x="6" y="6" width="12" height="12" rx="2.5" />);
+const IcoSend = svg(<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />);
 const fileIcon = (name?: string | null) => {
   const ext = (name || "").split(".").pop()?.toLowerCase();
   return ext === "pdf" ? "📄" : ext === "csv" || ext === "xls" || ext === "xlsx" ? "📊" : ext === "doc" || ext === "docx" ? "📝" : "📎";
@@ -442,25 +448,28 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   ))}
                 </div>
               )}
-              <div className="tm-attbar">
-                <label className="tm-attbtn">🖼 Image
+              <form className="tm-composer" onSubmit={onSubmit}>
+                <label className="tm-icobtn" title="Add photo">
+                  {IcoImage}
                   <input type="file" accept="image/*" multiple onChange={(e) => { addFiles(e.target.files, true); e.currentTarget.value = ""; }} style={{ display: "none" }} />
                 </label>
-                <label className="tm-attbtn">📎 File
+                <label className="tm-icobtn" title="Attach file">
+                  {IcoFile}
                   <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
                 </label>
-                {recording
-                  ? <button type="button" className="tm-attbtn rec" onClick={stopRec}>⏹ Stop · {mmss(recSecs)}</button>
-                  : <button type="button" className="tm-attbtn" onClick={startRec}>🎤 Voice note</button>}
-              </div>
-              <form className="tm-compose" onSubmit={onSubmit}>
+                <button type="button" className={`tm-icobtn ${recording ? "rec" : ""}`} title={recording ? "Stop recording" : "Record voice note"} onClick={recording ? stopRec : startRec}>
+                  {recording ? IcoStop : IcoMic}
+                </button>
+                {recording && <span className="tm-rectime">{mmss(recSecs)}</span>}
                 <textarea
                   ref={taRef} rows={1}
-                  className="tm-in tm-composein" value={text} onChange={(e) => setText(e.target.value)}
+                  className="tm-cin" value={text} onChange={(e) => setText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder={`Message ${active?.name?.split(" ")[0] ?? ""}...`} aria-label="Message"
                 />
-                <button className="tm-cta" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)}>Send</button>
+                <button className="tm-send" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)} aria-label="Send">
+                  {IcoSend}
+                </button>
               </form>
             </>
           )}

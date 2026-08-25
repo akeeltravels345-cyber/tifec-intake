@@ -2759,6 +2759,21 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
    min-height overrides the global textarea floor so it isn't stuck tall. */
 .tm-composein { flex: 1; min-width: 0; min-height: 42px; resize: none; overflow-y: auto; max-height: 140px; line-height: 1.5; }
 .tm-compose .tm-cta { flex: 0 0 auto; }
+/* Unified chat composer: attach icons + growing input + round send, one pill. */
+.tm-composer { display: flex; align-items: flex-end; gap: 2px; margin: 2px 4px 6px; padding: 5px 6px 5px 7px; background: #fff; border: 1px solid var(--line, #e3e9ed); border-radius: 24px; box-shadow: 0 1px 2px rgba(30,40,60,.05); transition: border-color .15s, box-shadow .15s; }
+.tm-composer:focus-within { border-color: var(--teal, #2E8E93); box-shadow: 0 0 0 3px rgba(46,142,147,.13); }
+.tm-icobtn { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 0; background: none; color: #808b98; cursor: pointer; flex-shrink: 0; transition: background .12s, color .12s; }
+.tm-icobtn:hover { background: #eef4f4; color: var(--teal-deep, #1f6d70); }
+.tm-icobtn.rec { color: #d64545; background: #fdeceb; animation: tm-recpulse 1.5s ease-in-out infinite; }
+@keyframes tm-recpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(214,69,69,.35); } 50% { box-shadow: 0 0 0 5px rgba(214,69,69,0); } }
+.tm-rectime { align-self: center; font: 600 12.5px "Open Sans"; color: #d64545; font-variant-numeric: tabular-nums; padding: 0 4px 0 2px; }
+.tm-cin { flex: 1; min-width: 0; min-height: 24px; height: 40px; box-sizing: border-box; border: 0; outline: 0; background: none; resize: none; overflow-y: auto; max-height: 140px; font: 400 14.5px/1.5 "Open Sans", system-ui, sans-serif; color: var(--ink); padding: 9px 6px; }
+.tm-cin::placeholder { color: #9aa4af; }
+.tm-send { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--indigo, #2E3192); color: #fff; cursor: pointer; flex-shrink: 0; transition: background .15s, transform .1s, opacity .15s; }
+.tm-send:hover:not(:disabled) { background: #23256d; }
+.tm-send:active:not(:disabled) { transform: scale(.93); }
+.tm-send:disabled { background: #d3d8df; color: #f4f6f8; cursor: default; }
+.tm-send svg { transform: translateX(-1px); }
 
 /* --- tickets --------------------------------------------------------------- */
 .tm-tabs2 { display: flex; gap: 6px; margin-bottom: 14px; }
