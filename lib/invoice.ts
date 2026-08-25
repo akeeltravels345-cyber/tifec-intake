@@ -63,19 +63,23 @@ export function buildInvoice(
   issueDate: string,
   r: InvoiceResolvers,
   /** Self-pay (default) invoices the full fee. Pass a `portionOf` to invoice a
-   *  different amount per session (e.g. the outstanding co-pay), and a
-   *  `descriptionPrefix` to label the lines. */
-  opts: { portionOf?: (s: BillingSession) => number; descriptionPrefix?: string } = {},
+   *  different amount per session (e.g. the outstanding co-pay), a
+   *  `descriptionPrefix` to label the lines, and `serviceLabel` to replace the
+   *  clinical service text with a neutral term (client-facing invoices should
+   *  not carry clinical detail). */
+  opts: { portionOf?: (s: BillingSession) => number; descriptionPrefix?: string; serviceLabel?: (s: BillingSession) => string } = {},
 ): InvoiceData {
   const portionOf = opts.portionOf ?? ((s: BillingSession) => s.totalCost);
   const ordered = [...sessions].sort((a, b) => a.dateOfService.localeCompare(b.dateOfService));
 
   const lines: InvoiceLine[] = ordered.map((s) => {
     // The CPT description usually already reads "Psychotherapy, 60 min", so only
-    // synthesise a duration when there's no code to describe the service.
+    // synthesise a duration when there's no code to describe the service. When a
+    // `serviceLabel` is given (client-facing invoices), use that neutral term
+    // instead of any clinical wording.
     const cptText = codeSummary(s.cptCodes, r.cptDesc);
     const mins = Math.round((s.durationHours || 0) * 60);
-    const base = cptText ? cap(cptText) : mins > 0 ? `Psychotherapy, ${mins} mins` : "Psychotherapy";
+    const base = opts.serviceLabel ? opts.serviceLabel(s) : cptText ? cap(cptText) : mins > 0 ? `Psychotherapy, ${mins} mins` : "Psychotherapy";
     const amount = Math.round((portionOf(s) + Number.EPSILON) * 100) / 100;
     return {
       date: s.dateOfService,
