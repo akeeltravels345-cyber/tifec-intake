@@ -62,7 +62,12 @@ export function buildInvoice(
   provider: ProviderConfig,
   issueDate: string,
   r: InvoiceResolvers,
+  /** Self-pay (default) invoices the full fee. Pass a `portionOf` to invoice a
+   *  different amount per session (e.g. the outstanding co-pay), and a
+   *  `descriptionPrefix` to label the lines. */
+  opts: { portionOf?: (s: BillingSession) => number; descriptionPrefix?: string } = {},
 ): InvoiceData {
+  const portionOf = opts.portionOf ?? ((s: BillingSession) => s.totalCost);
   const ordered = [...sessions].sort((a, b) => a.dateOfService.localeCompare(b.dateOfService));
 
   const lines: InvoiceLine[] = ordered.map((s) => {
@@ -70,13 +75,14 @@ export function buildInvoice(
     // synthesise a duration when there's no code to describe the service.
     const cptText = codeSummary(s.cptCodes, r.cptDesc);
     const mins = Math.round((s.durationHours || 0) * 60);
-    const description = cptText ? cap(cptText) : mins > 0 ? `Psychotherapy, ${mins} mins` : "Psychotherapy";
+    const base = cptText ? cap(cptText) : mins > 0 ? `Psychotherapy, ${mins} mins` : "Psychotherapy";
+    const amount = Math.round((portionOf(s) + Number.EPSILON) * 100) / 100;
     return {
       date: s.dateOfService,
-      description,
+      description: (opts.descriptionPrefix ?? "") + base,
       provider: r.clinName(s.clinicianId), // name only; registration goes on the managing-provider line
-      fee: s.totalCost,
-      portion: s.totalCost, // self-pay: the client owes the whole fee
+      fee: amount,
+      portion: amount,
     };
   });
 
