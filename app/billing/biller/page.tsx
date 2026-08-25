@@ -88,7 +88,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
     cur.amount = r2(cur.amount + insurancePortion(s)); cur.count++; cur.oldest = Math.max(cur.oldest, ageDays(s.dateOfService, today)); cur.toYou = r2(cur.toYou + comm(s));
     map.set(s.insurerId!, cur);
   }
-  const byInsurer = [...map.values()].sort((a, b) => b.amount - a.amount);
+  const byInsurer = [...map.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.amount - a.amount);
 
   // where your commission came from — earnings per clinician this month.
   // Outside clients are disabled for now, so only the practice's own clinicians.
@@ -189,13 +189,13 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
 
         {/* who owes you */}
         <div className="bo-card">
-          <div className="bo-secrow" style={{ margin: "0 0 8px" }}><span className="bo-lab">Who owes you</span></div>
-          <p className="bo-hint" style={{ margin: "0 2px 8px" }}>{money0(outstanding)} outstanding · chase the oldest first</p>
-          {byInsurer.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>Nothing outstanding — all caught up.</p> : byInsurer.map((i) => (
-            <div className="bo-crow" key={i.name} style={{ gridTemplateColumns: "1fr auto" }}>
+          <div className="bo-secrow" style={{ margin: "0 0 8px" }}><span className="bo-lab">Who owes you</span><Link href="/billing/aged-claims" className="bo-seclink">Print report →</Link></div>
+          <p className="bo-hint" style={{ margin: "0 2px 8px" }}>{money0(outstanding)} outstanding · chase the oldest first · open an insurer for its report</p>
+          {byInsurer.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>Nothing outstanding, all caught up.</p> : byInsurer.map((i) => (
+            <Link className="bo-crow bo-crowlink" key={i.id} href={`/billing/aged-claims/${i.id}`} style={{ gridTemplateColumns: "1fr auto" }}>
               <div className="ins">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"} · <span className={`bq-age ${i.oldest >= 15 ? "warn" : ""}`}>oldest {i.oldest}d</span></small></div>
-              <div className="bo-cright"><span className="bo-camt">{money(i.amount)}</span><span className="bl-toyou">+{money0(i.toYou)}</span></div>
-            </div>
+              <div className="bo-cright"><span className="bo-camt">{money(i.amount)}</span><span className="bl-toyou">+{money0(i.toYou)}</span><span className="bo-crowarr">→</span></div>
+            </Link>
           ))}
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--hair)" }}>
             <Link href="/billing/payments" className="bl-ghost">Reconcile in the billing queue →</Link>

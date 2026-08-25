@@ -21,7 +21,7 @@ export interface OverviewData {
   trend: { label: string; value: number; current: boolean }[];
   expenses: { name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[] }[];
   expensesTotal: number;
-  insurers: { name: string; count: number; amount: number; oldestDays: number }[];
+  insurers: { id: string; name: string; count: number; amount: number; oldestDays: number }[];
   insurersTotal: number;
   clinicians: ClinRow[];
   appointments: number;
@@ -205,17 +205,19 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
       <div className="bo-card" style={{ marginBottom: 22 }}>
         <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
           <h3 className="bo-sech">Waiting on insurance</h3>
-          <span className="bo-hint">Where your {money(data.insurersTotal)} in outstanding claims is sitting — oldest first</span>
+          <Link href="/billing/aged-claims" className="bo-seclink">Print report →</Link>
         </div>
+        <div className="bo-hint" style={{ margin: "0 0 8px" }}>Where your {money(data.insurersTotal)} in outstanding claims is sitting, oldest first. Open an insurer for its printable report.</div>
         {data.insurers.map((i) => (
-          <div className="bo-crow" key={i.name}>
+          <Link className="bo-crow bo-crowlink" key={i.id} href={`/billing/aged-claims/${i.id}`}>
             <div className="ins">{i.name}<small>{i.count} claim{i.count === 1 ? "" : "s"}</small></div>
             <div className="bo-ctrack"><i style={{ width: `${pct(i.amount, insMax)}%` }} /></div>
             <div className="bo-cright">
               <span className={`bo-age ${i.oldestDays >= 15 ? "warn" : ""}`}>oldest {i.oldestDays}d</span>
               <span className="bo-camt">{money(i.amount)}</span>
+              <span className="bo-crowarr">→</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

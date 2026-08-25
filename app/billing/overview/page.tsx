@@ -63,7 +63,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     cur.count += 1; cur.amount = r2(cur.amount + amt); cur.oldestDays = Math.max(cur.oldestDays, ageDays(s.dateOfService, today));
     map.set(s.insurerId, cur);
   }
-  const insurers = [...map.values()].sort((a, b) => b.amount - a.amount);
+  const insurers = [...map.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.amount - a.amount);
   const insurersTotal = r2(insurers.reduce((t, i) => t + i.amount, 0));
 
   const nameOf = (id: string) => CLINICIANS.find((c) => c.id === id)?.name ?? id;
