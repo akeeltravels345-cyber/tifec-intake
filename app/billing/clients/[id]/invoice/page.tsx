@@ -57,7 +57,7 @@ export default async function InvoicePage({
     clinName: (cid) => getClinician(cid)?.name ?? external.find((c) => c.id === cid)?.name ?? cid,
     clinCredentials: (cid) => getClinician(cid)?.credentials ?? "",
     cptDesc: (code) => cptCodes.find((c) => c.code === code)?.description ?? "",
-  }, isCopay ? { portionOf: uncollectedCopay, descriptionPrefix: "Co-pay — " } : {});
+  }, isCopay ? { portionOf: uncollectedCopay, descriptionPrefix: "Co-pay: " } : {});
 
   return (
     <div className="inv-page">

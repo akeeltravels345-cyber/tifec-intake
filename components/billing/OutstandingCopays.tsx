@@ -32,7 +32,7 @@ export default function OutstandingCopays({ rows, today, showClinician, canToggl
     <>
       <div className="su-topbar">
         <h1 className="su-h1">Outstanding co-pays</h1>
-        <p className="su-sub">Co-pays that were due at a visit but not collected. Record each one when it comes in — it books to the date received.{scope === "mine" ? " Showing your clients." : ""}</p>
+        <p className="su-sub">Co-pays that were due at a visit but not collected. Record each one when it comes in, and it books to the date received.{scope === "mine" ? " Showing your clients." : ""}</p>
         {canToggle && (
           <div className="cp-scope" role="tablist" aria-label="Whose co-pays">
             <Link href="/billing/copays?scope=mine" className={`cp-scopebtn ${scope === "mine" ? "on" : ""}`} role="tab" aria-selected={scope === "mine"}>My clients</Link>
