@@ -204,11 +204,11 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
       </div>
 
       {/* recent activity */}
-      <div className="bo-secrow" style={{ marginTop: 22 }}><h3 className="bo-sech">Recently marked billed</h3><span className="bo-hint">Your last reconciliations</span></div>
+      <div className="bo-secrow" style={{ marginTop: 22 }}><h3 className="bo-sech">Recently collected</h3><span className="bo-hint">Your last reconciliations</span></div>
       <div className="bo-card" style={{ padding: "8px 16px" }}>
-        {recent.length === 0 ? <div className="bq-empty">Nothing billed yet this period.</div> : (
+        {recent.length === 0 ? <div className="bq-empty">Nothing collected yet this period.</div> : (
           <div className="cd-tblwrap"><table className="cd-tbl">
-            <thead><tr><th>Paid</th><th>Client</th><th>Clinician</th><th>Insurer</th><th className="num">Amount</th><th className="num">Your cut</th></tr></thead>
+            <thead><tr><th>Collected</th><th>Client</th><th>Clinician</th><th>Insurer</th><th className="num">Amount</th><th className="num">Your cut</th></tr></thead>
             <tbody>
               {recent.map((s) => (
                 <tr key={s.id}>

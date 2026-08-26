@@ -24,17 +24,17 @@ export interface SessionRow {
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-// The pill reflects the real lifecycle: an insured claim is Outstanding (logged,
-// not yet submitted), then Billed (submitted, waiting on the insurer), then Paid
+// The pill reflects the real lifecycle: an insured claim is To bill (logged, not
+// yet submitted), then Billed (submitted, waiting on the insurer), then Collected
 // once the biller marks the money in. A claim the biller settles WITHOUT payment
-// reads as Written off / Written down — never Paid, and it doesn't pay out.
+// reads as Written off / Written down — never Collected, and it doesn't pay out.
 const pill = (s: SessionRow) =>
-  s.status === "self" ? <span className="cd-pill self">Self-pay</span>
-  : s.status === "writeoff" ? <span className="cd-pill adjusted" title="Contractual write-off — not collected, not paid to you">Written off</span>
-  : s.status === "writedown" ? <span className="cd-pill adjusted" title="Written down — not collected, not paid to you">Written down</span>
-  : s.status === "paid" ? <span className="cd-pill paid">Paid</span>
-  : s.billed ? <span className="cd-pill billed">Billed</span>
-  : <span className="cd-pill pend">Outstanding</span>;
+  s.status === "self" ? <span className="cd-pill self hastip" data-tip="Client pays directly. No insurer involved.">Self-pay</span>
+  : s.status === "writeoff" ? <span className="cd-pill adjusted hastip" data-tip="Contractual write-off. Not collected, not paid to you.">Written off</span>
+  : s.status === "writedown" ? <span className="cd-pill adjusted hastip" data-tip="Written down. Not collected, not paid to you.">Written down</span>
+  : s.status === "paid" ? <span className="cd-pill paid hastip" data-tip="Insurer paid, cash collected. This is what pays out to you.">Collected</span>
+  : s.billed ? <span className="cd-pill billed hastip" data-tip="Claim submitted to the insurer, waiting on payment.">Billed</span>
+  : <span className="cd-pill pend hastip" data-tip="Logged, not yet submitted to the insurer.">To bill</span>;
 
 /** The month's sessions. Clicking a client opens their full record; the clinician
  *  (and the owner/biller) can also fix or remove a mistaken entry right here. The
@@ -207,7 +207,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
                     {ecInsurer && <>
                       <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                       <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
-                      <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                      <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Billed (awaiting payment)</option><option value="paid">Collected</option></select></label>
                     </>}
                     <div className="cd-editactions">
                       <button className="ls-save sm" disabled={busy} onClick={() => saveEdit(s.id)}>{busy ? "Saving…" : "Save change"}</button>

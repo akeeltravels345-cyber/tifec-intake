@@ -1703,7 +1703,9 @@ body:has(.biz) { background: #F8F9F8; }
 .cd-card { background: #fff; border: 1px solid var(--edge); border-radius: 16px; padding: 24px 26px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 /* Six KPIs in ONE bordered container (3x2), split by internal hairlines — the
    1px grid gap over a hairline-coloured background draws the dividers. */
-.cd-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-bottom: 20px; background: var(--edge); border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
+/* overflow left visible so the cards' hover tooltips can escape the grid; the
+ * border-radius + 1px border keep the outer frame rounded. */
+.cd-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-bottom: 20px; background: var(--edge); border: 1px solid var(--edge); border-radius: 16px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 12px 30px rgba(70,55,25,.05); }
 .cd-kpi { background: #fff; padding: 16px 18px; }
 .cd-kpilink { text-decoration: none; display: block; transition: background .1s ease; }
 .cd-kpilink:hover { background: #f6f8fd; }
@@ -2847,6 +2849,23 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-send:active:not(:disabled) { transform: scale(.93); }
 .tm-send:disabled { background: #d3d8df; color: #f4f6f8; cursor: default; }
 .tm-send svg { transform: translateX(-1px); }
+/* Instant styled hover tooltip: add class "hastip" + data-tip="..." to any element. */
+.hastip { position: relative; }
+.hastip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%) translateY(4px);
+  background: #22283a; color: #fff; font: 400 11.5px/1.45 "Open Sans", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal; text-align: left; white-space: normal;
+  padding: 8px 11px; border-radius: 9px; width: max-content; max-width: 220px;
+  opacity: 0; visibility: hidden; transition: opacity .12s, transform .12s; z-index: 60; pointer-events: none;
+  box-shadow: 0 6px 20px rgba(20,25,40,.22);
+}
+.hastip::before {
+  content: ""; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #22283a; opacity: 0; visibility: hidden; transition: opacity .12s; z-index: 60; pointer-events: none;
+}
+.hastip:hover::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.hastip:hover::before { opacity: 1; visibility: visible; }
 /* Ticket reply footer: attach icons on the left, Reply button on the right. */
 .tm-formfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
 .tm-formtools { display: flex; align-items: center; gap: 2px; }

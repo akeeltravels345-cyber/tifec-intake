@@ -34,9 +34,9 @@ export default function InsuranceCollectedKpi({ total, thisMonth, prior, monthLa
   const hasSplit = total > 0 && rows.length > 0;
 
   return (
-    <div className={`cd-kpi cd-inskpi ${open && hasSplit ? "open" : ""}`} title="Insurance payments that landed this month. Expand to see how much is for this month's visits versus earlier ones.">
+    <div className={`cd-kpi cd-inskpi ${open && hasSplit ? "open" : ""}`}>
       <div className="ins-summary">
-        <div className="k">Insurance collected</div>
+        <div className="k hastip" data-tip="Insurance cash that actually landed this month. Expand to see how much is for this month's visits versus earlier ones.">Insurance collected</div>
         <div className="v">{money0(total)}</div>
         {hasSplit && (
           <div className="ins-pills">

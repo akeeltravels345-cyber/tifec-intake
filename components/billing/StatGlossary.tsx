@@ -7,9 +7,11 @@ import { useState } from "react";
 const ITEMS: [string, string][] = [
   ["Total earned", "The full value of the work you did this month, before anything is taken out — whether or not the money has arrived yet."],
   ["Collected at visit", "Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. This is money in hand."],
-  ["Insurance collected", "Insurance payments that have actually landed this month."],
-  ["Insurance outstanding", "Billed to insurers but not paid yet. This is money still on its way to you."],
+  ["Insurance collected", "Insurance payments that have actually landed this month. This is real cash, and it's what your payout is worked out from."],
+  ["Settled by insurers", "The part of this month's work the insurer has resolved — paid, or written off / down. It's a progress figure, not cash: only the part actually paid counts toward your payout."],
+  ["Insurance outstanding", "Insurance still on its way to you: claims not yet billed, or billed (submitted) and awaiting payment."],
   ["Co-pays not collected", "Co-pays that were due at the visit but weren't taken. It stays a write-off unless you collect it later."],
+  ["To bill / Billed / Collected", "A claim's life: To bill (logged, not yet submitted) → Billed (submitted to the insurer, waiting) → Collected (money in)."],
   ["Your payout", "A share of the cash actually collected this month, not of what you earned. Sessions still with the insurer pay out in the month the money arrives."],
 ];
 

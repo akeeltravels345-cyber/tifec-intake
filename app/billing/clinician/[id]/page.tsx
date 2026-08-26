@@ -110,20 +110,20 @@ export default async function ClinicianDetail({ params, searchParams }: { params
       </div>
 
       <div className="cd-kpis">
-        <div className="cd-kpi" title="How many sessions you logged this month."><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
-        <div className="cd-kpi" title="The realizable value of this month's work, before deductions — whether or not the money has arrived yet. Excludes anything written off or written down (those are shown separately and never pay out)."><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
+        <div className="cd-kpi hastip" data-tip="How many sessions you logged this month."><div className="k">Appointments logged</div><div className="v">{c.appointments}</div></div>
+        <div className="cd-kpi hastip" data-tip="The value of this month's work before deductions, whether or not the money has arrived."><div className="k">Total earned</div><div className="v">{money0(c.revenueGenerated)}</div></div>
         {/* Money taken at the appointment itself: the co-pay on an insured
             visit, or the whole fee when the client is self-pay. Sits with the
             insurance figures, since together they are the cash that arrived. */}
-        <div className="cd-kpi" title="Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. Money in hand."><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
+        <div className="cd-kpi hastip" data-tip="Cash taken on the day: co-pays on insured visits, or the whole fee when the client is self-pay. Money in hand."><div className="k">Collected at visit</div><div className="v">{money0(c.copayThisMonth)}</div></div>
         <NewGlow id="insbreakdown"><InsuranceCollectedKpi total={c.insuranceBilledThisMonth} thisMonth={c.insuranceThisMonthVisits} prior={c.insurancePriorVisits} monthLabel={MONTHS[month - 1]} rows={insRows} /></NewGlow>
-        <div className="cd-kpi" title="Billed to insurers but not paid yet — money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
+        <div className="cd-kpi hastip" data-tip="Insurance not collected yet: claims still to bill, or billed and awaiting payment. Money still on its way to you."><div className="k">Insurance outstanding</div><div className="v owe">{money0(c.outstanding)}</div></div>
         {/* Co-pays that were due at this month's visits but not collected — money
             missed. Highlighted so it can't be ignored. */}
-        <NewGlow id="copaynav"><Link href="/billing/copays" className="cd-kpi cd-kpilink" title="Co-pays due at your visits that weren't taken but are STILL OWED. Click to record them as they come in."><div className="k">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div><div className="cd-kpicta">Record →</div></Link></NewGlow>
-        <div className="cd-kpi" title="Co-pays deliberately WAIVED this month — written off, never chased."><div className="k">Co-pays waived</div><div className="v">{money0(c.waivedCopay)}</div></div>
-        {c.contractualWriteoff > 0 && <div className="cd-kpi" title="Insurance billed amount settled with a contractual write-off this month — its own bucket, not counted as collected and not paid out."><div className="k">Contractual write-offs</div><div className="v">{money0(c.contractualWriteoff)}</div></div>}
-        {c.writeDown > 0 && <div className="cd-kpi" title="Insurance billed amount written down this month — its own bucket, not counted as collected and not paid out."><div className="k">Write-downs</div><div className="v">{money0(c.writeDown)}</div></div>}
+        <NewGlow id="copaynav"><Link href="/billing/copays" className="cd-kpi cd-kpilink"><div className="k hastip" data-tip="Co-pays due at your visits that weren't taken but are still owed. Click to record them as they come in.">Co-pays not collected</div><div className={`v ${c.uncollectedCopay > 0 ? "owe" : ""}`}>{money0(c.uncollectedCopay)}</div><div className="cd-kpicta">Record →</div></Link></NewGlow>
+        <div className="cd-kpi hastip" data-tip="Co-pays deliberately waived this month: written off."><div className="k">Co-pays waived</div><div className="v">{money0(c.waivedCopay)}</div></div>
+        {c.contractualWriteoff > 0 && <div className="cd-kpi hastip" data-tip="A claim amount settled with a contractual write-off this month."><div className="k">Contractual write-offs</div><div className="v">{money0(c.contractualWriteoff)}</div></div>}
+        {c.writeDown > 0 && <div className="cd-kpi hastip" data-tip="A claim amount written down this month."><div className="k">Write-downs</div><div className="v">{money0(c.writeDown)}</div></div>}
       </div>
       {isSelf && <StatGlossary />}
       {c.uncollectedCopay > 0 && (
@@ -165,7 +165,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
               <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#8b93b8" }} />Company retention ({c.retentionPct}%)</span><span className="amt">−{money(c.retentionAmount)}</span></div>
               {c.billerFromClinician > 0 && (
                 <div className="cd-flowline minus">
-                  <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%{c.billerBasePct < 100 ? ` of ${c.billerBasePct}% billed` : ""})</span>
+                  <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%{c.billerBasePct < 100 ? ` of ${c.billerBasePct}% collected` : ""})</span>
                   <span className="amt">−{money(c.billerFromClinician)}</span>
                 </div>
               )}
@@ -184,10 +184,10 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
         <div className="cd-card">
           <span className="cd-lab">This month&apos;s work</span>
-          <div className="cd-workhead"><span style={{ fontSize: 13, color: "var(--muted)" }}>Billed vs coming in</span><span style={{ fontSize: 13, fontWeight: 700 }}>{money0(c.billedFromThisMonth)} of {money0(c.revenueGenerated)}</span></div>
+          <div className="cd-workhead"><span style={{ fontSize: 13, color: "var(--muted)" }}>Settled vs coming in</span><span style={{ fontSize: 13, fontWeight: 700 }}>{money0(c.billedFromThisMonth)} of {money0(c.revenueGenerated)}</span></div>
           <div className="cd-prog"><i style={{ width: `${w(c.billedFromThisMonth, c.revenueGenerated)}%` }} /></div>
           <div className="cd-flowline"><span className="lbl">Revenue generated</span><span className="amt">{money(c.revenueGenerated)}</span></div>
-          <div className="cd-flowline"><span className="lbl">Already billed</span><span className="amt">{money(c.billedFromThisMonth)}</span></div>
+          <div className="cd-flowline"><span className="lbl hastip" data-tip="This month's work the insurer has resolved (paid or written off). A progress figure, not cash. Only the collected part pays out.">Settled by insurers</span><span className="amt">{money(c.billedFromThisMonth)}</span></div>
           <div className="cd-flowline"><span className="lbl">Still outstanding</span><span className="amt">{money(c.outstandingThisMonth)}</span></div>
           <div className="cd-flowline"><span className="lbl">Collected at visit</span><span className="amt">{money(c.copayThisMonth)}</span></div>
 

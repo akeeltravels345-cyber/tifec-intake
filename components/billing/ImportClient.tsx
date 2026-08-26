@@ -79,7 +79,7 @@ export default function ImportClient({ clinicians, insurers }: { clinicians: Ref
               style={{ fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12.5, resize: "vertical" }}
             />
             <p className="su-hint" style={{ margin: "10px 2px 0" }}>
-              The first line must be the header. Column names are flexible: <b>Provider</b> works as well as <b>Clinician</b>, <b>Amount</b> as well as <b>Total</b>. A row with a paid date comes in already billed; one without is outstanding and lands in your queue.
+              The first line must be the header. Column names are flexible: <b>Provider</b> works as well as <b>Clinician</b>, <b>Amount</b> as well as <b>Total</b>. A row with a paid date comes in already collected; one without is outstanding and lands in your queue.
             </p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function ImportClient({ clinicians, insurers }: { clinicians: Ref
                         {r.errors.length > 0
                           ? <span style={{ color: "var(--neg)", fontWeight: 600, fontSize: 12.5 }}>{r.errors.join(" · ")}</span>
                           : r.insurancePaid
-                            ? <span className="su-tag">Billed {r.paidDate}</span>
+                            ? <span className="su-tag">Collected {r.paidDate}</span>
                             : <span style={{ color: "var(--muted)", fontSize: 12.5 }}>To bill</span>}
                       </td>
                     </tr>

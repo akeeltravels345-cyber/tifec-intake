@@ -249,7 +249,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                 <div className="bo-exp">
                   <div className="bo-expgrid">
                     <div className="bo-expcell"><div className="k">Revenue earned</div><div className="v">{money(c.revenueGenerated)}</div></div>
-                    <div className="bo-expcell"><div className="k">Already billed</div><div className="v">{money(c.billed)}</div></div>
+                    <div className="bo-expcell"><div className="k">Settled by insurers</div><div className="v">{money(c.billed)}</div></div>
                     <div className="bo-expcell"><div className="k">Still outstanding</div><div className="v">{money(c.outstandingThisMonth)}</div></div>
                     <div className="bo-expcell"><div className="k">Collected at visit</div><div className="v">{money(c.copay)}</div></div>
                     <div className="bo-expcell"><div className="k">Co-pays not collected</div><div className="v" style={c.uncollectedCopay > 0 ? { color: "#9a3b2a" } : undefined}>{money(c.uncollectedCopay)}</div></div>

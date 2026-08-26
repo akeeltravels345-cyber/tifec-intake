@@ -136,7 +136,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
     <>
       <div className="bq-topbar">
         <h1 className="bq-h1">Billing queue</h1>
-        <p className="bq-sub">Submit claims to the insurer, then mark them paid as the money lands. Only paid claims count as collected · amounts in KYD</p>
+        <p className="bq-sub">Bill claims to the insurer, then mark them collected as the money lands. Only collected claims pay out · amounts in KYD</p>
       </div>
 
       {/* Work-status ribbon: leads with what's left to do at each stage. Your cut
@@ -178,7 +178,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           <button className={`bq-tab ${tab === "tobill" ? "on" : ""}`} onClick={() => switchTab("tobill")}>To bill ({data.toBill.length})</button>
           <button className={`bq-tab ${tab === "awaiting" ? "on" : ""}`} onClick={() => switchTab("awaiting")}>Awaiting payment ({data.awaiting.length})</button>
           {data.selfPay.length > 0 && <button className={`bq-tab ${tab === "selfpay" ? "on" : ""}`} onClick={() => switchTab("selfpay")}>Self-pay ({data.selfPay.length})</button>}
-          <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Paid ({data.paid.length})</button>
+          <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Collected ({data.paid.length})</button>
           {data.adjusted.length > 0 && <button className={`bq-tab ${tab === "adjusted" ? "on" : ""}`} onClick={() => switchTab("adjusted")}>Written off / down ({data.adjusted.length})</button>}
         </div>
         <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -197,7 +197,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         groups.length === 0 ? (
           <div className="bq-group"><div className="bq-empty">
             <div className="big">{tab === "tobill" ? "Nothing to bill here" : tab === "selfpay" ? "No self-pay balances here" : "Nothing awaiting payment here"}</div>
-            <div className="small">{tab === "tobill" ? "Every logged claim in this view has been submitted to the insurer." : tab === "selfpay" ? "Every self-pay visit in this view has been paid or waived." : "Every submitted claim in this view has been paid."}</div>
+            <div className="small">{tab === "tobill" ? "Every logged claim in this view has been billed to the insurer." : tab === "selfpay" ? "Every self-pay visit in this view has been collected or waived." : "Every billed claim in this view has been collected."}</div>
           </div></div>
         ) : (
           <div className="bq-groups">
@@ -284,18 +284,18 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       ) : (
         <div className="bq-billed">
-          <div className="bq-thead"><span>Paid</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
+          <div className="bq-thead"><span>Collected</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
           {data.paid.length === 0 ? (
-            <div className="bq-empty"><div className="big">No payments recorded yet</div></div>
+            <div className="bq-empty"><div className="big">Nothing collected yet</div></div>
           ) : groups.length === 0 ? (
-            <div className="bq-empty"><div className="big">No paid claims match your filters</div></div>
+            <div className="bq-empty"><div className="big">No collected claims match your filters</div></div>
           ) : groups.map((g) => {
             const open = !collapsed.has(g.key);
             return (
             <div key={g.key}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)", cursor: "pointer" }} onClick={() => toggleCollapse(g.key)} role="button" aria-expanded={open} title={open ? "Collapse" : "Expand"}>
                 <span className="bq-gname">{g.name}</span>
-                <span className="bq-gmeta">{g.claims.length} paid</span>
+                <span className="bq-gmeta">{g.claims.length} collected</span>
                 <span style={{ flex: 1 }} />
                 <span className="bq-gtot">{money(g.total)}</span>
                 <span className="bq-gcomm" style={{ marginLeft: 10 }}>+{money(comm(g.claims))} to you</span>
@@ -303,7 +303,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
               </div>
               {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
                 <div className="bq-brow" key={c.id}>
-                  <span className="pill"><span className="ok" aria-hidden="true">✓</span><input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Paid date — click to change (back-date to when it actually settled)" /></span>
+                  <span className="pill"><span className="ok" aria-hidden="true">✓</span><input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Collected date — click to change (back-date to when it actually settled)" /></span>
                   <span><ClientName id={c.clientId} name={c.clientName} /></span>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
                   <span className="amt">{money(c.amount)}</span>
@@ -329,8 +329,8 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
             </>
           ) : (
             <>
-              <label>Paid date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
-              <button className="go" disabled={busy} onClick={() => markPaid([...selected], batchDate)}>{busy ? "Marking…" : `Mark ${selected.size} paid`}</button>
+              <label>Collected date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
+              <button className="go" disabled={busy} onClick={() => markPaid([...selected], batchDate)}>{busy ? "Marking…" : `Mark ${selected.size} collected`}</button>
             </>
           )}
           <button className="x" onClick={() => setSelected(new Set())}>Clear</button>

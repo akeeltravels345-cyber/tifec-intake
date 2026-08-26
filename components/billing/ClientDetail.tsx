@@ -27,7 +27,7 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
   self: { label: "Self-pay", cls: "self" },
   logged: { label: "To bill", cls: "logged" },
   billed: { label: "Awaiting payment", cls: "billed" },
-  paid: { label: "Paid", cls: "paid" },
+  paid: { label: "Collected", cls: "paid" },
   writeoff: { label: "Write-off", cls: "paid" },
   writedown: { label: "Write-down", cls: "paid" },
 };
@@ -595,7 +595,7 @@ export default function ClientDetail({
                   <option value="keep">Keep as is</option>
                   <option value="tobill">To bill</option>
                   <option value="awaiting">Awaiting payment</option>
-                  <option value="paid">Paid</option>
+                  <option value="paid">Collected</option>
                 </select></label>
                 <label>Set insurer<select className="ls-in" value={bulkInsurer} onChange={(e) => setBulkInsurer(e.target.value)}>
                   <option value="keep">Keep as is</option>
@@ -625,7 +625,7 @@ export default function ClientDetail({
                   {clinicians.length > 1 && <label>Clinician<select className="ls-in" value={acClin} onChange={(e) => setAcClin(e.target.value)}>{clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
                   <label>Insurer<select className="ls-in" value={acInsurer} onChange={(e) => setAcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
-                  <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option></select></label>
+                  <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option></select></label>
                 </div>
                 {chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}) — it won&apos;t be paid.</p>
@@ -725,7 +725,7 @@ export default function ClientDetail({
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
-                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Paid</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
+                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
                                 {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer — back-date to the real date if needed" /></label>}
                                 {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer actually settled — this drives the payout month" /></label>}
                                 {(ecStage === "writeoff" || ecStage === "writedown") && <>
