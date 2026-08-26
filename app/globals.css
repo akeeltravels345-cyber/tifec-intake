@@ -1991,6 +1991,13 @@ body:has(.biz) { background: #F8F9F8; }
 .cp-acts { display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .cp-invoice { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--indigo); text-decoration: none; white-space: nowrap; }
 .cp-invoice:hover { background: #f2f0fb; }
+/* Fix-collected-dates cleanup tool */
+.fx-tbl th.fx-chk, .fx-tbl td.fx-chk { width: 34px; text-align: center; }
+.fx-chk input { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
+.fx-tbl tbody tr.on { background: #f1f7f7; }
+.fx-wrong { color: #b3261e; font-weight: 600; white-space: nowrap; }
+.fx-date { border: 1px solid var(--edge); border-radius: 8px; padding: 5px 8px; font-size: 13px; font-family: inherit; }
+.fx-date:focus { outline: none; border-color: var(--teal, #2E8E93); box-shadow: 0 0 0 3px rgba(46,142,147,.12); }
 
 /* ---- Aged insurance claims report ---- */
 .ac-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
@@ -2310,6 +2317,11 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-thead span.r { text-align: right; }
 .bq-billed { background: #fff; border: 1px solid var(--edge); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 10px 26px rgba(70,55,25,.045); }
 .bq-brow { display: grid; grid-template-columns: 96px 1fr 120px 96px 96px 70px; align-items: center; gap: 14px; padding: 14px 20px; border-top: 1px solid var(--hair); }
+/* Collected tab: a leading checkbox column so the biller can bulk-fix dates. */
+.bq-thead-sel, .bq-brow-sel { grid-template-columns: 30px 96px 1fr 120px 96px 96px 70px; }
+.bq-brow-sel input[type="checkbox"], .bq-thead-sel input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
+.bq-brow-sel.on { background: #f2f8f8; }
+.bq-gselect { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; margin-right: 4px; }
 .bq-brow:first-child { border-top: none; }
 .bq-brow .pill { display: inline-flex; align-items: baseline; gap: 6px; justify-self: start; width: fit-content; max-width: 100%; padding: 0; background: none; white-space: nowrap; }
 .bq-brow .pill .ok { color: var(--green); font-weight: 700; font-size: 12px; }

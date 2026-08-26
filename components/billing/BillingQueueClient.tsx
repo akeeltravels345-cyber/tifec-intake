@@ -284,7 +284,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       ) : (
         <div className="bq-billed">
-          <div className="bq-thead"><span>Collected</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
+          <div className="bq-thead bq-thead-sel"><span><input type="checkbox" checked={filtered.length > 0 && filtered.every((c) => selected.has(c.id))} onChange={() => toggleGroup(filtered)} title="Select all shown" /></span><span>Collected</span><span>Client</span><span>{groupBy === "insurer" ? "Clinician" : "Insurer"}</span><span className="r">Amount</span><span className="r">Your cut</span><span className="r"></span></div>
           {data.paid.length === 0 ? (
             <div className="bq-empty"><div className="big">Nothing collected yet</div></div>
           ) : groups.length === 0 ? (
@@ -294,6 +294,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
             return (
             <div key={g.key}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 14px 8px", borderTop: "1px solid var(--line, #eae5db)", cursor: "pointer" }} onClick={() => toggleCollapse(g.key)} role="button" aria-expanded={open} title={open ? "Collapse" : "Expand"}>
+                <input type="checkbox" className="bq-gselect" onClick={(e) => e.stopPropagation()} checked={g.claims.length > 0 && g.claims.every((c) => selected.has(c.id))} onChange={() => toggleGroup(g.claims)} title="Select all in this group" />
                 <span className="bq-gname">{g.name}</span>
                 <span className="bq-gmeta">{g.claims.length} collected</span>
                 <span style={{ flex: 1 }} />
@@ -302,7 +303,8 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                 <span className={`bq-gchev ${open ? "open" : ""}`} aria-hidden="true">›</span>
               </div>
               {open && [...g.claims].sort((a, b) => (b.paidDate ?? "").localeCompare(a.paidDate ?? "")).map((c) => (
-                <div className="bq-brow" key={c.id}>
+                <div className={`bq-brow bq-brow-sel ${selected.has(c.id) ? "on" : ""}`} key={c.id}>
+                  <span><input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} aria-label="Select claim" /></span>
                   <span className="pill"><span className="ok" aria-hidden="true">✓</span><input type="date" className="bq-dateedit onpill" value={c.paidDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editPaid(c.id, c.paidDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Collected date — click to change (back-date to when it actually settled)" /></span>
                   <span><ClientName id={c.clientId} name={c.clientName} /></span>
                   <span style={{ fontSize: 13, color: "var(--muted)" }}>{groupBy === "insurer" ? c.clinicianName : c.insurerName}</span>
@@ -317,15 +319,20 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       )}
 
-      {isOpen && selected.size > 0 && (
+      {(isOpen || tab === "paid") && selected.size > 0 && (
         <div className="bq-bulk">
           <div><div className="bt">{selected.size} {tab === "selfpay" ? "balance" : "claim"}{selected.size === 1 ? "" : "s"} selected</div><div className="bsub">{money(selTotal)} {tab === "selfpay" ? "owed" : "insurance"}{tab === "selfpay" ? "" : <> · <span className="comm">+{money(comm(selClaims))} to you</span></>}</div></div>
           <div className="sp" />
-          {tab !== "selfpay" && <button className="gen" onClick={generateClaims} title="Build CMS-1500 claims for the selected claims">Generate CMS-1500</button>}
+          {isOpen && tab !== "selfpay" && <button className="gen" onClick={generateClaims} title="Build CMS-1500 claims for the selected claims">Generate CMS-1500</button>}
           {tab === "tobill" ? (
             <>
               <label>Billed date <input type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} /></label>
               <button className="go" disabled={busy} onClick={() => markBilled([...selected], batchDate)}>{busy ? "Submitting…" : `Mark ${selected.size} billed`}</button>
+            </>
+          ) : tab === "paid" ? (
+            <>
+              <label>Collected date <input type="date" value={batchDate} max={data.today} onChange={(e) => setBatchDate(e.target.value)} /></label>
+              <button className="go" disabled={busy} onClick={() => markPaid([...selected], batchDate)}>{busy ? "Updating…" : `Set date on ${selected.size}`}</button>
             </>
           ) : (
             <>

@@ -104,6 +104,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
               { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
               { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p === "/billing/import" },
+              { href: "/billing/fix-dates", label: "Fix dates", icon: IcSetup, match: (p) => p.startsWith("/billing/fix-dates") },
             ]
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician"), glow: "copaynav" },
