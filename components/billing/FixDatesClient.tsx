@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export interface FixRow {
@@ -34,14 +34,29 @@ export default function FixDatesClient({ rows, today }: { rows: FixRow[]; today:
   }, [rows, q]);
   const total = rows.reduce((s, r) => s + r.amount, 0);
   const selRows = rows.filter((r) => selected.has(r.id));
-  const allShownSelected = shown.length > 0 && shown.every((r) => selected.has(r.id));
+
+  // Group the flagged claims by the month they book to, then by clinician.
+  const months = useMemo(() => {
+    const byMonth = new Map<string, Map<string, FixRow[]>>();
+    for (const r of shown) {
+      const m = r.collectedDate.slice(0, 7);
+      if (!byMonth.has(m)) byMonth.set(m, new Map());
+      const byClin = byMonth.get(m)!;
+      if (!byClin.has(r.clinician)) byClin.set(r.clinician, []);
+      byClin.get(r.clinician)!.push(r);
+    }
+    return [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([m, byClin]) => {
+      const clinicians = [...byClin.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, rs]) => ({ name, rows: [...rs].sort((x, y) => x.dateOfService.localeCompare(y.dateOfService)) }));
+      const all = clinicians.flatMap((c) => c.rows);
+      return { m, clinicians, count: all.length, total: all.reduce((s, r) => s + r.amount, 0), ids: all.map((r) => r.id) };
+    });
+  }, [shown]);
 
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const toggleAll = () => setSelected((s) => {
-    const n = new Set(s);
-    if (allShownSelected) shown.forEach((r) => n.delete(r.id));
-    else shown.forEach((r) => n.add(r.id));
-    return n;
+  const toggleMany = (ids: string[]) => setSelected((s) => {
+    const n = new Set(s); const all = ids.every((id) => n.has(id));
+    ids.forEach((id) => (all ? n.delete(id) : n.add(id))); return n;
   });
 
   async function setDates(ids: string[], date: string) {
@@ -82,34 +97,43 @@ export default function FixDatesClient({ rows, today }: { rows: FixRow[]; today:
           </div>
           {err && <p className="ls-err" style={{ margin: "0 0 10px" }}>{err}</p>}
 
-          <div className="su-tblwrap"><table className="su-tbl fx-tbl">
-            <thead>
-              <tr>
-                <th className="fx-chk"><input type="checkbox" checked={allShownSelected} onChange={toggleAll} title="Select all shown" /></th>
-                <th>Client</th><th>Clinician</th><th>Insurer</th>
-                <th>Service date</th><th>Booked to</th><th className="num">Insurance</th><th>New collected date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.length === 0 ? (
-                <tr><td colSpan={8} className="su-expempty">No match for &ldquo;{q}&rdquo;.</td></tr>
-              ) : shown.map((r) => (
-                <tr key={r.id} className={selected.has(r.id) ? "on" : ""}>
-                  <td className="fx-chk"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label="Select" /></td>
-                  <td className="nm">{r.client}</td>
-                  <td>{r.clinician}</td>
-                  <td>{r.insurer}</td>
-                  <td>{r.dateOfService}</td>
-                  <td className="fx-wrong">{monthLabel(r.collectedDate)}</td>
-                  <td className="num">{money(r.amount)}</td>
-                  <td>
-                    <input type="date" className="fx-date" max={today} disabled={busy}
-                      onChange={(e) => { if (e.target.value && e.target.value !== r.dateOfService) setDates([r.id], e.target.value); }} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
+          {shown.length === 0 ? (
+            <div className="su-expempty" style={{ padding: 20 }}>No match for &ldquo;{q}&rdquo;.</div>
+          ) : months.map((mo) => (
+            <div key={mo.m} className="fx-month">
+              <div className="fx-mhead">
+                <input type="checkbox" className="fx-mselect" checked={mo.ids.every((id) => selected.has(id))} onChange={() => toggleMany(mo.ids)} title="Select all in this month" />
+                <span className="fx-mtitle">{monthLabel(mo.m + "-01")}</span>
+                <span className="fx-mmeta">{mo.count} claim{mo.count === 1 ? "" : "s"} · {money(mo.total)}</span>
+              </div>
+              <div className="su-tblwrap"><table className="su-tbl fx-tbl">
+                <thead>
+                  <tr><th className="fx-chk"></th><th>Client</th><th>Insurer</th><th>Service date</th><th className="num">Insurance</th><th>New collected date</th></tr>
+                </thead>
+                <tbody>
+                  {mo.clinicians.map((c) => (
+                    <Fragment key={c.name}>
+                      <tr className="fx-clinrow">
+                        <td className="fx-chk"><input type="checkbox" checked={c.rows.every((r) => selected.has(r.id))} onChange={() => toggleMany(c.rows.map((r) => r.id))} title="Select this clinician" /></td>
+                        <td colSpan={5} className="fx-clinname">{c.name} <span className="fx-clincount">{c.rows.length}</span></td>
+                      </tr>
+                      {c.rows.map((r) => (
+                        <tr key={r.id} className={selected.has(r.id) ? "on" : ""}>
+                          <td className="fx-chk"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label="Select" /></td>
+                          <td className="nm">{r.client}</td>
+                          <td>{r.insurer}</td>
+                          <td>{r.dateOfService}</td>
+                          <td className="num">{money(r.amount)}</td>
+                          <td><input type="date" className="fx-date" max={today} disabled={busy}
+                            onChange={(e) => { if (e.target.value && e.target.value !== r.dateOfService) setDates([r.id], e.target.value); }} /></td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table></div>
+            </div>
+          ))}
         </>
       )}
 
