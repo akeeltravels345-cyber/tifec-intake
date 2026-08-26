@@ -23,7 +23,7 @@ const IcWork = () => S(<><rect x="4" y="4" width="16" height="16" rx="2" /><path
 const IcKey = () => S(<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2" /></>);
 const IcSetup = () => S(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
-interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; }
+interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; }
 interface Group { label: string; items: Item[]; }
 
 function initialsOf(name: string): string {
@@ -104,7 +104,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
               { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
               { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p === "/billing/import" },
-              { href: "/billing/fix-dates", label: "Fix dates", icon: IcSetup, match: (p) => p.startsWith("/billing/fix-dates") },
+              { href: "/billing/fix-dates", label: "Fix dates", icon: IcSetup, match: (p) => p.startsWith("/billing/fix-dates"), highlight: true },
             ]
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician"), glow: "copaynav" },
@@ -197,7 +197,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               {g.label && <div className="bo-navl" style={gi === 0 ? undefined : { marginTop: 14 }}>{g.label}</div>}
               {g.items.map((n) => {
                 const Icon = n.icon;
-                const glowing = !!n.glow && navGlow;
+                const glowing = !!n.highlight || (!!n.glow && navGlow);
                 return (
                   <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`}>
                     <Icon />{n.label}
@@ -235,7 +235,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
         {flat.map((n) => {
           const Icon = n.icon;
           return (
-            <Link key={n.href} href={n.href} className={n.match(path) ? "on" : ""}>
+            <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}`}>
               <Icon />{n.label.startsWith("My ") ? n.label.slice(3).replace(/^./, (c) => c.toUpperCase()) : n.label.split(" ")[0]}
               {n.badge ? <span className="bdg">{n.badge}</span> : null}
             </Link>
