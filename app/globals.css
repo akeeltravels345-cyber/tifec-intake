@@ -1992,20 +1992,31 @@ body:has(.biz) { background: #F8F9F8; }
 .cp-invoice { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--indigo); text-decoration: none; white-space: nowrap; }
 .cp-invoice:hover { background: #f2f0fb; }
 /* Fix-collected-dates cleanup tool */
-.fx-tbl th.fx-chk, .fx-tbl td.fx-chk { width: 34px; text-align: center; }
-.fx-chk input { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
-.fx-tbl tbody tr.on { background: #f1f7f7; }
+.fx-chk input, .fx-mselect { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
 .fx-wrong { color: #b3261e; font-weight: 600; white-space: nowrap; }
-.fx-date { border: 1px solid var(--edge); border-radius: 8px; padding: 5px 8px; font-size: 13px; font-family: inherit; }
+.fx-date { border: 1px solid #c9d3d8; border-radius: 8px; padding: 6px 9px; font-size: 13px; font-family: inherit; background: #fff; }
 .fx-date:focus { outline: none; border-color: var(--teal, #2E8E93); box-shadow: 0 0 0 3px rgba(46,142,147,.12); }
-.fx-month { margin-bottom: 22px; }
-.fx-mhead { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 0 2px; }
-.fx-mselect { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
-.fx-mtitle { font: 600 16px "Newsreader", serif; color: var(--ink); }
-.fx-mmeta { font-size: 12.5px; color: var(--muted, #6a6f66); }
-.fx-clinrow td { background: #f6f4ee; border-top: 1px solid var(--edge); }
-.fx-clinname { font-weight: 700; color: var(--ink); font-size: 12.5px; }
-.fx-clincount { display: inline-block; margin-left: 6px; font-weight: 600; font-size: 11px; color: var(--teal-deep, #1f6d70); background: #e7f1f0; border-radius: 999px; padding: 1px 7px; }
+
+/* Each month is a self-contained card, so months read as separate blocks. */
+.fx-month { background: #fff; border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 8px 22px rgba(70,55,25,.055); }
+.fx-mhead { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #eef0fb; border-bottom: 1px solid var(--edge); }
+.fx-mtitle { font: 600 17px "Newsreader", serif; color: var(--indigo, #2E3192); }
+.fx-mmeta { margin-left: auto; font-size: 12.5px; font-weight: 600; color: #6a6f66; }
+
+/* Table inside the card: quiet column head, roomy rows, clear separators.
+ * Scoped under .fx-month so these win over the base .su-tbl rules. */
+.fx-month .fx-tbl th.fx-chk, .fx-month .fx-tbl td.fx-chk { width: 42px; text-align: center; padding-left: 10px; padding-right: 0; }
+.fx-month .fx-tbl th { background: #fff; color: #9aa1a8; font-size: 10px; letter-spacing: .07em; padding: 11px 18px 7px; border-bottom: 1px solid var(--hair); }
+.fx-month .fx-tbl td { padding: 13px 18px; border-top: 1px solid #eef0f2; font-size: 14px; }
+.fx-month .fx-tbl tbody tr:not(.fx-clinrow):hover td { background: #f8fbfb; }
+.fx-month .fx-tbl tbody tr.on td { background: #eef7f6; }
+.fx-month .fx-tbl td.nm { font-weight: 600; }
+
+/* Clinician sub-header: a clear tinted band with a teal accent bar. */
+.fx-month .fx-clinrow td { background: #f4f6f7; border-top: 2px solid var(--edge); padding: 9px 18px; }
+.fx-month .fx-clinrow td.fx-chk { box-shadow: inset 3px 0 0 var(--teal, #2E8E93); }
+.fx-clinname { font-weight: 700; color: var(--ink); font-size: 13px; letter-spacing: .01em; }
+.fx-clincount { display: inline-block; margin-left: 8px; font-weight: 600; font-size: 11px; color: var(--teal-deep, #1f6d70); background: #e2efee; border-radius: 999px; padding: 1px 8px; }
 
 /* ---- Aged insurance claims report ---- */
 .ac-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
