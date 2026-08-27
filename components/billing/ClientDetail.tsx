@@ -73,6 +73,7 @@ export default function ClientDetail({
   const [acClin, setAcClin] = useState(clinicians[0]?.id ?? "");
   const [acInsurer, setAcInsurer] = useState(insurerId ?? "");
   const [acAmount, setAcAmount] = useState("");
+  const [acCodes, setAcCodes] = useState<string[]>([]);
   const [acStage, setAcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
   // Bulk-edit: apply one change to every selected charge at once.
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -132,6 +133,22 @@ export default function ClientDetail({
       return next;
     });
   }
+  // The same CPT picker on the ADD-a-charge form, auto-suggesting the Amount.
+  function resuggestAcFee(next: string[]) {
+    if (cptCodes.length) { const sum = next.reduce((s, c) => s + cptFee(c), 0); if (sum > 0) setAcAmount(String(round2(sum))); }
+  }
+  function toggleAcCode(code: string, on: boolean) {
+    setAcCodes((prev) => { const next = on ? [...prev, code] : prev.filter((c) => c !== code); resuggestAcFee(next); return next; });
+  }
+  function bumpAcCode(code: string, delta: number) {
+    setAcCodes((prev) => {
+      const next = [...prev];
+      if (delta > 0) next.push(code);
+      else { const i = next.lastIndexOf(code); if (i >= 0) next.splice(i, 1); }
+      resuggestAcFee(next);
+      return next;
+    });
+  }
   // The insurance billed to the payer on the currently-edited charge.
   const ecBilledInsurance = round2(Math.max(0, (Number(ecTotal) || 0) - (Number(ecDue) || 0)));
   // For a write-off/write-down, resolve the cash collected from what the biller typed.
@@ -180,10 +197,10 @@ export default function ClientDetail({
     try {
       const res = await fetch(`/api/billing/clients/${id}/charges`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicianId: acClin, dateOfService: acDate, insurerId: acInsurer || null, totalCost: Number(acAmount) || 0, stage: acStage }),
+        body: JSON.stringify({ clinicianId: acClin, dateOfService: acDate, insurerId: acInsurer || null, totalCost: Number(acAmount) || 0, stage: acStage, cptCodes: acCodes }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not add.");
-      setShowAdd(false); setAcDate(""); setAcAmount(""); router.refresh();
+      setShowAdd(false); setAcDate(""); setAcAmount(""); setAcCodes([]); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not add."); }
     finally { setBusy(false); }
   }
@@ -627,6 +644,31 @@ export default function ClientDetail({
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
                   <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option></select></label>
                 </div>
+                {cptCodes.length > 0 && (
+                  <div className="cd-editcodes">
+                    <span className="cd-lab">Service codes <span className="opt">sets the amount and builds the CMS-1500</span></span>
+                    <div className="cd-codechips">
+                      {acCodes.length === 0 && <span className="cd-nocodes">No codes yet</span>}
+                      {collapseUnits(acCodes).map(({ code, units }) => (
+                        <span className="cd-codechip" key={code} title={cptLabel(code)}>
+                          {code}
+                          <span className="cd-qty">
+                            <button type="button" className="qb" aria-label={`Fewer units of ${code}`} onClick={() => bumpAcCode(code, -1)} disabled={units <= 1}>−</button>
+                            <span className="qn">×{units}</span>
+                            <button type="button" className="qb" aria-label={`More units of ${code}`} onClick={() => bumpAcCode(code, 1)}>+</button>
+                          </span>
+                          <button type="button" className="cx" aria-label={`Remove ${code}`} onClick={() => toggleAcCode(code, false)}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <select className="ls-in" value="" onChange={(e) => { if (e.target.value) toggleAcCode(e.target.value, true); }}>
+                      <option value="">+ Add a code…</option>
+                      {cptCodes.filter((c) => !acCodes.includes(c.code)).map((c) => (
+                        <option key={c.code} value={c.code}>{c.code} · {c.description} ({money(c.fee)})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}) — it won&apos;t be paid.</p>
                 )}
