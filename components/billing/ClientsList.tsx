@@ -14,9 +14,38 @@ export interface ClientRow {
 const money0 = (n: number) => (n ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—");
 type SortKey = "name" | "insurer" | "clinician" | "paid" | "lastVisit";
 
-export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: ClientRow[]; seesAll: boolean; clinicians?: { id: string; name: string }[] }) {
+export default function ClientsList({ rows, seesAll, clinicians = [], assignable = [], insurers = [] }: {
+  rows: ClientRow[]; seesAll: boolean;
+  clinicians?: { id: string; name: string }[];
+  assignable?: { id: string; name: string }[];
+  insurers?: { id: string; name: string }[];
+}) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
+  // "Add a client on behalf of a clinician" (biller/owner/admin).
+  const [adding, setAdding] = useState(false);
+  const [nClin, setNClin] = useState("");
+  const [nFirst, setNFirst] = useState("");
+  const [nLast, setNLast] = useState("");
+  const [nInsurer, setNInsurer] = useState("");
+  const [nDob, setNDob] = useState("");
+  const [nBusy, setNBusy] = useState(false);
+  const [nErr, setNErr] = useState("");
+
+  async function createClient() {
+    if (!nClin) { setNErr("Pick the clinician this client belongs to."); return; }
+    if (!nFirst.trim() || !nLast.trim()) { setNErr("Enter the client's first and last name."); return; }
+    setNBusy(true); setNErr("");
+    try {
+      const res = await fetch("/api/billing/clients", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clinicianId: nClin, first: nFirst, last: nLast, insurerId: nInsurer || null, dob: nDob || null }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not add the client.");
+      router.push(`/billing/clients/${j.clientId}`);
+    } catch (e) { setNErr(e instanceof Error ? e.message : "Could not add the client."); setNBusy(false); }
+  }
   const [q, setQ] = useState("");
   const [filterClin, setFilterClin] = useState("");
   const [filterInsurer, setFilterInsurer] = useState("");
@@ -78,6 +107,11 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
 
   return (
     <div className="su-sec">
+      {seesAll && assignable.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button type="button" className="cl-newbtn" onClick={() => { setAdding(true); setNErr(""); }}>+ New client</button>
+        </div>
+      )}
       {rows.length > 0 && (
         <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <input className="ls-in" type="search" placeholder="Search clients by name…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search clients by name" style={{ maxWidth: 300 }} />
@@ -151,6 +185,39 @@ export default function ClientsList({ rows, seesAll, clinicians = [] }: { rows: 
           <div className="sp" />
           <button className="go" onClick={generate}>Generate CMS-1500</button>
           <button className="x" onClick={() => setSel(new Set())}>Clear</button>
+        </div>
+      )}
+
+      {adding && (
+        <div className="cl-modalback" onClick={() => !nBusy && setAdding(false)}>
+          <div className="cl-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cl-modalhead"><span>New client</span><button type="button" className="cl-modalx" onClick={() => setAdding(false)} aria-label="Close">×</button></div>
+            <p className="cl-modalsub">Add a client for a clinician. It goes straight into their book, and dedups against any existing record the same way a logged session would.</p>
+
+            <label className="cl-lab">Assign to clinician <span className="ls-req">*</span>
+              <select className="ls-in" value={nClin} onChange={(e) => setNClin(e.target.value)} autoFocus>
+                <option value="">Choose a clinician…</option>
+                {assignable.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+            <div className="cl-row2">
+              <label className="cl-lab">First name <span className="ls-req">*</span><input className="ls-in" value={nFirst} onChange={(e) => setNFirst(e.target.value)} /></label>
+              <label className="cl-lab">Last name <span className="ls-req">*</span><input className="ls-in" value={nLast} onChange={(e) => setNLast(e.target.value)} /></label>
+            </div>
+            <label className="cl-lab">Usual insurer
+              <select className="ls-in" value={nInsurer} onChange={(e) => setNInsurer(e.target.value)}>
+                <option value="">Self-pay</option>
+                {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </select>
+            </label>
+            <label className="cl-lab">Date of birth <span className="cl-opt">optional, helps match records and claims</span><input type="date" className="ls-in" value={nDob} onChange={(e) => setNDob(e.target.value)} /></label>
+
+            {nErr && <div className="cl-err">{nErr}</div>}
+            <div className="cl-modalfoot">
+              <button type="button" className="cl-cancel" onClick={() => setAdding(false)}>Cancel</button>
+              <button type="button" className="cl-newbtn" onClick={createClient} disabled={nBusy}>{nBusy ? "Adding…" : "Add client"}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

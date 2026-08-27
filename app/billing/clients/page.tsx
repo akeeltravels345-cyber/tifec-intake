@@ -3,7 +3,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listSessions, listExternalClinicians } from "@/lib/billing";
 import { insurancePortion, collectedAtVisit } from "@/lib/billingCalc";
 import { listClients, listAllClients } from "@/lib/clients";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import ClientsList, { type ClientRow } from "@/components/billing/ClientsList";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,16 @@ export default async function ClientsPage() {
             : "The clients you've seen. Open one for their details and history, or tick several to build their CMS-1500 claims together."}
         </p>
       </div>
-      <ClientsList rows={rows} seesAll={seesAll} clinicians={clinicianOptions} />
+      <ClientsList
+        rows={rows}
+        seesAll={seesAll}
+        clinicians={clinicianOptions}
+        assignable={seesAll ? [
+          ...CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller").map((c) => ({ id: c.id, name: c.name })),
+          ...external.map((c) => ({ id: c.id, name: `${c.name} (external)` })),
+        ] : []}
+        insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))}
+      />
     </>
   );
 }

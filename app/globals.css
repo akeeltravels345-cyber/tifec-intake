@@ -1996,6 +1996,24 @@ body:has(.biz) { background: #F8F9F8; }
 .cp-acts { display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .cp-invoice { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--indigo); text-decoration: none; white-space: nowrap; }
 .cp-invoice:hover { background: #f2f0fb; }
+/* Add-a-client (biller on behalf of a clinician) */
+.cl-newbtn { background: var(--indigo, #2E3192); color: #fff; border: 0; border-radius: 10px; padding: 9px 18px; font: 600 13.5px "Open Sans"; cursor: pointer; white-space: nowrap; }
+.cl-newbtn:hover:not(:disabled) { background: #24276f; }
+.cl-newbtn:disabled { opacity: .55; cursor: default; }
+.cl-modalback { position: fixed; inset: 0; background: rgba(26,29,36,.42); display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px; z-index: 200; }
+.cl-modal { background: #fff; border-radius: 16px; width: 460px; max-width: 100%; padding: 20px 22px; box-shadow: 0 20px 60px rgba(20,25,40,.3); max-height: 84vh; overflow-y: auto; }
+.cl-modalhead { display: flex; align-items: center; justify-content: space-between; }
+.cl-modalhead span { font: 600 18px "Newsreader", serif; color: var(--ink); }
+.cl-modalx { background: none; border: 0; font-size: 24px; line-height: 1; color: var(--muted); cursor: pointer; }
+.cl-modalsub { font-size: 12.5px; color: var(--muted, #6a6f66); margin: 4px 0 16px; line-height: 1.5; }
+.cl-lab { display: block; font: 700 11px "Open Sans"; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.cl-lab .ls-in { display: block; width: 100%; margin-top: 5px; text-transform: none; letter-spacing: normal; font-weight: 400; }
+.cl-row2 { display: flex; gap: 12px; }
+.cl-row2 .cl-lab { flex: 1; }
+.cl-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--faint, #9aa1a8); }
+.cl-err { color: #b3261e; font-size: 13px; margin: 2px 0 12px; }
+.cl-modalfoot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.cl-cancel { background: none; border: 1px solid var(--edge); border-radius: 10px; padding: 9px 16px; font: 600 13px "Open Sans"; color: var(--ink); cursor: pointer; }
 /* Fix-collected-dates cleanup tool */
 .fx-chk input, .fx-mselect { width: 16px; height: 16px; accent-color: var(--teal, #2E8E93); cursor: pointer; }
 .fx-wrong { color: #b3261e; font-weight: 600; white-space: nowrap; }
