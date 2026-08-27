@@ -29,8 +29,12 @@ export default function InsuranceCollectedKpi({ total, thisMonth, prior, monthLa
   total: number; thisMonth: number; prior: number; monthLabel: string; rows: InsRow[];
 }) {
   const [open, setOpen] = useState(false);
-  const priorRows = rows.filter((r) => !r.fromThisMonth);
-  const thisRows = rows.filter((r) => r.fromThisMonth);
+  // Within each section: group a client's visits together (by name), and order
+  // that client's visit dates oldest first.
+  const byClientThenDate = (a: InsRow, b: InsRow) =>
+    a.client.localeCompare(b.client) || a.dateOfService.localeCompare(b.dateOfService);
+  const priorRows = rows.filter((r) => !r.fromThisMonth).sort(byClientThenDate);
+  const thisRows = rows.filter((r) => r.fromThisMonth).sort(byClientThenDate);
   const hasSplit = total > 0 && rows.length > 0;
 
   return (
