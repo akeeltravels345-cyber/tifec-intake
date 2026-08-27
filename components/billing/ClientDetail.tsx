@@ -74,6 +74,7 @@ export default function ClientDetail({
   const [acInsurer, setAcInsurer] = useState(insurerId ?? "");
   const [acAmount, setAcAmount] = useState("");
   const [acCodes, setAcCodes] = useState<string[]>([]);
+  const [acPaidDate, setAcPaidDate] = useState(today);
   const [acStage, setAcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
   // Bulk-edit: apply one change to every selected charge at once.
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -193,14 +194,15 @@ export default function ClientDetail({
   }
   async function addChargeNow() {
     if (!acDate || !acAmount) { setMsg("Enter a date and amount for the charge."); return; }
+    if (acStage === "paid" && !acPaidDate) { setMsg("Enter the date the payment was collected."); return; }
     setBusy(true); setMsg("");
     try {
       const res = await fetch(`/api/billing/clients/${id}/charges`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicianId: acClin, dateOfService: acDate, insurerId: acInsurer || null, totalCost: Number(acAmount) || 0, stage: acStage, cptCodes: acCodes }),
+        body: JSON.stringify({ clinicianId: acClin, dateOfService: acDate, insurerId: acInsurer || null, totalCost: Number(acAmount) || 0, stage: acStage, cptCodes: acCodes, ...(acStage === "paid" ? { paidDate: acPaidDate } : {}) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not add.");
-      setShowAdd(false); setAcDate(""); setAcAmount(""); setAcCodes([]); router.refresh();
+      setShowAdd(false); setAcDate(""); setAcAmount(""); setAcCodes([]); setAcPaidDate(today); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not add."); }
     finally { setBusy(false); }
   }
@@ -643,6 +645,7 @@ export default function ClientDetail({
                   <label>Insurer<select className="ls-in" value={acInsurer} onChange={(e) => setAcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
                   <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option></select></label>
+                  {acStage === "paid" && <label>Collected date<input type="date" className="ls-in" value={acPaidDate} max={today} onChange={(e) => setAcPaidDate(e.target.value)} title="When the payment actually came in — this books it to the right month" /></label>}
                 </div>
                 {cptCodes.length > 0 && (
                   <div className="cd-editcodes">
