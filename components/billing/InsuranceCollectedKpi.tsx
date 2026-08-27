@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export interface InsRow {
@@ -25,8 +26,8 @@ function fmtDay(iso: string | null): string {
 // money for this month's visits vs money that only landed now for older visits
 // (the insurance lag). Expands to an itemised list. Rendered inside the KPI
 // grid; the breakdown panel spans the full grid width as its own row.
-export default function InsuranceCollectedKpi({ total, thisMonth, prior, monthLabel, rows }: {
-  total: number; thisMonth: number; prior: number; monthLabel: string; rows: InsRow[];
+export default function InsuranceCollectedKpi({ total, thisMonth, prior, monthLabel, rows, reportHref }: {
+  total: number; thisMonth: number; prior: number; monthLabel: string; rows: InsRow[]; reportHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   // Within each section: group a client's visits together (by name), and order
@@ -59,7 +60,10 @@ export default function InsuranceCollectedKpi({ total, thisMonth, prior, monthLa
         <div className="ins-breakdown">
           <div className="ins-bd-head">
             <span>What made up this month&apos;s insurance cash</span>
-            <span className="ins-bd-sub">by the visit it paid for</span>
+            <span className="ins-bd-sub">
+              by the visit it paid for
+              {reportHref && <> &middot; <Link href={reportHref} className="ins-bd-print">Print report</Link></>}
+            </span>
           </div>
 
           <div className="ins-bd-group">

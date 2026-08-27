@@ -1731,6 +1731,8 @@ body:has(.biz) { background: #F8F9F8; }
 .ins-bd-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .ins-bd-head > span:first-child { font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .ins-bd-sub { font-size: 11.5px; color: var(--muted, #6a6f66); }
+.ins-bd-print { color: var(--teal-deep, #0f766e); font-weight: 700; text-decoration: none; }
+.ins-bd-print:hover { text-decoration: underline; }
 .ins-bd-group { border-top: 1px solid var(--edge); padding: 9px 0; }
 .ins-bd-grow { display: flex; justify-content: space-between; align-items: center; }
 .ins-bd-name { font-size: 13px; font-weight: 600; color: var(--ink); }
@@ -2088,6 +2090,13 @@ body:has(.biz) { background: #F8F9F8; }
 .ac-muted { color: #a2a8b3; }
 .ac-empty { text-align: center; color: #8a909b; padding: 20px; font-size: 9.4pt; }
 .ac-foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid #edeff3; font-size: 7.8pt; color: #a2a8b3; }
+
+/* Collections report (per-clinician insurance collected) */
+.ac-summary.col-3 { grid-template-columns: repeat(3, 1fr); }
+.col-tot { border-color: #cbd5e1; background: #f8fafc; }
+.col-secttl { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 10.5pt; margin: 4px 0 6px; padding-bottom: 5px; border-bottom: 2px solid #1a1d24; }
+.col-secttl span { font-variant-numeric: tabular-nums; }
+.ac-tbl tbody tr { break-inside: avoid; }
 
 @media print {
   .ac-noprint, .ac-back, .bo-side, .bo-mobtabs, .tm-banner { display: none !important; }
