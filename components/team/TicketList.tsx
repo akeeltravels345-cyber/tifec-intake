@@ -32,7 +32,8 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<"open" | "done">("open");
-  const [assignees, setAssignees] = useState<string[]>(contacts[0] ? [contacts[0].id] : []);
+  // No one is pre-selected; the person raising the ticket picks who it goes to.
+  const [assignees, setAssignees] = useState<string[]>([]);
   // Who the issue is from. Defaults to you; the admin/owner can log it for someone
   // who called or messaged them, so the ticket sits with that person.
   const [reportedBy, setReportedBy] = useState(meId);
