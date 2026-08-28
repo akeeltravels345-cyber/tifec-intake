@@ -125,6 +125,7 @@ const KEY_TO_SYMBOL: Record<string, string> = {
   "child-behaviour-self": "child",
   "parent-behaviour-assessment": "users",
   "ei-camp-agreement": "compass",
+  "peers-intake": "users",
   "l2-depression": "rain",
   "l2-anxiety": "pulse",
   "l2-anger": "flame",

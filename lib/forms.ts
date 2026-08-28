@@ -75,6 +75,7 @@ export type FormTemplateKey =
   | "child-behaviour-self"
   | "parent-behaviour-assessment"
   | "ei-camp-agreement"
+  | "peers-intake"
   | "l2p-depression"
   | "l2p-anxiety"
   | "l2p-anger"
@@ -1159,6 +1160,504 @@ export const EI_CAMP_AGREEMENT: FormSection[] = [
   },
 ];
 
+// =============================================================================
+// PEERS® SOCIAL SKILLS PROGRAM  (Parent/Caregiver Intake Interview)
+// Educational-psychology intake completed by a parent or caregiver.
+// =============================================================================
+const PEERS_SMNU = ["Strength", "Mild need", "Significant need", "Unknown"];
+const PEERS_GSS = ["Good", "Some difficulty", "Significant difficulty"];
+
+export const PEERS_INTAKE: FormSection[] = [
+  {
+    id: "peers-info",
+    title: "Child & Family Information",
+    description:
+      "This intake helps us understand your child's social strengths, challenges, and goals before beginning the PEERS® Social Skills Program.",
+    fields: [
+      { name: "full_name", label: "Child / adolescent's full name", type: "text", required: true },
+      { name: "dob", label: "Date of birth", type: "date", required: true },
+      { name: "email", label: "Parent / caregiver email", type: "email", required: true, help: EMAIL_NOTE },
+      { name: "parent_name", label: "Parent / caregiver completing this form", type: "text", required: true },
+      { name: "parent_relationship", label: "Relationship to the child", type: "text" },
+      { name: "school_grade", label: "School and grade", type: "text" },
+      {
+        name: "primary_diagnosis",
+        label: "Primary diagnosis / diagnoses, if applicable",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-referral",
+    title: "1. Reason for Referral",
+    fields: [
+      {
+        name: "referral_reason",
+        label: "1. What led you to consider a social skills program for your child at this time?",
+        type: "textarea",
+        required: true,
+      },
+      {
+        name: "main_concerns",
+        label: "2. What are your main concerns about your child's social functioning?",
+        type: "textarea",
+        required: true,
+      },
+      {
+        name: "referral_source",
+        label: "3. Who recommended or initiated the referral?",
+        type: "radio",
+        options: ["Parent/caregiver", "Child/adolescent", "School", "Psychologist/therapist", "Physician", "Other"],
+      },
+      {
+        name: "referral_source_other",
+        label: "If other, please specify",
+        type: "text",
+        showIf: { field: "referral_source", equals: "Other" },
+      },
+      {
+        name: "improve_1",
+        label: "4. If your child could improve three things socially, what would you most like those to be? (First)",
+        type: "text",
+      },
+      { name: "improve_2", label: "Second", type: "text" },
+      { name: "improve_3", label: "Third", type: "text" },
+      {
+        name: "recognizes_difficulty",
+        label: "5. Does your child recognize any social difficulties or express a desire for things to be different?",
+        type: "radio",
+        options: ["Yes", "Somewhat", "No", "Unsure"],
+      },
+      {
+        name: "recognizes_difficulty_explain",
+        label: "Please explain",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-strengths",
+    title: "2. Social Strengths and Interests",
+    fields: [
+      { name: "strengths", label: "6. What would you describe as your child's greatest strengths?", type: "textarea" },
+      {
+        name: "interests",
+        label: "7. What activities, hobbies, games, sports, clubs, or topics does your child enjoy?",
+        type: "textarea",
+      },
+      {
+        name: "comfortable_situations",
+        label: "8. In what social situations does your child seem most comfortable or successful?",
+        type: "textarea",
+      },
+      {
+        name: "connects_with",
+        label: "9. What types of people does your child tend to connect with most easily?",
+        type: "textarea",
+      },
+      {
+        name: "positive_qualities",
+        label: "10. What positive qualities does your child bring to friendships?",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-friendships",
+    title: "3. Current Friendships and Peer Relationships",
+    fields: [
+      {
+        name: "has_friends",
+        label: "11. Does your child currently have friends?",
+        type: "radio",
+        options: ["No close friends", "One close friend", "A few friends", "Several friends", "Unclear"],
+      },
+      {
+        name: "contact_frequency",
+        label:
+          "12. How often does your child communicate or spend time with peers outside of school or structured activities?",
+        type: "radio",
+        options: [
+          "Rarely/never",
+          "Less than once per month",
+          "A few times per month",
+          "About once per week",
+          "Several times per week",
+        ],
+      },
+      {
+        name: "invited_frequency",
+        label: "13. Does your child get invited to social activities, parties, outings, or get-togethers?",
+        type: "radio",
+        options: ["Frequently", "Sometimes", "Rarely", "Never", "Unsure"],
+      },
+      {
+        name: "initiates_frequency",
+        label: "14. Does your child initiate contact with peers or invite peers to spend time together?",
+        type: "radio",
+        options: ["Frequently", "Sometimes", "Rarely", "Never"],
+      },
+      {
+        name: "friendship_satisfaction",
+        label: "15. How satisfied does your child appear to be with their current friendships?",
+        type: "radio",
+        options: ["Very satisfied", "Somewhat satisfied", "Somewhat dissatisfied", "Very dissatisfied", "Unsure"],
+      },
+      { name: "friendship_goeswell", label: "16. What tends to go well in your child's friendships?", type: "textarea" },
+      {
+        name: "friendship_difficulty",
+        label: "17. What tends to cause friendships to become difficult or end?",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-communication",
+    title: "4. Social Communication Skills",
+    description:
+      "For each area, consider whether this is currently a Strength, a Mild need, a Significant need, or Unknown.",
+    fields: [
+      { name: "sc_starting", label: "Starting conversations", type: "radio", options: PEERS_SMNU },
+      { name: "sc_maintaining", label: "Maintaining back-and-forth conversation", type: "radio", options: PEERS_SMNU },
+      { name: "sc_listening", label: "Listening / showing interest in others", type: "radio", options: PEERS_SMNU },
+      { name: "sc_questions", label: "Asking appropriate questions", type: "radio", options: PEERS_SMNU },
+      { name: "sc_ontopic", label: "Staying on topic", type: "radio", options: PEERS_SMNU },
+      { name: "sc_uninterested", label: "Recognizing when someone is uninterested", type: "radio", options: PEERS_SMNU },
+      { name: "sc_humor", label: "Understanding humor / sarcasm", type: "radio", options: PEERS_SMNU },
+      { name: "sc_bodylanguage", label: "Reading facial expressions / body language", type: "radio", options: PEERS_SMNU },
+      { name: "sc_boundaries", label: "Respecting personal boundaries", type: "radio", options: PEERS_SMNU },
+      { name: "sc_joining", label: "Joining conversations / groups", type: "radio", options: PEERS_SMNU },
+      { name: "sc_exiting", label: "Exiting conversations appropriately", type: "radio", options: PEERS_SMNU },
+      { name: "sc_media", label: "Using phone / text / social media appropriately", type: "radio", options: PEERS_SMNU },
+      {
+        name: "conversation_habits",
+        label:
+          "18. Are there particular conversation habits that interfere with peer relationships (e.g., interrupting, talking excessively about preferred interests, correcting others, limited reciprocity)?",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-making-friends",
+    title: "5. Making and Maintaining Friendships",
+    description: "19. How well does your child:",
+    fields: [
+      { name: "mm_identify", label: "Identify appropriate potential friends", type: "radio", options: PEERS_GSS },
+      { name: "mm_approach", label: "Approach unfamiliar peers", type: "radio", options: PEERS_GSS },
+      { name: "mm_similar", label: "Find peers with similar interests", type: "radio", options: PEERS_GSS },
+      { name: "mm_contact", label: "Exchange contact information", type: "radio", options: PEERS_GSS },
+      { name: "mm_arrange", label: "Arrange get-togethers", type: "radio", options: PEERS_GSS },
+      { name: "mm_participate", label: "Participate appropriately in get-togethers", type: "radio", options: PEERS_GSS },
+      { name: "mm_compromise", label: "Compromise with peers", type: "radio", options: PEERS_GSS },
+      { name: "mm_disagreements", label: "Handle disagreements", type: "radio", options: PEERS_GSS },
+      { name: "mm_maintain", label: "Maintain friendships over time", type: "radio", options: PEERS_GSS },
+      {
+        name: "want_more_friends",
+        label: "20. Does your child want more friendships or closer friendships?",
+        type: "radio",
+        options: ["Yes", "No", "Sometimes", "Unsure"],
+      },
+      {
+        name: "opportunities_available",
+        label: "21. Are there opportunities available for your child to meet peers with similar interests?",
+        type: "radio",
+        options: ["Yes", "Limited", "No", "Unsure"],
+      },
+      { name: "opportunities_examples", label: "Examples", type: "textarea" },
+    ],
+  },
+  {
+    id: "peers-conflict",
+    title: "6. Peer Conflict, Teasing, Bullying, and Social Vulnerability",
+    fields: [
+      {
+        name: "conflict_experiences",
+        label: "22. Has your child experienced any of the following?",
+        type: "checkboxgroup",
+        options: [
+          "Teasing",
+          "Bullying",
+          "Cyberbullying",
+          "Being excluded",
+          "Being ignored by peers",
+          "Arguments/conflict",
+          "Rumors/gossip",
+          "Being taken advantage of",
+          "Difficulty recognizing when peers are being insincere",
+          "Difficulty managing a bad reputation",
+          "None known",
+        ],
+      },
+      {
+        name: "conflict_response",
+        label: "23. How does your child typically respond to teasing, rejection, or conflict?",
+        type: "textarea",
+      },
+      {
+        name: "makes_worse",
+        label: "24. Does your child ever respond in ways that unintentionally make peer problems worse?",
+        type: "radio",
+        options: ["Frequently", "Sometimes", "Rarely", "Never", "Unsure"],
+      },
+      { name: "makes_worse_describe", label: "Please describe", type: "textarea" },
+      {
+        name: "unsafe_friendships_concern",
+        label:
+          "25. Are you concerned about your child's ability to recognize unsafe, manipulative, or unhealthy friendships?",
+        type: "radio",
+        options: ["Yes", "Somewhat", "No"],
+      },
+      { name: "unsafe_friendships_explain", label: "Please explain", type: "textarea" },
+    ],
+  },
+  {
+    id: "peers-emotional",
+    title: "7. Emotional and Behavioral Functioning",
+    fields: [
+      {
+        name: "emotional_difficulties",
+        label: "26. Does your child currently experience difficulties with:",
+        type: "checkboxgroup",
+        options: [
+          "Anxiety in social situations",
+          "General anxiety/worry",
+          "Low mood",
+          "Low self-esteem",
+          "Anger/irritability",
+          "Emotional regulation",
+          "Impulsivity",
+          "Inattention/distractibility",
+          "Rigidity/difficulty with change",
+          "Sensory sensitivities",
+          "Behavioral outbursts",
+          "School refusal",
+          "None of the above",
+          "Other",
+        ],
+      },
+      {
+        name: "emotional_difficulties_other",
+        label: "If other, please specify",
+        type: "text",
+        showIf: { field: "emotional_difficulties", includes: "Other" },
+      },
+      {
+        name: "frustration_response",
+        label: "27. When your child becomes frustrated or upset, what typically happens?",
+        type: "textarea",
+      },
+      {
+        name: "calm_down",
+        label: "28. How easily can your child calm down and return to an activity following frustration?",
+        type: "radio",
+        options: [
+          "Easily",
+          "With some adult support",
+          "Requires significant support",
+          "Frequently unable to return to the activity",
+        ],
+      },
+      {
+        name: "group_safety_concern",
+        label:
+          "29. Are there any behaviors that could make participation in a structured social skills group difficult or unsafe?",
+        type: "radio",
+        options: ["No", "Yes", "Unsure"],
+      },
+      { name: "group_safety_describe", label: "If yes, please describe", type: "textarea" },
+    ],
+  },
+  {
+    id: "peers-services",
+    title: "8. Previous Services and Interventions",
+    fields: [
+      {
+        name: "previous_services",
+        label: "30. Has your child previously participated in:",
+        type: "checkboxgroup",
+        options: [
+          "Individual therapy",
+          "Group therapy",
+          "Social skills training",
+          "PEERS®",
+          "Speech/language therapy",
+          "Occupational therapy",
+          "Behavioral intervention",
+          "School counselling",
+          "Other",
+          "None",
+        ],
+      },
+      {
+        name: "previous_services_other",
+        label: "If other, please specify",
+        type: "text",
+        showIf: { field: "previous_services", includes: "Other" },
+      },
+      {
+        name: "helpful_strategies",
+        label: "31. What strategies or interventions have been most helpful?",
+        type: "textarea",
+      },
+      { name: "unhelpful_strategies", label: "32. What has not worked well?", type: "textarea" },
+      {
+        name: "current_professionals",
+        label: "33. Are there current professionals involved in your child's care?",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-readiness",
+    title: "9. Child / Adolescent Motivation and Group Readiness",
+    fields: [
+      {
+        name: "feels_about_group",
+        label: "34. How does your child feel about participating in a social skills group?",
+        type: "radio",
+        options: [
+          "Very interested",
+          "Somewhat interested",
+          "Neutral/unsure",
+          "Reluctant",
+          "Strongly opposed",
+          "Child has not yet been told",
+        ],
+      },
+      {
+        name: "recognizes_helpful",
+        label: "35. Does your child recognize that learning social strategies could be helpful?",
+        type: "radio",
+        options: ["Yes", "Somewhat", "No", "Unsure"],
+      },
+      {
+        name: "group_participation",
+        label: "36. How well can your child participate in a structured group setting?",
+        type: "radio",
+        options: [
+          "Independently",
+          "With occasional prompting",
+          "Requires frequent prompting/support",
+          "Significant difficulty participating in groups",
+        ],
+      },
+      {
+        name: "group_can_generally",
+        label: "37. Can your child generally:",
+        type: "checkboxgroup",
+        options: [
+          "Follow group rules",
+          "Take turns",
+          "Listen while others speak",
+          "Accept corrective feedback",
+          "Practice unfamiliar skills",
+          "Participate in role-play",
+          "Complete activities between sessions",
+          "Tolerate mild social discomfort/frustration",
+        ],
+      },
+      {
+        name: "reluctant_reasons",
+        label: "38. What might make your child reluctant to participate?",
+        type: "textarea",
+      },
+    ],
+  },
+  {
+    id: "peers-caregiver",
+    title: "10. Parent / Caregiver Participation",
+    intro: [
+      "PEERS® involves parent/caregiver participation and coaching outside of sessions.",
+    ],
+    fields: [
+      {
+        name: "coach_name",
+        label: "39. Who would most likely serve in the coaching role? (Name and relationship)",
+        type: "text",
+      },
+      {
+        name: "coach_willing",
+        label: "40. Is this person able and willing to:",
+        type: "checkboxgroup",
+        options: [
+          "Attend scheduled parent/caregiver sessions",
+          "Learn the social skills taught to the child",
+          "Coach skills between sessions",
+          "Support weekly practice/homework",
+          "Help identify appropriate peers",
+          "Help arrange social opportunities/get-togethers",
+          "Provide encouragement without taking over social interactions",
+        ],
+      },
+      {
+        name: "practical_barriers",
+        label: "41. Are there practical barriers that may affect regular participation?",
+        type: "checkboxgroup",
+        options: [
+          "Transportation",
+          "Work schedule",
+          "Child's extracurricular schedule",
+          "Caregiver availability",
+          "Financial concerns",
+          "Attendance concerns",
+          "None",
+          "Other",
+        ],
+      },
+      {
+        name: "practical_barriers_other",
+        label: "If other, please specify",
+        type: "text",
+        showIf: { field: "practical_barriers", includes: "Other" },
+      },
+    ],
+  },
+  {
+    id: "peers-goals",
+    title: "11. Goals for PEERS®",
+    fields: [
+      {
+        name: "success_looks_like",
+        label: "42. What would successful participation in this program look like for your child?",
+        type: "textarea",
+      },
+      {
+        name: "areas_to_address",
+        label: "43. Which areas would you most like the program to address?",
+        type: "checkboxgroup",
+        options: [
+          "Starting conversations",
+          "Maintaining conversations",
+          "Finding appropriate friends",
+          "Joining peer groups",
+          "Developing closer friendships",
+          "Planning/getting invited to get-togethers",
+          "Handling teasing",
+          "Handling bullying",
+          "Managing disagreements",
+          "Improving reputation",
+          "Appropriate electronic communication",
+          "Dating/romantic skills, if developmentally appropriate",
+          "Social confidence",
+          "Other",
+        ],
+      },
+      {
+        name: "areas_to_address_other",
+        label: "If other, please specify",
+        type: "text",
+        showIf: { field: "areas_to_address", includes: "Other" },
+      },
+      {
+        name: "most_important_change",
+        label: "44. What would be the most important change you would hope to see by the end of the program?",
+        type: "textarea",
+      },
+      { name: "additional_notes", label: "Additional notes", type: "textarea" },
+    ],
+  },
+];
+
 export interface FormTemplate {
   key: FormTemplateKey;
   /** Internal name — what clinicians/admin see (dashboard, submissions, oversight). */
@@ -1248,6 +1747,13 @@ export const FORM_TEMPLATES = {
     label: "Emotional Intelligence Camp Rules & Agreement",
     clientLabel: "Emotional Intelligence Camp Agreement",
     body: EI_CAMP_AGREEMENT,
+  },
+  "peers-intake": {
+    key: "peers-intake",
+    label: "PEERS® Social Skills Program Intake",
+    clientLabel: "PEERS® Social Skills Program - Parent/Caregiver Intake",
+    body: PEERS_INTAKE,
+    appendConsent: true,
   },
   ...L2_TEMPLATES,
 } as Record<FormTemplateKey, FormTemplate>;
