@@ -952,6 +952,32 @@ button.dash-subcue-link:hover .dash-subcue-arrow { transform: translateX(3px); }
 
   /* Interactive-only controls have no meaning on paper. */
   .tour-status, .status-control, .notes-actions { display: none !important; }
+
+  /* ---- Blank intake form on paper -------------------------------------- */
+  /* Screen-only chrome: crisis banner, live progress bar, the change/submit
+     buttons. None of it belongs on a printed or PDF'd form. */
+  .notice, .form-progress, .primary { display: none !important; }
+
+  /* The whole point: never split a question from its answer across a page.
+     Each question (label + input/options + help) prints as one intact block,
+     so nothing lands half on one page and half on the next. */
+  .field { break-inside: avoid; page-break-inside: avoid; }
+  .field label.q { break-after: avoid; }
+  /* A section heading must stay with at least the first question under it. */
+  .card .section-title { break-after: avoid; }
+
+  /* Blank fields need a visible box/line to write in on paper. */
+  input, select, textarea {
+    border: 1px solid #999 !important;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  textarea { min-height: 54px; }
+  /* Option chips: show as outlined boxes so a choice can be ticked by hand. */
+  .seg-option { border: 1px solid #999 !important; background: #fff !important; color: #000 !important; }
+  .seg-option.selected { border-color: #000 !important; font-weight: 700; }
 }
 
 /* ================= Modern dashboard (dm-*) — harmonized to the billing look ======= */
