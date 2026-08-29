@@ -102,8 +102,8 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
               { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-              { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
-              { href: "/billing/import", label: "Import", icon: IcLog, match: (p) => p === "/billing/import" },
+              // Import + Import review removed from the biller menu for now (routes
+              // kept, so they can be brought back later if needed).
               { href: "/billing/fix-dates", label: "Fix dates", icon: IcSetup, match: (p) => p.startsWith("/billing/fix-dates"), highlight: true },
             ]
           : [

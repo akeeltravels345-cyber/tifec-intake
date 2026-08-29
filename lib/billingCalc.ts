@@ -94,6 +94,24 @@ export function writeDown(s: BillingSession): number {
 
 const sumBy = (arr: BillingSession[], f: (s: BillingSession) => number) => round2(arr.reduce((t, s) => t + f(s), 0));
 
+/** Practice-wide cash collected in a given month, bucketed by when it actually
+ *  came in: an insured co-pay by its copayPaidDate (defaults to the visit),
+ *  self-pay by its paid date, and insurance by its paidDate. This is exactly
+ *  computeClinicianMonth's `collected`, summed across everyone — and because it's
+ *  session-additive it needs no per-clinician settings. */
+export function collectedInMonth(sessions: BillingSession[], year: number, month: number): number {
+  let total = 0;
+  for (const s of sessions) {
+    if (s.insurerId) {
+      if ((s.copayCollected || 0) > 0 && inMonth(s.copayPaidDate || s.dateOfService, year, month)) total += round2(s.copayCollected || 0);
+      if (insuranceSettled(s) && inMonth(s.paidDate, year, month)) total += insuranceCash(s);
+    } else if (inMonth(s.paidDate || s.dateOfService, year, month)) {
+      total += collectedAtVisit(s);
+    }
+  }
+  return round2(total);
+}
+
 // One insurance payment that landed this month, tagged by whether it paid for a
 // visit in this month or an earlier one. Names are resolved in the UI layer.
 export interface InsuranceCollectedItem {

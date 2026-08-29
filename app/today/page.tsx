@@ -8,8 +8,7 @@ import { isSystemAdmin } from "@/lib/clinicians";
 import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions, getPracticeConfig } from "@/lib/billing";
-import { insurancePortion, collectedAtVisit, selfPayOutstanding, insuranceCash } from "@/lib/billingCalc";
-import BookingValue from "@/components/billing/BookingValue";
+import { insurancePortion, collectedAtVisit, selfPayOutstanding, collectedInMonth } from "@/lib/billingCalc";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
 import Worklist from "@/components/today/Worklist";
@@ -63,7 +62,8 @@ export default async function TodayPage() {
   // Admin (builder) processing-fee numbers: the platform fee is a % of cash
   // collected, so "outstanding" is that % of money still to be collected.
   let feePct = 0, collectedAll = 0, outstandingAll = 0;
-  let avgPerClient = 0, payingClients = 0;
+  // Fee earned THIS month (the headline number), vs all-time (the history total).
+  let feeThisMonth = 0, collectedThisMonth = 0, feeMonthLabel = "";
   if (hasBilling) {
     const all = await listSessions();
     for (const s of all) {
@@ -77,22 +77,19 @@ export default async function TodayPage() {
 
     if (admin) {
       feePct = (await getPracticeConfig()).processingFeePct ?? 0;
-      // Cash collected per client → average revenue per paying client, the input
-      // to the "value per booking" readout below.
-      const byClient = new Map<string, number>();
       for (const s of all) {
-        // Cash already collected (drives the fee earned).
+        // Cash already collected all-time (drives the fee history total).
         collectedAll += collectedAtVisit(s);
         if (s.insurerId && s.insurancePaid) collectedAll += insurancePortion(s);
         // Money still to come in (will generate fee when it lands).
         if (s.insurerId && !s.insurancePaid) outstandingAll += insurancePortion(s);
         outstandingAll += selfPayOutstanding(s);
-        if (s.clientId) byClient.set(s.clientId, (byClient.get(s.clientId) ?? 0) + collectedAtVisit(s) + insuranceCash(s));
       }
       collectedAll = r2(collectedAll); outstandingAll = r2(outstandingAll);
-      const paying = [...byClient.values()].filter((v) => v > 0);
-      payingClients = paying.length;
-      avgPerClient = paying.length ? r2(paying.reduce((t, v) => t + v, 0) / paying.length) : 0;
+      const ym = caymanYearMonth();
+      collectedThisMonth = collectedInMonth(all, ym.year, ym.month);
+      feeThisMonth = r2((collectedThisMonth * feePct) / 100);
+      feeMonthLabel = new Date(ym.year, ym.month - 1, 1).toLocaleString("en-US", { month: "long" });
     }
 
     if (owner) {
@@ -185,11 +182,11 @@ export default async function TodayPage() {
           <>
             <div className="today-secrow"><span className="bo-lab">Your numbers</span></div>
             <div className="today-nums">
-              <div className="today-num">
-                <div className="k">Processing fee earned</div>
-                <div className="v">{money(feeEarned)}</div>
-                <div className="s">{feePct}% of {money(collectedAll)} collected so far</div>
-              </div>
+              <Link href="/billing/fees" className="today-num link">
+                <div className="k">Fee earned this month</div>
+                <div className="v">{money(feeThisMonth)}</div>
+                <div className="s">{feePct}% of {money(collectedThisMonth)} collected in {feeMonthLabel} · history →</div>
+              </Link>
               <div className="today-num owe">
                 <div className="k">Fee still to come</div>
                 <div className="v">{money(feeOutstanding)}</div>
@@ -207,7 +204,6 @@ export default async function TodayPage() {
               </Link>
             </div>
             {feePct === 0 && <p className="today-feenote">Set your platform processing fee % in <Link href="/billing/config">Setup</Link> to see these fill in.</p>}
-            <BookingValue avgPerClient={avgPerClient} payingClients={payingClients} />
           </>
         )}
 
