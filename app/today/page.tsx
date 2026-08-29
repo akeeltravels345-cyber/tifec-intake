@@ -12,6 +12,8 @@ import { insurancePortion, collectedAtVisit, selfPayOutstanding, insuranceCash }
 import BookingValue from "@/components/billing/BookingValue";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import TodayPipeline, { type MonthPipe } from "@/components/TodayPipeline";
+import Worklist from "@/components/today/Worklist";
+import { listBuilderTasks, type BuilderTask } from "@/lib/builderTasks";
 import { getSidebarData } from "@/lib/sidebarData";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,9 @@ export default async function TodayPage() {
   const admin = isSystemAdmin(me);
   const hasBilling = hasBillingBeta(me);
   const sidebar = await getSidebarData(me);
+
+  // Builder worklist: the admin's own task list, shown on Today for them alone.
+  const worklist: BuilderTask[] = admin ? await listBuilderTasks(me.id) : [];
 
   // Intake: forms waiting to be looked at.
   const subs = await getSubmissionsByClinician(me.id);
@@ -202,6 +207,9 @@ export default async function TodayPage() {
             <BookingValue avgPerClient={avgPerClient} payingClients={payingClients} />
           </>
         )}
+
+        {/* Builder worklist — admin only */}
+        {admin && <Worklist initial={worklist} />}
 
         {/* Owner money pipeline — swipeable by month */}
         {owner && pipes.length > 0 && <TodayPipeline months={pipes} />}

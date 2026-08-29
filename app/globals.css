@@ -3395,3 +3395,70 @@ html.tm-banner-open body { padding-top: 74px; }
    its footer (and last links) don't fall off the bottom. */
 html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 @media (max-width: 620px) { html.tm-banner-open .bo-side { height: calc(100vh - 104px); } }
+
+/* ============================================================================
+   Builder worklist on Today (admin only). wl-* classes; semantic status colours
+   are local so they don't depend on tokens the rest of the app may not define.
+   ============================================================================ */
+.wl { --wl-amber: #d99a34; --wl-amber-bg: #f7edd6; --wl-amber-tx: #8a6a2c; --wl-green: #3f8f5f; --wl-green-bg: #e0efe4; --wl-grey: #9aa4a6; --wl-grey-bg: #eef1f2; --wl-indigo: #2e3192; --wl-indigo-bg: #ebecf6; }
+.wl-secrow { display: flex; align-items: center; gap: 10px; margin: 8px 2px 12px; }
+.wl-admin { display: inline-flex; align-items: center; gap: 5px; background: var(--wl-indigo-bg); color: var(--wl-indigo); font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; letter-spacing: .03em; text-transform: uppercase; }
+.wl-admin::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--wl-indigo); }
+.wl-sp { flex: 1; }
+.wl-prog { display: flex; align-items: center; gap: 9px; }
+.wl-track { width: 110px; height: 6px; border-radius: 20px; background: var(--wl-grey-bg); overflow: hidden; }
+.wl-track i { display: block; height: 100%; background: var(--teal); border-radius: 20px; transition: width .35s ease; }
+.wl-pct { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wl-err { color: #b3261e; font-size: 13px; margin: 0 2px 10px; }
+
+.wl-panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgba(30,42,60,.04), 0 6px 20px rgba(30,42,60,.06); overflow: hidden; }
+.wl-task { border-bottom: 1px solid var(--line); }
+.wl-task:last-of-type { border-bottom: 0; }
+.wl-row { display: flex; align-items: center; gap: 13px; padding: 14px 18px; cursor: pointer; transition: background .12s; }
+.wl-row:hover { background: #f7fafa; }
+.wl-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.s-todo .wl-dot { background: var(--wl-grey); } .s-prog .wl-dot { background: var(--wl-amber); } .s-done .wl-dot { background: var(--wl-green); }
+.wl-main { flex: 1; min-width: 0; }
+.wl-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+.s-done .wl-name { color: var(--muted); }
+.wl-blurb { font-size: 12px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-reorder { display: flex; flex-direction: column; gap: 1px; opacity: 0; transition: opacity .12s; flex: none; }
+.wl-row:hover .wl-reorder { opacity: 1; }
+.wl-reorder button { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 11px; line-height: 1; padding: 1px 3px; border-radius: 4px; }
+.wl-reorder button:hover:not(:disabled) { color: var(--ink); background: var(--wl-grey-bg); }
+.wl-reorder button:disabled { opacity: .3; cursor: default; }
+.wl-pill { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; flex: none; }
+.s-todo .wl-pill { background: var(--wl-grey-bg); color: #74807f; } .s-prog .wl-pill { background: var(--wl-amber-bg); color: var(--wl-amber-tx); } .s-done .wl-pill { background: var(--wl-green-bg); color: var(--wl-green); }
+.wl-mini { width: 74px; flex: none; }
+.wl-mt { height: 5px; border-radius: 20px; background: var(--wl-grey-bg); overflow: hidden; }
+.wl-mt i { display: block; height: 100%; border-radius: 20px; transition: width .35s ease; }
+.s-prog .wl-mt i { background: var(--wl-amber); } .s-done .wl-mt i { background: var(--wl-green); } .s-todo .wl-mt i { background: var(--wl-grey); }
+.wl-mc { font-size: 10.5px; color: var(--muted); text-align: right; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.wl-chev { color: #b7c0c2; font-size: 12px; transition: transform .18s; flex: none; }
+.wl-task.open .wl-chev { transform: rotate(90deg); }
+.wl-subs { display: none; padding: 2px 18px 14px 41px; }
+.wl-task.open .wl-subs { display: block; }
+.wl-sub { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; }
+.wl-cb { appearance: none; -webkit-appearance: none; width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; flex: none; margin-top: 1px; display: grid; place-items: center; }
+.wl-cb:checked { background: var(--wl-green); border-color: var(--wl-green); }
+.wl-cb:checked::after { content: "✓"; color: #fff; font-size: 11px; font-weight: 700; }
+.wl-sub label { flex: 1; font-size: 13px; color: #3d4657; cursor: pointer; }
+.wl-sub.done label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.wl-opt { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--wl-amber-tx); background: var(--wl-amber-bg); padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+.wl-del { flex: none; border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 5px; border-radius: 6px; opacity: 0; transition: opacity .12s; }
+.wl-sub:hover .wl-del { opacity: 1; }
+.wl-del:hover { color: #c0453a; background: var(--wl-grey-bg); }
+.wl-add { display: flex; gap: 8px; margin-top: 8px; }
+.wl-add input { flex: 1; font: 400 13px "Open Sans", sans-serif; color: var(--ink); background: #f4f7f7; border: 1px solid transparent; border-radius: 8px; padding: 7px 11px; }
+.wl-add input:focus { outline: none; border-color: var(--teal); background: #fff; }
+.wl-add button { font: 600 12.5px "Open Sans", sans-serif; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.wl-add button:hover { border-color: var(--teal); }
+.wl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; color: #9aa4a6; }
+.wl-remove { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 11.5px; padding: 2px 4px; }
+.wl-remove:hover { color: #c0453a; }
+.wl-addtask { display: flex; gap: 9px; padding: 14px 18px; background: #fafcfc; border-top: 1px solid var(--line); }
+.wl-addtask input { flex: 1; font: 400 13px "Open Sans", sans-serif; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; }
+.wl-addtask input:focus { outline: none; border-color: var(--teal); }
+.wl-addtask button { font: 600 13px "Open Sans", sans-serif; color: #fff; background: var(--wl-indigo); border: 0; border-radius: 9px; padding: 8px 15px; cursor: pointer; }
+.wl-addtask button:disabled { opacity: .5; cursor: default; }
+@media (max-width: 620px) { .wl-blurb { display: none; } .wl-mini { width: 52px; } .wl-reorder { opacity: 1; } }
