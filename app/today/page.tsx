@@ -167,15 +167,18 @@ export default async function TodayPage() {
           </div>
         </header>
 
-        {/* Start here */}
-        <Link href={startHere.href} className="today-starthere">
-          <div>
-            <span className="today-sh-lab">Start here</span>
-            <div className="today-sh-title">{startHere.title}</div>
-            <div className="today-sh-body">{startHere.body}</div>
-          </div>
-          <span className="today-sh-cta">{startHere.cta} →</span>
-        </Link>
+        {/* Start here — hidden for the builder/admin, who doesn't need the
+            "where the money sits" nudge. Everyone else still gets it. */}
+        {!admin && (
+          <Link href={startHere.href} className="today-starthere">
+            <div>
+              <span className="today-sh-lab">Start here</span>
+              <div className="today-sh-title">{startHere.title}</div>
+              <div className="today-sh-body">{startHere.body}</div>
+            </div>
+            <span className="today-sh-cta">{startHere.cta} →</span>
+          </Link>
+        )}
 
         {/* Admin (builder) numbers — your processing-fee take + your tickets */}
         {admin && (
