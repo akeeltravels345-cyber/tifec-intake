@@ -37,6 +37,19 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const money0 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const bucketOf = (age: number) => (age <= 14 ? 0 : age <= 30 ? 1 : age <= 60 ? 2 : 3);
 
+// Awaiting-payment volume by the month a claim was billed: this month vs the two
+// before, so a pile-up reads as a trend rather than a single number.
+function monthHistory(awaiting: Claim[], today: string) {
+  const base = new Date(today + "T00:00:00");
+  return [0, 1, 2].map((off) => {
+    const d = new Date(base); d.setMonth(d.getMonth() - off);
+    const key = d.toISOString().slice(0, 7);
+    const label = off === 0 ? "This month" : off === 1 ? "Last month" : d.toLocaleString("en-US", { month: "long" });
+    const rows = awaiting.filter((c) => (c.billedDate ?? c.dos).slice(0, 7) === key);
+    return { label, amount: rows.reduce((t, c) => t + c.amount, 0), count: rows.length };
+  });
+}
+
 type Tab = "tobill" | "awaiting" | "selfpay" | "paid" | "adjusted";
 
 export default function BillingQueueClient({ data }: { data: QueueData }) {
@@ -159,20 +172,6 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       </div>
 
-      {/* Aging filter chips — slim pills that drive the list filter (open tabs). */}
-      {isOpen && (
-        <div className="bq-chips">
-          <button className={`bq-chip ${bucket === null ? "on" : ""}`} onClick={() => setBucket(null)}>
-            All ages<span className="cc">{active.length}</span>
-          </button>
-          {data.buckets.map((b, i) => (
-            <button key={b.label} className={`bq-chip ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
-              <span className="cd" style={{ background: b.color }} />{b.label}<span className="cc">{chipCounts[i]}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="bq-toolbar">
         <div className="bq-tabs">
           <button className={`bq-tab ${tab === "tobill" ? "on" : ""}`} onClick={() => switchTab("tobill")}>To bill ({data.toBill.length})</button>
@@ -181,6 +180,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           <button className={`bq-tab ${tab === "paid" ? "on" : ""}`} onClick={() => switchTab("paid")}>Collected ({data.paid.length})</button>
           {data.adjusted.length > 0 && <button className={`bq-tab ${tab === "adjusted" ? "on" : ""}`} onClick={() => switchTab("adjusted")}>Written off / down ({data.adjusted.length})</button>}
         </div>
+        <span className="bq-tsp" />
         <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
           <option value="">All clinicians</option>
@@ -192,6 +192,37 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
         {(q || filterClin || bucket !== null) && <button className="bq-clear" onClick={clearFilters}>Clear filters</button>}
       </div>
+
+      {/* Aging filter — a quiet segmented control under the toolbar (open tabs). */}
+      {isOpen && (
+        <div className="bq-chipsrow">
+          <span className="bq-chipslab">Age</span>
+          <div className="bq-chips">
+            <button className={`bq-chip ${bucket === null ? "on" : ""}`} onClick={() => setBucket(null)}>
+              All<span className="cc">{active.length}</span>
+            </button>
+            {data.buckets.map((b, i) => (
+              <button key={b.label} className={`bq-chip ${bucket === i ? "on" : ""}`} onClick={() => setBucket(bucket === i ? null : i)}>
+                <span className="cd" style={{ background: b.color }} />{b.label}<span className="cc">{chipCounts[i]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Awaiting-payment volume by month billed — reads a pile-up as a trend. */}
+      {tab === "awaiting" && (
+        <div className="bq-history">
+          <span className="bq-hlab">Awaiting, by month billed</span>
+          {monthHistory(data.awaiting, data.today).map((h) => (
+            <div className="bq-hseg" key={h.label}>
+              <span className="hk">{h.label}</span>
+              <span className="hv mono">{money(h.amount)}</span>
+              <span className="hc">{h.count} claim{h.count === 1 ? "" : "s"}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {isOpen ? (
         groups.length === 0 ? (
@@ -228,7 +259,6 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
                       <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
                       <div className="amt">{money(c.amount)}</div>
-                      <div className="comm">+{money(c.commission)}</div>
                       {tab === "awaiting" && c.insurerId !== "self" && <div className="bq-rowacts"><button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button><button className="bq-undo" disabled={busy} onClick={() => (adjustId === c.id ? setAdjustId(null) : openAdjust(c.id))} title="Settle with a contractual write-off or write-down">Write off/down</button></div>}
                     </div>
                     {adjustId === c.id && (
