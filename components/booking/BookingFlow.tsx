@@ -7,7 +7,7 @@ interface Type { id: string; name: string; category: string; durationMin: number
 interface Clin { id: string; name: string; credentials: string; }
 interface Insurer { id: string; name: string; }
 interface Slot { minute: number; clinicianId: string; }
-type Step = "service" | "clinician" | "time" | "details" | "confirm" | "done";
+type Step = "service" | "clinician" | "time" | "details" | "confirm" | "done" | "waitlist" | "waitlisted";
 
 const CAY = 5;
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -79,6 +79,22 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     return g.filter((x) => x.items.length);
   }, [slots, date]);
 
+  async function joinWaitlist() {
+    if (!type) return;
+    if (!details.name.trim()) { setErr("Please enter your name."); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(details.email)) { setErr("Please enter a valid email."); return; }
+    setBusy(true); setErr("");
+    const res = await fetch("/api/book/waitlist", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId: clin !== "any" ? clin : null, name: details.name, email: details.email, phone: details.phone, note: details.notes }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(data.error || "Could not join the waitlist."); return; }
+    try { localStorage.setItem(REMEMBER_KEY, JSON.stringify({ name: details.name, email: details.email, phone: details.phone, path: details.path, insurerId: details.insurerId, policyNo: details.policyNo })); } catch { /* ignore */ }
+    setStep("waitlisted");
+  }
+
   async function book() {
     if (!type || !slot) return;
     if (!details.name.trim()) { setErr("Please enter your name."); return; }
@@ -111,7 +127,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
           <div className="bk-title">Book an appointment</div>
         </header>
 
-        {step !== "done" && (
+        {step !== "done" && step !== "waitlist" && step !== "waitlisted" && (
           <div className="bk-steps">
             {STEPS.map((s, i) => (
               <div key={s} className={`bk-dot ${i === stepIndex ? "on" : ""} ${i < stepIndex ? "done" : ""}`}>
@@ -121,7 +137,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
           </div>
         )}
 
-        {step !== "service" && step !== "done" && (
+        {step !== "service" && step !== "done" && step !== "waitlist" && step !== "waitlisted" && (
           <button className="bk-back" onClick={() => setStep(STEPS[Math.max(0, stepIndex - 1)])}>← Back</button>
         )}
 
@@ -192,6 +208,32 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               </div>
             ))}
             {slots.length > 0 && <p className="bk-tznote">Times shown in <b>{tz}</b>. The clinic runs on Cayman time (EST).</p>}
+            <button className="bk-textbtn" onClick={() => { setErr(""); setStep("waitlist"); }}>Don&apos;t see a time that works? Join the waitlist →</button>
+          </section>
+        )}
+
+        {step === "waitlist" && type && (
+          <section className="bk-sec">
+            <button className="bk-back" onClick={() => setStep("time")}>← Back</button>
+            <h2 className="bk-h2">Join the waitlist</h2>
+            <p className="bk-donesub" style={{ marginBottom: 18 }}>We&apos;ll reach out when a spot opens for <b>{type.name}</b>{clin !== "any" ? ` with ${clinName(clin)}` : ""}.</p>
+            <div className="bk-form">
+              <label className="bk-f"><span>Full name</span><input value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoFocus /></label>
+              <label className="bk-f"><span>Email</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="How we'll reach you" /></label>
+              <label className="bk-f"><span>Phone <em>(optional)</em></span><input value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} /></label>
+              <label className="bk-f"><span>When are you usually free? <em>(optional)</em></span><textarea rows={2} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} placeholder="e.g. weekday mornings" /></label>
+            </div>
+            {err && <p className="bk-err">{err}</p>}
+            <button className="bk-cta" onClick={joinWaitlist} disabled={busy}>{busy ? "Joining…" : "Join the waitlist"}</button>
+          </section>
+        )}
+
+        {step === "waitlisted" && type && (
+          <section className="bk-sec bk-done">
+            <div className="bk-check" style={{ background: "linear-gradient(135deg,#3a7ea1,#2e3192)" }}>☑</div>
+            <h2 className="bk-h2">You&apos;re on the waitlist</h2>
+            <p className="bk-donesub">We&apos;ve added you for <b>{type.name}</b>. We&apos;ll be in touch at <b>{details.email}</b> as soon as a spot opens.</p>
+            <button className="bk-textbtn" onClick={() => { setStep("time"); }}>Back to times</button>
           </section>
         )}
 

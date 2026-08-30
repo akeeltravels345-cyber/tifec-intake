@@ -3933,3 +3933,26 @@ body:has(.bk-page) .brandbar { display: none; }
 .cal-att-add input { flex: 1; min-width: 0; font: 400 13px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 .cal-att-add input:focus { outline: none; border-color: var(--teal); }
 .cal-att-add button { font: 600 12.5px "Open Sans"; color: #fff; background: var(--teal); border: 0; border-radius: 8px; padding: 7px 13px; cursor: pointer; }
+
+/* Scheduling waitlist (admin) */
+.wl2 { max-width: 780px; margin: 0 auto; padding: 22px 20px 70px; color: var(--ink); }
+.wl2-head { margin-bottom: 16px; }
+.wl2-h1 { font: 400 28px "Newsreader", serif; margin: 0 0 3px; }
+.wl2-sub { font-size: 14px; color: var(--muted); margin: 0; max-width: 56ch; }
+.wl2-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 30px; background: var(--card); border: 1px dashed var(--line); border-radius: 12px; }
+.wl2-list { display: flex; flex-direction: column; gap: 10px; }
+.wl2-row { display: flex; align-items: flex-start; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; box-shadow: 0 1px 2px rgba(30,42,60,.04); }
+.wl2-row.offered { border-color: #cbe0e6; background: rgba(49,154,159,.04); }
+.wl2-main { flex: 1; min-width: 0; }
+.wl2-name { font-size: 14.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.wl2-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--teal-deep); background: var(--teal-bg, #e2efef); padding: 1px 8px; border-radius: 20px; }
+.wl2-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.wl2-tag { color: var(--indigo); background: var(--indigo-bg, #e9eaf6); padding: 1px 8px; border-radius: 20px; font-weight: 600; }
+.wl2-when { margin-left: auto; }
+.wl2-note { font-size: 12.5px; color: var(--ink); margin-top: 6px; background: var(--surface-2, #f4f7f6); border-radius: 8px; padding: 6px 10px; }
+.wl2-actions { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.wl2-actions button { font: 600 12px "Open Sans"; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px; padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+.wl2-actions button:hover { border-color: var(--teal); }
+.wl2-actions button.ok { color: #fff; background: var(--green, #3f8f5f); border-color: var(--green, #3f8f5f); }
+.wl2-actions button.rm { color: var(--muted); }
+.wl2-actions button.rm:hover { color: #c0453a; border-color: #e3b7b0; }

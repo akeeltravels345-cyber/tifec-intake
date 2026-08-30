@@ -643,3 +643,54 @@ export async function schedulingStats(year: number, month: number): Promise<Sche
     clientBookings, staffBookings, popularTypes, byClinician, byWeekday,
   };
 }
+
+// =============================================================================
+// Waitlist — when a client can't find a time (or a group is full), they join a
+// list; staff work it and reach out when a slot frees. (No auto-email yet.)
+//   Postgres: scheduling_waitlist   Local: data/scheduling-waitlist.local.json
+// =============================================================================
+
+export type WaitStatus = "waiting" | "offered" | "booked" | "removed";
+export interface WaitlistEntry {
+  id: string; typeId: string | null; clinicianId: string | null;
+  name: string; email: string; phone: string; note: string;
+  status: WaitStatus; createdAt: string;
+}
+const WAIT_FILE = "scheduling-waitlist.local.json";
+const asWait = (v: unknown): WaitStatus => (["waiting", "offered", "booked", "removed"].includes(v as string) ? (v as WaitStatus) : "waiting");
+function rowToWait(r: Record<string, unknown>): WaitlistEntry {
+  return {
+    id: str(r.id), typeId: r.type_id ? str(r.type_id) : null, clinicianId: r.clinician_id ? str(r.clinician_id) : null,
+    name: str(r.name), email: str(r.email), phone: str(r.phone), note: str(r.note),
+    status: asWait(r.status), createdAt: iso(r.created_at),
+  };
+}
+
+export async function listWaitlist(includeDone = false): Promise<WaitlistEntry[]> {
+  let rows: WaitlistEntry[];
+  try {
+    if (usePostgres) { const sql = await pg(); rows = ((await sql`SELECT * FROM scheduling_waitlist`) as Record<string, unknown>[]).map(rowToWait); }
+    else rows = readJson<WaitlistEntry[]>(WAIT_FILE, []);
+  } catch { return []; }
+  return rows.filter((w) => includeDone || (w.status !== "removed" && w.status !== "booked"))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function addWaitlist(input: Partial<WaitlistEntry>): Promise<WaitlistEntry> {
+  const row: WaitlistEntry = {
+    id: randomId(), typeId: input.typeId ? str(input.typeId) : null, clinicianId: input.clinicianId ? str(input.clinicianId) : null,
+    name: str(input.name).trim(), email: str(input.email).trim(), phone: str(input.phone).trim(), note: str(input.note).trim(),
+    status: "waiting", createdAt: now(),
+  };
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`INSERT INTO scheduling_waitlist (id, type_id, clinician_id, name, email, phone, note, status, created_at)
+      VALUES (${row.id}, ${row.typeId}, ${row.clinicianId}, ${row.name}, ${row.email}, ${row.phone}, ${row.note}, ${row.status}, ${row.createdAt})`;
+  } else { const all = readJson<WaitlistEntry[]>(WAIT_FILE, []); all.push(row); writeJson(WAIT_FILE, all); }
+  return row;
+}
+
+export async function setWaitlistStatus(id: string, status: WaitStatus): Promise<void> {
+  if (usePostgres) { const sql = await pg(); await sql`UPDATE scheduling_waitlist SET status=${status} WHERE id=${id}`; }
+  else { const all = readJson<WaitlistEntry[]>(WAIT_FILE, []); const i = all.findIndex((w) => w.id === id); if (i >= 0) { all[i].status = status; writeJson(WAIT_FILE, all); } }
+}
