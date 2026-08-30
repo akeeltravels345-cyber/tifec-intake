@@ -31,6 +31,22 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [confirmed, setConfirmed] = useState<{ startAt: string } | null>(null);
+  const [remembered, setRemembered] = useState(false);
+
+  // Returning clients: remember their details in THEIR OWN browser only, so they
+  // don't re-type name / email / insurance / policy. Never leaves the device.
+  const REMEMBER_KEY = "ec-booking-client";
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(REMEMBER_KEY);
+      if (raw) { const p = JSON.parse(raw); setDetails((d) => ({ ...d, ...p })); setRemembered(true); }
+    } catch { /* storage unavailable */ }
+  }, []);
+  function forgetMe() {
+    try { localStorage.removeItem(REMEMBER_KEY); } catch { /* ignore */ }
+    setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" });
+    setRemembered(false);
+  }
 
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || "";
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -75,6 +91,12 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not book. Please try again."); if (res.status === 409) { setStep("time"); } return; }
+    try {
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+        name: details.name, email: details.email, phone: details.phone,
+        path: details.path, insurerId: details.insurerId, policyNo: details.policyNo,
+      }));
+    } catch { /* storage unavailable */ }
     setConfirmed({ startAt: data.appointment.startAt }); setStep("done");
   }
 
@@ -177,6 +199,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         {step === "details" && type && slot && (
           <section className="bk-sec">
             <h2 className="bk-h2">Your details</h2>
+            {remembered && <p className="bk-welcome">Welcome back{details.name ? `, ${details.name.split(" ")[0]}` : ""} — we&apos;ve filled in your details. <button type="button" onClick={forgetMe}>Not you?</button></p>}
             <div className="bk-form">
               <label className="bk-f"><span>Full name</span><input value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoFocus /></label>
               <label className="bk-f"><span>Email</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="For your confirmation & reminders" /></label>

@@ -1954,6 +1954,16 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-bucket .bkd { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .bq-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .bq-tsp { flex: 1 1 12px; }
+.bq-monthbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.bq-mnav { display: inline-flex; align-items: center; gap: 2px; background: #fff; border: 1px solid var(--edge); border-radius: 10px; padding: 3px; }
+.bq-mnav button { border: none; background: transparent; border-radius: 7px; width: 30px; height: 30px; font-size: 17px; color: var(--muted); cursor: pointer; line-height: 1; }
+.bq-mnav button:hover:not(:disabled) { background: #f4f1ea; color: var(--ink); }
+.bq-mnav button:disabled { opacity: .3; cursor: default; }
+.bq-mlabel { font: 600 14px "Open Sans"; color: var(--ink); min-width: 132px; text-align: center; }
+.bq-mmeta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bq-mmeta b { color: var(--ink); font-weight: 700; }
+.bq-mnow { border: none; background: transparent; color: var(--indigo); font: 600 13px "Open Sans"; cursor: pointer; }
+.bq-mnow:hover { text-decoration: underline; }
 .bq-tabs { display: inline-flex; gap: 4px; background: #F0EDE3; border-radius: 10px; padding: 4px; }
 .bq-tab { border: none; background: transparent; border-radius: 7px; padding: 8px 15px; font: 600 13px "Open Sans"; color: var(--muted); cursor: pointer; }
 .bq-tab.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
@@ -3786,3 +3796,8 @@ body:has(.bk-page) .brandbar { display: none; }
 
 .bk-foot { text-align: center; color: #a6b0af; font-size: 12px; margin-top: 26px; }
 @media (max-width: 480px) { .bk-title { font-size: 28px; } .bk-sec { padding: 22px 18px 24px; } .bk-dot b { display: none; } }
+
+/* Booking: returning-client welcome-back note */
+.bk-welcome { font-size: 13.5px; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 12px; padding: 10px 14px; margin: 0 0 16px; }
+.bk-welcome button { background: none; border: 0; color: #6b7679; font: 600 13px "Open Sans"; text-decoration: underline; cursor: pointer; padding: 0 0 0 4px; }
+.bk-welcome button:hover { color: #223038; }
