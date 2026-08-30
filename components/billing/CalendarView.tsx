@@ -126,6 +126,25 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: a.id }) });
     setDraft(null); load(monday, who);
   }
+  // Drag to reschedule: keep the length, move to the dropped day + start time.
+  async function reschedule(id: string, day: string, startMin: number) {
+    const a = appts.find((x) => x.id === id);
+    if (!a) return;
+    const dur = Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000);
+    const clamped = Math.max(DAY_START * 60, Math.min(startMin, DAY_END * 60 - dur));
+    const startAt = utcFromCay(day, clamped), endAt = utcFromCay(day, clamped + dur);
+    setAppts((list) => list.map((x) => (x.id === id ? { ...x, startAt, endAt } : x))); // optimistic
+    await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update", id, startAt, endAt }) });
+    load(monday, who);
+  }
+  function onDrop(e: React.DragEvent, day: string) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain");
+    if (!id) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const min = DAY_START * 60 + Math.round(((e.clientY - rect.top) / HOUR) * 60 / 15) * 15;
+    reschedule(id, day, min);
+  }
 
   // ---- lane layout per day (side-by-side for overlaps) ----
   function layout(dayAppts: Appointment[]) {
@@ -175,7 +194,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             return (
               <div key={day} className={`cal-col ${isToday ? "today" : ""}`}>
                 <div className="cal-colhead"><b>{DOW[weekdayMon(day)]}</b> {new Date(Date.UTC(y, m - 1, d)).getUTCDate()}</div>
-                <div className="cal-slots" onClick={(e) => {
+                <div className="cal-slots"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => onDrop(e, day)}
+                  onClick={(e) => {
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                   const min = DAY_START * 60 + Math.floor(((e.clientY - rect.top) / HOUR) * 60 / 15) * 15;
                   openNew(day, Math.max(DAY_START * 60, Math.min(min, (DAY_END - 1) * 60)));
@@ -192,6 +214,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const color = a.kind === "block" ? "#8a929a" : (t?.color || "#2f8e93");
                     return (
                       <div key={a.id} className={`cal-appt st-${a.status}`} style={{ top, height, left: `${left}%`, width: `calc(${width}% - 3px)`, borderLeftColor: color }}
+                        draggable onDragStart={(ev) => { ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
                         onClick={(ev) => { ev.stopPropagation(); openEdit(a); }}>
                         <div className="cal-appt-t">{label12(s)}</div>
                         <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : a.clientName}</div>

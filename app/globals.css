@@ -3873,3 +3873,11 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-welcome { font-size: 13.5px; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 12px; padding: 10px 14px; margin: 0 0 16px; }
 .bk-welcome button { background: none; border: 0; color: #6b7679; font: 600 13px "Open Sans"; text-decoration: underline; cursor: pointer; padding: 0 0 0 4px; }
 .bk-welcome button:hover { color: #223038; }
+
+/* Calendar: draggable appointments */
+.cal-appt { cursor: grab; }
+.cal-appt:active { cursor: grabbing; }
+
+/* Booking: manage-booking link on the confirmation */
+.bk-managelink { display: inline-block; margin-top: 18px; color: #226e72; font: 600 14px "Open Sans"; text-decoration: none; }
+.bk-managelink:hover { text-decoration: underline; }

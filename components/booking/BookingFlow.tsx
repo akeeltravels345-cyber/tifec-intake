@@ -30,7 +30,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [details, setDetails] = useState({ name: "", email: "", phone: "", path: "self_pay" as "self_pay" | "insurance", insurerId: "", policyNo: "", notes: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [confirmed, setConfirmed] = useState<{ startAt: string } | null>(null);
+  const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
 
   // Returning clients: remember their details in THEIR OWN browser only, so they
@@ -97,7 +97,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         path: details.path, insurerId: details.insurerId, policyNo: details.policyNo,
       }));
     } catch { /* storage unavailable */ }
-    setConfirmed({ startAt: data.appointment.startAt }); setStep("done");
+    setConfirmed({ startAt: data.appointment.startAt, id: data.appointment.id }); setStep("done");
   }
 
   const STEPS: Step[] = ["service", "clinician", "time", "details"];
@@ -260,6 +260,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <Row k="When" v={`${fmtDay(confirmed.startAt)} · ${fmtTime(confirmed.startAt)}`} />
             </div>
             {type.hasIntake && <p className="bk-intake">Look out for a short intake form by email. Completing it before your visit helps us give you the best care.</p>}
+            <a className="bk-managelink" href={`/book/manage?preview=${preview}&id=${confirmed.id}`}>Need to change it? Manage this booking →</a>
             <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
           </section>
         )}
