@@ -92,6 +92,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+            { href: "/billing/scheduling/types", label: "Appointment types", icon: IcSetup, match: (p) => p.startsWith("/billing/scheduling") },
             ...(notesEnabled ? [{ href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") }] : []),
             { href: "/billing/import/review", label: "Import review", icon: IcWork, badge: importPending, match: (p) => p.startsWith("/billing/import/review") },
           ]
