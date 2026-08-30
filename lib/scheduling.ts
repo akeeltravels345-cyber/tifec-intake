@@ -283,3 +283,179 @@ export async function saveAvailability(clinicianId: string, input: Partial<Clini
   }
   return row;
 }
+
+// =============================================================================
+// Appointments — the calendar itself.
+//   Postgres: scheduling_appointments
+//   Local:    data/scheduling-appointments.local.json
+// PROTOTYPE ISOLATION: the client is stored by name/email on the appointment;
+// we do NOT write to billing_clients or billing_sessions yet. The "seen visit
+// -> billing session" bridge stays stubbed (billingSessionId null) until Akeel
+// says to connect it, so live intake/billing are never touched.
+// =============================================================================
+
+export type AppointmentStatus = "booked" | "confirmed" | "seen" | "cancelled" | "no_show";
+export type AppointmentKind = "appointment" | "block";
+export type InsurancePath = "self_pay" | "insurance" | null;
+export type IntakeStatus = "not_required" | "pending" | "received";
+
+export interface Appointment {
+  id: string;
+  kind: AppointmentKind;         // "block" = staff personal time, no client
+  clientId: string | null;       // reserved for the shared record; null for now
+  clientName: string;
+  clientEmail: string;
+  clinicianId: string;
+  typeId: string | null;
+  title: string;                 // block label, or a note shown on the calendar
+  startAt: string;               // ISO UTC
+  endAt: string;                 // ISO UTC
+  mode: AppointmentMode;
+  locationOrLink: string;
+  status: AppointmentStatus;
+  insurancePath: InsurancePath;
+  insurerId: string | null;
+  policyNo: string;
+  intakeStatus: IntakeStatus;
+  billingSessionId: string | null;
+  notes: string;
+  createdBy: string;
+  source: "staff" | "client";
+  createdAt: string;
+  updatedAt: string;
+}
+
+const APPT_FILE = "scheduling-appointments.local.json";
+const STATUSES: AppointmentStatus[] = ["booked", "confirmed", "seen", "cancelled", "no_show"];
+const asStatus = (v: unknown): AppointmentStatus => (STATUSES.includes(v as AppointmentStatus) ? (v as AppointmentStatus) : "booked");
+const asPath = (v: unknown): InsurancePath => (v === "self_pay" || v === "insurance" ? v : null);
+const asIntake = (v: unknown): IntakeStatus => (v === "pending" || v === "received" ? v : "not_required");
+
+function rowToAppt(r: Record<string, unknown>): Appointment {
+  return {
+    id: str(r.id), kind: r.kind === "block" ? "block" : "appointment",
+    clientId: r.client_id ? str(r.client_id) : null, clientName: str(r.client_name), clientEmail: str(r.client_email),
+    clinicianId: str(r.clinician_id), typeId: r.type_id ? str(r.type_id) : null, title: str(r.title),
+    startAt: iso(r.start_at), endAt: iso(r.end_at), mode: asMode(r.mode), locationOrLink: str(r.location_or_link),
+    status: asStatus(r.status), insurancePath: asPath(r.insurance_path), insurerId: r.insurer_id ? str(r.insurer_id) : null,
+    policyNo: str(r.policy_no), intakeStatus: asIntake(r.intake_status), billingSessionId: r.billing_session_id ? str(r.billing_session_id) : null,
+    notes: str(r.notes), createdBy: str(r.created_by), source: r.source === "client" ? "client" : "staff",
+    createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
+  };
+}
+
+export async function listAppointments(opts: { from?: string; to?: string; clinicianId?: string } = {}): Promise<Appointment[]> {
+  let rows: Appointment[];
+  try {
+    if (usePostgres) {
+      const sql = await pg();
+      const res = (await sql`SELECT * FROM scheduling_appointments
+        WHERE (${opts.from ?? null}::timestamptz IS NULL OR end_at >= ${opts.from ?? null})
+          AND (${opts.to ?? null}::timestamptz IS NULL OR start_at < ${opts.to ?? null})
+          AND (${opts.clinicianId ?? null}::text IS NULL OR clinician_id = ${opts.clinicianId ?? null})`) as Record<string, unknown>[];
+      rows = res.map(rowToAppt);
+    } else {
+      rows = readJson<Appointment[]>(APPT_FILE, []).filter((a) =>
+        (!opts.from || a.endAt >= opts.from) && (!opts.to || a.startAt < opts.to) &&
+        (!opts.clinicianId || a.clinicianId === opts.clinicianId));
+    }
+  } catch {
+    return [];
+  }
+  return rows.sort((a, b) => a.startAt.localeCompare(b.startAt));
+}
+
+export async function getAppointment(id: string): Promise<Appointment | null> {
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`SELECT * FROM scheduling_appointments WHERE id = ${id}`) as Record<string, unknown>[];
+    return res[0] ? rowToAppt(res[0]) : null;
+  }
+  return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.id === id) ?? null;
+}
+
+type ApptInput = Partial<Omit<Appointment, "id" | "createdAt" | "updatedAt">>;
+
+function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
+  const t = now();
+  const b: Appointment = base ?? {
+    id: randomId(), kind: "appointment", clientId: null, clientName: "", clientEmail: "", clinicianId: "",
+    typeId: null, title: "", startAt: t, endAt: t, mode: "in_person", locationOrLink: "", status: "booked",
+    insurancePath: null, insurerId: null, policyNo: "", intakeStatus: "not_required", billingSessionId: null,
+    notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
+  };
+  return {
+    ...b,
+    kind: input.kind === "block" ? "block" : (input.kind === "appointment" ? "appointment" : b.kind),
+    clientName: input.clientName !== undefined ? str(input.clientName).trim() : b.clientName,
+    clientEmail: input.clientEmail !== undefined ? str(input.clientEmail).trim() : b.clientEmail,
+    clinicianId: input.clinicianId !== undefined ? str(input.clinicianId) : b.clinicianId,
+    typeId: input.typeId !== undefined ? (input.typeId ? str(input.typeId) : null) : b.typeId,
+    title: input.title !== undefined ? str(input.title).trim() : b.title,
+    startAt: input.startAt !== undefined ? iso(input.startAt) : b.startAt,
+    endAt: input.endAt !== undefined ? iso(input.endAt) : b.endAt,
+    mode: input.mode !== undefined ? asMode(input.mode) : b.mode,
+    locationOrLink: input.locationOrLink !== undefined ? str(input.locationOrLink).trim() : b.locationOrLink,
+    status: input.status !== undefined ? asStatus(input.status) : b.status,
+    insurancePath: input.insurancePath !== undefined ? asPath(input.insurancePath) : b.insurancePath,
+    insurerId: input.insurerId !== undefined ? (input.insurerId ? str(input.insurerId) : null) : b.insurerId,
+    policyNo: input.policyNo !== undefined ? str(input.policyNo).trim() : b.policyNo,
+    intakeStatus: input.intakeStatus !== undefined ? asIntake(input.intakeStatus) : b.intakeStatus,
+    notes: input.notes !== undefined ? str(input.notes) : b.notes,
+    createdBy: input.createdBy !== undefined ? str(input.createdBy) : b.createdBy,
+    source: input.source === "client" ? "client" : b.source,
+    updatedAt: t,
+  };
+}
+
+async function persistAppt(row: Appointment, isNew: boolean) {
+  if (usePostgres) {
+    const sql = await pg();
+    if (isNew) {
+      await sql`INSERT INTO scheduling_appointments
+        (id, kind, client_id, client_name, client_email, clinician_id, type_id, title, start_at, end_at, mode,
+         location_or_link, status, insurance_path, insurer_id, policy_no, intake_status, billing_session_id, notes,
+         created_by, source, created_at, updated_at)
+        VALUES (${row.id}, ${row.kind}, ${row.clientId}, ${row.clientName}, ${row.clientEmail}, ${row.clinicianId},
+         ${row.typeId}, ${row.title}, ${row.startAt}, ${row.endAt}, ${row.mode}, ${row.locationOrLink}, ${row.status},
+         ${row.insurancePath}, ${row.insurerId}, ${row.policyNo}, ${row.intakeStatus}, ${row.billingSessionId}, ${row.notes},
+         ${row.createdBy}, ${row.source}, ${row.createdAt}, ${row.updatedAt})`;
+    } else {
+      await sql`UPDATE scheduling_appointments SET
+        kind=${row.kind}, client_id=${row.clientId}, client_name=${row.clientName}, client_email=${row.clientEmail},
+        clinician_id=${row.clinicianId}, type_id=${row.typeId}, title=${row.title}, start_at=${row.startAt}, end_at=${row.endAt},
+        mode=${row.mode}, location_or_link=${row.locationOrLink}, status=${row.status}, insurance_path=${row.insurancePath},
+        insurer_id=${row.insurerId}, policy_no=${row.policyNo}, intake_status=${row.intakeStatus},
+        billing_session_id=${row.billingSessionId}, notes=${row.notes}, updated_at=${row.updatedAt}
+        WHERE id=${row.id}`;
+    }
+  } else {
+    const all = readJson<Appointment[]>(APPT_FILE, []);
+    const i = all.findIndex((a) => a.id === row.id);
+    if (i >= 0) all[i] = row; else all.push(row);
+    writeJson(APPT_FILE, all);
+  }
+}
+
+export async function createAppointment(input: ApptInput): Promise<Appointment> {
+  const row = normalizeAppt(input);
+  await persistAppt(row, true);
+  return row;
+}
+
+export async function updateAppointment(id: string, input: ApptInput): Promise<Appointment | null> {
+  const base = await getAppointment(id);
+  if (!base) return null;
+  const row = normalizeAppt(input, base);
+  await persistAppt(row, false);
+  return row;
+}
+
+export async function deleteAppointment(id: string): Promise<void> {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`DELETE FROM scheduling_appointments WHERE id=${id}`;
+  } else {
+    writeJson(APPT_FILE, readJson<Appointment[]>(APPT_FILE, []).filter((a) => a.id !== id));
+  }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { href: "/billing/scheduling/calendar", label: "Calendar" },
   { href: "/billing/scheduling/types", label: "Appointment types" },
   { href: "/billing/scheduling/availability", label: "Availability" },
 ];
