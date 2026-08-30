@@ -3915,3 +3915,21 @@ body:has(.bk-page) .brandbar { display: none; }
 .cal-series-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--teal-deep); background: var(--teal-bg, #e2efef); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }
 .cal-series-note button { border: 0; background: none; color: #b1543c; font: 600 12.5px "Open Sans"; text-decoration: underline; cursor: pointer; padding: 0; }
 .cal-series-note button:hover { filter: brightness(1.1); }
+
+/* Types: group tag */
+.st-tag.grp { background: var(--indigo-bg, #e9eaf6); color: var(--indigo); }
+
+/* Calendar: group attendee roster in the edit modal */
+.cal-roster { margin: 0 16px 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2, #f4f7f6); }
+.cal-roster-h { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+.cal-roster-h span { font-size: 12px; color: var(--muted); font-weight: 500; }
+.cal-roster-hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+.cal-att { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line-soft, #eef2f4); font-size: 13px; }
+.cal-att:last-of-type { border-bottom: 0; }
+.cal-att-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-att button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 0 4px; }
+.cal-att button:hover { color: #c0453a; }
+.cal-att-add { display: flex; gap: 6px; margin-top: 8px; }
+.cal-att-add input { flex: 1; min-width: 0; font: 400 13px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.cal-att-add input:focus { outline: none; border-color: var(--teal); }
+.cal-att-add button { font: 600 12.5px "Open Sans"; color: #fff; background: var(--teal); border: 0; border-radius: 8px; padding: 7px 13px; cursor: pointer; }

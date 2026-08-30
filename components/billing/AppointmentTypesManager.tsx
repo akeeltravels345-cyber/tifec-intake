@@ -13,7 +13,7 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 type Draft = Omit<AppointmentType, "id" | "createdAt" | "updatedAt"> & { id?: string };
 const blank = (): Draft => ({
   name: "", category: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0, price: 0,
-  color: COLORS[0], mode: "in_person", baselineCptCodes: [], intakeFormKey: null,
+  color: COLORS[0], mode: "in_person", capacity: 1, baselineCptCodes: [], intakeFormKey: null,
   newClientIntakeOnly: true, active: true, sortOrder: 0,
 });
 
@@ -105,6 +105,8 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
               <input type="number" min={0} step={5} value={draft.bufferAfterMin} onChange={(e) => set("bufferAfterMin", Number(e.target.value))} /></label>
             <label className="st-f"><span>Price (KYD)</span>
               <input type="number" min={0} step={5} value={draft.price} onChange={(e) => set("price", Number(e.target.value))} /></label>
+            <label className="st-f"><span>Capacity (seats) <em>1 = individual</em></span>
+              <input type="number" min={1} step={1} value={draft.capacity} onChange={(e) => set("capacity", Math.max(1, Number(e.target.value)))} /></label>
           </div>
 
           <div className="st-erow">
@@ -171,6 +173,7 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
               <div className="st-meta">
                 <span>{t.durationMin} min</span>
                 <span>{MODE_LABEL[t.mode]}</span>
+                {t.capacity > 1 && <span className="st-tag grp">group · {t.capacity} seats</span>}
                 {t.price > 0 && <span>{money(t.price)}</span>}
                 {t.baselineCptCodes.length > 0 && <span className="st-tag bil">{t.baselineCptCodes.join(", ")}</span>}
                 {t.intakeFormKey && <span className="st-tag int">intake{t.newClientIntakeOnly ? " · new" : ""}</span>}

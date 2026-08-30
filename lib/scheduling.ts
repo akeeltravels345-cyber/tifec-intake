@@ -24,6 +24,7 @@ export interface AppointmentType {
   price: number;                 // KYD, shown at booking; 0 = not shown
   color: string;                 // hex, for the calendar
   mode: AppointmentMode;
+  capacity: number;              // 1 = individual; >1 = group/workshop (seats)
   baselineCptCodes: string[];    // starting codes; editable on the session later
   intakeFormKey: string | null;  // which intake form to attach, if any
   newClientIntakeOnly: boolean;  // only require the form for new clients
@@ -65,6 +66,7 @@ function rowToType(r: Record<string, unknown>): AppointmentType {
     id: str(r.id), name: str(r.name), category: str(r.category),
     durationMin: num(r.duration_min), bufferBeforeMin: num(r.buffer_before_min), bufferAfterMin: num(r.buffer_after_min),
     price: num(r.price), color: str(r.color) || "#2f8e93", mode: asMode(r.mode),
+    capacity: Math.max(1, num(r.capacity) || 1),
     baselineCptCodes: parseCodes(r.baseline_cpt_codes),
     intakeFormKey: r.intake_form_key ? str(r.intake_form_key) : null,
     newClientIntakeOnly: !!r.new_client_intake_only,
@@ -95,11 +97,12 @@ function normalize(input: TypeInput, base?: AppointmentType): AppointmentType {
   const t = now();
   const b = base ?? {
     id: randomId(), name: "", category: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0,
-    price: 0, color: "#2f8e93", mode: "in_person" as AppointmentMode, baselineCptCodes: [],
+    price: 0, color: "#2f8e93", mode: "in_person" as AppointmentMode, capacity: 1, baselineCptCodes: [],
     intakeFormKey: null, newClientIntakeOnly: true, active: true, sortOrder: 0, createdAt: t, updatedAt: t,
   };
   return {
     ...b,
+    capacity: input.capacity != null ? Math.max(1, num(input.capacity)) : b.capacity,
     name: input.name != null ? str(input.name).trim() : b.name,
     category: input.category != null ? str(input.category).trim() : b.category,
     durationMin: input.durationMin != null ? Math.max(5, num(input.durationMin)) : b.durationMin,
@@ -135,6 +138,9 @@ async function persist(row: AppointmentType, isNew: boolean) {
         new_client_intake_only=${row.newClientIntakeOnly}, active=${row.active}, sort_order=${row.sortOrder}, updated_at=${row.updatedAt}
         WHERE id=${row.id}`;
     }
+    // Guarded: capacity was added later, so set it separately (a pre-migration
+    // table without the column still saves the type fine).
+    try { await sql`UPDATE scheduling_appointment_types SET capacity=${row.capacity} WHERE id=${row.id}`; } catch { /* column not migrated */ }
   } else {
     const all = readJson<AppointmentType[]>(FILE, []);
     const i = all.findIndex((t) => t.id === row.id);
@@ -299,10 +305,14 @@ export type AppointmentKind = "appointment" | "block";
 export type InsurancePath = "self_pay" | "insurance" | null;
 export type IntakeStatus = "not_required" | "pending" | "received";
 
+export interface Attendee { name: string; email: string; phone: string; }
+
 export interface Appointment {
   id: string;
   seriesId: string | null;       // links a recurring series; null for one-offs
   kind: AppointmentKind;         // "block" = staff personal time, no client
+  capacity: number;              // seats; 1 = individual, >1 = group
+  attendees: Attendee[];         // group roster (empty for individual)
   clientId: string | null;       // reserved for the shared record; null for now
   clientName: string;
   clientEmail: string;
@@ -331,10 +341,16 @@ const STATUSES: AppointmentStatus[] = ["booked", "confirmed", "seen", "cancelled
 const asStatus = (v: unknown): AppointmentStatus => (STATUSES.includes(v as AppointmentStatus) ? (v as AppointmentStatus) : "booked");
 const asPath = (v: unknown): InsurancePath => (v === "self_pay" || v === "insurance" ? v : null);
 const asIntake = (v: unknown): IntakeStatus => (v === "pending" || v === "received" ? v : "not_required");
+function parseAttendees(v: unknown): Attendee[] {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((a: Record<string, unknown>) => ({ name: str(a.name).trim(), email: str(a.email).trim(), phone: str(a.phone).trim() })).filter((a) => a.name || a.email);
+}
 
 function rowToAppt(r: Record<string, unknown>): Appointment {
   return {
     id: str(r.id), seriesId: r.series_id ? str(r.series_id) : null, kind: r.kind === "block" ? "block" : "appointment",
+    capacity: Math.max(1, num(r.capacity) || 1), attendees: parseAttendees(r.attendees),
     clientId: r.client_id ? str(r.client_id) : null, clientName: str(r.client_name), clientEmail: str(r.client_email),
     clinicianId: str(r.clinician_id), typeId: r.type_id ? str(r.type_id) : null, title: str(r.title),
     startAt: iso(r.start_at), endAt: iso(r.end_at), mode: asMode(r.mode), locationOrLink: str(r.location_or_link),
@@ -380,7 +396,7 @@ type ApptInput = Partial<Omit<Appointment, "id" | "createdAt" | "updatedAt">>;
 function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
   const t = now();
   const b: Appointment = base ?? {
-    id: randomId(), seriesId: null, kind: "appointment", clientId: null, clientName: "", clientEmail: "", clinicianId: "",
+    id: randomId(), seriesId: null, kind: "appointment", capacity: 1, attendees: [], clientId: null, clientName: "", clientEmail: "", clinicianId: "",
     typeId: null, title: "", startAt: t, endAt: t, mode: "in_person", locationOrLink: "", status: "booked",
     insurancePath: null, insurerId: null, policyNo: "", intakeStatus: "not_required", billingSessionId: null,
     notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
@@ -388,6 +404,8 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
   return {
     ...b,
     seriesId: input.seriesId !== undefined ? (input.seriesId ? str(input.seriesId) : null) : b.seriesId,
+    capacity: input.capacity !== undefined ? Math.max(1, num(input.capacity)) : b.capacity,
+    attendees: input.attendees !== undefined ? parseAttendees(input.attendees) : b.attendees,
     kind: input.kind === "block" ? "block" : (input.kind === "appointment" ? "appointment" : b.kind),
     clientName: input.clientName !== undefined ? str(input.clientName).trim() : b.clientName,
     clientEmail: input.clientEmail !== undefined ? str(input.clientEmail).trim() : b.clientEmail,
@@ -434,6 +452,8 @@ async function persistAppt(row: Appointment, isNew: boolean) {
         billing_session_id=${row.billingSessionId}, notes=${row.notes}, updated_at=${row.updatedAt}
         WHERE id=${row.id}`;
     }
+    // Guarded: capacity + attendees were added later.
+    try { await sql`UPDATE scheduling_appointments SET capacity=${row.capacity}, attendees=${JSON.stringify(row.attendees)}::jsonb WHERE id=${row.id}`; } catch { /* columns not migrated */ }
   } else {
     const all = readJson<Appointment[]>(APPT_FILE, []);
     const i = all.findIndex((a) => a.id === row.id);

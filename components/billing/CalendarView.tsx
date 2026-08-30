@@ -65,6 +65,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [attName, setAttName] = useState("");
+  const [attEmail, setAttEmail] = useState("");
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
   async function load(mon: string, clin: string) {
@@ -88,6 +90,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
       kind: "appointment", clientName: "", clientEmail: "", clinicianId: who !== "all" ? who : (clinicians[0]?.id || ""),
       typeId: t?.id || null, mode: t?.mode || "in_person", locationOrLink: "", status: "booked",
       insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "",
+      capacity: t?.capacity || 1, attendees: [],
       _date: date || days[0], _startMin: startMin ?? 9 * 60, _durMin: t?.durationMin || 50,
       _repeatEvery: 0, _repeatCount: 4,
     });
@@ -98,12 +101,15 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   }
   function pickType(id: string) {
     const t = typeById(id);
-    setDraft((d) => d ? { ...d, typeId: id, mode: t?.mode || d.mode, _durMin: t?.durationMin || d._durMin } : d);
+    setDraft((d) => d ? { ...d, typeId: id, mode: t?.mode || d.mode, _durMin: t?.durationMin || d._durMin, capacity: t?.capacity || 1 } : d);
   }
 
+  const isGroup = (d: Draft | null) => !!d && d.kind !== "block" && (d.capacity || 1) > 1;
   async function save() {
     if (!draft) return;
-    if (draft.kind !== "block" && !String(draft.clientName || "").trim()) { setErr("Who is it for?"); return; }
+    // A group session is labelled by its type; individuals need a client name.
+    if (isGroup(draft) && !String(draft.clientName || "").trim()) draft.clientName = typeById(draft.typeId || "")?.name || "Group session";
+    if (draft.kind !== "block" && !isGroup(draft) && !String(draft.clientName || "").trim()) { setErr("Who is it for?"); return; }
     if (!draft.clinicianId) { setErr("Pick a clinician."); return; }
     const startAt = utcFromCay(draft._date!, draft._startMin!);
     const endAt = utcFromCay(draft._date!, draft._startMin! + (draft._durMin || 50));
@@ -225,8 +231,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                         draggable onDragStart={(ev) => { ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
                         onClick={(ev) => { ev.stopPropagation(); openEdit(a); }}>
                         <div className="cal-appt-t">{label12(s)}</div>
-                        <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : a.clientName}</div>
-                        {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{t?.name || "Visit"}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
+                        <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : (a.capacity > 1 ? `${(t?.name || "Group")} 👥` : a.clientName)}</div>
+                        {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{a.capacity > 1 ? `${(a.attendees || []).length}/${a.capacity} seats` : (t?.name || "Visit")}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
                       </div>
                     );
                   })}
@@ -253,8 +259,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             <div className="cal-form">
               {draft.kind !== "block" ? (
                 <>
-                  <label className="cal-f grow"><span>Client name</span><input value={draft.clientName || ""} onChange={(e) => setDraft({ ...draft, clientName: e.target.value })} placeholder="Full name" autoFocus /></label>
-                  <label className="cal-f grow"><span>Client email</span><input value={draft.clientEmail || ""} onChange={(e) => setDraft({ ...draft, clientEmail: e.target.value })} placeholder="for confirmation & reminders" /></label>
+                  {!isGroup(draft) && <>
+                    <label className="cal-f grow"><span>Client name</span><input value={draft.clientName || ""} onChange={(e) => setDraft({ ...draft, clientName: e.target.value })} placeholder="Full name" autoFocus /></label>
+                    <label className="cal-f grow"><span>Client email</span><input value={draft.clientEmail || ""} onChange={(e) => setDraft({ ...draft, clientEmail: e.target.value })} placeholder="for confirmation & reminders" /></label>
+                  </>}
                   <label className="cal-f"><span>Appointment type</span>
                     <select value={draft.typeId || ""} onChange={(e) => pickType(e.target.value)}>
                       {types.length === 0 && <option value="">No types yet</option>}
@@ -317,6 +325,32 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               )}
               <label className="cal-f grow"><span>Notes</span><input value={draft.notes || ""} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="optional" /></label>
             </div>
+
+            {isGroup(draft) && (
+              <div className="cal-roster">
+                {!draft.id ? (
+                  <p className="cal-roster-hint">Group session ({draft.capacity} seats). Create it, then add attendees here.</p>
+                ) : (
+                  <>
+                    <div className="cal-roster-h">Attendees <span>{(draft.attendees || []).length} of {draft.capacity} seats</span></div>
+                    {(draft.attendees || []).map((a, i) => (
+                      <div key={i} className="cal-att">
+                        <span className="cal-att-n">{a.name}{a.email ? ` · ${a.email}` : ""}</span>
+                        <button type="button" onClick={() => setDraft({ ...draft, attendees: (draft.attendees || []).filter((_, j) => j !== i) })}>×</button>
+                      </div>
+                    ))}
+                    {(draft.attendees || []).length < (draft.capacity || 1) ? (
+                      <div className="cal-att-add">
+                        <input placeholder="Name" value={attName} onChange={(e) => setAttName(e.target.value)} />
+                        <input placeholder="Email (optional)" value={attEmail} onChange={(e) => setAttEmail(e.target.value)} />
+                        <button type="button" onClick={() => { if (!attName.trim()) return; setDraft({ ...draft, attendees: [...(draft.attendees || []), { name: attName.trim(), email: attEmail.trim(), phone: "" }] }); setAttName(""); setAttEmail(""); }}>Add</button>
+                      </div>
+                    ) : <p className="cal-roster-hint">Full. Remove someone to free a seat.</p>}
+                    <p className="cal-roster-hint">Remember to Save.</p>
+                  </>
+                )}
+              </div>
+            )}
 
             {draft.id && draft.kind !== "block" && (
               <div className="cal-status">
