@@ -3,6 +3,7 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
+  createRecurring, deleteSeriesFrom,
 } from "@/lib/scheduling";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +43,21 @@ export async function POST(req: Request) {
       if (body.kind !== "block" && !String(body.clientName || "").trim()) {
         return NextResponse.json({ error: "Who is it for?" }, { status: 400 });
       }
-      const appt = await createAppointment({ ...body, createdBy: user.clinician.id, source: "staff" } as never);
+      const base = { ...body, createdBy: user.clinician.id, source: "staff" } as Record<string, unknown>;
+      delete base.repeatEveryDays; delete base.repeatCount;
+      const everyDays = Number(body.repeatEveryDays) || 0;
+      const count = Number(body.repeatCount) || 1;
+      if (everyDays > 0 && count > 1) {
+        const made = await createRecurring(base as never, everyDays, count);
+        return NextResponse.json({ ok: true, appointment: made[0], count: made.length });
+      }
+      const appt = await createAppointment(base as never);
       return NextResponse.json({ ok: true, appointment: appt });
+    }
+
+    if (action === "series:removeFrom") {
+      const removed = await deleteSeriesFrom(String(body.seriesId), String(body.fromStartAt));
+      return NextResponse.json({ ok: true, removed });
     }
     if (action === "update" || action === "status") {
       const appt = await updateAppointment(String(body.id), body as never);

@@ -30,7 +30,7 @@ const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minute
 const label12 = (minutes: number) => { let h = Math.floor(minutes / 60); const m = minutes % 60; const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}${m ? ":" + pad(m) : ""}${ap}`; };
 const prettyDate = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }); };
 
-type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number };
+type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number };
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
@@ -89,6 +89,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
       typeId: t?.id || null, mode: t?.mode || "in_person", locationOrLink: "", status: "booked",
       insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "",
       _date: date || days[0], _startMin: startMin ?? 9 * 60, _durMin: t?.durationMin || 50,
+      _repeatEvery: 0, _repeatCount: 4,
     });
   }
   function openEdit(a: Appointment) {
@@ -107,8 +108,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const startAt = utcFromCay(draft._date!, draft._startMin!);
     const endAt = utcFromCay(draft._date!, draft._startMin! + (draft._durMin || 50));
     setBusy(true);
-    const payload = { ...draft, startAt, endAt };
-    delete (payload as Draft)._date; delete (payload as Draft)._startMin; delete (payload as Draft)._durMin;
+    const payload: Record<string, unknown> = { ...draft, startAt, endAt };
+    if (!draft.id && draft._repeatEvery) { payload.repeatEveryDays = draft._repeatEvery; payload.repeatCount = draft._repeatCount || 1; }
+    delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount;
     const action = draft.id ? "update" : "create";
     const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload }) });
     const data = await res.json().catch(() => ({}));
@@ -124,6 +126,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   async function remove(a: Appointment) {
     if (!confirm("Delete this from the calendar?")) return;
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: a.id }) });
+    setDraft(null); load(monday, who);
+  }
+  async function removeSeries(a: Appointment) {
+    if (!a.seriesId) return;
+    if (!confirm("Remove this and all later appointments in the series?")) return;
+    await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "series:removeFrom", seriesId: a.seriesId, fromStartAt: a.startAt }) });
     setDraft(null); load(monday, who);
   }
   // Drag to reschedule: keep the length, move to the dropped day + start time.
@@ -218,7 +226,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                         onClick={(ev) => { ev.stopPropagation(); openEdit(a); }}>
                         <div className="cal-appt-t">{label12(s)}</div>
                         <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : a.clientName}</div>
-                        {a.kind !== "block" && <div className="cal-appt-m">{t?.name || "Visit"}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
+                        {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{t?.name || "Visit"}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
                       </div>
                     );
                   })}
@@ -267,6 +275,20 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               <label className="cal-f"><span>Start</span><input type="time" value={hhmm(draft._startMin || 540)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); setDraft({ ...draft, _startMin: h * 60 + m }); }} /></label>
               <label className="cal-f"><span>Duration (min)</span><input type="number" min={5} step={5} value={draft._durMin || 50} onChange={(e) => setDraft({ ...draft, _durMin: Number(e.target.value) })} /></label>
 
+              {!draft.id && draft.kind !== "block" && (
+                <>
+                  <label className="cal-f"><span>Repeat</span>
+                    <select value={draft._repeatEvery || 0} onChange={(e) => setDraft({ ...draft, _repeatEvery: Number(e.target.value) })}>
+                      <option value={0}>Doesn&apos;t repeat</option>
+                      <option value={7}>Weekly</option>
+                      <option value={14}>Every 2 weeks</option>
+                      <option value={28}>Every 4 weeks</option>
+                    </select>
+                  </label>
+                  {!!draft._repeatEvery && <label className="cal-f"><span>Occurrences</span><input type="number" min={2} max={52} value={draft._repeatCount || 4} onChange={(e) => setDraft({ ...draft, _repeatCount: Number(e.target.value) })} /></label>}
+                </>
+              )}
+
               {draft.kind !== "block" && (
                 <>
                   <label className="cal-f"><span>Mode</span>
@@ -304,6 +326,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             )}
             {draft.id && draft.status === "seen" && draft.kind !== "block" && (
               <p className="cal-bridge">Marked seen. When you connect scheduling to billing, this becomes a billing session automatically. (Not wired yet — prototype.)</p>
+            )}
+            {draft.id && draft.seriesId && (
+              <div className="cal-series-note">↻ Part of a recurring series. <button type="button" onClick={() => removeSeries(draft as Appointment)}>Remove this and all later</button></div>
             )}
 
             {draft.kind !== "block" && draft.clinicianId && draft._date && (() => {

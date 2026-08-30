@@ -301,6 +301,7 @@ export type IntakeStatus = "not_required" | "pending" | "received";
 
 export interface Appointment {
   id: string;
+  seriesId: string | null;       // links a recurring series; null for one-offs
   kind: AppointmentKind;         // "block" = staff personal time, no client
   clientId: string | null;       // reserved for the shared record; null for now
   clientName: string;
@@ -333,7 +334,7 @@ const asIntake = (v: unknown): IntakeStatus => (v === "pending" || v === "receiv
 
 function rowToAppt(r: Record<string, unknown>): Appointment {
   return {
-    id: str(r.id), kind: r.kind === "block" ? "block" : "appointment",
+    id: str(r.id), seriesId: r.series_id ? str(r.series_id) : null, kind: r.kind === "block" ? "block" : "appointment",
     clientId: r.client_id ? str(r.client_id) : null, clientName: str(r.client_name), clientEmail: str(r.client_email),
     clinicianId: str(r.clinician_id), typeId: r.type_id ? str(r.type_id) : null, title: str(r.title),
     startAt: iso(r.start_at), endAt: iso(r.end_at), mode: asMode(r.mode), locationOrLink: str(r.location_or_link),
@@ -379,13 +380,14 @@ type ApptInput = Partial<Omit<Appointment, "id" | "createdAt" | "updatedAt">>;
 function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
   const t = now();
   const b: Appointment = base ?? {
-    id: randomId(), kind: "appointment", clientId: null, clientName: "", clientEmail: "", clinicianId: "",
+    id: randomId(), seriesId: null, kind: "appointment", clientId: null, clientName: "", clientEmail: "", clinicianId: "",
     typeId: null, title: "", startAt: t, endAt: t, mode: "in_person", locationOrLink: "", status: "booked",
     insurancePath: null, insurerId: null, policyNo: "", intakeStatus: "not_required", billingSessionId: null,
     notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
   };
   return {
     ...b,
+    seriesId: input.seriesId !== undefined ? (input.seriesId ? str(input.seriesId) : null) : b.seriesId,
     kind: input.kind === "block" ? "block" : (input.kind === "appointment" ? "appointment" : b.kind),
     clientName: input.clientName !== undefined ? str(input.clientName).trim() : b.clientName,
     clientEmail: input.clientEmail !== undefined ? str(input.clientEmail).trim() : b.clientEmail,
@@ -420,6 +422,9 @@ async function persistAppt(row: Appointment, isNew: boolean) {
          ${row.typeId}, ${row.title}, ${row.startAt}, ${row.endAt}, ${row.mode}, ${row.locationOrLink}, ${row.status},
          ${row.insurancePath}, ${row.insurerId}, ${row.policyNo}, ${row.intakeStatus}, ${row.billingSessionId}, ${row.notes},
          ${row.createdBy}, ${row.source}, ${row.createdAt}, ${row.updatedAt})`;
+      // Guarded: set series_id separately so a pre-migration table (without the
+      // column) still books fine; the link just won't persist until migrated.
+      if (row.seriesId) { try { await sql`UPDATE scheduling_appointments SET series_id = ${row.seriesId} WHERE id = ${row.id}`; } catch { /* column not migrated */ } }
     } else {
       await sql`UPDATE scheduling_appointments SET
         kind=${row.kind}, client_id=${row.clientId}, client_name=${row.clientName}, client_email=${row.clientEmail},
@@ -458,6 +463,39 @@ export async function deleteAppointment(id: string): Promise<void> {
   } else {
     writeJson(APPT_FILE, readJson<Appointment[]>(APPT_FILE, []).filter((a) => a.id !== id));
   }
+}
+
+/** Create a recurring series: `count` copies spaced `everyDays` apart, sharing a
+ *  seriesId. Returns the appointments made. */
+export async function createRecurring(input: ApptInput, everyDays: number, count: number): Promise<Appointment[]> {
+  const seriesId = randomId();
+  const n = Math.max(1, Math.min(52, Math.floor(count)));
+  const step = Math.max(1, Math.floor(everyDays)) * 86400e3;
+  const baseStart = iso(input.startAt ?? now());
+  const baseEnd = iso(input.endAt ?? baseStart);
+  const out: Appointment[] = [];
+  for (let i = 0; i < n; i++) {
+    const startAt = new Date(Date.parse(baseStart) + i * step).toISOString();
+    const endAt = new Date(Date.parse(baseEnd) + i * step).toISOString();
+    out.push(await createAppointment({ ...input, seriesId, startAt, endAt }));
+  }
+  return out;
+}
+
+/** Delete this occurrence and every later one in the same series. Guarded so a
+ *  pre-migration table (no series_id) just removes the single appointment. */
+export async function deleteSeriesFrom(seriesId: string, fromStartAt: string): Promise<number> {
+  if (usePostgres) {
+    const sql = await pg();
+    try {
+      const res = (await sql`DELETE FROM scheduling_appointments WHERE series_id = ${seriesId} AND start_at >= ${fromStartAt} RETURNING id`) as unknown[];
+      return res.length;
+    } catch { return 0; }
+  }
+  const all = readJson<Appointment[]>(APPT_FILE, []);
+  const keep = all.filter((a) => !(a.seriesId === seriesId && a.startAt >= fromStartAt));
+  writeJson(APPT_FILE, keep);
+  return all.length - keep.length;
 }
 
 // =============================================================================
