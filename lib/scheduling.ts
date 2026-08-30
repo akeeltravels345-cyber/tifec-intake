@@ -459,3 +459,57 @@ export async function deleteAppointment(id: string): Promise<void> {
     writeJson(APPT_FILE, readJson<Appointment[]>(APPT_FILE, []).filter((a) => a.id !== id));
   }
 }
+
+// =============================================================================
+// Booking engine — open slots for the client-facing page. Read-only over
+// availability + appointments; Cayman is fixed UTC-5.
+// =============================================================================
+
+const CAY_OFFSET = 5;
+const toMinutes = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
+const addDaysStr = (dateStr: string, n: number) => { const [y, m, d] = dateStr.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const utcAtCayMidnightStr = (dateStr: string) => { const [y, m, d] = dateStr.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d, CAY_OFFSET, 0)).toISOString(); };
+export const utcFromCayMinutes = (dateStr: string, minutes: number) => { const [y, m, d] = dateStr.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d, CAY_OFFSET + Math.floor(minutes / 60), minutes % 60)).toISOString(); };
+const cayMinutesOf = (iso: string) => { const d = new Date(Date.parse(iso) - CAY_OFFSET * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+
+function workingBlocksForAvail(av: ClinicianAvailability, dateStr: string): { s: number; e: number }[] {
+  const ov = av.overrides.find((o) => o.date === dateStr);
+  if (ov) return ov.closed ? [] : ov.blocks.map((b) => ({ s: toMinutes(b.start), e: toMinutes(b.end) }));
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const dh = av.weekly.find((x) => x.day === wd);
+  return dh ? dh.blocks.map((b) => ({ s: toMinutes(b.start), e: toMinutes(b.end) })) : [];
+}
+
+/** Open start times (Cayman minutes) for one clinician on one date, honouring
+ *  their hours, existing appointments, min-notice, and max-per-day. */
+export async function availableSlots(clinicianId: string, dateStr: string, durationMin: number, nowMs = Date.now()): Promise<number[]> {
+  const av = await getAvailability(clinicianId);
+  const blocks = workingBlocksForAvail(av, dateStr);
+  if (!blocks.length) return [];
+  const appts = (await listAppointments({ clinicianId, from: utcAtCayMidnightStr(dateStr), to: utcAtCayMidnightStr(addDaysStr(dateStr, 1)) }))
+    .filter((a) => a.status !== "cancelled");
+  if (av.maxPerDay > 0 && appts.filter((a) => a.kind === "appointment").length >= av.maxPerDay) return [];
+  const busy = appts.map((a) => ({ s: cayMinutesOf(a.startAt), e: cayMinutesOf(a.endAt) }));
+  const step = av.slotIntervalMin || 30;
+  const cutoff = nowMs + av.minNoticeHours * 3600e3;
+  const out: number[] = [];
+  for (const blk of blocks) {
+    for (let t = blk.s; t + durationMin <= blk.e; t += step) {
+      const overlaps = busy.some((b) => t < b.e && t + durationMin > b.s);
+      if (overlaps) continue;
+      if (Date.parse(utcFromCayMinutes(dateStr, t)) < cutoff) continue;
+      out.push(t);
+    }
+  }
+  return out;
+}
+
+/** For "any available": the open minutes across a set of clinicians, each with
+ *  the first free clinician for that time. */
+export async function availableSlotsAny(clinicianIds: string[], dateStr: string, durationMin: number, nowMs = Date.now()): Promise<{ minute: number; clinicianId: string }[]> {
+  const per = await Promise.all(clinicianIds.map(async (id) => ({ id, mins: new Set(await availableSlots(id, dateStr, durationMin, nowMs)) })));
+  const all = new Set<number>();
+  per.forEach((p) => p.mins.forEach((m) => all.add(m)));
+  return [...all].sort((a, b) => a - b).map((minute) => ({ minute, clinicianId: per.find((p) => p.mins.has(minute))!.id }));
+}

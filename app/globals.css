@@ -3689,3 +3689,100 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 /* Calendar: closed / non-working time shading + outside-hours warning */
 .cal-closed { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(45deg, rgba(120,130,140,.05), rgba(120,130,140,.05) 6px, rgba(120,130,140,.09) 6px, rgba(120,130,140,.09) 12px); pointer-events: none; }
 .cal-warn { font-size: 12.5px; color: #8a5a1a; background: var(--maybe-bg, #f6ecd6); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }
+
+/* ============================================================================
+   Client booking flow (/book) — warm, calm, editorial. Its own world.
+   ============================================================================ */
+body:has(.bk-page) .brandbar { display: none; }
+.bk-page { min-height: 100vh; background:
+    radial-gradient(1200px 600px at 50% -10%, #e4f0ef 0%, rgba(228,240,239,0) 60%),
+    linear-gradient(180deg, #f5f8f7 0%, #eef2f1 100%);
+  padding: 40px 18px 60px; font-family: "Open Sans", system-ui, sans-serif; color: #26303a; -webkit-font-smoothing: antialiased; }
+.bk-shell { max-width: 580px; margin: 0 auto; }
+.bk-head { text-align: center; margin-bottom: 26px; }
+.bk-brand { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #2f8e93; }
+.bk-title { font-family: "Newsreader", Georgia, serif; font-weight: 500; font-size: 34px; letter-spacing: -.015em; margin-top: 8px; color: #223038; }
+
+.bk-steps { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+.bk-dot { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #fff; border: 1px solid #e2e9e8; }
+.bk-dot span { width: 22px; height: 22px; border-radius: 50%; background: #eef2f1; color: #8a969a; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.bk-dot b { font-size: 12.5px; font-weight: 600; color: #8a969a; }
+.bk-dot.on { border-color: #2f8e93; }
+.bk-dot.on span { background: #2f8e93; color: #fff; }
+.bk-dot.on b { color: #226e72; }
+.bk-dot.done span { background: #d7ece9; color: #226e72; }
+.bk-dot.done span::before { content: "✓"; }
+.bk-dot.done span { font-size: 0; }
+.bk-dot.done span::before { font-size: 12px; }
+
+.bk-back { background: none; border: 0; color: #6b7679; font: 600 13.5px "Open Sans"; cursor: pointer; padding: 4px 0; margin-bottom: 10px; }
+.bk-back:hover { color: #223038; }
+
+.bk-sec { background: #fff; border: 1px solid #e6ecea; border-radius: 20px; padding: 26px 26px 28px; box-shadow: 0 1px 2px rgba(30,42,60,.03), 0 18px 50px rgba(34,60,64,.07); }
+.bk-h2 { font-family: "Newsreader", serif; font-weight: 500; font-size: 22px; letter-spacing: -.01em; margin: 0 0 18px; color: #223038; }
+.bk-empty, .bk-hint { color: #8a969a; font-size: 14.5px; padding: 8px 0; }
+
+.bk-cards { display: flex; flex-direction: column; gap: 10px; }
+.bk-card { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; background: #fff; border: 1px solid #e6ecea; border-radius: 14px; padding: 15px 16px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s; }
+.bk-card:hover { transform: translateY(-1px); border-color: #bfdad8; box-shadow: 0 8px 22px rgba(34,60,64,.09); }
+.bk-accent { width: 6px; align-self: stretch; border-radius: 6px; flex: none; }
+.bk-avatar { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(135deg, #2f8e93, #256e72); }
+.bk-avatar.any { background: linear-gradient(135deg, #3a7ea1, #2e3192); font-size: 18px; }
+.bk-cardmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bk-cardname { font-size: 16px; font-weight: 600; color: #223038; letter-spacing: -.01em; }
+.bk-cardmeta { font-size: 13px; color: #6b7679; }
+.bk-chev { color: #b7c4c2; font-size: 17px; flex: none; transition: transform .12s; }
+.bk-card:hover .bk-chev { transform: translateX(3px); color: #2f8e93; }
+
+.bk-daystrip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; margin: 0 -4px 6px; scroll-snap-type: x proximity; }
+.bk-day { scroll-snap-align: start; flex: none; width: 58px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 0; background: #fff; border: 1px solid #e6ecea; border-radius: 13px; cursor: pointer; transition: border-color .12s, background .12s; }
+.bk-day:hover { border-color: #bfdad8; }
+.bk-day.on { background: #2f8e93; border-color: #2f8e93; }
+.bk-dow { font-size: 11px; font-weight: 600; color: #8a969a; text-transform: uppercase; letter-spacing: .04em; }
+.bk-dnum { font-size: 19px; font-weight: 700; color: #223038; font-variant-numeric: tabular-nums; }
+.bk-dmon { font-size: 10.5px; color: #8a969a; }
+.bk-day.on .bk-dow, .bk-day.on .bk-dnum, .bk-day.on .bk-dmon { color: #fff; }
+
+.bk-slotgroup { margin-top: 14px; }
+.bk-slotlabel { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9aa4a3; margin-bottom: 8px; }
+.bk-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.bk-slot { font: 600 14px "Open Sans"; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 10px; padding: 10px 6px; cursor: pointer; transition: transform .1s, background .12s, color .12s; font-variant-numeric: tabular-nums; }
+.bk-slot:hover { background: #2f8e93; color: #fff; border-color: #2f8e93; transform: translateY(-1px); }
+.bk-tznote { font-size: 12px; color: #8a969a; margin-top: 16px; }
+.bk-tznote b { color: #6b7679; }
+
+.bk-form { display: flex; flex-direction: column; gap: 14px; }
+.bk-f { display: flex; flex-direction: column; gap: 6px; }
+.bk-f > span { font-size: 12.5px; font-weight: 600; color: #3d4a4e; }
+.bk-f > span em { font-weight: 400; color: #9aa4a3; font-style: normal; }
+.bk-f input, .bk-f select, .bk-f textarea { font: 400 15px "Open Sans"; color: #223038; background: #fff; border: 1px solid #dfe6e4; border-radius: 11px; padding: 11px 13px; }
+.bk-f input:focus, .bk-f select:focus, .bk-f textarea:focus { outline: none; border-color: #2f8e93; box-shadow: 0 0 0 3px rgba(47,142,147,.12); }
+.bk-f textarea { resize: vertical; }
+.bk-seg { display: inline-flex; border: 1px solid #dfe6e4; border-radius: 11px; overflow: hidden; align-self: flex-start; }
+.bk-seg button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid #dfe6e4; background: #fff; color: #6b7679; padding: 10px 20px; cursor: pointer; }
+.bk-seg button:first-child { border-left: 0; }
+.bk-seg button.on { background: #2f8e93; color: #fff; }
+.bk-intake { font-size: 13.5px; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 12px; padding: 12px 14px; margin-top: 16px; line-height: 1.55; }
+.bk-err { color: #b3261e; font-size: 13.5px; margin-top: 14px; }
+
+.bk-cta { width: 100%; margin-top: 20px; font: 700 15.5px "Open Sans"; color: #fff; background: #256e72; border: 0; border-radius: 13px; padding: 14px; cursor: pointer; transition: filter .12s, transform .06s; }
+.bk-cta:hover { filter: brightness(1.07); }
+.bk-cta:active { transform: translateY(1px); }
+.bk-cta:disabled { opacity: .6; cursor: default; }
+.bk-textbtn { display: block; margin: 12px auto 0; background: none; border: 0; color: #6b7679; font: 600 13.5px "Open Sans"; cursor: pointer; }
+.bk-textbtn:hover { color: #223038; }
+
+.bk-summary { border: 1px solid #e6ecea; border-radius: 14px; overflow: hidden; }
+.bk-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid #f0f4f3; font-size: 14.5px; }
+.bk-row:last-child { border-bottom: 0; }
+.bk-row span:first-child { color: #8a969a; }
+.bk-row span:last-child { color: #223038; font-weight: 600; text-align: right; }
+.bk-row.strong span:last-child { color: #226e72; }
+
+.bk-done { text-align: center; }
+.bk-check { width: 62px; height: 62px; border-radius: 50%; background: linear-gradient(135deg, #3f8f5f, #2f8e93); color: #fff; font-size: 30px; font-weight: 700; display: grid; place-items: center; margin: 0 auto 16px; box-shadow: 0 10px 26px rgba(47,142,147,.3); }
+.bk-donesub { color: #6b7679; font-size: 15px; margin: 0 0 20px; }
+.bk-done .bk-summary { text-align: left; }
+
+.bk-foot { text-align: center; color: #a6b0af; font-size: 12px; margin-top: 26px; }
+@media (max-width: 480px) { .bk-title { font-size: 28px; } .bk-sec { padding: 22px 18px 24px; } .bk-dot b { display: none; } }
