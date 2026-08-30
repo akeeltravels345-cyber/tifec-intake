@@ -3881,3 +3881,32 @@ body:has(.bk-page) .brandbar { display: none; }
 /* Booking: manage-booking link on the confirmation */
 .bk-managelink { display: inline-block; margin-top: 18px; color: #226e72; font: 600 14px "Open Sans"; text-decoration: none; }
 .bk-managelink:hover { text-decoration: underline; }
+
+/* Scheduling insights (/billing/scheduling/reports) */
+.sr { max-width: 860px; margin: 0 auto; padding: 22px 20px 70px; color: var(--ink); }
+.sr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.sr-h1 { font: 400 28px "Newsreader", serif; margin: 0 0 3px; }
+.sr-sub { font-size: 14px; color: var(--muted); margin: 0; max-width: 54ch; }
+.sr-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+.sr-tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 15px; }
+.sr-tile.good { border-color: #cbe6d3; } .sr-tile.warn { border-color: #ecd7b0; }
+.sr-k { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.sr-v { font-size: 27px; font-weight: 700; margin-top: 5px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.sr-tile.good .sr-v { color: var(--green, #3f8f5f); } .sr-tile.warn .sr-v { color: #b1543c; }
+.sr-s { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.sr-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 30px; background: var(--card); border: 1px dashed var(--line); border-radius: 12px; }
+.sr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.sr-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.sr-card h2 { font: 600 14px "Open Sans"; margin: 0 0 12px; }
+.sr-bar { display: flex; align-items: center; gap: 11px; margin: 9px 0; }
+.sr-barlabel { flex: none; width: 130px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-bartrack { flex: 1; height: 9px; border-radius: 20px; background: var(--surface-2, #f4f7f6); overflow: hidden; }
+.sr-bartrack i { display: block; height: 100%; border-radius: 20px; background: var(--teal, #2f8e93); min-width: 3px; }
+.sr-barval { flex: none; width: 26px; text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sr-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+.sr-daycol { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.sr-daybar { width: 100%; max-width: 34px; height: 80px; background: var(--surface-2, #f4f7f6); border-radius: 8px; display: flex; align-items: flex-end; overflow: hidden; }
+.sr-daybar i { width: 100%; background: linear-gradient(180deg, var(--teal, #2f8e93), var(--teal-deep, #256e72)); border-radius: 8px 8px 0 0; min-height: 2px; }
+.sr-daynum { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sr-dayname { font-size: 11px; color: var(--muted); }
+@media (max-width: 720px) { .sr-tiles { grid-template-columns: repeat(2, 1fr); } .sr-cols { grid-template-columns: 1fr; } }

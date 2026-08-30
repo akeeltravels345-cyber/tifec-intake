@@ -513,3 +513,75 @@ export async function availableSlotsAny(clinicianIds: string[], dateStr: string,
   per.forEach((p) => p.mins.forEach((m) => all.add(m)));
   return [...all].sort((a, b) => a - b).map((minute) => ({ minute, clinicianId: per.find((p) => p.mins.has(minute))!.id }));
 }
+
+// =============================================================================
+// Scheduling insights — read-only stats over appointments for a Cayman month.
+// =============================================================================
+
+const cayMonthOf = (isoStr: string) => new Date(Date.parse(isoStr) - CAY_OFFSET * 3600e3).toISOString().slice(0, 7);
+const cayWeekdayMon = (isoStr: string) => (new Date(Date.parse(isoStr) - CAY_OFFSET * 3600e3).getUTCDay() + 6) % 7; // 0=Mon
+
+export interface SchedulingStats {
+  total: number; upcoming: number; seen: number; noShow: number; cancelled: number;
+  noShowRate: number; cancelRate: number;
+  newClients: number; returningClients: number; totalClients: number;
+  clientBookings: number; staffBookings: number;
+  popularTypes: { typeId: string | null; name: string; color: string; count: number }[];
+  byClinician: { clinicianId: string; count: number }[];
+  byWeekday: number[]; // Mon..Sun
+}
+
+export async function schedulingStats(year: number, month: number): Promise<SchedulingStats> {
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  let all: Appointment[]; let types: AppointmentType[];
+  try { [all, types] = await Promise.all([listAppointments({}), listAppointmentTypes()]); }
+  catch { all = []; types = []; }
+  const appts = all.filter((a) => a.kind === "appointment");
+  const inMonth = appts.filter((a) => cayMonthOf(a.startAt) === monthKey);
+
+  const total = inMonth.length;
+  const seen = inMonth.filter((a) => a.status === "seen").length;
+  const noShow = inMonth.filter((a) => a.status === "no_show").length;
+  const cancelled = inMonth.filter((a) => a.status === "cancelled").length;
+  const upcoming = inMonth.filter((a) => a.status === "booked" || a.status === "confirmed").length;
+  const nonCancelled = total - cancelled;
+  const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+
+  // Client identity = lowercased email (fallback to name). "New" = their earliest
+  // appointment across all time falls in this month.
+  const idOf = (a: Appointment) => (a.clientEmail || a.clientName || "").trim().toLowerCase();
+  const firstSeen = new Map<string, string>();
+  for (const a of appts) {
+    const k = idOf(a); if (!k) continue;
+    const cur = firstSeen.get(k);
+    if (!cur || a.startAt < cur) firstSeen.set(k, a.startAt);
+  }
+  const monthClients = new Set(inMonth.map(idOf).filter(Boolean));
+  let newClients = 0;
+  for (const k of monthClients) if (cayMonthOf(firstSeen.get(k) || "") === monthKey) newClients++;
+  const totalClients = monthClients.size;
+
+  const clientBookings = inMonth.filter((a) => a.source === "client").length;
+  const staffBookings = total - clientBookings;
+
+  const typeCount = new Map<string, number>();
+  for (const a of inMonth) typeCount.set(a.typeId || "none", (typeCount.get(a.typeId || "none") || 0) + 1);
+  const popularTypes = [...typeCount.entries()].map(([tid, count]) => {
+    const t = types.find((x) => x.id === tid);
+    return { typeId: tid === "none" ? null : tid, name: t?.name || "Other", color: t?.color || "#8a929a", count };
+  }).sort((a, b) => b.count - a.count);
+
+  const clinCount = new Map<string, number>();
+  for (const a of inMonth) clinCount.set(a.clinicianId, (clinCount.get(a.clinicianId) || 0) + 1);
+  const byClinician = [...clinCount.entries()].map(([clinicianId, count]) => ({ clinicianId, count })).sort((a, b) => b.count - a.count);
+
+  const byWeekday = [0, 0, 0, 0, 0, 0, 0];
+  for (const a of inMonth) byWeekday[cayWeekdayMon(a.startAt)]++;
+
+  return {
+    total, upcoming, seen, noShow, cancelled,
+    noShowRate: pct(noShow, nonCancelled), cancelRate: pct(cancelled, total),
+    newClients, returningClients: totalClients - newClients, totalClients,
+    clientBookings, staffBookings, popularTypes, byClinician, byWeekday,
+  };
+}
