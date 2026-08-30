@@ -176,3 +176,110 @@ export async function reorderAppointmentTypes(orderedIds: string[]): Promise<voi
     if (next != null && next !== t.sortOrder) { await persist({ ...t, sortOrder: next, updatedAt: now() }, false); }
   }
 }
+
+// =============================================================================
+// Availability — per-clinician bookable hours + booking rules.
+//   Postgres: scheduling_availability (one row per clinician)
+//   Local:    data/scheduling-availability.local.json
+// Times are "HH:MM" 24h in Cayman local; the booking page converts for clients.
+// =============================================================================
+
+export interface TimeBlock { start: string; end: string; }         // "09:00".."17:00"
+export interface DayHours { day: number; blocks: TimeBlock[]; }     // day 0=Sun .. 6=Sat
+export interface DateOverride { date: string; closed: boolean; blocks: TimeBlock[]; } // "YYYY-MM-DD"
+
+export interface ClinicianAvailability {
+  clinicianId: string;
+  weekly: DayHours[];
+  overrides: DateOverride[];
+  minNoticeHours: number;   // no bookings sooner than this
+  bookAheadDays: number;    // how far ahead clients can book
+  maxPerDay: number;        // 0 = no limit
+  slotIntervalMin: number;  // granularity of offered start times
+  updatedAt: string;
+}
+
+const AVAIL_FILE = "scheduling-availability.local.json";
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const cleanBlocks = (v: unknown): TimeBlock[] => {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((b: Record<string, unknown>) => ({ start: str(b.start), end: str(b.end) }))
+    .filter((b) => HHMM.test(b.start) && HHMM.test(b.end) && b.start < b.end)
+    .sort((a, b) => a.start.localeCompare(b.start));
+};
+const cleanWeekly = (v: unknown): DayHours[] => {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((d: Record<string, unknown>) => ({ day: num(d.day), blocks: cleanBlocks(d.blocks) }))
+    .filter((d) => d.day >= 0 && d.day <= 6);
+};
+const cleanOverrides = (v: unknown): DateOverride[] => {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((o: Record<string, unknown>) => ({ date: str(o.date).slice(0, 10), closed: !!o.closed, blocks: cleanBlocks(o.blocks) }))
+    .filter((o) => /^\d{4}-\d{2}-\d{2}$/.test(o.date))
+    .sort((a, b) => a.date.localeCompare(b.date));
+};
+
+function defaultAvailability(clinicianId: string): ClinicianAvailability {
+  return { clinicianId, weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, updatedAt: now() };
+}
+
+function rowToAvail(r: Record<string, unknown>): ClinicianAvailability {
+  return {
+    clinicianId: str(r.clinician_id),
+    weekly: cleanWeekly(r.weekly), overrides: cleanOverrides(r.overrides),
+    minNoticeHours: num(r.min_notice_hours), bookAheadDays: num(r.book_ahead_days),
+    maxPerDay: num(r.max_per_day), slotIntervalMin: num(r.slot_interval_min) || 30,
+    updatedAt: iso(r.updated_at),
+  };
+}
+
+export async function getAvailability(clinicianId: string): Promise<ClinicianAvailability> {
+  try {
+    if (usePostgres) {
+      const sql = await pg();
+      const res = (await sql`SELECT * FROM scheduling_availability WHERE clinician_id = ${clinicianId}`) as Record<string, unknown>[];
+      return res[0] ? rowToAvail(res[0]) : defaultAvailability(clinicianId);
+    }
+    const row = readJson<ClinicianAvailability[]>(AVAIL_FILE, []).find((a) => a.clinicianId === clinicianId);
+    return row ? { ...defaultAvailability(clinicianId), ...row } : defaultAvailability(clinicianId);
+  } catch {
+    return defaultAvailability(clinicianId);
+  }
+}
+
+export async function saveAvailability(clinicianId: string, input: Partial<ClinicianAvailability>): Promise<ClinicianAvailability> {
+  const base = await getAvailability(clinicianId);
+  const row: ClinicianAvailability = {
+    clinicianId,
+    weekly: input.weekly != null ? cleanWeekly(input.weekly) : base.weekly,
+    overrides: input.overrides != null ? cleanOverrides(input.overrides) : base.overrides,
+    minNoticeHours: input.minNoticeHours != null ? Math.max(0, num(input.minNoticeHours)) : base.minNoticeHours,
+    bookAheadDays: input.bookAheadDays != null ? Math.max(1, num(input.bookAheadDays)) : base.bookAheadDays,
+    maxPerDay: input.maxPerDay != null ? Math.max(0, num(input.maxPerDay)) : base.maxPerDay,
+    slotIntervalMin: input.slotIntervalMin != null ? Math.max(5, num(input.slotIntervalMin)) : base.slotIntervalMin,
+    updatedAt: now(),
+  };
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`INSERT INTO scheduling_availability
+      (clinician_id, weekly, overrides, min_notice_hours, book_ahead_days, max_per_day, slot_interval_min, updated_at)
+      VALUES (${clinicianId}, ${JSON.stringify(row.weekly)}::jsonb, ${JSON.stringify(row.overrides)}::jsonb,
+        ${row.minNoticeHours}, ${row.bookAheadDays}, ${row.maxPerDay}, ${row.slotIntervalMin}, ${row.updatedAt})
+      ON CONFLICT (clinician_id) DO UPDATE SET
+        weekly=EXCLUDED.weekly, overrides=EXCLUDED.overrides, min_notice_hours=EXCLUDED.min_notice_hours,
+        book_ahead_days=EXCLUDED.book_ahead_days, max_per_day=EXCLUDED.max_per_day,
+        slot_interval_min=EXCLUDED.slot_interval_min, updated_at=EXCLUDED.updated_at`;
+  } else {
+    const all = readJson<ClinicianAvailability[]>(AVAIL_FILE, []);
+    const i = all.findIndex((a) => a.clinicianId === clinicianId);
+    if (i >= 0) all[i] = row; else all.push(row);
+    writeJson(AVAIL_FILE, all);
+  }
+  return row;
+}

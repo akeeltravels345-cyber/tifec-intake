@@ -4,6 +4,7 @@ import { isSystemAdmin } from "@/lib/clinicians";
 import { listAppointmentTypes } from "@/lib/scheduling";
 import { listCptCodes } from "@/lib/billing";
 import { FORM_TEMPLATES } from "@/lib/forms";
+import SchedulingTabs from "@/components/billing/SchedulingTabs";
 import AppointmentTypesManager from "@/components/billing/AppointmentTypesManager";
 
 export const dynamic = "force-dynamic";
@@ -23,5 +24,10 @@ export default async function AppointmentTypesPage() {
   const [types, cpt] = await Promise.all([listAppointmentTypes(), listCptCodes()]);
   const cptCodes = cpt.filter((c) => c.active !== false).map((c) => ({ code: c.code, description: c.description }));
 
-  return <AppointmentTypesManager initial={types} cptCodes={cptCodes} formOptions={FORM_OPTIONS} />;
+  return (
+    <div>
+      <SchedulingTabs />
+      <AppointmentTypesManager initial={types} cptCodes={cptCodes} formOptions={FORM_OPTIONS} />
+    </div>
+  );
 }
