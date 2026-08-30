@@ -3517,8 +3517,30 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .wl-add button { font: 600 12.5px "Open Sans", sans-serif; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
 .wl-add button:hover { border-color: var(--teal); }
 .wl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; color: #9aa4a6; }
+.wl-footacts { display: inline-flex; gap: 10px; align-items: center; }
 .wl-remove { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 11.5px; padding: 2px 4px; }
-.wl-remove:hover { color: #c0453a; }
+.wl-remove:hover { color: var(--wl-indigo); }
+.wl-remove.danger:hover { color: #c0453a; }
+/* archive a single done task (inline with the checkbox row) */
+.wl-subarch { flex: none; border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 13px; line-height: 1; padding: 2px 5px; border-radius: 6px; opacity: 0; transition: opacity .12s; }
+.wl-sub:hover .wl-subarch { opacity: 1; }
+.wl-subarch:hover { color: var(--wl-indigo); background: var(--wl-grey-bg); }
+/* archived tasks within a heading */
+.wl-archsubs { margin-top: 4px; }
+.wl-archtoggle { border: 0; background: none; color: var(--muted); cursor: pointer; font: 600 12px "Open Sans"; padding: 4px 2px; }
+.wl-archtoggle:hover { color: var(--ink); text-decoration: underline; }
+.wl-sub.archived label { color: var(--muted); }
+.wl-archdot { flex: none; width: 17px; text-align: center; color: var(--wl-green); font-size: 12px; font-weight: 700; }
+.wl-restore { flex: none; border: 1px solid var(--line); background: #fff; color: var(--wl-indigo); cursor: pointer; font: 600 11.5px "Open Sans"; padding: 2px 9px; border-radius: 20px; }
+.wl-restore:hover { border-color: var(--wl-indigo); }
+/* archived headings section */
+.wl-archived { border-top: 1px solid var(--line); }
+.wl-archhead { width: 100%; display: flex; align-items: center; gap: 7px; border: 0; background: none; cursor: pointer; padding: 12px 18px; font: 700 12px "Open Sans"; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.wl-archhead:hover { color: var(--ink); }
+.wl-archcount { background: var(--wl-grey-bg); color: var(--muted); border-radius: 20px; padding: 1px 8px; font-size: 11px; }
+.wl-archrow { display: flex; align-items: center; gap: 10px; padding: 9px 18px; border-top: 1px solid var(--line-soft); }
+.wl-archname { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.wl-archmeta { font-size: 11.5px; color: #9aa4a6; font-variant-numeric: tabular-nums; }
 .wl-list { display: flex; flex-direction: column; }
 .wl-showall { align-self: flex-start; margin: 4px 18px 8px; border: 0; background: none; color: var(--wl-indigo); font: 600 13px "Open Sans"; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .wl-showall:hover { text-decoration: underline; }

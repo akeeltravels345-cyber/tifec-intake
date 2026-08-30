@@ -19,6 +19,7 @@ export interface BuilderSub {
   text: string;
   done: boolean;
   optional: boolean;
+  archived: boolean;
 }
 export interface BuilderTask {
   id: string;
@@ -27,6 +28,7 @@ export interface BuilderTask {
   blurb: string;
   note: string;
   subs: BuilderSub[];
+  archived: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -56,7 +58,7 @@ const parseSubs = (v: unknown): BuilderSub[] => {
   const raw = typeof v === "string" ? safeJson(v) : v;
   if (!Array.isArray(raw)) return [];
   return raw.map((s: Record<string, unknown>) => ({
-    id: str(s.id) || randomId(), text: str(s.text), done: !!s.done, optional: !!s.optional,
+    id: str(s.id) || randomId(), text: str(s.text), done: !!s.done, optional: !!s.optional, archived: !!s.archived,
   }));
 };
 
@@ -99,8 +101,8 @@ const DEFAULTS: { title: string; blurb: string; subs: { text: string; optional?:
 function seedTasks(ownerId: string): BuilderTask[] {
   const t = now();
   return DEFAULTS.map((d, i) => ({
-    id: randomId(), ownerId, title: d.title, blurb: d.blurb, note: "", sortOrder: i,
-    subs: d.subs.map((s) => ({ id: randomId(), text: s.text, done: false, optional: !!s.optional })),
+    id: randomId(), ownerId, title: d.title, blurb: d.blurb, note: "", sortOrder: i, archived: false,
+    subs: d.subs.map((s) => ({ id: randomId(), text: s.text, done: false, optional: !!s.optional, archived: false })),
     createdAt: t, updatedAt: t,
   }));
 }
@@ -141,16 +143,18 @@ export async function listBuilderTasks(ownerId: string, seedDefaults = false): P
 async function rawList(ownerId: string): Promise<BuilderTask[]> {
   if (usePostgres) {
     const sql = await pg();
-    const rows = (await sql`
-      SELECT id, owner_id, title, blurb, note, subs, sort_order, created_at, updated_at
-      FROM builder_tasks WHERE owner_id = ${ownerId}`) as Record<string, unknown>[];
+    // SELECT * so the `archived` column is read when present but doesn't break
+    // pre-migration (undefined → false).
+    const rows = (await sql`SELECT * FROM builder_tasks WHERE owner_id = ${ownerId}`) as Record<string, unknown>[];
     return rows.map((r) => ({
       id: str(r.id), ownerId: str(r.owner_id), title: str(r.title), blurb: str(r.blurb),
-      note: str(r.note), subs: parseSubs(r.subs), sortOrder: Number(r.sort_order) || 0,
+      note: str(r.note), subs: parseSubs(r.subs), archived: !!r.archived, sortOrder: Number(r.sort_order) || 0,
       createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
     }));
   }
-  return readJson<BuilderTask[]>(FILE, []).filter((t) => t.ownerId === ownerId);
+  return readJson<BuilderTask[]>(FILE, []).filter((t) => t.ownerId === ownerId).map((t) => ({
+    ...t, archived: !!t.archived, subs: (t.subs || []).map((s) => ({ ...s, archived: !!s.archived })),
+  }));
 }
 
 async function getTask(ownerId: string, taskId: string): Promise<BuilderTask | null> {
@@ -165,6 +169,11 @@ async function persist(task: BuilderTask) {
       UPDATE builder_tasks SET title = ${task.title}, blurb = ${task.blurb}, note = ${task.note},
         subs = ${JSON.stringify(task.subs)}::jsonb, sort_order = ${task.sortOrder}, updated_at = ${task.updatedAt}
       WHERE id = ${task.id} AND owner_id = ${task.ownerId}`;
+    // `archived` is written separately + guarded, so the row still saves if the
+    // column hasn't been migrated in yet.
+    try {
+      await sql`UPDATE builder_tasks SET archived = ${task.archived} WHERE id = ${task.id} AND owner_id = ${task.ownerId}`;
+    } catch { /* archived column not migrated yet — heading-archive persists once it is */ }
   } else {
     const all = readJson<BuilderTask[]>(FILE, []);
     const i = all.findIndex((t) => t.id === task.id && t.ownerId === task.ownerId);
@@ -176,9 +185,29 @@ export async function createTask(ownerId: string, title: string, blurb = ""): Pr
   const existing = await rawList(ownerId);
   const maxOrder = existing.reduce((m, t) => Math.max(m, t.sortOrder), -1);
   const t = now();
-  const row: BuilderTask = { id: randomId(), ownerId, title: title.trim(), blurb: blurb.trim(), note: "", subs: [], sortOrder: maxOrder + 1, createdAt: t, updatedAt: t };
+  const row: BuilderTask = { id: randomId(), ownerId, title: title.trim(), blurb: blurb.trim(), note: "", subs: [], archived: false, sortOrder: maxOrder + 1, createdAt: t, updatedAt: t };
   await insertTask(row);
   return row;
+}
+
+/** Archive / restore a whole heading (manual; persists via the guarded column). */
+export async function setTaskArchived(ownerId: string, taskId: string, archived: boolean): Promise<BuilderTask | null> {
+  const task = await getTask(ownerId, taskId);
+  if (!task) return null;
+  task.archived = archived;
+  await persist(task);
+  return task;
+}
+
+/** Archive / restore a single task (sub) within a heading (stored in the subs JSON). */
+export async function setSubArchived(ownerId: string, taskId: string, subId: string, archived: boolean): Promise<BuilderTask | null> {
+  const task = await getTask(ownerId, taskId);
+  if (!task) return null;
+  const sub = task.subs.find((s) => s.id === subId);
+  if (!sub) return null;
+  sub.archived = archived;
+  await persist(task);
+  return task;
 }
 
 export async function updateTask(ownerId: string, taskId: string, patch: { title?: string; blurb?: string; note?: string }): Promise<BuilderTask | null> {
@@ -204,7 +233,7 @@ export async function deleteTask(ownerId: string, taskId: string): Promise<void>
 export async function addSub(ownerId: string, taskId: string, text: string): Promise<BuilderTask | null> {
   const task = await getTask(ownerId, taskId);
   if (!task) return null;
-  task.subs.push({ id: randomId(), text: text.trim(), done: false, optional: false });
+  task.subs.push({ id: randomId(), text: text.trim(), done: false, optional: false, archived: false });
   await persist(task);
   return task;
 }

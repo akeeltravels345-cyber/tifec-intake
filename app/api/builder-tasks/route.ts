@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import {
   listBuilderTasks, createTask, updateTask, deleteTask,
-  addSub, toggleSub, deleteSub, reorderTasks,
+  addSub, toggleSub, deleteSub, reorderTasks, setTaskArchived, setSubArchived,
 } from "@/lib/builderTasks";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +74,18 @@ export async function POST(req: Request) {
 
     if (action === "sub:delete") {
       const task = await deleteSub(me.id, String(body.taskId), String(body.subId));
+      if (!task) return NextResponse.json({ error: "Step not found." }, { status: 404 });
+      return NextResponse.json({ ok: true, task });
+    }
+
+    if (action === "task:archive") {
+      const task = await setTaskArchived(me.id, String(body.taskId), !!body.archived);
+      if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+      return NextResponse.json({ ok: true, task });
+    }
+
+    if (action === "sub:archive") {
+      const task = await setSubArchived(me.id, String(body.taskId), String(body.subId), !!body.archived);
       if (!task) return NextResponse.json({ error: "Step not found." }, { status: 404 });
       return NextResponse.json({ ok: true, task });
     }

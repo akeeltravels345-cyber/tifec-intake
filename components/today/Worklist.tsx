@@ -9,8 +9,9 @@ type Status = "todo" | "prog" | "done";
 const LABEL: Record<Status, string> = { todo: "Not started", prog: "In progress", done: "Done" };
 
 function statusOf(t: BuilderTask): Status {
-  const required = t.subs.filter((s) => !s.optional);
-  const base = required.length ? required : t.subs;
+  const live = t.subs.filter((s) => !s.archived); // archived tasks are put away
+  const required = live.filter((s) => !s.optional);
+  const base = required.length ? required : live;
   if (base.length === 0) return "todo";
   const done = base.filter((s) => s.done).length;
   if (done === 0) return "todo";
@@ -38,6 +39,8 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
   // First-run tutorial nudging the user to add their own task. Shown once (per
   // browser) until they add a task or dismiss it.
   const [showAll, setShowAll] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [openArchSubs, setOpenArchSubs] = useState<Set<string>>(new Set());
   const [editId, setEditId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [coach, setCoach] = useState(false);
@@ -97,6 +100,16 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
     post("task:delete", { taskId: task.id });
   }
 
+  function archiveTask(task: BuilderTask, archived: boolean) {
+    replace({ ...task, archived });
+    post("task:archive", { taskId: task.id, archived }).then((t) => t && replace(t));
+  }
+  function archiveSub(task: BuilderTask, subId: string, archived: boolean) {
+    replace({ ...task, subs: task.subs.map((s) => (s.id === subId ? { ...s, archived } : s)) });
+    post("sub:archive", { taskId: task.id, subId, archived }).then((t) => t && replace(t));
+  }
+  const toggleArchSubs = (id: string) => setOpenArchSubs((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
   function startRename(task: BuilderTask) { setEditId(task.id); setEditTitle(task.title); }
   async function saveRename(task: BuilderTask) {
     const title = editTitle.trim();
@@ -117,8 +130,11 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
     post("reorder", { orderedIds: next.map((t) => t.id) });
   }
 
-  const totalSteps = tasks.reduce((n, t) => n + t.subs.length, 0);
-  const doneSteps = tasks.reduce((n, t) => n + t.subs.filter((s) => s.done).length, 0);
+  const activeTasks = tasks.filter((t) => !t.archived);
+  const archivedTasks = tasks.filter((t) => t.archived);
+  const liveSubs = (t: BuilderTask) => t.subs.filter((s) => !s.archived);
+  const totalSteps = activeTasks.reduce((n, t) => n + liveSubs(t).length, 0);
+  const doneSteps = activeTasks.reduce((n, t) => n + liveSubs(t).filter((s) => s.done).length, 0);
   const pct = totalSteps ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
   return (
@@ -137,10 +153,12 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
 
       <section className="wl-panel">
         <div className="wl-list">
-        {(showAll ? tasks : tasks.slice(0, TASK_LIMIT)).map((t, i) => {
+        {(showAll ? activeTasks : activeTasks.slice(0, TASK_LIMIT)).map((t, i) => {
           const st = statusOf(t);
-          const total = t.subs.length;
-          const done = t.subs.filter((s) => s.done).length;
+          const subsActive = t.subs.filter((s) => !s.archived);
+          const subsArchived = t.subs.filter((s) => s.archived);
+          const total = subsActive.length;
+          const done = subsActive.filter((s) => s.done).length;
           const p = total ? Math.round((done / total) * 100) : 0;
           const open = openId === t.id;
           return (
@@ -163,8 +181,9 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
                 </div>
                 <div className="wl-rowacts" onClick={(e) => e.stopPropagation()}>
                   <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(t, -1)}>↑</button>
-                  <button type="button" aria-label="Move down" disabled={i === tasks.length - 1} onClick={() => move(t, 1)}>↓</button>
+                  <button type="button" aria-label="Move down" disabled={i === activeTasks.length - 1} onClick={() => move(t, 1)}>↓</button>
                   <button type="button" aria-label="Rename heading" onClick={() => startRename(t)}>✎</button>
+                  <button type="button" aria-label="Archive heading" title="Archive heading" onClick={() => archiveTask(t, true)}>⤓</button>
                   <button type="button" className="del" aria-label="Delete heading" onClick={() => removeTask(t)}>×</button>
                 </div>
                 <span className="wl-pill">{LABEL[st]}</span>
@@ -176,13 +195,29 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
               </div>
 
               <div className="wl-subs">
-                {t.subs.map((s) => (
+                {subsActive.map((s) => (
                   <div key={s.id} className={`wl-sub ${s.done ? "done" : ""}`}>
                     <input type="checkbox" className="wl-cb" checked={s.done} onChange={(e) => toggleSub(t, s.id, e.target.checked)} id={`wl-${s.id}`} />
                     <label htmlFor={`wl-${s.id}`}>{s.text}{s.optional && <span className="wl-opt">optional</span>}</label>
+                    {s.done && <button type="button" className="wl-subarch" aria-label="Archive task" title="Archive this task" onClick={() => archiveSub(t, s.id, true)}>⤓</button>}
                     <button type="button" className="wl-del" aria-label="Remove task" onClick={() => deleteSub(t, s.id)}>×</button>
                   </div>
                 ))}
+                {subsArchived.length > 0 && (
+                  <div className="wl-archsubs">
+                    <button type="button" className="wl-archtoggle" onClick={() => toggleArchSubs(t.id)}>
+                      {openArchSubs.has(t.id) ? "Hide" : "Show"} {subsArchived.length} archived {subsArchived.length === 1 ? "task" : "tasks"}
+                    </button>
+                    {openArchSubs.has(t.id) && subsArchived.map((s) => (
+                      <div key={s.id} className="wl-sub done archived">
+                        <span className="wl-archdot">✓</span>
+                        <label>{s.text}</label>
+                        <button type="button" className="wl-restore" onClick={() => archiveSub(t, s.id, false)}>Restore</button>
+                        <button type="button" className="wl-del" aria-label="Remove task" onClick={() => deleteSub(t, s.id)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="wl-add">
                   <input type="text" placeholder="Add a task under this heading…" value={subDraft[t.id] || ""}
                     onChange={(e) => setSubDraft((d) => ({ ...d, [t.id]: e.target.value }))}
@@ -191,19 +226,39 @@ export default function Worklist({ initial, title = "My worklist", chip = "Admin
                 </div>
                 <div className="wl-foot">
                   <span>Updated {caymanDay(t.updatedAt)}</span>
-                  <button type="button" className="wl-remove" onClick={() => removeTask(t)}>Remove heading</button>
+                  <span className="wl-footacts">
+                    <button type="button" className="wl-remove" onClick={() => archiveTask(t, true)}>Archive</button>
+                    <button type="button" className="wl-remove danger" onClick={() => removeTask(t)}>Remove heading</button>
+                  </span>
                 </div>
               </div>
             </div>
           );
         })}
-        {tasks.length > TASK_LIMIT && (
+        {activeTasks.length > TASK_LIMIT && (
           <button type="button" className="wl-showall" onClick={() => setShowAll((s) => !s)}>
-            {showAll ? "Show fewer" : `Show all ${tasks.length} headings`}
+            {showAll ? "Show fewer" : `Show all ${activeTasks.length} headings`}
             <span className={`wl-showchev ${showAll ? "up" : ""}`} aria-hidden="true">▾</span>
           </button>
         )}
         </div>
+
+        {archivedTasks.length > 0 && (
+          <div className="wl-archived">
+            <button type="button" className="wl-archhead" onClick={() => setShowArchived((s) => !s)}>
+              <span className={`wl-showchev ${showArchived ? "up" : ""}`} aria-hidden="true">▸</span>
+              Archived <span className="wl-archcount">{archivedTasks.length}</span>
+            </button>
+            {showArchived && archivedTasks.map((t) => (
+              <div key={t.id} className="wl-archrow">
+                <span className="wl-archname">{t.title}</span>
+                <span className="wl-archmeta">{t.subs.filter((s) => s.done).length}/{t.subs.length} done</span>
+                <button type="button" className="wl-restore" onClick={() => archiveTask(t, false)}>Restore</button>
+                <button type="button" className="wl-del" aria-label="Delete heading" onClick={() => removeTask(t)}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {coach && (
           <div className="wl-coach">
