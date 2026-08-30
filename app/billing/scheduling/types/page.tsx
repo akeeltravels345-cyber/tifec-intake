@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getBillingUser, isOwner } from "@/lib/billingRole";
+import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { listAppointmentTypes } from "@/lib/scheduling";
 import { listCptCodes } from "@/lib/billing";
@@ -17,7 +17,8 @@ const FORM_OPTIONS = Object.values(FORM_TEMPLATES)
 export default async function AppointmentTypesPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/scheduling/types");
-  if (!isOwner(user.role) && !isSystemAdmin(user.clinician)) redirect("/billing/me");
+  // Admin only while this is a prototype. No one else, not even the owner.
+  if (!isSystemAdmin(user.clinician)) redirect("/today");
 
   const [types, cpt] = await Promise.all([listAppointmentTypes(), listCptCodes()]);
   const cptCodes = cpt.filter((c) => c.active !== false).map((c) => ({ code: c.code, description: c.description }));

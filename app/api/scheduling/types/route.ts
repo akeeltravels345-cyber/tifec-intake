@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBillingUser, isOwner } from "@/lib/billingRole";
+import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import {
   listAppointmentTypes, createAppointmentType, updateAppointmentType,
@@ -8,26 +8,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Appointment types are practice configuration: the owner and the system admin
-// manage them. Billers and clinicians can read the list (for booking) but not
-// change it.
-async function requireEditor() {
+// Prototype: the whole scheduler is the system admin's alone for now. Owner,
+// billers and clinicians are all refused, read and write, until it's ready.
+async function requireAdmin() {
   const user = await getBillingUser();
   if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (!isOwner(user.role) && !isSystemAdmin(user.clinician)) {
+  if (!isSystemAdmin(user.clinician)) {
     return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
   }
   return { user };
 }
 
 export async function GET() {
-  const user = await getBillingUser();
-  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const { error } = await requireAdmin();
+  if (error) return error;
   return NextResponse.json({ types: await listAppointmentTypes() });
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireEditor();
+  const { error } = await requireAdmin();
   if (error) return error;
 
   let body: Record<string, unknown>;
