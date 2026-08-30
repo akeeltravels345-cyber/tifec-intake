@@ -1953,6 +1953,7 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-bucket .bc { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
 .bq-bucket .bkd { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .bq-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.bq-tsp { flex: 1 1 12px; }
 .bq-tabs { display: inline-flex; gap: 4px; background: #F0EDE3; border-radius: 10px; padding: 4px; }
 .bq-tab { border: none; background: transparent; border-radius: 7px; padding: 8px 15px; font: 600 13px "Open Sans"; color: var(--muted); cursor: pointer; }
 .bq-tab.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
@@ -1986,9 +1987,10 @@ body:has(.biz) { background: #F8F9F8; }
    opens the picker (via showPicker). Keeps rows tidy instead of icon-cluttered. */
 .biz .bq-dateedit::-webkit-calendar-picker-indicator { display: none; }
 .biz .bq-dateedit { -webkit-appearance: none; appearance: none; }
-/* On the green "paid" pill: inherit the pill's colour, faint hover chip. */
-.biz .pill .bq-dateedit.onpill { color: var(--ink); font-weight: 500; font-size: 13px; }
-.biz .pill .bq-dateedit.onpill:hover:not(:disabled) { border-color: var(--edge); background: #fff; }
+/* On the Collected tab: a clearly-editable bordered date chip (not text disguised
+   as static), so its native picker never collides with the client name beside it. */
+.biz .pill .bq-dateedit.onpill { color: var(--ink); font-weight: 600; font-size: 13px; border: 1px solid var(--edge); background: #fff; border-radius: 7px; padding: 3px 9px; }
+.biz .pill .bq-dateedit.onpill:hover:not(:disabled), .biz .pill .bq-dateedit.onpill:focus { border-color: var(--teal); background: #fff; }
 /* Leading date-of-service column on the Awaiting tab: reads like the row's date. */
 .biz .bq-dateedit.lead { font-size: 13px; color: var(--ink); font-weight: 600; padding: 1px 2px; margin-left: -2px; }
 /* Self-pay disposition segmented control (Log a session). */
@@ -2214,7 +2216,7 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-gcomm { font-size: 12px; color: var(--teal-deep); font-weight: 700; margin-top: 2px; }
 .bq-age { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: #edf3f2; color: var(--teal-deep); white-space: nowrap; }
 .bq-age.warn { background: var(--amber-bg); color: var(--amber); }
-.bq-row { display: grid; grid-template-columns: 26px 92px 84px 1fr 110px 96px; align-items: center; gap: 14px; padding: 13px 20px; border-top: 1px solid var(--hair); }
+.bq-row { display: grid; grid-template-columns: 26px 92px 84px 1fr 110px; align-items: center; gap: 14px; padding: 13px 20px; border-top: 1px solid var(--hair); }
 .bq-row:hover { background: #fdfbf6; }
 .bq-row.sel { background: #eef4f3; }
 .bq-row .dos { font-size: 13px; color: var(--muted); }
@@ -2224,7 +2226,7 @@ body:has(.biz) { background: #F8F9F8; }
 .bq-row .amt { text-align: right; font: 400 16px "Newsreader", serif; font-variant-numeric: tabular-nums; }
 .bq-row .comm { text-align: right; font-size: 12px; color: var(--teal-deep); font-weight: 700; }
 .bq-refflag { display: inline-block; margin-left: 8px; font-size: 10.5px; font-weight: 800; color: #9a3b2a; white-space: nowrap; }
-.bq-row.act { grid-template-columns: 26px 92px 84px 1fr 110px 96px auto; }
+.bq-row.act { grid-template-columns: 26px 92px 84px 1fr 110px auto; }
 .bq-row.act .bq-undo { justify-self: end; }
 .bq-rowacts { display: inline-flex; gap: 6px; justify-self: end; }
 /* Inline write-off / write-down settle form under a queue claim. */
@@ -3171,13 +3173,23 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .bq-wcut .c { font-size: 12px; color: var(--muted); line-height: 1.7; }
 .biz .bq-wcut .c b { color: var(--teal-deep); font-weight: 700; }
 
-.biz .bq-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.biz .bq-chip { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 15px; font: 600 13px "Open Sans"; color: var(--muted); cursor: pointer; transition: border-color .14s, background .14s; }
-.biz .bq-chip:hover { border-color: var(--teal); }
-.biz .bq-chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
-.biz .bq-chip .cd { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.biz .bq-chip .cc { font-weight: 700; opacity: .55; }
-.biz .bq-chip.on .cc { opacity: .85; }
+.biz .bq-chipsrow { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.biz .bq-chipslab { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+.biz .bq-chips { display: inline-flex; gap: 2px; background: #F0EDE3; border-radius: 8px; padding: 3px; flex-wrap: wrap; }
+.biz .bq-chip { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; border-radius: 6px; padding: 6px 12px; font: 600 12px "Open Sans"; color: var(--muted); cursor: pointer; transition: background .14s, color .14s; }
+.biz .bq-chip:hover:not(.on) { color: var(--ink); }
+.biz .bq-chip.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.biz .bq-chip .cd { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.biz .bq-chip .cc { font-weight: 700; color: var(--faint); }
+.biz .bq-chip.on .cc { color: var(--muted); }
+
+/* Awaiting-payment monthly history strip */
+.biz .bq-history { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; background: #fff; border: 1px solid var(--edge); border-radius: 12px; padding: 14px 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(70,55,25,.03), 0 6px 18px rgba(70,55,25,.035); }
+.biz .bq-hlab { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; white-space: nowrap; }
+.biz .bq-hseg { display: flex; flex-direction: column; gap: 2px; padding-left: 22px; border-left: 1px solid var(--hair); }
+.biz .bq-hseg .hk { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.biz .bq-hseg .hv { font: 400 19px "Newsreader", serif; font-variant-numeric: tabular-nums; }
+.biz .bq-hseg .hc { font-size: 11px; color: var(--faint); }
 
 @media (max-width: 900px) {
   .biz .bq-wcut { text-align: left; padding: 10px 22px 12px; }
@@ -3673,3 +3685,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-btn.del { border-color: transparent; color: #b1543c; }
 .cal-btn.del:hover { background: var(--red-bg, #f6e4e2); }
 .cal-btn:disabled { opacity: .5; cursor: default; }
+
+/* Calendar: closed / non-working time shading + outside-hours warning */
+.cal-closed { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(45deg, rgba(120,130,140,.05), rgba(120,130,140,.05) 6px, rgba(120,130,140,.09) 6px, rgba(120,130,140,.09) 12px); pointer-events: none; }
+.cal-warn { font-size: 12.5px; color: #8a5a1a; background: var(--maybe-bg, #f6ecd6); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }

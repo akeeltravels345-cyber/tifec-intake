@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Appointment, AppointmentType, AppointmentMode, AppointmentStatus } from "@/lib/scheduling";
+import type { Appointment, AppointmentType, AppointmentMode, AppointmentStatus, DayHours, DateOverride } from "@/lib/scheduling";
 
 interface Clin { id: string; name: string; }
 interface Insurer { id: string; name: string; }
+interface Avail { clinicianId: string; weekly: DayHours[]; overrides: DateOverride[]; }
 
 const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -31,9 +32,33 @@ const prettyDate = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); re
 
 type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number };
 
-export default function CalendarView({ clinicians, types, insurers, todayCayman, initial }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; todayCayman: string; initial: Appointment[];
+const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
+
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[];
 }) {
+  const availMap = new Map(availabilities.map((a) => [a.clinicianId, a]));
+  // Working intervals (minutes) for a clinician on a date; null = we don't know.
+  function workingBlocks(clinId: string, dayStr: string): { s: number; e: number }[] | null {
+    const av = availMap.get(clinId);
+    if (!av) return null;
+    const ov = av.overrides.find((o) => o.date === dayStr);
+    if (ov) return ov.closed ? [] : ov.blocks.map((b) => ({ s: toMin(b.start), e: toMin(b.end) }));
+    const [y, m, d] = dayStr.split("-").map(Number);
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=Sun..6=Sat, matches stored weekly.day
+    const dh = av.weekly.find((x) => x.day === wd);
+    return dh ? dh.blocks.map((b) => ({ s: toMin(b.start), e: toMin(b.end) })) : [];
+  }
+  function closedRegions(clinId: string, dayStr: string): { s: number; e: number }[] {
+    const blocks = workingBlocks(clinId, dayStr);
+    if (blocks === null) return [];
+    const lo = DAY_START * 60, hi = DAY_END * 60;
+    const sorted = blocks.filter((b) => b.e > lo && b.s < hi).map((b) => ({ s: Math.max(lo, b.s), e: Math.min(hi, b.e) })).sort((a, b) => a.s - b.s);
+    const regions: { s: number; e: number }[] = []; let cur = lo;
+    for (const b of sorted) { if (b.s > cur) regions.push({ s: cur, e: b.s }); cur = Math.max(cur, b.e); }
+    if (cur < hi) regions.push({ s: cur, e: hi });
+    return regions;
+  }
   const [monday, setMonday] = useState(() => mondayOf(todayCayman));
   const [appts, setAppts] = useState<Appointment[]>(initial);
   const [who, setWho] = useState<string>("all");
@@ -156,6 +181,9 @@ export default function CalendarView({ clinicians, types, insurers, todayCayman,
                   openNew(day, Math.max(DAY_START * 60, Math.min(min, (DAY_END - 1) * 60)));
                 }}>
                   {Array.from({ length: DAY_END - DAY_START }, (_, i) => <div key={i} className="cal-line" style={{ top: i * HOUR }} />)}
+                  {who !== "all" && closedRegions(who, day).map((r, i) => (
+                    <div key={`c${i}`} className="cal-closed" style={{ top: ((r.s - DAY_START * 60) / 60) * HOUR, height: ((r.e - r.s) / 60) * HOUR }} />
+                  ))}
                   {placed.map(({ a, s, e, lane, laneCount }) => {
                     const t = typeById(a.typeId);
                     const top = ((s - DAY_START * 60) / 60) * HOUR;
@@ -254,6 +282,13 @@ export default function CalendarView({ clinicians, types, insurers, todayCayman,
             {draft.id && draft.status === "seen" && draft.kind !== "block" && (
               <p className="cal-bridge">Marked seen. When you connect scheduling to billing, this becomes a billing session automatically. (Not wired yet — prototype.)</p>
             )}
+
+            {draft.kind !== "block" && draft.clinicianId && draft._date && (() => {
+              const blocks = workingBlocks(draft.clinicianId, draft._date);
+              const s = draft._startMin ?? 0, e = s + (draft._durMin || 50);
+              const outside = blocks !== null && !blocks.some((b) => s >= b.s && e <= b.e);
+              return outside ? <p className="cal-warn">Outside {clinName(draft.clinicianId)}&apos;s set hours for that day. You can still book it.</p> : null;
+            })()}
 
             <div className="cal-actions">
               {draft.id ? <button className="cal-btn del" onClick={() => remove(draft as Appointment)}>Delete</button> : <span />}

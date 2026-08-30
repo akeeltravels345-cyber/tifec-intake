@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
-import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
+import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
 import { listInsurers } from "@/lib/billing";
 import { caymanToday } from "@/lib/caymanTime";
 import SchedulingTabs from "@/components/billing/SchedulingTabs";
@@ -24,10 +24,11 @@ export default async function CalendarPage() {
 
   const today = caymanToday();
   const monday = mondayOf(today);
-  const [types, insurers, appts] = await Promise.all([
+  const [types, insurers, appts, avails] = await Promise.all([
     listAppointmentTypes(),
     listInsurers(),
     listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)) }),
+    Promise.all(bookable.map((c) => getAvailability(c.id))),
   ]);
 
   return (
@@ -37,6 +38,7 @@ export default async function CalendarPage() {
         clinicians={bookable.map((c) => ({ id: c.id, name: c.name }))}
         types={types.filter((t) => t.active)}
         insurers={insurers.map((i) => ({ id: i.id, name: i.name }))}
+        availabilities={avails.map((a) => ({ clinicianId: a.clinicianId, weekly: a.weekly, overrides: a.overrides }))}
         todayCayman={today}
         initial={appts}
       />
