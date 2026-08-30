@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type Mode = "in_person" | "virtual" | "either";
 interface Type { id: string; name: string; category: string; durationMin: number; price: number; mode: Mode; color: string; hasIntake: boolean; newClientIntakeOnly: boolean; }
@@ -16,8 +16,8 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const initials = (name: string) => name.replace(/\(.*?\)/g, "").split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss)\.?$/i.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const MODE_LABEL: Record<Mode, string> = { in_person: "In person", virtual: "Virtual", either: "In person or virtual" };
 
-export default function BookingFlow({ practiceName, types, clinicians, insurers, preview }: {
-  practiceName: string; types: Type[]; clinicians: Clin[]; insurers: Insurer[]; preview: string;
+export default function BookingFlow({ practiceName, types, clinicians, insurers, preview, welcome, accent }: {
+  practiceName: string; types: Type[]; clinicians: Clin[]; insurers: Insurer[]; preview: string; welcome?: string; accent?: string;
 }) {
   const tz = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return "your timezone"; } }, []);
   const [step, setStep] = useState<Step>("service");
@@ -120,11 +120,12 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const stepIndex = STEPS.indexOf(step);
 
   return (
-    <div className="bk-page">
+    <div className="bk-page" style={accent ? ({ "--bk-accent": accent } as CSSProperties) : undefined}>
       <div className="bk-shell">
         <header className="bk-head">
           <div className="bk-brand">{practiceName}</div>
           <div className="bk-title">Book an appointment</div>
+          {welcome && <p className="bk-welcome-msg">{welcome}</p>}
         </header>
 
         {step !== "done" && step !== "waitlist" && step !== "waitlisted" && (

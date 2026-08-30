@@ -9,6 +9,7 @@ const TABS = [
   { href: "/billing/scheduling/reports", label: "Insights" },
   { href: "/billing/scheduling/types", label: "Appointment types" },
   { href: "/billing/scheduling/availability", label: "Availability" },
+  { href: "/billing/scheduling/settings", label: "Settings" },
 ];
 
 // In-page nav across the scheduling screens, so the sidebar keeps one entry.

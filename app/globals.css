@@ -3819,7 +3819,7 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-daystrip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; margin: 0 -4px 6px; scroll-snap-type: x proximity; }
 .bk-day { scroll-snap-align: start; flex: none; width: 58px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 0; background: #fff; border: 1px solid #e6ecea; border-radius: 13px; cursor: pointer; transition: border-color .12s, background .12s; }
 .bk-day:hover { border-color: #bfdad8; }
-.bk-day.on { background: #2f8e93; border-color: #2f8e93; }
+.bk-day.on { background: var(--bk-accent, #2f8e93); border-color: var(--bk-accent, #2f8e93); }
 .bk-dow { font-size: 11px; font-weight: 600; color: #8a969a; text-transform: uppercase; letter-spacing: .04em; }
 .bk-dnum { font-size: 19px; font-weight: 700; color: #223038; font-variant-numeric: tabular-nums; }
 .bk-dmon { font-size: 10.5px; color: #8a969a; }
@@ -3829,7 +3829,7 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-slotlabel { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9aa4a3; margin-bottom: 8px; }
 .bk-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
 .bk-slot { font: 600 14px "Open Sans"; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 10px; padding: 10px 6px; cursor: pointer; transition: transform .1s, background .12s, color .12s; font-variant-numeric: tabular-nums; }
-.bk-slot:hover { background: #2f8e93; color: #fff; border-color: #2f8e93; transform: translateY(-1px); }
+.bk-slot:hover { background: var(--bk-accent, #2f8e93); color: #fff; border-color: #2f8e93; transform: translateY(-1px); }
 .bk-tznote { font-size: 12px; color: #8a969a; margin-top: 16px; }
 .bk-tznote b { color: #6b7679; }
 
@@ -3847,7 +3847,7 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-intake { font-size: 13.5px; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 12px; padding: 12px 14px; margin-top: 16px; line-height: 1.55; }
 .bk-err { color: #b3261e; font-size: 13.5px; margin-top: 14px; }
 
-.bk-cta { width: 100%; margin-top: 20px; font: 700 15.5px "Open Sans"; color: #fff; background: #256e72; border: 0; border-radius: 13px; padding: 14px; cursor: pointer; transition: filter .12s, transform .06s; }
+.bk-cta { width: 100%; margin-top: 20px; font: 700 15.5px "Open Sans"; color: #fff; background: var(--bk-accent, #256e72); border: 0; border-radius: 13px; padding: 14px; cursor: pointer; transition: filter .12s, transform .06s; }
 .bk-cta:hover { filter: brightness(1.07); }
 .bk-cta:active { transform: translateY(1px); }
 .bk-cta:disabled { opacity: .6; cursor: default; }
@@ -3956,3 +3956,40 @@ body:has(.bk-page) .brandbar { display: none; }
 .wl2-actions button.ok { color: #fff; background: var(--green, #3f8f5f); border-color: var(--green, #3f8f5f); }
 .wl2-actions button.rm { color: var(--muted); }
 .wl2-actions button.rm:hover { color: #c0453a; border-color: #e3b7b0; }
+
+/* Booking: welcome message under the title */
+.bk-welcome-msg { color: #55635d; font-size: 15px; max-width: 46ch; margin: 12px auto 0; line-height: 1.5; }
+
+/* Scheduling settings page */
+.ss { max-width: 720px; margin: 0 auto; padding: 22px 20px 80px; color: var(--ink); }
+.ss-head { margin-bottom: 16px; }
+.ss-h1 { font: 400 28px "Newsreader", serif; margin: 0 0 3px; }
+.ss-sub { font-size: 14px; color: var(--muted); margin: 0; }
+.ss-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+.ss-card h2 { font: 600 15px "Open Sans"; margin: 0 0 12px; }
+.ss-f { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ss-f > span { font-size: 12.5px; font-weight: 600; }
+.ss-f > span em { font-weight: 400; color: var(--muted); font-style: normal; }
+.ss-f input, .ss-f textarea { font: 400 14px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; }
+.ss-f input:focus, .ss-f textarea:focus { outline: none; border-color: var(--teal); }
+.ss-swatches { display: flex; gap: 8px; }
+.ss-sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.ss-sw.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--card) inset; }
+.ss-notihead { display: flex; align-items: center; justify-content: space-between; }
+.ss-switch { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ss-warn { font-size: 12.5px; color: #8a5a1a; background: var(--maybe-bg, #f6ecd6); border-radius: 9px; padding: 9px 12px; margin: 4px 0 12px; }
+.ss-toggles { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 12px; }
+.ss-chk { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; cursor: pointer; }
+.ss-hint { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+.ss-tpl { border-top: 1px solid var(--line-soft, #eef2f4); padding-top: 12px; margin-top: 12px; }
+.ss-tpl:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.ss-tpl-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--teal-deep); margin-bottom: 8px; }
+.ss-preview { background: var(--surface-2, #f4f7f6); border-radius: 10px; padding: 12px 14px; margin-top: 8px; }
+.ss-preview-l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+.ss-preview-s { font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+.ss-preview-b { font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.5; }
+.ss-save { display: flex; align-items: center; gap: 12px; }
+.ss-sp { flex: 1; }
+.ss-msg { font-size: 13px; font-weight: 600; } .ss-msg.ok { color: var(--green, #3f8f5f); } .ss-msg.err { color: #b3261e; }
+.ss-btn { font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 10px 16px; cursor: pointer; }
+.ss-btn:disabled { opacity: .5; cursor: default; }

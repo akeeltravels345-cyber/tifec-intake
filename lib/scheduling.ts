@@ -694,3 +694,70 @@ export async function setWaitlistStatus(id: string, status: WaitStatus): Promise
   if (usePostgres) { const sql = await pg(); await sql`UPDATE scheduling_waitlist SET status=${status} WHERE id=${id}`; }
   else { const all = readJson<WaitlistEntry[]>(WAIT_FILE, []); const i = all.findIndex((w) => w.id === id); if (i >= 0) { all[i].status = status; writeJson(WAIT_FILE, all); } }
 }
+
+// =============================================================================
+// Scheduling settings — booking-page branding + notification config. A single
+// JSON row. Notifications are BUILT but OFF until the admin turns them on and
+// gives the go (nothing sends in the prototype).
+//   Postgres: scheduling_settings   Local: data/scheduling-settings.local.json
+// =============================================================================
+
+export interface NotifyTemplate { subject: string; body: string; }
+export interface SchedulingSettings {
+  booking: { welcome: string; accent: string };
+  notifications: {
+    enabled: boolean;                 // master switch; false = nothing sends
+    confirmation: boolean; reminder: boolean; reschedule: boolean; cancellation: boolean;
+    reminderOffsetsHours: number[];   // e.g. [24, 1]
+    templates: { confirmation: NotifyTemplate; reminder: NotifyTemplate };
+  };
+}
+
+const SET_FILE = "scheduling-settings.local.json";
+export const DEFAULT_SETTINGS: SchedulingSettings = {
+  booking: { welcome: "", accent: "#256e72" },
+  notifications: {
+    enabled: false,
+    confirmation: true, reminder: true, reschedule: true, cancellation: true,
+    reminderOffsetsHours: [24, 1],
+    templates: {
+      confirmation: { subject: "Your appointment is booked", body: "Hi {client},\n\nYou're booked for {service} with {clinician} on {when}.\n\nSee you then,\n{practice}" },
+      reminder: { subject: "Reminder: your appointment {when}", body: "Hi {client},\n\nThis is a friendly reminder of your {service} with {clinician} on {when}.\n\n{practice}" },
+    },
+  },
+};
+
+function mergeSettings(saved: Partial<SchedulingSettings> | null): SchedulingSettings {
+  const d = DEFAULT_SETTINGS;
+  if (!saved) return d;
+  return {
+    booking: { ...d.booking, ...(saved.booking || {}) },
+    notifications: {
+      ...d.notifications, ...(saved.notifications || {}),
+      templates: { ...d.notifications.templates, ...((saved.notifications || {}).templates || {}) },
+      reminderOffsetsHours: Array.isArray(saved.notifications?.reminderOffsetsHours) ? saved.notifications!.reminderOffsetsHours.map((n) => Math.max(0, num(n))) : d.notifications.reminderOffsetsHours,
+    },
+  };
+}
+
+export async function getSchedulingSettings(): Promise<SchedulingSettings> {
+  try {
+    if (usePostgres) {
+      const sql = await pg();
+      const rows = (await sql`SELECT data FROM scheduling_settings WHERE id='default'`) as Record<string, unknown>[];
+      const data = rows[0]?.data;
+      return mergeSettings((typeof data === "string" ? JSON.parse(data) : data) as Partial<SchedulingSettings> | null);
+    }
+    return mergeSettings(readJson<Partial<SchedulingSettings> | null>(SET_FILE, null));
+  } catch { return DEFAULT_SETTINGS; }
+}
+
+export async function saveSchedulingSettings(patch: Partial<SchedulingSettings>): Promise<SchedulingSettings> {
+  const next = mergeSettings({ ...(await getSchedulingSettings()), ...patch });
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`INSERT INTO scheduling_settings (id, data) VALUES ('default', ${JSON.stringify(next)}::jsonb)
+      ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`;
+  } else { writeJson(SET_FILE, next); }
+  return next;
+}
