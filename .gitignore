@@ -21,3 +21,10 @@ data/*.json
 
 # local dev note (worktree-specific)
 BILLING-WORKSPACE.md
+TASKS.md
+dashboard.html
+
+# stray data / scratch (never commit PHI or design zips)
+db/*.json
+*.zip
+HANDOFF-*.md
