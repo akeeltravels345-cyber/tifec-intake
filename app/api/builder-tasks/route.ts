@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
-import { isSystemAdmin } from "@/lib/clinicians";
 import {
   listBuilderTasks, createTask, updateTask, deleteTask,
   addSub, toggleSub, deleteSub, reorderTasks,
@@ -12,24 +11,23 @@ const MAX_TITLE = 160;
 const MAX_TEXT = 400;
 const MAX_NOTE = 2000;
 
-// The builder task list is the system admin's alone. Everyone else (owner,
-// biller, clinicians) is refused, so this never leaks build notes.
-async function requireAdmin() {
+// Each worklist is private to its owner: every operation is scoped to the signed-in
+// user's own id, so people only ever read and write their own list.
+async function requireUser() {
   const me = await getCurrentClinician();
   if (!me) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (!isSystemAdmin(me)) return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
   return { me };
 }
 
 export async function GET() {
-  const { me, error } = await requireAdmin();
+  const { me, error } = await requireUser();
   if (error) return error;
   const tasks = await listBuilderTasks(me.id);
   return NextResponse.json({ tasks });
 }
 
 export async function POST(req: Request) {
-  const { me, error } = await requireAdmin();
+  const { me, error } = await requireUser();
   if (error) return error;
 
   let body: Record<string, unknown>;

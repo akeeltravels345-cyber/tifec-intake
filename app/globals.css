@@ -1579,6 +1579,39 @@ body:has(.biz) { background: #F8F9F8; }
 .bo-big { font: 400 44px/1 "Newsreader", serif; letter-spacing: -.01em; margin: 12px 0 0; font-variant-numeric: tabular-nums; color: var(--ink); }
 .bo-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; vertical-align: 9px; margin-left: 12px; color: #147a45; background: #e3f4ea; }
 .bo-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+/* Hero gradient banner (business overview) */
+.biz .bo-stripe { position: relative; overflow: hidden; display: grid; grid-template-columns: repeat(4, 1fr); border-radius: 18px; padding: 46px 20px 22px; margin-bottom: 26px; box-shadow: 0 20px 50px rgba(46,49,146,.22); }
+.biz .bo-stripe-title { position: absolute; top: 17px; left: 22px; z-index: 2; font: 700 11.5px "Open Sans"; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.72); }
+.biz .bo-stripe-bg { position: absolute; inset: 0; background: linear-gradient(150deg, #2F8E93 0%, #35509f 52%, #2E3192 100%); z-index: 0; }
+.biz .bo-stripe-bg::before, .biz .bo-stripe-bg::after { content: ""; position: absolute; border-radius: 50%; background: rgba(255,255,255,.08); }
+.biz .bo-stripe-bg::before { width: 180px; height: 180px; top: -70px; left: -50px; }
+.biz .bo-stripe-bg::after { width: 320px; height: 320px; bottom: -140px; right: -90px; }
+.biz .bo-sseg { position: relative; z-index: 1; padding: 2px 20px; }
+.biz .bo-sseg + .bo-sseg { border-left: 1px solid rgba(255,255,255,.2); }
+.biz .bo-sseg .sk { display: block; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.82); font-weight: 700; }
+.biz .bo-sseg .sv { display: block; margin-top: 8px; font: 400 26px "Newsreader", serif; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.biz .bo-stripe-delta { position: absolute; top: 15px; right: 16px; z-index: 2; background: #8fe0c4; color: #1f5d47; font: 700 12px "Open Sans"; padding: 4px 11px; border-radius: 999px; }
+.biz .bo-cashbrk { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; font-size: 13px; color: var(--muted); margin-bottom: 18px; padding: 0 6px; }
+.biz .bo-cashbrk > span:first-child { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--faint); }
+.biz .bo-cashbrk b { color: var(--ink); font-weight: 700; }
+.biz .bo-cashbrk .sub { color: var(--faint); }
+.biz .bo-topgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: stretch; margin-bottom: 20px; }
+.biz .bo-topgrid.solo { grid-template-columns: 1fr; }
+.biz .bo-clincol .bo-clin { display: flex; flex-direction: column; gap: 10px; }
+/* The worklist box fills its column so it always lines up with the By-clinician
+   box on the right, even when the task list is short or empty. */
+.biz .bo-wlcol { display: flex; min-width: 0; }
+.biz .bo-wlcol .wl { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.biz .bo-wlcol .wl-panel { flex: 1; display: flex; flex-direction: column; }
+.biz .bo-wlcol .wl-panel > .wl-list { flex: 1; }
+@media (max-width: 900px) { .biz .bo-topgrid { grid-template-columns: 1fr; } }
+.biz .bo-clhead.nav:hover .bo-chev { color: var(--teal); transform: translateX(2px); }
+@media (max-width: 700px) {
+  .biz .bo-stripe { grid-template-columns: 1fr 1fr; gap: 18px 0; }
+  .biz .bo-sseg { padding: 10px 16px; }
+  .biz .bo-sseg + .bo-sseg { border-left: none; }
+  .biz .bo-sseg .sv { font-size: 22px; }
+}
 .bo-segbar { height: 14px; border-radius: 999px; overflow: hidden; display: flex; background: #EEE7DB; margin: 20px 0 12px; }
 .bo-segbar i { display: block; height: 100%; transition: width .5s cubic-bezier(.22,1,.36,1); }
 .bo-leg { display: flex; gap: 24px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
@@ -3154,6 +3187,7 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 
 /* attribution beside who-owes-you */
 .biz .bo-split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-bottom: 18px; align-items: start; }
+.biz .bo-splitleft { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 
 /* quiet inline link (sits inside a card header, unlike the solid .bl-cta) */
 .biz .bl-ghost { display: inline-flex; align-items: center; gap: 5px; color: var(--teal-deep); font: 600 12.5px "Open Sans"; text-decoration: none; }
@@ -3448,11 +3482,14 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .wl-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
 .s-done .wl-name { color: var(--muted); }
 .wl-blurb { font-size: 12px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wl-reorder { display: flex; flex-direction: column; gap: 1px; opacity: 0; transition: opacity .12s; flex: none; }
-.wl-row:hover .wl-reorder { opacity: 1; }
-.wl-reorder button { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 11px; line-height: 1; padding: 1px 3px; border-radius: 4px; }
-.wl-reorder button:hover:not(:disabled) { color: var(--ink); background: var(--wl-grey-bg); }
-.wl-reorder button:disabled { opacity: .3; cursor: default; }
+.wl-rowacts { display: inline-flex; align-items: center; gap: 0; opacity: 0; transition: opacity .12s; flex: none; }
+.wl-row:hover .wl-rowacts, .wl-rowacts:focus-within { opacity: 1; }
+.wl-rowacts button { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 12px; line-height: 1; padding: 4px 5px; border-radius: 5px; }
+.wl-rowacts button:hover:not(:disabled) { color: var(--ink); background: var(--wl-grey-bg); }
+.wl-rowacts button:disabled { opacity: .3; cursor: default; }
+.wl-rowacts button.del:hover { color: #c0453a; background: var(--wl-grey-bg); }
+.wl-rename { width: 100%; font: 600 14.5px "Open Sans", sans-serif; color: var(--ink); border: 1px solid var(--wl-indigo); border-radius: 7px; padding: 4px 8px; background: #fff; }
+.wl-rename:focus { outline: none; }
 .wl-pill { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; flex: none; }
 .s-todo .wl-pill { background: var(--wl-grey-bg); color: #74807f; } .s-prog .wl-pill { background: var(--wl-amber-bg); color: var(--wl-amber-tx); } .s-done .wl-pill { background: var(--wl-green-bg); color: var(--wl-green); }
 .wl-mini { width: 74px; flex: none; }
@@ -3482,12 +3519,25 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .wl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; color: #9aa4a6; }
 .wl-remove { border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 11.5px; padding: 2px 4px; }
 .wl-remove:hover { color: #c0453a; }
-.wl-addtask { display: flex; gap: 9px; padding: 14px 18px; background: #fafcfc; border-top: 1px solid var(--line); }
+.wl-list { display: flex; flex-direction: column; }
+.wl-showall { align-self: flex-start; margin: 4px 18px 8px; border: 0; background: none; color: var(--wl-indigo); font: 600 13px "Open Sans"; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.wl-showall:hover { text-decoration: underline; }
+.wl-showchev { font-size: 11px; transition: transform .18s; }
+.wl-showchev.up { transform: rotate(180deg); }
+.wl-coach { display: flex; align-items: center; gap: 10px; margin: 12px 18px 0; padding: 10px 12px 10px 14px; background: var(--wl-indigo-bg); border: 1px solid #d4d6ef; border-radius: 10px; font-size: 13px; color: #3d4657; line-height: 1.4; }
+.wl-coach-ico { font-size: 16px; flex: none; }
+.wl-coach-txt { flex: 1; }
+.wl-coach-txt b { color: var(--ink); font-weight: 700; }
+.wl-coach-x { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; padding: 3px 5px; border-radius: 6px; }
+.wl-coach-x:hover { color: var(--ink); background: rgba(0,0,0,.05); }
+.wl-addtask { display: flex; gap: 9px; padding: 14px 18px; background: #fafcfc; border-top: 1px solid var(--line); transition: box-shadow .2s; }
+.wl-addtask.wl-cued { box-shadow: inset 0 0 0 2px var(--wl-indigo); border-radius: 0 0 16px 16px; }
+.wl-addtask.wl-cued input { border-color: var(--wl-indigo); }
 .wl-addtask input { flex: 1; font: 400 13px "Open Sans", sans-serif; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; }
 .wl-addtask input:focus { outline: none; border-color: var(--teal); }
 .wl-addtask button { font: 600 13px "Open Sans", sans-serif; color: #fff; background: var(--wl-indigo); border: 0; border-radius: 9px; padding: 8px 15px; cursor: pointer; }
 .wl-addtask button:disabled { opacity: .5; cursor: default; }
-@media (max-width: 620px) { .wl-blurb { display: none; } .wl-mini { width: 52px; } .wl-reorder { opacity: 1; } }
+@media (max-width: 620px) { .wl-blurb { display: none; } .wl-mini { width: 52px; } .wl-rowacts { opacity: 1; } }
 
 /* Fee history (admin only) — /billing/fees */
 .fh-wrap { max-width: 720px; margin: 0 auto; padding: 30px 20px 70px; color: var(--ink); }

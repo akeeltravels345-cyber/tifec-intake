@@ -4,6 +4,7 @@ import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth } from "@/lib/billing";
 import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
+import { listBuilderTasks } from "@/lib/builderTasks";
 import OverviewClient, { type OverviewData, type ClinRow } from "@/components/billing/OverviewClient";
 
 export const dynamic = "force-dynamic";
@@ -36,8 +37,12 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const expensesTotal = runningExpensesTotalForMonth(cfg, year, month);
   const monthExpenses = expensesForMonth(cfg, year, month).expenses;
   const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0);
-  // The builder's processing-fee line shows only to the admin (the builder).
+  // The illustrative processing-fee line is admin-only (the builder).
   const isAdmin = user.clinician.contact === "admin";
+  // Personal worklist: each viewer gets their OWN list, scoped to whoever they're
+  // currently viewing as. The owner sees the owner's, the admin sees the admin's.
+  const builderTasks = await listBuilderTasks(user.clinician.id, isAdmin);
+  const worklistChip = isAdmin ? "Admin only" : "Private";
 
   const earned = biz.revenueGenerated;
   const thisMonthOutstanding = r2(biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0));
@@ -90,6 +95,8 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     contractualWriteoff: biz.contractualWriteoff,
     writeDown: biz.writeDown,
     isAdmin,
+    builderTasks,
+    worklistChip,
   };
 
   return <OverviewClient data={data} />;

@@ -6,6 +6,8 @@ import { listSessions, listInsurers, listClinicianSettings, listExternalClinicia
 import { insurancePortion, ageDays } from "@/lib/billingCalc";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
+import Worklist from "@/components/today/Worklist";
+import { listBuilderTasks } from "@/lib/builderTasks";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,8 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/biller");
   if (!canMarkBilled(user.role)) redirect("/billing/me");
+
+  const worklist = await listBuilderTasks(user.clinician.id); // the biller's own list
 
   const sp = await searchParams;
   const nowYM = caymanYearMonth();
@@ -167,25 +171,9 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <div className="bo-split">
-        {/* where your commission came from */}
-        <div className="bo-card">
-          <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
-            <span className="bo-lab">Where your cut came from</span>
-          </div>
-          <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · each clinician&apos;s own rate plus {billerRate}% of what the company retains</p>
-          {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
-            <div className="bo-crow" key={c.id}>
-              <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
-              <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
-              <div className="bo-cright">
-                <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
-                <span className="bo-camt">{money(c.cut)}</span>
-                <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* worklist beside "Who owes you", heights aligned (same grid as the owner overview) */}
+      <div className="bo-topgrid">
+        <div className="bo-wlcol"><Worklist initial={worklist} chip="Private" /></div>
 
         {/* who owes you */}
         <div className="bo-card">
@@ -201,6 +189,25 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
             <Link href="/billing/payments" className="bl-ghost">Reconcile in the billing queue →</Link>
           </div>
         </div>
+      </div>
+
+      {/* where your cut came from — full width below */}
+      <div className="bo-card" style={{ marginBottom: 18 }}>
+        <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
+          <span className="bo-lab">Where your cut came from</span>
+        </div>
+        <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · each clinician&apos;s own rate plus {billerRate}% of what the company retains</p>
+        {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
+          <div className="bo-crow" key={c.id}>
+            <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
+            <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
+            <div className="bo-cright">
+              <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
+              <span className="bo-camt">{money(c.cut)}</span>
+              <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* recent activity */}

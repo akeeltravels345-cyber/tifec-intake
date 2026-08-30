@@ -119,16 +119,18 @@ async function insertTask(row: BuilderTask) {
   }
 }
 
-/** The owner's tasks, ordered. Seeds the defaults the first time (empty list).
- *  Never throws: if the table is missing pre-migration, returns []. */
-export async function listBuilderTasks(ownerId: string): Promise<BuilderTask[]> {
+/** A user's tasks, ordered. When `seedDefaults` is set (the admin/builder only),
+ *  seeds the starter workstreams the first time; everyone else starts empty and
+ *  builds their own list. Never throws: if the table is missing pre-migration,
+ *  returns []. */
+export async function listBuilderTasks(ownerId: string, seedDefaults = false): Promise<BuilderTask[]> {
   let tasks: BuilderTask[];
   try {
     tasks = await rawList(ownerId);
   } catch {
-    return []; // table not migrated yet — don't break the Today page
+    return []; // table not migrated yet — don't break the page
   }
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && seedDefaults) {
     const seeded = seedTasks(ownerId);
     try { for (const row of seeded) await insertTask(row); } catch { return seeded; }
     tasks = seeded;

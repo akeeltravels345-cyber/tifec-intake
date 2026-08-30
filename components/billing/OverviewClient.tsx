@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Worklist from "@/components/today/Worklist";
+import type { BuilderTask } from "@/lib/builderTasks";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const money0 = (n: number) => `${n < 0 ? "−" : ""}$${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -18,6 +20,8 @@ export interface OverviewData {
   cashTotal: number; cashCopays: number; cashInsurance: number; cashRollover: number;
   bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; netAfterProcessing: number };
   isAdmin?: boolean; // the builder/admin sees the platform processing-fee line
+  builderTasks?: BuilderTask[]; // the viewer's own worklist mounted on the overview
+  worklistChip?: string; // chip label on the worklist ("Private" / "Admin only")
   trend: { label: string; value: number; current: boolean }[];
   expenses: { name: string; detail: string; amount: number; breakdown?: { label: string; amount: number }[] }[];
   expensesTotal: number;
@@ -53,7 +57,6 @@ function TrendChart({ pts }: { pts: { label: string; value: number; current: boo
 export default function OverviewClient({ data }: { data: OverviewData }) {
   const router = useRouter();
   const [sort, setSort] = useState<"collected" | "owed" | "payout">("collected");
-  const [open, setOpen] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
   const go = (y: number, m: number) => router.push(`/billing/overview?y=${y}&m=${m}`);
@@ -90,37 +93,52 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
         </div>
       </div>
 
-      {/* Hero: work earned + cash collected */}
-      <div className="bo-hero">
-        <div className="bo-card">
-          <span className="bo-lab">Total charged · {data.monthName}</span>
-          <div className="bo-big">{money(data.earned)}
-            {data.earnedDelta !== null && <span className="bo-delta">▲ {Math.abs(data.earnedDelta).toFixed(0)}% vs prior</span>}
-          </div>
-          <div className="bo-segbar">
-            <i style={{ width: `${pct(data.earnedCollected, data.earned)}%`, background: "var(--teal)" }} />
-            <i style={{ width: `${pct(data.earnedOwed, data.earned)}%`, background: "#D9A441" }} />
-          </div>
-          <div className="bo-leg">
-            <span className="k"><span className="bo-dot" style={{ background: "var(--teal)" }} />Collected <b>{money(data.earnedCollected)}</b></span>
-            <span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Still owed by insurers <b>{money(data.earnedOwed)}</b></span>
-          </div>
-          <p className="bo-cap">The total charged for every session delivered this month. These two always add back to what was charged — nothing is hidden.</p>
-        </div>
-
-        <div className="bo-card">
-          <span className="bo-lab">Cash actually collected · {data.monthName}</span>
-          <div className="bo-big">{money(data.cashTotal)}</div>
-          <div className="bo-brk">
-            <div className="bo-brkrow"><span className="k"><span className="bo-dot" style={{ background: "var(--teal)" }} />Co-pays taken at visits</span><span className="v">{money(data.cashCopays)}</span></div>
-            <div className="bo-brkrow"><span className="k"><span className="bo-dot" style={{ background: "var(--indigo)" }} />Insurance payments received</span><span className="v">{money(data.cashInsurance)}</span></div>
-            <div className="bo-brkrow"><span className="k sub">↳ of which from earlier months</span><span className="v sub">{money(data.cashRollover)}</span></div>
-          </div>
-          <p className="bo-cap">Money that truly arrived this month — and the only basis for clinician payouts.</p>
-        </div>
+      {/* Hero: one gradient banner — earned, its collected/owed split, and the
+          cash that actually arrived this month. */}
+      <div className="bo-stripe">
+        <div className="bo-stripe-bg" />
+        <span className="bo-stripe-title">{data.monthName} {data.year}</span>
+        {data.earnedDelta !== null && <span className="bo-stripe-delta">▲ {Math.abs(data.earnedDelta).toFixed(0)}% vs prior</span>}
+        <div className="bo-sseg"><span className="sk">Work earned</span><span className="sv">{money(data.earned)}</span></div>
+        <div className="bo-sseg"><span className="sk">Collected</span><span className="sv">{money(data.earnedCollected)}</span></div>
+        <div className="bo-sseg"><span className="sk">Still owed</span><span className="sv">{money(data.earnedOwed)}</span></div>
+        <div className="bo-sseg"><span className="sk">Cash collected</span><span className="sv">{money(data.cashTotal)}</span></div>
       </div>
 
-      <div className="bo-bridge"><span className="line" /><span className="txt">Earned is the work you did · Collected is the cash in the door. They differ by what insurers still owe you.</span><span className="line" /></div>
+      {/* Worklist (admin) beside the by-clinician list. */}
+      <div className={`bo-topgrid ${data.builderTasks ? "" : "solo"}`}>
+        {data.builderTasks && (
+          <div className="bo-wlcol"><Worklist initial={data.builderTasks} chip={data.worklistChip} /></div>
+        )}
+        <div className="bo-clincol" id="by-clinician">
+          <div className="bo-secrow" style={{ marginTop: 0 }}>
+            <h3 className="bo-sech">By clinician</h3>
+            <div className="bo-sorttabs">
+              {(["collected", "owed", "payout"] as const).map((k) => (
+                <button key={k} className={`bo-st ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>{k === "collected" ? "Collected" : k === "owed" ? "Outstanding" : "Payout"}</button>
+              ))}
+            </div>
+          </div>
+          <div className="bo-clin">
+            {clinicians.map((c) => {
+              const total = c.collected + c.owed;
+              return (
+                <div className="bo-clrow" key={c.id}>
+                  <div className="bo-clhead nav" onClick={() => router.push(`/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`)} role="button" title={`Open ${c.name}'s detail`}>
+                    <div className="nm">{c.name}<small>{c.appts} appointment{c.appts === 1 ? "" : "s"}</small></div>
+                    <div className="bo-clmid">
+                      <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
+                      <div className="bo-clcap"><span>{money0(c.collected)} collected</span><span>{c.owed > 0 ? `${money0(c.owed)} outstanding` : "all collected"}</span></div>
+                    </div>
+                    <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">payout</div></div>
+                    <div className="bo-chev">›</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {(data.uncollectedCopay > 0 || data.waivedCopay > 0 || data.contractualWriteoff > 0 || data.writeDown > 0) && (
         <div className="bo-uncollected">
@@ -221,48 +239,6 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
         ))}
       </div>
 
-      {/* By clinician */}
-      <div className="bo-secrow" id="by-clinician">
-        <h3 className="bo-sech">By clinician</h3>
-        <div className="bo-sorttabs">
-          {(["collected", "owed", "payout"] as const).map((k) => (
-            <button key={k} className={`bo-st ${sort === k ? "on" : ""}`} onClick={() => setSort(k)}>{k === "collected" ? "Collected" : k === "owed" ? "Outstanding" : "Payout"}</button>
-          ))}
-        </div>
-      </div>
-      <div className="bo-clin">
-        {clinicians.map((c) => {
-          const total = c.collected + c.owed;
-          const isOpen = open === c.id;
-          return (
-            <div className="bo-clrow" key={c.id}>
-              <div className="bo-clhead" onClick={() => setOpen(isOpen ? null : c.id)}>
-                <div className="nm">{c.name}<small>{c.appts} appointment{c.appts === 1 ? "" : "s"}</small></div>
-                <div className="bo-clmid">
-                  <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
-                  <div className="bo-clcap"><span>{money0(c.collected)} collected</span><span>{c.owed > 0 ? `${money0(c.owed)} outstanding` : "all collected"}</span></div>
-                </div>
-                <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">payout</div></div>
-                <div className={`bo-chev ${isOpen ? "open" : ""}`}>›</div>
-              </div>
-              {isOpen && (
-                <div className="bo-exp">
-                  <div className="bo-expgrid">
-                    <div className="bo-expcell"><div className="k">Revenue earned</div><div className="v">{money(c.revenueGenerated)}</div></div>
-                    <div className="bo-expcell"><div className="k">Settled by insurers</div><div className="v">{money(c.billed)}</div></div>
-                    <div className="bo-expcell"><div className="k">Still outstanding</div><div className="v">{money(c.outstandingThisMonth)}</div></div>
-                    <div className="bo-expcell"><div className="k">Collected at visit</div><div className="v">{money(c.copay)}</div></div>
-                    <div className="bo-expcell"><div className="k">Co-pays not collected</div><div className="v" style={c.uncollectedCopay > 0 ? { color: "#9a3b2a" } : undefined}>{money(c.uncollectedCopay)}</div></div>
-                    <div className="bo-expcell"><div className="k">Co-pays waived</div><div className="v">{money(c.waivedCopay)}</div></div>
-                  </div>
-                  <div className="bo-prog"><i style={{ width: `${pct(c.billed, c.revenueGenerated)}%` }} /></div>
-                  <p className="bo-expnote"><Link href={`/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`}>Open {c.name}&apos;s full detail →</Link></p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
       {exportOpen && (
         <div className="bo-modal" onClick={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>

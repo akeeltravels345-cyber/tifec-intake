@@ -45,7 +45,7 @@ export default async function TodayPage() {
   const sidebar = await getSidebarData(me);
 
   // Builder worklist: the admin's own task list, shown on Today for them alone.
-  const worklist: BuilderTask[] = admin ? await listBuilderTasks(me.id) : [];
+  const worklist: BuilderTask[] = admin ? await listBuilderTasks(me.id, true) : [];
 
   // Intake: forms waiting to be looked at.
   const subs = await getSubmissionsByClinician(me.id);
