@@ -326,6 +326,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    if (action === "ticket:nudge") {
+      const id = String(body.id ?? "");
+      const t = await getTicket(id);
+      if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
+      // A nudge is a gentle reminder. The raiser, an assignee, or the admin/owner
+      // can send one — the same people who can see the ticket.
+      const c = getClinician(me.id);
+      const oversees = c?.contact === "admin" || c?.contact === "owner";
+      if (!oversees && t.createdBy !== me.id && !t.assignees.includes(me.id)) {
+        return NextResponse.json({ error: "Not your ticket." }, { status: 403 });
+      }
+      if (t.status === "resolved") return NextResponse.json({ error: "This ticket is already resolved." }, { status: 400 });
+      // Nudge the people it's waiting on — its assignees, minus whoever's nudging.
+      const targets = t.assignees.filter((a) => a !== me.id);
+      if (targets.length === 0) return NextResponse.json({ error: "There's no one else to nudge on this ticket." }, { status: 400 });
+      await notify(targets, "ticket_status",
+        `${me.name} nudged you about ticket #${t.ref} (${t.area}) — still waiting on you`, `/team/tickets/${t.id}`);
+      return NextResponse.json({ ok: true, nudged: targets.length });
+    }
+
     if (action === "ticket:delete") {
       const id = String(body.id ?? "");
       const t = await getTicket(id);

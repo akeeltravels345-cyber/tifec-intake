@@ -67,6 +67,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [nudged, setNudged] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
   const recRef = useRef<MediaRecorder | null>(null);
@@ -145,6 +146,14 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
     catch (err) { setError(err instanceof Error ? err.message : "Failed"); setBusy(false); }
   }
 
+  async function nudge() {
+    if (busy || nudged) return;
+    setBusy(true); setError("");
+    try { await post({ action: "ticket:nudge", id: ticket.id }); setNudged(true); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
@@ -165,7 +174,12 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       {ticket.status !== "resolved" && (yourTurn || waitingOn.length > 0) && (
         <div className={`tm-ballbar ${yourTurn ? "you" : ""}`}>
           <span className="dot" />
-          {yourTurn ? "Your turn — the ball is with you" : `Waiting on ${nameList(waitingOn)}`}
+          <span className="tm-balltext">{yourTurn ? "Your turn — the ball is with you" : `Waiting on ${nameList(waitingOn)}`}</span>
+          {!yourTurn && waitingOn.length > 0 && (
+            <button type="button" className="tm-nudge" onClick={nudge} disabled={busy || nudged}>
+              {nudged ? "Nudged ✓" : "Nudge"}
+            </button>
+          )}
         </div>
       )}
 
