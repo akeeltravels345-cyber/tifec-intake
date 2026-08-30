@@ -52,6 +52,17 @@ function monthHistory(awaiting: Claim[], today: string) {
 
 type Tab = "tobill" | "awaiting" | "selfpay" | "paid" | "adjusted";
 
+// Step a "YYYY-MM" key by whole months, and render it as "August 2026".
+const stepMonth = (ym: string, delta: number) => {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+const monthLabel = (ym: string) => {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+};
+
 export default function BillingQueueClient({ data }: { data: QueueData }) {
   const router = useRouter();
   // Rates differ per clinician, so a cut is always summed from the claims
@@ -62,6 +73,9 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const [q, setQ] = useState("");
   const [filterClin, setFilterClin] = useState("");
   const [bucket, setBucket] = useState<number | null>(null);
+  // Collected tab is scoped to one collection month at a time (default: current),
+  // so the list stays bounded instead of growing forever.
+  const [paidMonth, setPaidMonth] = useState(data.today.slice(0, 7));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Which groups are folded shut (by group key), so long queues stay scannable.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -82,8 +96,15 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   const filtered = useMemo(() => active.filter((c) =>
     (!q || c.clientName.toLowerCase().includes(q.toLowerCase())) &&
     (!filterClin || c.clinicianId === filterClin) &&
-    (bucket === null || bucketOf(c.age) === bucket)
-  ), [active, q, filterClin, bucket]);
+    (bucket === null || bucketOf(c.age) === bucket) &&
+    (tab !== "paid" || (c.paidDate ?? "").slice(0, 7) === paidMonth)
+  ), [active, q, filterClin, bucket, tab, paidMonth]);
+
+  // Totals for the month the Collected tab is showing (before search/clinician
+  // filters), so the month navigator reads the full month at a glance.
+  const paidMonthClaims = useMemo(() => data.paid.filter((c) => (c.paidDate ?? "").slice(0, 7) === paidMonth), [data.paid, paidMonth]);
+  const paidMonthTotal = paidMonthClaims.reduce((t, c) => t + c.amount, 0);
+  const atLatestMonth = paidMonth >= data.today.slice(0, 7);
 
   // Aging chip counts reflect the tab you're on, not a fixed server total.
   const chipCounts = useMemo(() => {
@@ -224,6 +245,19 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
         </div>
       )}
 
+      {/* Collected tab is scoped to one collection month; step back for history. */}
+      {tab === "paid" && (
+        <div className="bq-monthbar">
+          <div className="bq-mnav">
+            <button type="button" onClick={() => setPaidMonth((m) => stepMonth(m, -1))} aria-label="Previous month">‹</button>
+            <span className="bq-mlabel">{monthLabel(paidMonth)}</span>
+            <button type="button" disabled={atLatestMonth} onClick={() => setPaidMonth((m) => stepMonth(m, 1))} aria-label="Next month">›</button>
+          </div>
+          <span className="bq-mmeta">{paidMonthClaims.length} collected · <b>{money(paidMonthTotal)}</b></span>
+          {!atLatestMonth && <button className="bq-mnow" onClick={() => setPaidMonth(data.today.slice(0, 7))}>Back to this month</button>}
+        </div>
+      )}
+
       {isOpen ? (
         groups.length === 0 ? (
           <div className="bq-group"><div className="bq-empty">
@@ -318,7 +352,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           {data.paid.length === 0 ? (
             <div className="bq-empty"><div className="big">Nothing collected yet</div></div>
           ) : groups.length === 0 ? (
-            <div className="bq-empty"><div className="big">No collected claims match your filters</div></div>
+            <div className="bq-empty"><div className="big">Nothing collected in {monthLabel(paidMonth)}{(q || filterClin) ? " matches your filters" : ""}</div><div className="small">Use the month arrows above to look at another month.</div></div>
           ) : groups.map((g) => {
             const open = !collapsed.has(g.key);
             return (
