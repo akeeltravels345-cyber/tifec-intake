@@ -173,7 +173,10 @@ export default async function ClinicianDetail({ params, searchParams }: { params
                     <span className="lbl"><span className="cd-keydot" style={{ background: "#43A9AE" }} />Billing{biller ? ` · ${biller.name}` : ""} ({c.billerPct}%)</span>
                     <span className="amt">−{money(c.billerFromClinician)}</span>
                   </div>
-                  <div className="cd-flowline sub"><span className="lbl">↳ {money0(c.insuranceBilledThisMonth)} insurance − {c.retentionPct}% retention = {money0(c.insuranceBilledThisMonth * c.billerBasePct / 100)}, then × {c.billerPct}% = {money0(c.billerFromClinician)}</span><span className="amt" /></div>
+                  <div className="cd-flowline sub"><span className="lbl">↳ {c.billerBasePct === 100 - c.retentionPct
+                    ? <>{money0(c.insuranceBilledThisMonth)} insurance − {c.retentionPct}% retention = {money0(c.insuranceBilledThisMonth * c.billerBasePct / 100)}</>
+                    : <>{money0(c.insuranceBilledThisMonth)} insurance × {c.billerBasePct}% (agreed biller base) = {money0(c.insuranceBilledThisMonth * c.billerBasePct / 100)}</>
+                  }, then × {c.billerPct}% = {money0(c.billerFromClinician)}</span><span className="amt" /></div>
                 </>
               )}
               {c.otherDeductionPct > 0 && <div className="cd-flowline minus"><span className="lbl"><span className="cd-keydot" style={{ background: "#D9A441" }} />Other ({c.otherDeductionPct}%)</span><span className="amt">−{money(c.otherDeductionPctAmount)}</span></div>}
@@ -182,7 +185,9 @@ export default async function ClinicianDetail({ params, searchParams }: { params
               <div className="cd-rtotal"><span className="k"><span className="cd-keydot" style={{ background: "var(--indigo)" }} />Net payout</span><span className="v">{money(c.payout)}</span></div>
               <p className="cd-note">
                 Payout follows the cash actually collected this month. Appointments still awaiting insurance pay out the month their payment arrives.
-                {c.billerFromClinician > 0 && <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on your after-retention share of the insurance — {c.billerBasePct}% of the {money0(c.insuranceBilledThisMonth)} collected for you, not the gross.</>}
+                {c.billerFromClinician > 0 && (c.billerBasePct === 100 - c.retentionPct
+                  ? <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on your after-retention share of the insurance — {c.billerBasePct}% of the {money0(c.insuranceBilledThisMonth)} collected for you, not the gross.</>
+                  : <> Billing is your own {c.billerPct}% agreement with {biller ? biller.name : "the biller"}, charged on an agreed {c.billerBasePct}% of the {money0(c.insuranceBilledThisMonth)} insurance collected for you, not the gross.</>)}
               </p>
               <Link href={`/billing/clinician/${id}/statement?y=${year}&m=${month}`} className="cd-stmt">🧾 View payout statement →</Link>
             </>

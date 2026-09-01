@@ -235,10 +235,15 @@ export function computeClinicianMonth(
   // Both are charged on insurance collected (what the biller chases); co-pays
   // are taken at the visit by the clinician.
   const billerPct = settings.billerPct ?? 0;
-  // Policy: the biller's rate is ALWAYS charged on the clinician's after-retention
-  // share of the insurance — (100 − retention)% of insurance billed, never the
-  // gross and never a per-clinician base override. (Pension uses the same base.)
-  const billerBasePct = Math.max(0, 100 - pct);
+  // Policy: the biller's rate is charged on the clinician's after-retention share
+  // of the insurance — (100 − retention)% of insurance billed. A clinician can
+  // carry a per-clinician base OVERRIDE (billerBasePct in Setup) for a private
+  // biller↔clinician agreement that differs from the standard rule — e.g. Joan,
+  // whose biller takes 7% of 70% of insurance even though her retention implies a
+  // different share. A stored 0 (or unset) means "no override, use the rule."
+  const billerBasePct = settings.billerBasePct && settings.billerBasePct > 0
+    ? settings.billerBasePct
+    : Math.max(0, 100 - pct);
   const billerBase = round2((insuranceBilledThisMonth * billerBasePct) / 100);
   const billerFromClinician = round2((billerBase * billerPct) / 100);
   const insuranceRetention = round2((insuranceBilledThisMonth * pct) / 100);
