@@ -3993,3 +3993,47 @@ body:has(.bk-page) .brandbar { display: none; }
 .ss-msg { font-size: 13px; font-weight: 600; } .ss-msg.ok { color: var(--green, #3f8f5f); } .ss-msg.err { color: #b3261e; }
 .ss-btn { font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 10px 16px; cursor: pointer; }
 .ss-btn:disabled { opacity: .5; cursor: default; }
+
+/* ICD-10 diagnosis picker (type-ahead + browse, distinct from the fee-code select) */
+.biz .icd { display: flex; flex-direction: column; gap: 10px; }
+.biz .icd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.biz .icd-chip { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--edge); border-radius: 10px; padding: 5px 6px 5px 10px; max-width: 100%; }
+.biz .icd-chip-code { font: 700 12.5px "IBM Plex Mono", "Open Sans", monospace; color: var(--indigo); background: #eceefb; border-radius: 6px; padding: 2px 7px; flex: none; letter-spacing: .01em; }
+.biz .icd-chip-desc { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.biz .icd-chip button { flex: none; border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; border-radius: 5px; }
+.biz .icd-chip button:hover { color: #c0453a; background: var(--hair); }
+
+.biz .icd-box { position: relative; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--edge); border-radius: 11px; padding: 10px 12px; transition: border-color .12s, box-shadow .12s; }
+.biz .icd-box:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,142,147,.12); }
+.biz .icd-ic { color: var(--faint); font-size: 15px; flex: none; }
+.biz .icd-input { flex: 1; border: 0; background: none; outline: none; font: 14.5px "Open Sans"; color: var(--ink); min-width: 0; }
+.biz .icd-input::placeholder { color: var(--faint); }
+.biz .icd-clear { flex: none; border: 0; background: none; color: #9aa4a6; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; border-radius: 5px; }
+.biz .icd-clear:hover { color: var(--ink); }
+
+.biz .icd-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0; max-height: 340px; overflow-y: auto; background: #fff; border: 1px solid var(--edge); border-radius: 12px; box-shadow: 0 10px 34px rgba(30,42,60,.14); padding: 5px; }
+.biz .icd-opt { width: 100%; display: grid; grid-template-columns: 78px 1fr auto; align-items: baseline; gap: 12px; text-align: left; border: 0; background: none; cursor: pointer; padding: 9px 11px; border-radius: 8px; }
+.biz .icd-opt.on { background: #eef4f4; }
+.biz .icd-opt-code { font: 700 12.5px "IBM Plex Mono", monospace; color: var(--indigo); letter-spacing: .01em; }
+.biz .icd-opt-desc { font-size: 13.5px; color: var(--ink); line-height: 1.35; }
+.biz .icd-opt-cat { font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.biz .icd-empty { padding: 14px 12px; font-size: 13.5px; color: var(--muted); text-align: center; }
+.biz .icd-hint { margin: 0; font-size: 12px; color: var(--faint); }
+@media (max-width: 560px) { .biz .icd-opt { grid-template-columns: 64px 1fr; } .biz .icd-opt-cat { display: none; } }
+
+/* ICD-10 diagnosis change log + errors */
+.biz .icd-err { color: #b3261e; font-size: 12.5px; margin: 8px 0 0; }
+.biz .icd-log { margin-top: 12px; border-top: 1px solid var(--hair); padding-top: 8px; }
+.biz .icd-logtoggle { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; cursor: pointer; font: 700 11px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 4px 0; }
+.biz .icd-logtoggle:hover { color: var(--ink); }
+.biz .icd-logchev { transition: transform .16s; font-size: 10px; }
+.biz .icd-logchev.up { transform: rotate(90deg); }
+.biz .icd-logcount { background: var(--hair); color: var(--muted); border-radius: 20px; padding: 1px 8px; }
+.biz .icd-loglist { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.biz .icd-loglist li { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line-soft, #eef2f4); font-size: 12.5px; flex-wrap: wrap; }
+.biz .icd-logact { font-weight: 700; font-size: 11px; white-space: nowrap; }
+.biz .icd-logact.add { color: var(--ok, #2c7a55); }
+.biz .icd-logact.remove { color: #b3453a; }
+.biz .icd-logcode { font: 700 12px "IBM Plex Mono", monospace; color: var(--indigo); }
+.biz .icd-logby { color: var(--ink); }
+.biz .icd-logat { margin-left: auto; color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: 11.5px; white-space: nowrap; }

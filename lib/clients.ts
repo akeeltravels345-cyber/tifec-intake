@@ -39,6 +39,7 @@ export interface ClientProfile {
     insuredDob?: string;        // box 11a
   };
   diagnosis?: string[];         // ICD-10 codes (box 21) — the client's standing dx
+  diagnosisLog?: DiagnosisLogEntry[]; // audit trail of every dx add/remove
   sample?: boolean;             // seeded demo client, so it can be bulk-removed
   referral?: ClientReferral;    // insurer referral + its validity window
   documents?: ClientDocument[]; // referral letter, intake form, other files/links
@@ -372,6 +373,29 @@ export async function deleteClient(id: string): Promise<void> {
 export async function listSampleClients(): Promise<Client[]> {
   const isDemo = (c: Client) => c.profile.sample || /sample-/i.test(c.last) || /sample-/i.test(c.first);
   return (await listAllClients()).filter(isDemo);
+}
+
+/** One line of the diagnosis audit trail. */
+export interface DiagnosisLogEntry { by: string; byName: string; at: string; action: "add" | "remove"; code: string }
+
+/** Set a client's ICD-10 diagnoses and record every add/remove in the audit log
+ *  (who, when, which code). Editable by anyone who can see the client; the log is
+ *  append-only so a change can always be traced. */
+export async function setClientDiagnoses(id: string, codes: string[], by: string, byName: string): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const prev = client.profile.diagnosis ?? [];
+  const next = [...new Set(codes.map((c) => c.trim()).filter(Boolean))];
+  const added = next.filter((c) => !prev.includes(c));
+  const removed = prev.filter((c) => !next.includes(c));
+  if (added.length === 0 && removed.length === 0) return client;
+  const at = new Date().toISOString();
+  const entries: DiagnosisLogEntry[] = [
+    ...added.map((code) => ({ by, byName, at, action: "add" as const, code })),
+    ...removed.map((code) => ({ by, byName, at, action: "remove" as const, code })),
+  ];
+  const profile = { ...client.profile, diagnosis: next, diagnosisLog: [...(client.profile.diagnosisLog ?? []), ...entries] };
+  return updateClient(id, client.insurerId, profile);
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */

@@ -4,6 +4,7 @@ import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ClientProfile } from "@/lib/clients";
+import Icd10Section from "./Icd10Section";
 import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
 import DobInput from "./DobInput";
@@ -246,7 +247,6 @@ export default function ClientDetail({
   const [insuredFirst, setInsuredFirst] = useState(profile.insurance?.insuredFirst ?? "");
   const [insuredLast, setInsuredLast] = useState(profile.insurance?.insuredLast ?? "");
   const [insuredDob, setInsuredDob] = useState(profile.insurance?.insuredDob ?? "");
-  const [dx, setDx] = useState((profile.diagnosis ?? []).join(", "));
   // referral
   const [refSource, setRefSource] = useState(profile.referral?.source ?? "");
   const [refAuth, setRefAuth] = useState(profile.referral?.authNumber ?? "");
@@ -277,7 +277,6 @@ export default function ClientDetail({
       insurance: (memberId || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
         ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
-      diagnosis: dx.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
       referral: (refSource || refAuth || refStart || refEnd || refSessions)
         ? { source: refSource || undefined, authNumber: refAuth || undefined, startDate: refStart || undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
         : undefined,
@@ -451,7 +450,6 @@ export default function ClientDetail({
             {field("Relationship to insured", val(profile.insurance?.relationship ?? "self"))}
             {profile.insurance?.relationship && profile.insurance.relationship !== "self" &&
               field("Insured", val([profile.insurance?.insuredFirst, profile.insurance?.insuredLast, profile.insurance?.insuredDob].filter(Boolean).join(" ")))}
-            {field("Diagnosis (ICD-10)", val((profile.diagnosis ?? []).join(", ")))}
           </div>
         ) : (
           <div className="su-card cd-grid">
@@ -472,7 +470,6 @@ export default function ClientDetail({
               {field("Insured last name", <input className="ls-in" value={insuredLast} onChange={(e) => setInsuredLast(e.target.value)} />)}
               {field("Insured date of birth", <DobInput value={insuredDob} onChange={setInsuredDob} />)}
             </>}
-            {field("Diagnosis (ICD-10, comma-separated)", <input className="ls-in" placeholder="e.g. F41.1, F32.1" value={dx} onChange={(e) => setDx(e.target.value)} />)}
             <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in — after the end date they can&apos;t be paid</span></div>
             {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
             {field("Referral / auth number", <input className="ls-in" value={refAuth} onChange={(e) => setRefAuth(e.target.value)} />)}
@@ -486,6 +483,15 @@ export default function ClientDetail({
             </div>
           </div>
         )}
+      </div>
+
+      {/* ---- Diagnoses ---- */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Diagnoses</h2>
+          <span className="su-hint">The client&apos;s ICD-10 diagnoses (CMS-1500 box 21). Anyone on the record can edit; every add and removal is logged.</span></div>
+        <div className="su-card" style={{ padding: 16 }}>
+          <Icd10Section clientId={id} initial={profile.diagnosis ?? []} initialLog={profile.diagnosisLog ?? []} />
+        </div>
       </div>
 
       {/* ---- Documents ---- */}

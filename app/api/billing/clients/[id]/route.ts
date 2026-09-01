@@ -99,7 +99,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           insuredDob: isDate(insr.insuredDob) ? String(insr.insuredDob) : undefined,
         }
       : undefined,
-    diagnosis: Array.isArray(p.diagnosis) ? p.diagnosis.map((x) => String(x).trim().toUpperCase()).filter(Boolean).slice(0, 12) : undefined,
+    // Diagnoses (and their audit log) are managed only through the /diagnosis
+    // endpoint; never let a record edit wipe them or bypass the log.
+    diagnosis: client.profile.diagnosis,
+    diagnosisLog: client.profile.diagnosisLog,
     referral: parseReferral(p.referral),
     documents: parseDocuments(p.documents),
     // Shared notes are managed only through the /notes endpoint; never let a
