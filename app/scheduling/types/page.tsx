@@ -4,8 +4,8 @@ import { isSystemAdmin } from "@/lib/clinicians";
 import { listAppointmentTypes } from "@/lib/scheduling";
 import { listCptCodes } from "@/lib/billing";
 import { FORM_TEMPLATES } from "@/lib/forms";
-import SchedulingTabs from "@/components/billing/SchedulingTabs";
-import AppointmentTypesManager from "@/components/billing/AppointmentTypesManager";
+import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
+import AppointmentTypesManager from "@/components/scheduling/AppointmentTypesManager";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ const FORM_OPTIONS = Object.values(FORM_TEMPLATES)
 
 export default async function AppointmentTypesPage() {
   const user = await getBillingUser();
-  if (!user) redirect("/login?next=/billing/scheduling/types");
+  if (!user) redirect("/login?next=/scheduling/types");
   // Admin only while this is a prototype. No one else, not even the owner.
   if (!isSystemAdmin(user.clinician)) redirect("/today");
 

@@ -78,7 +78,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
         { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
         // Scheduling is admin-only while it is being built — not shown to the
         // owner or anyone else until it's ready.
-        { href: "/billing/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/billing/scheduling") },
+        { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling") },
         { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
       ] },
     ];

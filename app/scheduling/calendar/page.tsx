@@ -4,8 +4,8 @@ import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
 import { listInsurers } from "@/lib/billing";
 import { caymanToday } from "@/lib/caymanTime";
-import SchedulingTabs from "@/components/billing/SchedulingTabs";
-import CalendarView from "@/components/billing/CalendarView";
+import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
+import CalendarView from "@/components/scheduling/CalendarView";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ const utcAtCayMidnight = (d: string) => { const [y, m, dd] = d.split("-").map(Nu
 
 export default async function CalendarPage() {
   const user = await getBillingUser();
-  if (!user) redirect("/login?next=/billing/scheduling/calendar");
+  if (!user) redirect("/login?next=/scheduling/calendar");
   if (!isSystemAdmin(user.clinician)) redirect("/today");
 
   const today = caymanToday();

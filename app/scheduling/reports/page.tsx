@@ -3,7 +3,7 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { schedulingStats } from "@/lib/scheduling";
 import { caymanYearMonth } from "@/lib/caymanTime";
-import SchedulingTabs from "@/components/billing/SchedulingTabs";
+import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
 import MonthNav from "@/components/billing/MonthNav";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
-  if (!user) redirect("/login?next=/billing/scheduling/reports");
+  if (!user) redirect("/login?next=/scheduling/reports");
   if (!isSystemAdmin(user.clinician)) redirect("/today");
 
   const sp = await searchParams;
@@ -39,7 +39,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <h1 className="sr-h1">Scheduling insights</h1>
             <p className="sr-sub">Appointments, clients and no-shows for {MONTHS[month - 1]} {year}. Reads scheduling data only.</p>
           </div>
-          <MonthNav year={year} month={month} path="/billing/scheduling/reports" />
+          <MonthNav year={year} month={month} path="/scheduling/reports" />
         </div>
 
         <div className="sr-tiles">

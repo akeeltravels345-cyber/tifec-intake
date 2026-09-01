@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/billing/scheduling/calendar", label: "Calendar" },
-  { href: "/billing/scheduling/waitlist", label: "Waitlist" },
-  { href: "/billing/scheduling/reports", label: "Insights" },
-  { href: "/billing/scheduling/types", label: "Appointment types" },
-  { href: "/billing/scheduling/availability", label: "Availability" },
-  { href: "/billing/scheduling/settings", label: "Settings" },
+  { href: "/scheduling/calendar", label: "Calendar" },
+  { href: "/scheduling/waitlist", label: "Waitlist" },
+  { href: "/scheduling/reports", label: "Insights" },
+  { href: "/scheduling/types", label: "Appointment types" },
+  { href: "/scheduling/availability", label: "Availability" },
+  { href: "/scheduling/settings", label: "Settings" },
 ];
 
 // In-page nav across the scheduling screens, so the sidebar keeps one entry.

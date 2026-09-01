@@ -2,14 +2,14 @@ import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { listWaitlist, listAppointmentTypes } from "@/lib/scheduling";
-import SchedulingTabs from "@/components/billing/SchedulingTabs";
-import WaitlistView from "@/components/billing/WaitlistView";
+import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
+import WaitlistView from "@/components/scheduling/WaitlistView";
 
 export const dynamic = "force-dynamic";
 
 export default async function WaitlistPage() {
   const user = await getBillingUser();
-  if (!user) redirect("/login?next=/billing/scheduling/waitlist");
+  if (!user) redirect("/login?next=/scheduling/waitlist");
   if (!isSystemAdmin(user.clinician)) redirect("/today");
 
   const [entries, types] = await Promise.all([listWaitlist(), listAppointmentTypes()]);

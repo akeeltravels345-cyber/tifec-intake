@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { getAvailability } from "@/lib/scheduling";
-import SchedulingTabs from "@/components/billing/SchedulingTabs";
-import AvailabilityManager from "@/components/billing/AvailabilityManager";
+import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
+import AvailabilityManager from "@/components/scheduling/AvailabilityManager";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "bill
 
 export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const user = await getBillingUser();
-  if (!user) redirect("/login?next=/billing/scheduling/availability");
+  if (!user) redirect("/login?next=/scheduling/availability");
   if (!isSystemAdmin(user.clinician)) redirect("/today");
 
   const sp = await searchParams;
