@@ -421,6 +421,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     insurerId: input.insurerId !== undefined ? (input.insurerId ? str(input.insurerId) : null) : b.insurerId,
     policyNo: input.policyNo !== undefined ? str(input.policyNo).trim() : b.policyNo,
     intakeStatus: input.intakeStatus !== undefined ? asIntake(input.intakeStatus) : b.intakeStatus,
+    billingSessionId: input.billingSessionId !== undefined ? (input.billingSessionId ? str(input.billingSessionId) : null) : b.billingSessionId,
     notes: input.notes !== undefined ? str(input.notes) : b.notes,
     createdBy: input.createdBy !== undefined ? str(input.createdBy) : b.createdBy,
     source: input.source === "client" ? "client" : b.source,
@@ -705,6 +706,7 @@ export async function setWaitlistStatus(id: string, status: WaitStatus): Promise
 export interface NotifyTemplate { subject: string; body: string; }
 export interface SchedulingSettings {
   booking: { welcome: string; accent: string };
+  bridge: { seenToBilling: boolean }; // off by default; marking "seen" makes a billing session
   notifications: {
     enabled: boolean;                 // master switch; false = nothing sends
     confirmation: boolean; reminder: boolean; reschedule: boolean; cancellation: boolean;
@@ -716,6 +718,7 @@ export interface SchedulingSettings {
 const SET_FILE = "scheduling-settings.local.json";
 export const DEFAULT_SETTINGS: SchedulingSettings = {
   booking: { welcome: "", accent: "#256e72" },
+  bridge: { seenToBilling: false },
   notifications: {
     enabled: false,
     confirmation: true, reminder: true, reschedule: true, cancellation: true,
@@ -732,6 +735,7 @@ function mergeSettings(saved: Partial<SchedulingSettings> | null): SchedulingSet
   if (!saved) return d;
   return {
     booking: { ...d.booking, ...(saved.booking || {}) },
+    bridge: { ...d.bridge, ...(saved.bridge || {}) },
     notifications: {
       ...d.notifications, ...(saved.notifications || {}),
       templates: { ...d.notifications.templates, ...((saved.notifications || {}).templates || {}) },

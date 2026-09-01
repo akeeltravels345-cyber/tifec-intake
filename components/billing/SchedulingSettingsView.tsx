@@ -14,6 +14,7 @@ export default function SchedulingSettingsView({ initial }: { initial: Schedulin
   const [msg, setMsg] = useState("");
 
   const setBooking = (patch: Partial<SchedulingSettings["booking"]>) => { setS((x) => ({ ...x, booking: { ...x.booking, ...patch } })); setDirty(true); setMsg(""); };
+  const setBridge = (patch: Partial<SchedulingSettings["bridge"]>) => { setS((x) => ({ ...x, bridge: { ...x.bridge, ...patch } })); setDirty(true); setMsg(""); };
   const setNotif = (patch: Partial<SchedulingSettings["notifications"]>) => { setS((x) => ({ ...x, notifications: { ...x.notifications, ...patch } })); setDirty(true); setMsg(""); };
   const setTpl = (which: "confirmation" | "reminder", patch: Partial<SchedulingSettings["notifications"]["templates"]["confirmation"]>) =>
     setNotif({ templates: { ...s.notifications.templates, [which]: { ...s.notifications.templates[which], ...patch } } });
@@ -66,6 +67,16 @@ export default function SchedulingSettingsView({ initial }: { initial: Schedulin
             <div className="ss-preview"><div className="ss-preview-l">Preview</div><div className="ss-preview-s">{fill(n.templates[k].subject)}</div><div className="ss-preview-b">{fill(n.templates[k].body)}</div></div>
           </div>
         ))}
+      </div>
+
+      <div className="ss-card">
+        <div className="ss-notihead">
+          <h2>Connect to billing</h2>
+          <label className="ss-switch"><input type="checkbox" checked={s.bridge.seenToBilling} onChange={(e) => setBridge({ seenToBilling: e.target.checked })} /> <span>{s.bridge.seenToBilling ? "On" : "Off"}</span></label>
+        </div>
+        {s.bridge.seenToBilling
+          ? <p className="ss-warn" style={{ color: "#226e72", background: "var(--teal-bg, #e2efef)" }}>On. Marking an appointment <b>seen</b> now creates a billing session (clinician, date, baseline codes, insurer) for the biller to work. Each visit is bridged once.</p>
+          : <p className="ss-warn">Off. Marking an appointment seen does nothing to billing yet. Turn this on when you want seen visits to flow into the billing queue automatically.</p>}
       </div>
 
       <div className="ss-save">

@@ -5,6 +5,7 @@ import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
   createRecurring, deleteSeriesFrom,
 } from "@/lib/scheduling";
+import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,12 @@ export async function POST(req: Request) {
     if (action === "update" || action === "status") {
       const appt = await updateAppointment(String(body.id), body as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
-      return NextResponse.json({ ok: true, appointment: appt });
+      // Seen -> billing session, only if the admin turned the bridge on.
+      let billingSessionId: string | null = appt.billingSessionId;
+      if (appt.status === "seen" && !appt.billingSessionId) {
+        try { billingSessionId = (await maybeBridgeSeen(appt.id)) ?? appt.billingSessionId; } catch (e) { console.error("bridge failed", e); }
+      }
+      return NextResponse.json({ ok: true, appointment: { ...appt, billingSessionId } });
     }
     if (action === "delete") {
       await deleteAppointment(String(body.id));

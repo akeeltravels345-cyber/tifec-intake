@@ -125,9 +125,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     setDraft(null); load(monday, who);
   }
   async function setStatus(a: Appointment, status: AppointmentStatus) {
-    await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", id: a.id, status }) });
+    const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", id: a.id, status }) });
+    const data = await res.json().catch(() => ({}));
     load(monday, who);
-    setDraft((d) => (d && d.id === a.id ? { ...d, status } : d));
+    setDraft((d) => (d && d.id === a.id ? { ...d, status, billingSessionId: data.appointment?.billingSessionId ?? d.billingSessionId } : d));
   }
   async function remove(a: Appointment) {
     if (!confirm("Delete this from the calendar?")) return;
@@ -359,7 +360,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               </div>
             )}
             {draft.id && draft.status === "seen" && draft.kind !== "block" && (
-              <p className="cal-bridge">Marked seen. When you connect scheduling to billing, this becomes a billing session automatically. (Not wired yet — prototype.)</p>
+              <p className="cal-bridge">{draft.billingSessionId
+                ? "✓ A billing session was created for this visit — it's in the billing queue for the biller."
+                : "Marked seen. Turn on “Connect to billing” in Settings to make seen visits into billing sessions automatically."}</p>
             )}
             {draft.id && draft.seriesId && (
               <div className="cal-series-note">↻ Part of a recurring series. <button type="button" onClick={() => removeSeries(draft as Appointment)}>Remove this and all later</button></div>
