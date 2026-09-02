@@ -108,7 +108,10 @@ export default function ClientDetail({
     setEcDue(String(a.copayDue));
     setEcStage(a.stage === "writeoff" || a.stage === "writedown" ? a.stage : a.stage === "paid" ? "paid" : a.stage === "billed" ? "awaiting" : "tobill");
     setEcBilled(a.billedDate ?? "");
-    setEcPaid(a.paidDate ?? "");
+    // If the charge is already in a collected state but no collected date was ever
+    // recorded, show today (what it would save as) rather than a blank field.
+    const paidOnOpen = a.insurerId ? a.stage === "paid" : (a.selfPayStatus !== "owing" && a.selfPayStatus !== "waived");
+    setEcPaid(a.paidDate ?? (paidOnOpen ? today : ""));
     setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
     // Seed the adjustment amount from the stored collected amount (as the "adjusted" figure).
     const billedIns = round2(Math.max(0, (a.total || 0) - (a.copayDue || 0)));
@@ -171,6 +174,10 @@ export default function ClientDetail({
     setBusy(true); setMsg("");
     try {
       const adjusting = ecInsurer && (ecStage === "writeoff" || ecStage === "writedown");
+      // Is this charge being marked Collected? If so and no collected date was
+      // chosen, default it to today — a payment recorded now lands on today, not
+      // the date of service.
+      const markedPaid = ecInsurer ? ecStage === "paid" : ecSelfPay === "paid";
       const res = await fetch(`/api/billing/sessions/${sid}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +188,7 @@ export default function ClientDetail({
           stage: ecInsurer ? ecStage : "paid",
           selfPayStatus: ecInsurer ? null : (ecSelfPay === "paid" ? null : ecSelfPay),
           billedDate: ecBilled || null,
-          paidDate: ecPaid || null,
+          paidDate: markedPaid ? (ecPaid || today) : (ecPaid || null),
           insuranceCollected: adjusting ? ecInsuranceCollected() : null,
           cptCodes: ecCodes,
         }),
@@ -799,14 +806,14 @@ export default function ClientDetail({
                               )}
                               <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                               {!ecInsurer && <>
-                                <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => setEcSelfPay(e.target.value as typeof ecSelfPay)}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
+                                <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => { const v = e.target.value as typeof ecSelfPay; setEcSelfPay(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
                                 {ecSelfPay === "owing" && <label>Collected so far<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>}
                                 {ecSelfPay !== "waived" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected — set independently of the date of service" /></label>}
                               </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
-                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => setEcStage(e.target.value as typeof ecStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
+                                <label>Status<select className="ls-in" value={ecStage} onChange={(e) => { const v = e.target.value as typeof ecStage; setEcStage(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
                                 {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer — back-date to the real date if needed" /></label>}
                                 {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer actually settled — this drives the payout month" /></label>}
                                 {(ecStage === "writeoff" || ecStage === "writedown") && <>
