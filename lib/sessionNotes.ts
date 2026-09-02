@@ -6,9 +6,9 @@ import fs from "fs";
 import path from "path";
 import { encrypt, decrypt, randomId } from "./crypto";
 
-// Feature flag: session notes are hidden unless NOTES_ENABLED=1. Flip the env
-// var (or this default) to bring the feature back — nothing else changes.
-export const NOTES_ENABLED = process.env.NOTES_ENABLED === "1";
+// Feature flag: session notes are ON by default now that clinicians paste their
+// Supanote treatment notes in here. Set NOTES_ENABLED=0 to hide the feature.
+export const NOTES_ENABLED = process.env.NOTES_ENABLED !== "0";
 
 export interface Soap { s: string; o: string; a: string; p: string }
 export interface SessionNote {

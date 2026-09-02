@@ -4059,3 +4059,12 @@ body:has(.bk-page) .brandbar { display: none; }
 .iie-list li:last-child { border-bottom: none; }
 .iie-list .nm { font-weight: 600; color: #333; }
 .iie-list .em { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12.5px; }
+
+/* Session-notes: Supanote link + paste-to-SOAP. */
+.sn-toprow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.sn-supa { margin-left: auto; font: 600 13px "Open Sans"; color: var(--indigo); text-decoration: none; border: 1px solid var(--indigo); border-radius: 9px; padding: 7px 12px; background: #fff; white-space: nowrap; }
+.sn-supa:hover { background: #eef4f3; }
+.sn-paste { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; padding: 12px; background: #f4f7fb; border: 1px dashed #c3cee0; border-radius: 10px; }
+.sn-paste textarea { background: #fff; }
+.sn-pasterow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 4px; }
+.sn-pastemsg { font-size: 12.5px; color: #2c6a4a; line-height: 1.4; }
