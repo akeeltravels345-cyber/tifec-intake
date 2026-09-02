@@ -39,10 +39,11 @@ jobs:
           fi
           STAMP="$(date -u +%Y-%m-%d)"
           OUT="tifec-backup-$STAMP.sql.gz.gpg"
-          # Dump from the matching Postgres 17 image so pg_dump versions always
-          # line up with Neon; pipe straight into gzip and gpg so the plain dump
-          # is never written to disk.
-          docker run --rm -e PGCONNECT_TIMEOUT=30 postgres:17 \
+          # Dump from a Postgres image whose pg_dump is at least as new as Neon's
+          # server (Neon runs Postgres 18); pipe straight into gzip and gpg so the
+          # plain dump is never written to disk. If Neon ever moves to a newer
+          # major, bump this image tag to match.
+          docker run --rm -e PGCONNECT_TIMEOUT=30 postgres:18 \
             pg_dump --no-owner --no-privileges "$DATABASE_URL" \
             | gzip \
             | gpg --symmetric --cipher-algo AES256 --batch --yes \
