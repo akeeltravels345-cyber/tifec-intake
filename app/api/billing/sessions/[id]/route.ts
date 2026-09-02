@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkBilled } from "@/lib/billingRole";
 import { getSession, deleteSession, updateSession } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
@@ -61,6 +62,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, insuranceDisposition, insuranceCollected, notes, ...(cptCodes && cptCodes.length ? { cptCodes } : {}) });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });
+  await logChange(me.id, `session:${id}`, "edit", "edited a charge");
   return NextResponse.json({ ok: true });
 }
 
@@ -82,5 +84,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const ok = await deleteSession(id);
   if (!ok) return NextResponse.json({ error: "Charge not found." }, { status: 404 });
+  await logChange(me.id, `session:${id}`, "delete", "deleted a charge");
   return NextResponse.json({ ok: true });
 }

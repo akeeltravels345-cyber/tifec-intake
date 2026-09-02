@@ -4,6 +4,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, type ClientDocument } from "@/lib/clients";
 import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
 import { randomId } from "@/lib/crypto";
+import { logChange } from "@/lib/db";
 
 // Files we accept for a client document. Referral letters and clinical paperwork
 // are PDFs or scans/photos; a couple of office formats are allowed too.
@@ -56,5 +57,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const documents = [...(client.profile.documents ?? []), doc];
   await updateClient(id, client.insurerId, { ...client.profile, documents });
 
+  await logChange(user.clinician.id, `client:${id}`, "create", "added a document");
   return NextResponse.json({ ok: true, documents });
 }

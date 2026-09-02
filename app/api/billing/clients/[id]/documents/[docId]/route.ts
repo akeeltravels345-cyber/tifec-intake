@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient } from "@/lib/clients";
 import { getDocFile, deleteDocFile } from "@/lib/clientDocs";
+import { logChange } from "@/lib/db";
 
 // Shared gate: biller/owner (any client) or a clinician linked to this client.
 async function gate(id: string) {
@@ -12,7 +13,7 @@ async function gate(id: string) {
   const seesAll = isBiller(user.role) || isOwner(user.role);
   if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id)))
     return { error: "Not allowed.", status: 403 as const };
-  return { client };
+  return { client, userId: user.clinician.id };
 }
 
 // Download the stored file. Streams the decrypted bytes with the right type.
@@ -51,5 +52,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   await deleteDocFile(docId);
   const documents = (g.client.profile.documents ?? []).filter((d) => d.id !== docId);
   await updateClient(id, g.client.insurerId, { ...g.client.profile, documents });
+  await logChange(g.userId, `client:${id}`, "delete", "removed a document");
   return NextResponse.json({ ok: true, documents });
 }

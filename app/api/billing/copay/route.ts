@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getSession, markCopayCollected } from "@/lib/billing";
 import { caymanToday } from "@/lib/caymanTime";
+import { logChange } from "@/lib/db";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
 
   if (body.action === "undo") {
     await markCopayCollected(sessionId, 0, null);
+    await logChange(user.clinician.id, `session:${sessionId}`, "status", "reversed a co-pay");
     return NextResponse.json({ ok: true });
   }
 
@@ -34,5 +36,6 @@ export async function POST(req: Request) {
   const date = body.date && isDate(String(body.date)) ? String(body.date) : caymanToday();
   const ok = await markCopayCollected(sessionId, amount, date);
   if (!ok) return NextResponse.json({ error: "Could not record the co-pay." }, { status: 500 });
+  await logChange(user.clinician.id, `session:${sessionId}`, "status", "recorded a co-pay");
   return NextResponse.json({ ok: true });
 }

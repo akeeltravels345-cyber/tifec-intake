@@ -4,6 +4,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
 import { deleteDocFilesForClient } from "@/lib/clientDocs";
 import { listSessions, deleteSession } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -59,6 +60,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   for (const sess of sessions) { if (await deleteSession(sess.id)) removedCharges++; }
   await deleteDocFilesForClient(id);
   await deleteClient(id);
+  await logChange(user.clinician.id, `client:${id}`, "delete", `deleted client record and ${removedCharges} charge(s)`);
   return NextResponse.json({ ok: true, removedCharges });
 }
 
@@ -116,5 +118,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const insurerId = body.insurerId ? String(body.insurerId) : null;
   const updated = await updateClient(id, insurerId, profile);
   if (!updated) return NextResponse.json({ error: "Client not found." }, { status: 404 });
+  await logChange(user.clinician.id, `client:${id}`, "edit", "edited client record");
   return NextResponse.json({ ok: true });
 }

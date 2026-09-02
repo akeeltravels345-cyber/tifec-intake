@@ -4,6 +4,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { CLINICIANS, getClinician } from "@/lib/clinicians";
 import { listInsurers, listSessions, insertSession } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 import { addClients } from "@/lib/clients";
 import { parseArReport, matchInsurer } from "@/lib/arReport";
 
@@ -133,6 +134,7 @@ export async function POST(req: Request) {
     }
   }
 
+  await logChange(me.id, `clinician:${clinicianId}`, "create", `imported roster: ${added + linked} client(s), ${claimsAdded} charge(s)`);
   return NextResponse.json({
     ok: true, added: added + linked, duplicates, total: rows.length, forClinician: clinician.name,
     kind: parsed.kind, owedTotal: isAr ? owedTotal : 0, claimsAdded, claimsSkipped,

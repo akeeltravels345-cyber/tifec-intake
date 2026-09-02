@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, setClientDiagnoses } from "@/lib/clients";
 import { isSystemAdmin } from "@/lib/clinicians";
+import { logChange } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -28,5 +29,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const updated = await setClientDiagnoses(id, codes, user.clinician.id, user.clinician.name);
   if (!updated) return NextResponse.json({ error: "Could not save." }, { status: 500 });
+  await logChange(user.clinician.id, `client:${id}`, "edit", `updated diagnoses (${codes.length} code${codes.length === 1 ? "" : "s"})`);
   return NextResponse.json({ ok: true, diagnosis: updated.profile.diagnosis ?? [], diagnosisLog: updated.profile.diagnosisLog ?? [] });
 }

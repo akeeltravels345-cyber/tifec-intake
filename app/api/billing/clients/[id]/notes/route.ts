@@ -4,6 +4,7 @@ import { getBillingUser, isBiller } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { clinicianSeesClient } from "@/lib/clients";
 import { addNote, updateNote, deleteNote, getNote, type Soap } from "@/lib/sessionNotes";
+import { logChange } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!hasContent(soap)) return NextResponse.json({ error: "Write something in the note first." }, { status: 400 });
 
   const note = await addNote({ clientId, clinicianId: g.user.clinician.id, sessionId: typeof body.sessionId === "string" ? body.sessionId : null, noteDate, soap });
+  await logChange(g.user.clinician.id, `client:${clientId}`, "notes", "added a session note");
   return NextResponse.json({ ok: true, id: note.id });
 }
 
@@ -55,7 +57,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!hasContent(soap)) return NextResponse.json({ error: "The note can't be empty." }, { status: 400 });
 
   const ok = await updateNote(noteId, { noteDate: isDate(body.noteDate) ? String(body.noteDate) : undefined, soap });
-  return ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Could not save." }, { status: 500 });
+  if (!ok) return NextResponse.json({ error: "Could not save." }, { status: 500 });
+  await logChange(g.user.clinician.id, `client:${clientId}`, "notes", "edited a session note");
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -70,5 +74,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!note || note.clientId !== clientId) return NextResponse.json({ error: "Note not found." }, { status: 404 });
   if (note.clinicianId !== g.user.clinician.id) return NextResponse.json({ error: "You can only delete your own notes." }, { status: 403 });
   await deleteNote(noteId);
+  await logChange(g.user.clinician.id, `client:${clientId}`, "notes", "deleted a session note");
   return NextResponse.json({ ok: true });
 }

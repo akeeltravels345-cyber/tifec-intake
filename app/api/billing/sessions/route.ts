@@ -3,6 +3,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { insertSession, listExternalClinicians, isExternalId } from "@/lib/billing";
 import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { resolveClient, type ClientProfile } from "@/lib/clients";
+import { logChange } from "@/lib/db";
 
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
@@ -71,5 +72,6 @@ export async function POST(req: Request) {
     notes: typeof body.notes === "string" ? body.notes : "",
   });
 
+  await logChange(me.id, `session:${session.id}`, "create", "logged a session");
   return NextResponse.json({ ok: true, id: session.id });
 }

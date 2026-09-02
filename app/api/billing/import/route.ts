@@ -4,6 +4,7 @@ import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { insertSession, listSessions, listInsurers, listExternalClinicians } from "@/lib/billing";
 import { CLINICIANS } from "@/lib/clinicians";
 import { parseCsv, buildRows, dupeKey, type DateOrder } from "@/lib/billingImport";
+import { logChange } from "@/lib/db";
 
 // Bulk import of past work. Takes the raw CSV rather than parsed rows, so the
 // server does its own parsing and validation instead of trusting the browser.
@@ -63,5 +64,6 @@ export async function POST(req: Request) {
     imported++;
   }
 
+  await logChange(me.id, "import", "create", `imported ${imported} charge(s) from CSV (${duplicates} dup, ${failed} failed)`);
   return NextResponse.json({ ok: true, imported, duplicates, failed, total: rows.length });
 }

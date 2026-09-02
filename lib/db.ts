@@ -225,6 +225,7 @@ export async function listSubmissions(): Promise<SubmissionRow[]> {
 // ---------------------------------------------------------------------------
 export type AuditAction =
   | "view"
+  | "create"
   | "status"
   | "notes"
   | "edit"
@@ -284,6 +285,30 @@ export async function logAuth(
     id: randomId(),
     clinician_id: clinicianId,
     submission_token: "",
+    action,
+    detail,
+    at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Record a change to a client's billing PHI (a client record, session/charge,
+ * co-pay, payment, document, diagnosis, or note). The `resource` is a stable
+ * reference like "client:<id>" or "session:<id>" — NEVER a name or other PHI,
+ * since the audit log itself must stay PHI-free. Used for the billing subsystem,
+ * mirroring the submissions audit trail. Changes only (create/edit/delete/…),
+ * not passive views.
+ */
+export async function logChange(
+  clinicianId: string,
+  resource: string,
+  action: Extract<AuditAction, "create" | "edit" | "delete" | "notes" | "status">,
+  detail: string
+): Promise<void> {
+  await logAccess({
+    id: randomId(),
+    clinician_id: clinicianId,
+    submission_token: resource,
     action,
     detail,
     at: new Date().toISOString(),

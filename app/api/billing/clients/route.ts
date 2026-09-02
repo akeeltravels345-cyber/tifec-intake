@@ -3,6 +3,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { resolveClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { isExternalId, listExternalClinicians } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -39,5 +40,6 @@ export async function POST(req: Request) {
   }
 
   const clientId = await resolveClient(clinicianId, { first, last, insurerId, profile: dob ? { dob } : {} });
+  await logChange(user.clinician.id, `client:${clientId}`, "create", "created client record");
   return NextResponse.json({ ok: true, clientId });
 }

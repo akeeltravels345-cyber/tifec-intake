@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkPaid } from "@/lib/billingRole";
 import { markSessionPaid, markSessionBilled, markSelfPayPaid, markSessionAdjusted, markSessionUnadjusted, getSession } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "A valid billed date is required." }, { status: 400 });
     const ok = await markSessionBilled(sessionId, billed, billed ? billedDate : null);
     if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    await logChange(me.id, `session:${sessionId}`, "status", billed ? "marked submitted to insurer" : "un-marked submitted to insurer");
     return NextResponse.json({ ok: true });
   }
 
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
     if (!settleDate || !isDate(settleDate)) return NextResponse.json({ error: "A valid settled date is required." }, { status: 400 });
     const ok = await markSessionAdjusted(sessionId, disposition, collected, settleDate);
     if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    await logChange(me.id, `session:${sessionId}`, "status", `settled a claim as ${disposition}`);
     return NextResponse.json({ ok: true });
   }
 
@@ -51,6 +54,7 @@ export async function POST(req: Request) {
   if (action === "unadjust") {
     const ok = await markSessionUnadjusted(sessionId);
     if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+    await logChange(me.id, `session:${sessionId}`, "status", "reversed a claim write-off/down");
     return NextResponse.json({ ok: true });
   }
 
@@ -66,5 +70,6 @@ export async function POST(req: Request) {
     ? await markSelfPayPaid(sessionId, paid, paid ? paidDate : null)
     : await markSessionPaid(sessionId, paid, paid ? paidDate : null);
   if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
+  await logChange(me.id, `session:${sessionId}`, "status", paid ? "recorded payment received" : "un-marked payment");
   return NextResponse.json({ ok: true });
 }

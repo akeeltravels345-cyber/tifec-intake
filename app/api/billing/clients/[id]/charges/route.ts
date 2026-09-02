@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { insertSession } from "@/lib/billing";
+import { logChange } from "@/lib/db";
 
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
@@ -55,5 +56,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     notes: typeof body.notes === "string" ? body.notes : "",
     billedDate, insurancePaid: paid, paidDate,
   });
+  await logChange(user.clinician.id, `session:${session.id}`, "create", `added a charge for client:${id}`);
   return NextResponse.json({ ok: true, id: session.id });
 }
