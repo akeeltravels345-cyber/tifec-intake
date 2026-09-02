@@ -11,6 +11,7 @@ import {
 import { listFeedback } from "@/lib/feedback";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogout from "@/components/IdleLogout";
+import ImportIntakeEmails from "@/components/ImportIntakeEmails";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import { getSidebarData } from "@/lib/sidebarData";
 import { devMode } from "@/lib/billingRole";
@@ -187,6 +188,10 @@ export default async function AdminPage({
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="card">
+        <ImportIntakeEmails />
       </div>
 
       <div className="card">
