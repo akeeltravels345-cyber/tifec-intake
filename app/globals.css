@@ -4091,3 +4091,20 @@ body:has(.bk-page) .brandbar { display: none; }
 .idle-opt:disabled { opacity: .6; cursor: not-allowed; }
 .idle-ok { font-size: 12.5px; color: #2c7a55; margin: 10px 0 0; }
 .idle-err { font-size: 12.5px; color: var(--neg); font-weight: 600; margin: 10px 0 0; }
+
+/* Account: profile photo upload. */
+.av-h { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+.av-sub { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0 0 14px; }
+.av-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.av-pic { width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: var(--indigo); color: #fff; display: flex; align-items: center; justify-content: center; font: 700 24px "Open Sans"; flex: none; }
+.av-pic img { width: 100%; height: 100%; object-fit: cover; }
+.av-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.av-btn { background: var(--indigo); color: #fff; border: 1px solid var(--indigo); border-radius: 9px; padding: 9px 16px; font: 600 13.5px "Open Sans"; cursor: pointer; }
+.av-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.av-btn.ghost { background: #fff; color: #7a5f22; border-color: #cbd3e1; color: #33405a; }
+.av-btn.ghost:hover:not(:disabled) { background: #f2f4f8; }
+.av-btn:disabled { opacity: .6; cursor: not-allowed; }
+.av-err { font-size: 12.5px; color: var(--neg); font-weight: 600; margin: 10px 0 0; }
+/* Photo fills the round avatar chips (account header + sidebar). */
+.avatar .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.bo-uav img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }

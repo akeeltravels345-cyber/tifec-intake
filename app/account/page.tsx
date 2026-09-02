@@ -6,7 +6,8 @@ import UnifiedSidebar from "@/components/UnifiedSidebar";
 import AccountClient from "./AccountClient";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import IdleTimeoutSetting from "@/components/IdleTimeoutSetting";
-import { getIdleMinutes, IDLE_MINUTES_CHOICES } from "@/lib/users";
+import AvatarUpload from "@/components/AvatarUpload";
+import { getIdleMinutes, getAvatar, IDLE_MINUTES_CHOICES } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ export default async function AccountPage() {
   if (!me) redirect("/login?next=/account");
   const sidebar = await getSidebarData(me);
   const idleMinutes = await getIdleMinutes(me.id);
+  const avatar = await getAvatar(me.id);
+  const myInitials = initials(me.name);
 
   return (
     <div className="biz">
@@ -32,7 +35,7 @@ export default async function AccountPage() {
           <IdleLogoutForUser />
           <div className="card">
             <div className="page-head" style={{ marginBottom: 22 }}>
-              <div className="avatar">{initials(me.name)}</div>
+              <div className="avatar">{avatar ? <img src={avatar} alt="" className="avatar-img" /> : myInitials}</div>
               <div>
                 <div className="greeting">Account</div>
                 <h1 className="who">{me.name}</h1>
@@ -41,6 +44,10 @@ export default async function AccountPage() {
             </div>
 
             <AccountClient />
+          </div>
+
+          <div className="card" style={{ marginTop: 18 }}>
+            <AvatarUpload initial={avatar} initials={myInitials} />
           </div>
 
           <div className="card" style={{ marginTop: 18 }}>

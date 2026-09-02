@@ -34,7 +34,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, meId, name, avatar, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const owner = role === "owner", biller = role === "biller";
 
   // Glow the nav entry that leads to a new feature, for a person's first 3
@@ -222,7 +222,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             </>
           )}
           <div className="bo-usr">
-            <div className="bo-uav">{initialsOf(name)}</div>
+            <div className="bo-uav">{avatar ? <img src={avatar} alt="" /> : initialsOf(name)}</div>
             <div style={{ minWidth: 0 }}><div className="bo-un">{name}</div><div className="bo-ur">{roleLabel}</div></div>
             <button type="button" className="bo-signout" onClick={signOut} title="Sign out" aria-label="Sign out">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>

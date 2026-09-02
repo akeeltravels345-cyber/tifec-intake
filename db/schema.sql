@@ -43,10 +43,12 @@ CREATE TABLE IF NOT EXISTS clinician_users (
   password_hash TEXT NOT NULL,             -- scrypt "salt:hash" (see lib/auth.ts)
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   tour_seen     BOOLEAN NOT NULL DEFAULT false, -- first-login walkthrough shown once
-  idle_minutes  INTEGER                          -- per-user auto-logout window; null = default (15)
+  idle_minutes  INTEGER,                         -- per-user auto-logout window; null = default (15)
+  avatar        TEXT                             -- profile photo as a small square JPEG data URL; null = none
 );
 -- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS tour_seen BOOLEAN NOT NULL DEFAULT false;
 -- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS idle_minutes INTEGER;
+-- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS avatar TEXT;
 
 -- Clinician-submitted issue reports ("Report an issue").
 CREATE TABLE IF NOT EXISTS feedback (

@@ -16,6 +16,7 @@ export interface UserRow {
   updated_at: string;
   tour_seen?: boolean; // the first-login walkthrough only auto-opens until this is set
   idle_minutes?: number; // per-user auto-logout window; unset = default (15)
+  avatar?: string | null; // profile photo as a small square JPEG data URL (or null)
 }
 
 // Auto-logout window choices (minutes). Capped so it can be relaxed for a
@@ -146,6 +147,38 @@ export async function setIdleMinutes(clinicianId: string, minutes: number): Prom
   const existing = rows.find((u) => u.clinician_id === clinicianId);
   if (existing) existing.idle_minutes = m;
   else rows.push({ clinician_id: clinicianId, password_hash: "", updated_at: new Date().toISOString(), idle_minutes: m });
+  writeLocal(rows);
+}
+
+/** This clinician's profile photo (small square JPEG data URL), or null.
+ *  Guarded so it works before the avatar column exists. */
+export async function getAvatar(clinicianId: string): Promise<string | null> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      const res = (await sql`SELECT avatar FROM clinician_users WHERE clinician_id = ${clinicianId} LIMIT 1`) as { avatar: string | null }[];
+      return res[0]?.avatar ?? null;
+    } catch { return null; }
+  }
+  return readLocal().find((u) => u.clinician_id === clinicianId)?.avatar ?? null;
+}
+
+/** Set (data URL) or clear (null) this clinician's profile photo. */
+export async function setAvatar(clinicianId: string, avatar: string | null): Promise<void> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      await sql`
+        INSERT INTO clinician_users (clinician_id, password_hash, updated_at, avatar)
+        VALUES (${clinicianId}, '', ${new Date().toISOString()}, ${avatar})
+        ON CONFLICT (clinician_id) DO UPDATE SET avatar = ${avatar}`;
+    } catch { /* column may not exist yet */ }
+    return;
+  }
+  const rows = readLocal();
+  const existing = rows.find((u) => u.clinician_id === clinicianId);
+  if (existing) existing.avatar = avatar;
+  else rows.push({ clinician_id: clinicianId, password_hash: "", updated_at: new Date().toISOString(), avatar });
   writeLocal(rows);
 }
 
