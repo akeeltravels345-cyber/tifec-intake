@@ -43,11 +43,11 @@ export default async function AccountPage() {
               </div>
             </div>
 
-            <AccountClient />
+            <AvatarUpload initial={avatar} initials={myInitials} />
           </div>
 
           <div className="card" style={{ marginTop: 18 }}>
-            <AvatarUpload initial={avatar} initials={myInitials} />
+            <AccountClient />
           </div>
 
           <div className="card" style={{ marginTop: 18 }}>
