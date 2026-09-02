@@ -236,6 +236,7 @@ export default function ClientDetail({
   const [dob, setDob] = useState(profile.dob ?? "");
   const [sex, setSex] = useState(profile.sex ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
+  const [email, setEmail] = useState(profile.email ?? "");
   const [line1, setLine1] = useState(profile.address?.line1 ?? "");
   const [line2, setLine2] = useState(profile.address?.line2 ?? "");
   const [city, setCity] = useState(profile.address?.city ?? "");
@@ -271,6 +272,7 @@ export default function ClientDetail({
       dob: dob || undefined,
       sex: (sex || undefined) as ClientProfile["sex"],
       phone: phone || undefined,
+      email: email.trim() || undefined,
       address: (line1 || city || region || postal || country || line2)
         ? { line1: line1 || undefined, line2: line2 || undefined, city: city || undefined, region: region || undefined, postal: postal || undefined, country: country || undefined }
         : undefined,
@@ -444,6 +446,7 @@ export default function ClientDetail({
             {field("Date of birth", val(profile.dob ?? ""))}
             {field("Sex", val(profile.sex ?? ""))}
             {field("Phone", val(profile.phone ?? ""))}
+            {field("Email", val(profile.email ?? ""))}
             {field("Address", val([profile.address?.line1, profile.address?.line2, profile.address?.city, profile.address?.region, profile.address?.postal, profile.address?.country].filter(Boolean).join(", ")))}
             {field("Usual insurer", val(insurers.find((i) => i.id === insurerId)?.name ?? (insurerId ? "" : "Self-pay")))}
             {field("Member / ID no.", val(profile.insurance?.memberId ?? ""))}
@@ -456,6 +459,7 @@ export default function ClientDetail({
             {field("Date of birth", <DobInput value={dob} onChange={setDob} />)}
             {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">—</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
+            {field("Email", <input className="ls-in" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
             {field("Address line 1", <input className="ls-in" value={line1} onChange={(e) => setLine1(e.target.value)} />)}
             {field("Address line 2", <input className="ls-in" value={line2} onChange={(e) => setLine2(e.target.value)} />)}

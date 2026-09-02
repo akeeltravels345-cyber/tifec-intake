@@ -29,6 +29,7 @@ export interface ClientProfile {
     line1?: string; line2?: string; city?: string; region?: string; postal?: string; country?: string;
   };                            // box 5
   phone?: string;               // box 5
+  email?: string;               // client contact email
   insurance?: {
     memberId?: string;          // insured's ID number (box 1a)
     groupNo?: string;           // box 11

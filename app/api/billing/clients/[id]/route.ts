@@ -90,6 +90,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     dob: isDate(p.dob) ? String(p.dob) : undefined,
     sex: p.sex === "M" || p.sex === "F" || p.sex === "U" ? p.sex : undefined,
     phone: s(p.phone),
+    email: s(p.email),
     address: (s(addr.line1) || s(addr.line2) || s(addr.city) || s(addr.region) || s(addr.postal) || s(addr.country))
       ? { line1: s(addr.line1), line2: s(addr.line2), city: s(addr.city), region: s(addr.region), postal: s(addr.postal), country: s(addr.country) }
       : undefined,
