@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { caymanToday } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
-import { getBillingUser, isBiller, devMode } from "@/lib/billingRole";
+import { getBillingUser, devMode } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { listClients } from "@/lib/clients";
 import { listNotesForClient, NOTES_ENABLED } from "@/lib/sessionNotes";
@@ -17,11 +17,16 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   if (!NOTES_ENABLED) redirect("/today");
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/notes");
-  if (isBiller(user.role) || isSystemAdmin(user.clinician)) redirect("/today");
+  // Session notes follow the treating relationship, not the billing role — the
+  // roster below is only the user's own linked clients. The oversight admin
+  // never has clinical notes; anyone else with no linked clients has nothing to
+  // show, so they're sent to Today.
+  if (isSystemAdmin(user.clinician)) redirect("/today");
 
   const sp = await searchParams;
   const [sidebar, clients] = await Promise.all([getSidebarData(user.clinician), listClients(user.clinician.id)]);
   const roster = [...clients].sort((a, b) => `${a.last}${a.first}`.localeCompare(`${b.last}${b.first}`));
+  if (roster.length === 0) redirect("/today");
   const activeId = sp.client && roster.some((c) => c.id === sp.client) ? sp.client! : roster[0]?.id;
   const active = roster.find((c) => c.id === activeId);
   const today = caymanToday();

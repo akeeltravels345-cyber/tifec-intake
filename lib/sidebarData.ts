@@ -12,6 +12,7 @@ import { touchPresence } from "@/lib/comms";
 import { listStaged } from "@/lib/importStaging";
 import { NOTES_ENABLED } from "@/lib/sessionNotes";
 import { getAvatar } from "@/lib/users";
+import { listClients } from "@/lib/clients";
 
 export interface SidebarData {
   role: "owner" | "biller" | "clinician";
@@ -20,6 +21,9 @@ export interface SidebarData {
   meId: string;
   name: string;
   avatar: string | null;
+  // True when this user is clinically linked to at least one client (their own
+  // treating caseload) — drives whether the Session notes link is worth showing.
+  hasOwnClients: boolean;
   queueCount: number;
   needReview: number;
   teamUnread: number;
@@ -39,7 +43,7 @@ export interface SidebarData {
 export async function getSidebarData(me: Clinician): Promise<SidebarData> {
   void touchPresence(me.id); // stamp "active now" on every navigation (fire-and-forget)
   const hasBilling = hasBillingBeta(me);
-  const [subs, teamUnread, tickets, sessions, view, staged, noteCount, avatar] = await Promise.all([
+  const [subs, teamUnread, tickets, sessions, view, staged, noteCount, avatar, myClients] = await Promise.all([
     getSubmissionsByClinician(me.id),
     unreadCount(me.id),
     listTickets(),
@@ -48,6 +52,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     hasBilling ? listStaged("pending") : Promise.resolve([]),
     unreadNotifications(me.id),
     getAvatar(me.id),
+    hasBilling ? listClients(me.id) : Promise.resolve([]),
   ]);
   const canSwitchViews = !!view && isSystemAdmin(view.real);
   const impersonating = canSwitchViews && !!view && view.impersonating;
@@ -69,6 +74,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     meId: me.id,
     name: me.name,
     avatar,
+    hasOwnClients: myClients.length > 0,
     queueCount: sessions.filter((s) => s.insurerId && !s.insurancePaid).length,
     needReview: subs.filter((s) => s.status === "new").length,
     teamUnread,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { caymanToday } from "@/lib/caymanTime";
-import { getBillingUser, isBiller } from "@/lib/billingRole";
+import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { clinicianSeesClient } from "@/lib/clients";
 import { addNote, updateNote, deleteNote, getNote, type Soap } from "@/lib/sessionNotes";
@@ -15,12 +15,14 @@ const readSoap = (b: Record<string, unknown>): Soap => ({
 });
 const hasContent = (s: Soap) => !!(s.s.trim() || s.o.trim() || s.a.trim() || s.p.trim());
 
-// Only a clinician linked to THIS client may read or write its notes (PHI).
-// The biller and the system admin never see clinical content.
+// Only a clinician LINKED to THIS client may read or write its notes (PHI).
+// Access follows the treating relationship, not the billing role: a biller who
+// is also a practicum clinician sees their own clients' notes; a pure biller
+// (never linked as a clinician) does not. The oversight admin never sees notes.
 async function gate(clientId: string) {
   const user = await getBillingUser();
   if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (isSystemAdmin(user.clinician) || isBiller(user.role)) return { error: NextResponse.json({ error: "Not allowed." }, { status: 403 }) };
+  if (isSystemAdmin(user.clinician)) return { error: NextResponse.json({ error: "Not allowed." }, { status: 403 }) };
   if (!(await clinicianSeesClient(clientId, user.clinician.id))) return { error: NextResponse.json({ error: "Not your client." }, { status: 403 }) };
   return { user };
 }

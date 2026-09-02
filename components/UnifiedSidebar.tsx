@@ -34,7 +34,12 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, avatar, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  // Show the Session notes link only when notes are enabled AND this user has
+  // their own caseload — so a pure biller (no linked clients) never sees a link
+  // that would just bounce, but a biller who is also a clinician (Nick) does.
+  const showNotes = notesEnabled && hasOwnClients;
+  const notesLink = { href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") };
   const owner = role === "owner", biller = role === "biller";
 
   // Glow the nav entry that leads to a new feature, for a person's first 3
@@ -95,7 +100,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-            ...(notesEnabled ? [{ href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") }] : []),
+            ...(showNotes ? [notesLink] : []),
           ]
         : biller
           ? [
@@ -104,13 +109,17 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
               { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+              // A biller who is also a practicum clinician (e.g. Nick) sees notes
+              // for their own caseload; a pure biller has no linked clients, so
+              // showNotes is false and this link is hidden.
+              ...(showNotes ? [notesLink] : []),
               // Import, Import review and Fix dates removed from the menu — done
               // with them. Routes are kept in case they're needed again.
             ]
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician"), glow: "copaynav" },
               { href: "/billing/clients", label: "My clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
-              ...(notesEnabled ? [{ href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") }] : []),
+              ...(showNotes ? [notesLink] : []),
               { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
             ];
       groups.push({ label: "Billing", items: billing });

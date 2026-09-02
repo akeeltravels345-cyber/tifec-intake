@@ -51,9 +51,13 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s), insuranceCollected: s.insuranceCollected,
     }));
 
-  // Clinical notes: only clinicians linked to this client (never biller/admin).
+  // Clinical notes: anyone clinically LINKED to this client (their treating
+  // clinician), never the oversight admin. Access follows the treating
+  // relationship, not the billing role — so a biller who is also a practicum
+  // clinician (e.g. Nick) sees notes for their own clients, and a pure biller,
+  // who is never linked as a clinician, still sees none.
   const linked = await clinicianSeesClient(id, user.clinician.id);
-  const canSeeNotes = NOTES_ENABLED && !isBiller(user.role) && user.clinician.contact !== "admin" && linked;
+  const canSeeNotes = NOTES_ENABLED && user.clinician.contact !== "admin" && linked;
   const noteRows = canSeeNotes
     ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
     : [];
