@@ -51,6 +51,11 @@ export interface Clinician {
   /** BETA: this account can see + open the billing system inside the intake app.
    *  Only enrolled accounts get the "Billing (Beta)" entry point and /billing access. */
   billingBeta?: boolean;
+  /** A practicum (training) clinician who ALSO holds a billing role (e.g. Nick,
+   *  who is the biller). Their practicum clients are unpaid, so they're kept out
+   *  of the paid/bookable clinician lists, but they CAN be assigned clients as a
+   *  treating clinician (no-charge records) so they can keep session notes. */
+  practicum?: boolean;
   /** Reachable in the team area as this contact. Clinicians message and assign
    *  tickets to a ROLE, so this is what puts a real person behind it. */
   contact?: ContactRole;
@@ -261,6 +266,7 @@ export const CLINICIANS: Clinician[] = [
     id: "nick-oconnor",
     billingBeta: true, // BETA billing access
     contact: "biller",
+    practicum: true, // biller who also treats practicum (unpaid) clients — assignable as a treating clinician for session notes
     name: "Nick O'Connor",
     credentials: "Training Clinician (Practicum)",
     email: "tifec.billing@gmail.com",
@@ -374,6 +380,13 @@ export function getClinician(id: string): Clinician | undefined {
  *  /admin oversight, notice moderation). The practice owner also carries
  *  admin: true for business oversight, but is NOT a system admin. */
 export const isSystemAdmin = (c: Clinician | null | undefined): boolean => c?.contact === "admin";
+
+/** Can this internal person be assigned clients as their treating clinician?
+ *  Regular clinicians can; the biller normally can't — except a practicum biller
+ *  (Nick), whose unpaid practicum clients live as no-charge records so he can
+ *  keep session notes. Never a hidden/admin-only account. */
+export const canTreatClients = (c: Clinician | null | undefined): boolean =>
+  !!c && !c.intakeHidden && (c.contact !== "biller" || !!c.practicum);
 
 /** The people behind the owner / biller / admin contacts. */
 export const CONTACTS = CLINICIANS.filter((c) => !!c.contact);

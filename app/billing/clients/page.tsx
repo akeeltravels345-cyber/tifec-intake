@@ -3,7 +3,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listSessions, listExternalClinicians } from "@/lib/billing";
 import { insurancePortion, collectedAtVisit } from "@/lib/billingCalc";
 import { listClients, listAllClients } from "@/lib/clients";
-import { getClinician, CLINICIANS } from "@/lib/clinicians";
+import { getClinician, CLINICIANS, canTreatClients } from "@/lib/clinicians";
 import ClientsList, { type ClientRow } from "@/components/billing/ClientsList";
 
 export const dynamic = "force-dynamic";
@@ -85,7 +85,7 @@ export default async function ClientsPage() {
         seesAll={seesAll}
         clinicians={clinicianOptions}
         assignable={seesAll ? [
-          ...CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller").map((c) => ({ id: c.id, name: c.name })),
+          ...CLINICIANS.filter(canTreatClients).map((c) => ({ id: c.id, name: c.name })),
           ...external.map((c) => ({ id: c.id, name: `${c.name} (external)` })),
         ] : []}
         insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))}

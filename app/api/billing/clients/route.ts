@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { resolveClient } from "@/lib/clients";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, canTreatClients } from "@/lib/clinicians";
 import { isExternalId, listExternalClinicians } from "@/lib/billing";
 import { logChange } from "@/lib/db";
 
@@ -30,10 +30,11 @@ export async function POST(req: Request) {
 
   if (!first || !last) return NextResponse.json({ error: "Enter the client's first and last name." }, { status: 400 });
 
-  // The clinician must be a real treating provider (internal team member who isn't
-  // the biller/admin, or a registered external provider) — never the biller/admin.
+  // The clinician must be a real treating provider (a regular clinician, or a
+  // practicum biller like Nick who treats unpaid practicum clients), or a
+  // registered external provider — never the admin or a non-treating biller.
   const internal = getClinician(clinicianId);
-  const isTreatingInternal = !!internal && !internal.intakeHidden && internal.contact !== "biller";
+  const isTreatingInternal = canTreatClients(internal);
   const isExternal = isExternalId(clinicianId) && (await listExternalClinicians()).some((c) => c.id === clinicianId);
   if (!isTreatingInternal && !isExternal) {
     return NextResponse.json({ error: "Pick a clinician to assign this client to." }, { status: 400 });
