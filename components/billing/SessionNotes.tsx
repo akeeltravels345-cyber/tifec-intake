@@ -13,8 +13,8 @@ export interface NoteRow {
 }
 
 const FIELDS: { k: "s" | "o" | "a" | "p"; label: string; hint: string }[] = [
-  { k: "s", label: "Subjective", hint: "What the client reports — how they say they're doing." },
-  { k: "o", label: "Objective", hint: "What you observed — presentation, affect, measures." },
+  { k: "s", label: "Subjective", hint: "What the client reports: how they say they're doing." },
+  { k: "o", label: "Objective", hint: "What you observed: presentation, affect, measures." },
   { k: "a", label: "Assessment", hint: "Your clinical impression / progress toward goals." },
   { k: "p", label: "Plan", hint: "Next steps, interventions, homework, follow-up." },
 ];
@@ -26,7 +26,7 @@ const SUPANOTE_URL = "https://app.supanote.ai";
 
 // Split a note pasted from Supanote into SOAP by its section headers. Supanote
 // (and most templates) label the sections "Subjective/Objective/Assessment/Plan"
-// — we find those at line starts (allowing a leading #, *, - or > and a : . - )
+// we find those at line starts (allowing a leading #, *, - or > and a : . - )
 // separator) and slice the text between them. Returns null when fewer than two
 // sections are found, so an unstructured note is never mangled.
 const SOAP_DEFS: { k: "s" | "o" | "a" | "p"; alts: string[] }[] = [
@@ -80,10 +80,10 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
     const parsed = splitSoap(text);
     if (parsed) {
       setSoap(parsed);
-      setPasteMsg("Split into Subjective / Objective / Assessment / Plan — check the fields below, then save.");
+      setPasteMsg("Split into Subjective / Objective / Assessment / Plan. Check the fields below, then save.");
     } else {
       setSoap((s) => ({ ...s, s: [s.s, text.trim()].filter(Boolean).join("\n\n") }));
-      setPasteMsg("Couldn't spot SOAP headings, so the whole note went into Subjective — move any parts to the right box, then save.");
+      setPasteMsg("Couldn't spot SOAP headings, so the whole note went into Subjective. Move any parts to the right box, then save.");
     }
     setPaste("");
   }
@@ -117,7 +117,7 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
     <div className="sn-editor">
       <label className="sn-datelab">Session date<input type="date" className="ls-in" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></label>
       <div className="sn-paste">
-        <span className="sn-flab">Paste from Supanote <span className="opt">Write in Supanote, hit Copy, then paste here — we&apos;ll split it into S/O/A/P below for you to review.</span></span>
+        <span className="sn-flab">Paste from Supanote <span className="opt">Write in Supanote, hit Copy, then paste here, and we&apos;ll split it into S/O/A/P below for you to review.</span></span>
         <textarea
           className="ls-in" rows={3} value={paste}
           placeholder="Paste a note copied from Supanote…"
@@ -154,7 +154,7 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
       {adding && editor}
 
       {notes.length === 0 && !adding ? (
-        <p className="sn-empty">No session notes yet. Add the first one — it&apos;s encrypted and only visible to this client&apos;s clinicians.</p>
+        <p className="sn-empty">No session notes yet. Add the first one. It&apos;s encrypted and only visible to this client&apos;s clinicians.</p>
       ) : (
         <div className="sn-list">
           {notes.map((n) => editId === n.id ? (
