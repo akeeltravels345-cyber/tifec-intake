@@ -15,7 +15,17 @@ export interface UserRow {
   password_hash: string;
   updated_at: string;
   tour_seen?: boolean; // the first-login walkthrough only auto-opens until this is set
+  idle_minutes?: number; // per-user auto-logout window; unset = default (15)
 }
+
+// Auto-logout window choices (minutes). Capped so it can be relaxed for a
+// power user without removing the HIPAA automatic-logoff safeguard entirely.
+export const IDLE_MINUTES_DEFAULT = 15;
+export const IDLE_MINUTES_CHOICES = [15, 30, 60] as const;
+export const clampIdleMinutes = (n: unknown): number => {
+  const v = Number(n);
+  return (IDLE_MINUTES_CHOICES as readonly number[]).includes(v) ? v : IDLE_MINUTES_DEFAULT;
+};
 
 const usePostgres = !!process.env.DATABASE_URL;
 
@@ -100,6 +110,42 @@ export async function markTourSeen(clinicianId: string): Promise<void> {
   const existing = rows.find((u) => u.clinician_id === clinicianId);
   if (existing) existing.tour_seen = true;
   else rows.push({ clinician_id: clinicianId, password_hash: "", updated_at: new Date().toISOString(), tour_seen: true });
+  writeLocal(rows);
+}
+
+/** This clinician's auto-logout window in minutes (default 15). Guarded so it
+ *  works before the idle_minutes column exists — falls back to the default. */
+export async function getIdleMinutes(clinicianId: string): Promise<number> {
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      const res = (await sql`SELECT idle_minutes FROM clinician_users WHERE clinician_id = ${clinicianId} LIMIT 1`) as { idle_minutes: number | null }[];
+      return res[0]?.idle_minutes ? clampIdleMinutes(res[0].idle_minutes) : IDLE_MINUTES_DEFAULT;
+    } catch {
+      return IDLE_MINUTES_DEFAULT; // column may not exist yet
+    }
+  }
+  const v = readLocal().find((u) => u.clinician_id === clinicianId)?.idle_minutes;
+  return v ? clampIdleMinutes(v) : IDLE_MINUTES_DEFAULT;
+}
+
+/** Set this clinician's auto-logout window (clamped to an allowed choice). */
+export async function setIdleMinutes(clinicianId: string, minutes: number): Promise<void> {
+  const m = clampIdleMinutes(minutes);
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      await sql`
+        INSERT INTO clinician_users (clinician_id, password_hash, updated_at, idle_minutes)
+        VALUES (${clinicianId}, '', ${new Date().toISOString()}, ${m})
+        ON CONFLICT (clinician_id) DO UPDATE SET idle_minutes = ${m}`;
+    } catch { /* column may not exist yet — nothing to persist until the migration runs */ }
+    return;
+  }
+  const rows = readLocal();
+  const existing = rows.find((u) => u.clinician_id === clinicianId);
+  if (existing) existing.idle_minutes = m;
+  else rows.push({ clinician_id: clinicianId, password_hash: "", updated_at: new Date().toISOString(), idle_minutes: m });
   writeLocal(rows);
 }
 

@@ -3,7 +3,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { listDemoRecords } from "@/lib/demoCleanup";
 import LogoutButton from "@/components/LogoutButton";
-import IdleLogout from "@/components/IdleLogout";
+import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import CleanupClient from "./CleanupClient";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function CleanupPage() {
 
   return (
     <div className="container">
-      <IdleLogout />
+      <IdleLogoutForUser />
       <div className="detail-topbar no-print">
         <Link href="/admin" className="back-link" style={{ margin: 0 }}>← Admin</Link>
         <LogoutButton />

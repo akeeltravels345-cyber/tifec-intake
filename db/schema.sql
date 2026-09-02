@@ -42,9 +42,11 @@ CREATE TABLE IF NOT EXISTS clinician_users (
   clinician_id  TEXT PRIMARY KEY,          -- matches an id in lib/clinicians.ts
   password_hash TEXT NOT NULL,             -- scrypt "salt:hash" (see lib/auth.ts)
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  tour_seen     BOOLEAN NOT NULL DEFAULT false  -- first-login walkthrough shown once
+  tour_seen     BOOLEAN NOT NULL DEFAULT false, -- first-login walkthrough shown once
+  idle_minutes  INTEGER                          -- per-user auto-logout window; null = default (15)
 );
 -- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS tour_seen BOOLEAN NOT NULL DEFAULT false;
+-- Existing installs: ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS idle_minutes INTEGER;
 
 -- Clinician-submitted issue reports ("Report an issue").
 CREATE TABLE IF NOT EXISTS feedback (

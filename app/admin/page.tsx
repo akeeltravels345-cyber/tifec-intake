@@ -10,7 +10,7 @@ import {
 } from "@/lib/db";
 import { listFeedback } from "@/lib/feedback";
 import LogoutButton from "@/components/LogoutButton";
-import IdleLogout from "@/components/IdleLogout";
+import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import ImportIntakeEmails from "@/components/ImportIntakeEmails";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import { getSidebarData } from "@/lib/sidebarData";
@@ -137,7 +137,7 @@ export default async function AdminPage({
       <UnifiedSidebar data={sidebar} isDev={devMode()} />
       <main className="bo-main">
       <div className="container" style={{ padding: 0, maxWidth: "none" }}>
-      <IdleLogout />
+      <IdleLogoutForUser />
       <div className="card">
         <div className="page-head">
           <div className="avatar">{me ? initials(me.name) : "★"}</div>

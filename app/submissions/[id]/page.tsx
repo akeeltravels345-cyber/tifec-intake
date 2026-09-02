@@ -10,7 +10,7 @@ import { isDsmChildForm, isDsmChildSelfForm } from "@/lib/dsmChild";
 import { isLevel2Form } from "@/lib/level2";
 import StatusControl from "@/components/StatusControl";
 import LogoutButton from "@/components/LogoutButton";
-import IdleLogout from "@/components/IdleLogout";
+import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import Tour from "@/components/Tour";
 import SubmissionActions from "@/components/SubmissionActions";
 import NotesEditor from "@/components/NotesEditor";
@@ -148,7 +148,7 @@ export default async function SubmissionView({
 
   return (
     <div className="container rec">
-      <IdleLogout />
+      <IdleLogoutForUser />
       <Tour mount="record" />
       <div className="detail-topbar no-print">
         <Link href="/dashboard" className="back-link" style={{ margin: 0 }}>← Dashboard</Link>

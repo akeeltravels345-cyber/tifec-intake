@@ -6,7 +6,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { buildSections, templateLabel, type FormTemplateKey } from "@/lib/forms";
 import { decrypt } from "@/lib/crypto";
 import LogoutButton from "@/components/LogoutButton";
-import IdleLogout from "@/components/IdleLogout";
+import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import EditSubmission from "@/components/EditSubmission";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function EditSubmissionPage({ params }: { params: Promise<{
 
   return (
     <div className="container">
-      <IdleLogout />
+      <IdleLogoutForUser />
       <div className="detail-topbar no-print">
         <Link href={`/submissions/${token}`} className="back-link" style={{ margin: 0 }}>← Back to record</Link>
         <LogoutButton />

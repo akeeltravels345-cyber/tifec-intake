@@ -3,7 +3,7 @@ import { getBillingUser, devMode } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import { getSidebarData } from "@/lib/sidebarData";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
-import IdleLogout from "@/components/IdleLogout";
+import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export default async function SchedulingLayout({ children }: { children: React.R
   const data = await getSidebarData(user.clinician);
   return (
     <div className="biz">
-      {!devMode() && <IdleLogout />}
+      {!devMode() && <IdleLogoutForUser />}
       <UnifiedSidebar data={data} isDev={devMode()} />
       <main className="bo-main">{children}</main>
     </div>
