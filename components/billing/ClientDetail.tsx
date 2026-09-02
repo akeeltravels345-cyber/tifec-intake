@@ -24,6 +24,8 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmtSize = (n?: number) => (!n ? "" : n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
 const noteWhen = (iso: string) => { const d = iso.slice(0, 10); const t = iso.slice(11, 16); return t ? `${d} ${t}` : d; };
+const monthNameOf = (iso: string) => { const [y, m] = iso.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" }); };
+const longDateOf = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }); } catch { return iso; } };
 const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
   self: { label: "Self-pay", cls: "self" },
   logged: { label: "To bill", cls: "logged" },
@@ -77,6 +79,11 @@ export default function ClientDetail({
   const [acCodes, setAcCodes] = useState<string[]>([]);
   const [acPaidDate, setAcPaidDate] = useState(today);
   const [acStage, setAcStage] = useState<"tobill" | "awaiting" | "paid">("awaiting");
+  // Date-of-service caution for the add-charge form: warns once when the charge is
+  // dated outside the current month or in the future, then confirming lets it save.
+  const [acDateWarn, setAcDateWarn] = useState<{ future: boolean } | null>(null);
+  const [acDateOk, setAcDateOk] = useState("");
+  const pickAcDate = (v: string) => { setAcDate(v); setAcDateWarn(null); };
   // Bulk-edit: apply one change to every selected charge at once.
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkStage, setBulkStage] = useState<"keep" | "tobill" | "awaiting" | "paid">("keep");
@@ -196,6 +203,12 @@ export default function ClientDetail({
   async function addChargeNow() {
     if (!acDate || !acAmount) { setMsg("Enter a date and amount for the charge."); return; }
     if (acStage === "paid" && !acPaidDate) { setMsg("Enter the date the payment was collected."); return; }
+    // Date-of-service safety: a charge dated in another month or the future is
+    // almost always a slip. Ask once to confirm; a confirmed date then saves.
+    if (today && acDate !== acDateOk && (acDate > today || acDate.slice(0, 7) !== today.slice(0, 7))) {
+      setAcDateWarn({ future: acDate > today });
+      return;
+    }
     setBusy(true); setMsg("");
     try {
       const res = await fetch(`/api/billing/clients/${id}/charges`, {
@@ -650,7 +663,7 @@ export default function ClientDetail({
             ) : (
               <div className="cd-addform">
                 <div className="cd-addrow">
-                  <label>Date of service<input type="date" className="ls-in" value={acDate} onChange={(e) => setAcDate(e.target.value)} /></label>
+                  <label>Date of service<input type="date" className="ls-in" value={acDate} onChange={(e) => pickAcDate(e.target.value)} /></label>
                   {clinicians.length > 1 && <label>Clinician<select className="ls-in" value={acClin} onChange={(e) => setAcClin(e.target.value)}>{clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
                   <label>Insurer<select className="ls-in" value={acInsurer} onChange={(e) => setAcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
@@ -684,6 +697,19 @@ export default function ClientDetail({
                 )}
                 {chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}) — it won&apos;t be paid.</p>
+                )}
+                {acDateWarn && (
+                  <div className="ls-doswarn">
+                    <div className="ls-doswarn-h">⚠️ Check the date of service</div>
+                    <p className="ls-doswarn-b">
+                      {acDateWarn.future
+                        ? <>You have entered the date <b>{longDateOf(acDate)}</b> — that&apos;s in the <b>future</b>, and a session can&apos;t have happened yet. Is that the date you meant? Fix it above if not.</>
+                        : <>You have entered the date <b>{longDateOf(acDate)}</b>, which is in <b>{monthNameOf(acDate)}</b> — not the current month, <b>{monthNameOf(today)}</b>. Is that the date you meant? Fix it above if not.</>}
+                    </p>
+                    <div className="ls-doswarn-acts">
+                      <button type="button" className="ls-save" onClick={() => { setAcDateOk(acDate); setAcDateWarn(null); }}>Yes, that&apos;s correct</button>
+                    </div>
+                  </div>
                 )}
                 <div className="cd-addbtns">
                   <button className="ls-save" disabled={busy} onClick={addChargeNow}>{busy ? "Adding…" : "Add charge"}</button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DobInput from "./DobInput";
 
@@ -109,6 +109,20 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Set when the entered date of service is in another month or the future, so we
+  // can ask the clinician to confirm the intent before saving.
+  const [dosWarn, setDosWarn] = useState<{ future: boolean } | null>(null);
+  // The date the clinician has explicitly confirmed as intentional. Once set,
+  // saving with that date goes straight through — the caution never blocks the
+  // save, it only asks once so they can keep working on the rest of the form.
+  const [dosOk, setDosOk] = useState("");
+  const dosWarnRef = useRef<HTMLDivElement | null>(null);
+  // The Save buttons sit below the date, so pull the caution into view when it
+  // fires — otherwise a click at the bottom looks like nothing happened.
+  useEffect(() => { if (dosWarn) dosWarnRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [dosWarn]);
+  const monthName = (iso: string) => { const [y, m] = iso.split("-").map(Number); return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" }); };
+  const longDate = (iso: string) => { try { return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }); } catch { return iso; } };
+  const pickDos = (v: string) => { setDos(v); setDosWarn(null); };
 
   const insurer = useMemo(() => insurers.find((i) => i.id === insurerId), [insurers, insurerId]);
   const totalCost = useMemo(() => round2(codes.reduce((t, c) => t + feeOf(c) * unitsOf(c), 0)), [codes, cptCodes, variantByCode, unitsByCode]);
@@ -146,8 +160,8 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     return () => window.removeEventListener("keydown", onKey);
   }, [showAll]);
 
-  async function submit(e: React.FormEvent, andAnother = false) {
-    e.preventDefault();
+  async function submit(e: React.SyntheticEvent | null, andAnother = false) {
+    e?.preventDefault();
     if (busy) return; // never let a second click fire while a save is already in flight
     setError(""); setSaved("");
     if (!first.trim() || !last.trim()) {
@@ -158,6 +172,13 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (payMode === "insurance" && !insurerId) return setError("Choose the insurer, or switch to \u201cPaid in full at the visit\u201d.");
     if (!dos) return setError("Date of service is required.");
     if (!codes.length) return setError("Select at least one service code.");
+    // Date-of-service safety: a session dated outside the current month, or in the
+    // future, is almost always a slip (wrong month/year). Ask once to confirm the
+    // intent; after they confirm this date the save proceeds normally.
+    if (today && dos !== dosOk && (dos > today || dos.slice(0, 7) !== today.slice(0, 7))) {
+      setDosWarn({ future: dos > today });
+      return;
+    }
     setBusy(true);
     // A self-pay discount is baked into the charged total; record the reason so
     // the record shows why the fee was reduced.
@@ -294,14 +315,27 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           <div className="ls-field">
             <label className="ls-q">Date of service <span className="ls-req">*</span></label>
             <div className="ls-dates">
-              <input type="date" className="ls-in" style={{ maxWidth: 190 }} value={dos} onChange={(e) => setDos(e.target.value)} />
+              <input type="date" className="ls-in" style={{ maxWidth: 190 }} value={dos} onChange={(e) => pickDos(e.target.value)} />
               {today && (
                 <>
-                  <button type="button" className={`ls-day ${dos === today ? "on" : ""}`} onClick={() => setDos(today)}>Today</button>
-                  <button type="button" className={`ls-day ${dos === yesterday ? "on" : ""}`} onClick={() => setDos(yesterday)}>Yesterday</button>
+                  <button type="button" className={`ls-day ${dos === today ? "on" : ""}`} onClick={() => pickDos(today)}>Today</button>
+                  <button type="button" className={`ls-day ${dos === yesterday ? "on" : ""}`} onClick={() => pickDos(yesterday)}>Yesterday</button>
                 </>
               )}
             </div>
+            {dosWarn && (
+              <div className="ls-doswarn" ref={dosWarnRef}>
+                <div className="ls-doswarn-h">⚠️ Check the date of service</div>
+                <p className="ls-doswarn-b">
+                  {dosWarn.future
+                    ? <>You have entered the date <b>{longDate(dos)}</b> — that&apos;s in the <b>future</b>, and a session can&apos;t have happened yet. Is that the date you meant? Fix it above if not.</>
+                    : <>You have entered the date <b>{longDate(dos)}</b>, which is in <b>{monthName(dos)}</b> — not the current month, <b>{monthName(today)}</b>. Is that the date you meant? Fix it above if not.</>}
+                </p>
+                <div className="ls-doswarn-acts">
+                  <button type="button" className="ls-save" onClick={() => { setDosOk(dos); setDosWarn(null); }}>Yes, that&apos;s correct</button>
+                </div>
+              </div>
+            )}
             {duplicate && (
               <p className="ls-dupe">
                 You&apos;ve already logged a session for <b>{first} {last}</b> on this date. Carry on if they really were seen twice.

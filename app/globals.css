@@ -3383,6 +3383,18 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .biz .ls-savemore:disabled { opacity: .5; cursor: not-allowed; }
 .biz .ls-saved { font-size: 13px; color: #2c7a55; background: #e7f3ec; border-radius: 9px; padding: 10px 13px; margin-bottom: 12px; font-weight: 600; }
 
+/* Date-of-service caution: fires when a session is dated in another month or the
+   future, so a mistyped date can't slip into the wrong month's numbers. */
+.biz .ls-doswarn { background: #fff8ec; border: 1px solid #f0d69a; border-left: 4px solid #e0a53d; border-radius: 11px; padding: 13px 15px; margin: 10px 0 2px; }
+.biz .ls-doswarn-h { font: 700 13.5px "Open Sans"; color: #8a5d0e; margin-bottom: 5px; }
+.biz .ls-doswarn-b { font-size: 13px; line-height: 1.5; color: #6b5326; margin: 0 0 11px; }
+.biz .ls-doswarn-b b { color: #4a3a12; }
+.biz .ls-doswarn-acts { display: flex; gap: 9px; flex-wrap: wrap; }
+.biz .ls-doswarn-acts .ls-save { background: #c98a1e; }
+.biz .ls-doswarn-acts .ls-save:hover:not(:disabled) { background: #b3781a; }
+.biz .ls-doswarn-acts .ls-savemore { border-color: #cbb37a; color: #7a5f22; }
+.biz .ls-doswarn-acts .ls-savemore:hover:not(:disabled) { background: #f5ecd7; }
+
 /* Notifications: new messages, tickets and notices in one place. */
 .tm-topright { display: flex; align-items: center; gap: 14px; }
 .tm-bellwrap { position: relative; }
