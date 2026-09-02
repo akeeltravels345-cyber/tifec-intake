@@ -96,3 +96,36 @@ export async function findIntakeEmailsForClient(first: string, last: string, dob
   }
   return [...found];
 }
+
+export interface IntakeClient { first: string; last: string; dob?: string; }
+
+/** The distinct clients found across THIS clinician's intake submissions — the
+ *  people who filled a form for them. A couple form yields both partners. Used
+ *  to seed no-charge billing records for a practicum clinician so their unpaid
+ *  caseload exists in the system (e.g. for session notes) without re-entry. */
+export async function listIntakeClientsForClinician(clinicianId: string): Promise<IntakeClient[]> {
+  let rows;
+  try { rows = await listSubmissions(); } catch { return []; }
+  const seen = new Map<string, IntakeClient>();
+  const add = (full: unknown, dob?: string) => {
+    const name = String(full ?? "").trim();
+    if (!name) return;
+    const parts = name.split(/\s+/);
+    const first = parts[0];
+    const last = parts.slice(1).join(" ");
+    if (!first) return;
+    const key = `${norm(`${first} ${last}`)}|${dob ?? ""}`;
+    if (!seen.has(key)) seen.set(key, { first, last, dob });
+  };
+  for (const r of rows) {
+    if (r.clinician_id !== clinicianId) continue;
+    let a: Record<string, unknown>;
+    try { a = JSON.parse(decrypt(r.answers_encrypted)) as Record<string, unknown>; } catch { continue; }
+    const dob = a.dob ? String(a.dob) : undefined;
+    if (a.his_name) add(a.his_name, a.his_dob ? String(a.his_dob) : dob);
+    if (a.hers_name) add(a.hers_name, a.hers_dob ? String(a.hers_dob) : dob);
+    if (a.full_name) add(a.full_name, dob);
+    if (!a.his_name && !a.hers_name && !a.full_name && a.consent_signature_name) add(a.consent_signature_name, dob);
+  }
+  return [...seen.values()].sort((x, y) => `${x.last}${x.first}`.localeCompare(`${y.last}${y.first}`));
+}

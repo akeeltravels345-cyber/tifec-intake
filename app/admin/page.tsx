@@ -12,6 +12,7 @@ import { listFeedback } from "@/lib/feedback";
 import LogoutButton from "@/components/LogoutButton";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import ImportIntakeEmails from "@/components/ImportIntakeEmails";
+import ImportIntakeClients from "@/components/ImportIntakeClients";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import { getSidebarData } from "@/lib/sidebarData";
 import { devMode } from "@/lib/billingRole";
@@ -130,6 +131,9 @@ export default async function AdminPage({
   const reachedEnd = logAll || audit.length < logLimit;
   const logHref = (v: string | number) => `/admin?${key ? `key=${encodeURIComponent(key)}&` : ""}log=${v}#activity`;
   const reports = await listFeedback(15).catch(() => []);
+  // Practicum clinicians (e.g. Nick) whose unpaid intake caseload can be seeded
+  // as no-charge records for session notes.
+  const practicumClinicians = CLINICIANS.filter((c) => c.practicum).map((c) => ({ id: c.id, name: c.name }));
 
   const sidebar = await getSidebarData(me!);
   return (
@@ -193,6 +197,12 @@ export default async function AdminPage({
       <div className="card">
         <ImportIntakeEmails />
       </div>
+
+      {practicumClinicians.length > 0 && (
+        <div className="card">
+          <ImportIntakeClients clinicians={practicumClinicians} />
+        </div>
+      )}
 
       <div className="card">
         <h2 className="section-title">Reported issues</h2>
