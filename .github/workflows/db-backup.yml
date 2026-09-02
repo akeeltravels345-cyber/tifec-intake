@@ -1,0 +1,59 @@
+name: Daily database backup
+
+# Keeps an encrypted copy of the ENTIRE database as a downloadable file, every
+# day. The dump is compressed and encrypted with a passphrase, so the stored
+# file is useless to anyone who doesn't have the passphrase (this holds client
+# PHI, so it must never sit anywhere in plain text).
+#
+# Runs automatically overnight, and can also be run on demand from the Actions
+# tab (Run workflow) — do that right before anything risky, like a migration.
+#
+# Requires two repository secrets (Settings -> Secrets and variables -> Actions):
+#   DATABASE_URL       the Neon connection string (same one used in Vercel)
+#   BACKUP_PASSPHRASE  a strong passphrase you invent and STORE SAFELY — if it
+#                      is lost, the backups can never be decrypted.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily (~01:00 Cayman)
+  workflow_dispatch: {}    # lets you run it by hand from the Actions tab
+
+# Never run two backups at once; let a manual run wait for a scheduled one.
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump, compress, and encrypt the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ] || [ -z "${BACKUP_PASSPHRASE:-}" ]; then
+            echo "Missing DATABASE_URL or BACKUP_PASSPHRASE secret. Add both in repo Settings -> Secrets and variables -> Actions." >&2
+            exit 1
+          fi
+          STAMP="$(date -u +%Y-%m-%d)"
+          OUT="tifec-backup-$STAMP.sql.gz.gpg"
+          # Dump from the matching Postgres 17 image so pg_dump versions always
+          # line up with Neon; pipe straight into gzip and gpg so the plain dump
+          # is never written to disk.
+          docker run --rm -e PGCONNECT_TIMEOUT=30 postgres:17 \
+            pg_dump --no-owner --no-privileges "$DATABASE_URL" \
+            | gzip \
+            | gpg --symmetric --cipher-algo AES256 --batch --yes \
+                  --passphrase "$BACKUP_PASSPHRASE" -o "$OUT"
+          ls -lh "$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+
+      - name: Upload the encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: tifec-db-backup-${{ github.run_id }}
+          path: tifec-backup-*.sql.gz.gpg
+          retention-days: 90
+          if-no-files-found: error
