@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getBillingUser, canMarkBilled } from "@/lib/billingRole";
 import { listSessions, listInsurers, listClinicianSettings, listExternalClinicians, getPracticeConfig } from "@/lib/billing";
 import { insurancePortion, ageDays } from "@/lib/billingCalc";
-import { getClinician, CLINICIANS } from "@/lib/clinicians";
+import { computeBillerMonth } from "@/lib/billerPayout";
+import { getClinician } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import Worklist from "@/components/today/Worklist";
 import { listBuilderTasks } from "@/lib/builderTasks";
@@ -38,52 +39,23 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   // a practice-wide % of the COMPANY RETENTION, plus an individual % agreed for
   // that clinician. Outside clinicians aren't on TIFEC's books, so they just
   // carry their own rate on what's collected for them.
+  // The biller's commission for the month (collected + pending + the per-clinician
+  // and company breakdown) is computed in one shared place so this dashboard and
+  // the payout statement can never disagree.
   const billerRate = cfg.billerCommissionPct;
-  const settingsOf = (cid: string) => settingsList.find((s) => s.clinicianId === cid);
-  const retentionPctOf = (cid: string) => settingsOf(cid)?.retentionPct ?? 0;
-  const directPctOf = (cid: string) => settingsOf(cid)?.billerPct ?? 0;
-  const externalOf = (cid: string) => external.find((c) => c.id === cid);
-  // Commission is earned on real clinicians and outside clients only. The
-  // admin/test account is not a clinician anyone is billed for, and it's hidden
-  // from the breakdown below — so it must not earn either, or the headline
-  // figure would stop matching the rows that explain it.
-  const earnsCommission = (cid: string) =>
-    !!externalOf(cid) || CLINICIANS.some((c) => c.id === cid && !c.intakeHidden);
-  const comm = (s: (typeof all)[number]) => {
-    if (!earnsCommission(s.clinicianId)) return 0;
-    const ins = insurancePortion(s);
-    const e = externalOf(s.clinicianId);
-    if (e) return (ins * e.billerPct) / 100;
-    const fromCompany = (ins * (retentionPctOf(s.clinicianId) / 100) * billerRate) / 100;
-    const fromClinician = (ins * directPctOf(s.clinicianId)) / 100;
-    return fromCompany + fromClinician;
-  };
-  /** The rate shown on a row: their own % for an outside client, or for a TIFEC
-   *  clinician the combined cut of collections — their individual % plus the
-   *  practice % of retention. */
-  const effRateOf = (cid: string) => {
-    const e = externalOf(cid);
-    if (e) return e.billerPct;
-    const combined = directPctOf(cid) + (retentionPctOf(cid) / 100) * billerRate;
-    return Math.round(combined * 100) / 100;
-  };
+  const bm = computeBillerMonth(all, settingsList, external, billerRate, year, month);
+  const comm = bm.comm;
   const insName = (id: string | null) =>
     insurerList.find((i) => i.id === id)?.name ?? (id ? "Unknown insurer" : "Self-pay");
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
   const sum = (arr: typeof all, f: (s: (typeof all)[number]) => number) => r2(arr.reduce((t, s) => t + f(s), 0));
 
-  const billedThisMonth = all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === mKey && insurancePortion(s) > 0);
-  const insuranceCollected = sum(billedThisMonth, insurancePortion);
-  const commission = sum(billedThisMonth, comm);
+  const { insuranceCollected, commission, pendingCommission, blendedRate, byClinician, company: companyRow } = bm;
   const prevCollected = sum(all.filter((s) => s.insurancePaid && s.paidDate?.slice(0, 7) === key(prevY, prevM)), insurancePortion);
   const commDelta = prevCollected > 0 ? ((insuranceCollected - prevCollected) / prevCollected) * 100 : null;
 
   const unbilled = all.filter((s) => s.insurerId && !s.insurancePaid && insurancePortion(s) > 0);
   const outstanding = sum(unbilled, insurancePortion);
-  const pendingCommission = sum(unbilled, comm);
-  // Rates differ per clinician, so the headline rate is what the mix actually
-  // worked out to this month, not a number anyone configured.
-  const blendedRate = `${(insuranceCollected > 0 ? (commission / insuranceCollected) * 100 : 0).toFixed(1)}%`;
 
   // who owes you — outstanding per insurer (with your commission on it)
   const map = new Map<string, { name: string; amount: number; count: number; oldest: number; toYou: number }>();
@@ -94,19 +66,8 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   }
   const byInsurer = [...map.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.amount - a.amount);
 
-  // where your commission came from — earnings per clinician this month.
-  // Outside clients are disabled for now, so only the practice's own clinicians.
-  const roster = CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name, external: false }));
-  const byClinician = roster.map((c) => {
-    const billed = billedThisMonth.filter((s) => s.clinicianId === c.id);
-    const open = unbilled.filter((s) => s.clinicianId === c.id);
-    return {
-      id: c.id, name: c.name, external: c.external, pct: effRateOf(c.id), claims: billed.length,
-      collected: sum(billed, insurancePortion), cut: sum(billed, comm),
-      pending: sum(open, comm), outstanding: sum(open, insurancePortion),
-    };
-  }).filter((c) => c.collected > 0 || c.outstanding > 0).sort((a, b) => b.cut - a.cut);
-  const cutMax = Math.max(1, ...byClinician.map((c) => c.cut));
+  // byClinician + companyRow now come from computeBillerMonth (see above).
+  const cutMax = Math.max(1, ...byClinician.map((c) => c.cut), companyRow.cut);
 
   // recent claims marked billed (activity log)
   const recent = all.filter((s) => s.insurancePaid && s.paidDate && insurancePortion(s) > 0)
@@ -136,6 +97,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <MonthNav year={year} month={month} path="/billing/biller" />
+          <Link href={`/billing/biller/statement?y=${year}&m=${month}`} className="bz-link">Payout statement →</Link>
           <Link href="/billing/payments" className="bl-cta">Open billing queue →</Link>
         </div>
       </div>
@@ -146,7 +108,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
           <div className="dh-lab">Your commission · {MONTHS[month - 1]}</div>
           <div className="dh-big">{money(commission)}</div>
           <p className="dh-cap">
-            Your cut of <b>{money0(insuranceCollected)}</b> collected across {billedThisMonth.length} claim{billedThisMonth.length === 1 ? "" : "s"}.
+            Your cut of <b>{money0(insuranceCollected)}</b> collected across {bm.billedCount} claim{bm.billedCount === 1 ? "" : "s"}.
             {pendingCommission > 0 && <> <b>+{money0(pendingCommission)}</b> is still to come once the open claims are paid.</>}
           </p>
         </div>
@@ -196,18 +158,35 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         <div className="bo-secrow" style={{ margin: "0 0 6px" }}>
           <span className="bo-lab">Where your cut came from</span>
         </div>
-        <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · each clinician&apos;s own rate plus {billerRate}% of what the company retains</p>
-        {byClinician.length === 0 ? <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p> : byClinician.map((c) => (
-          <div className="bo-crow" key={c.id}>
-            <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
-            <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
-            <div className="bo-cright">
-              <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(c.collected)} collected</span>
-              <span className="bo-camt">{money(c.cut)}</span>
-              <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
-            </div>
-          </div>
-        ))}
+        <p className="bo-hint" style={{ margin: "0 2px 6px" }}>your {money0(commission)} this month · each clinician&apos;s own rate, plus {billerRate}% of the company&apos;s retained share (its own row)</p>
+        {byClinician.length === 0 && companyRow.cut === 0 && companyRow.pending === 0 ? (
+          <p className="bo-hint" style={{ padding: "12px 0" }}>No activity yet this month.</p>
+        ) : (
+          <>
+            {byClinician.map((c) => (
+              <div className="bo-crow" key={c.id}>
+                <div className="ins">{c.name}{c.external && <span className="bl-out">Outside</span>}<small><span className="bl-rate">{c.pct}%</span> {c.claims} claim{c.claims === 1 ? "" : "s"}</small></div>
+                <div className="bo-ctrack teal"><i style={{ width: `${pctW(c.cut, cutMax)}%` }} /></div>
+                <div className="bo-cright">
+                  <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>on {money0(c.base)} base</span>
+                  <span className="bo-camt">{money(c.cut)}</span>
+                  <span className="bl-toyou" style={{ minWidth: 92 }}>{c.pending > 0 ? `+${money0(c.pending)} pending` : "—"}</span>
+                </div>
+              </div>
+            ))}
+            {(companyRow.cut > 0 || companyRow.pending > 0 || companyRow.retained > 0) && (
+              <div className="bo-crow bl-companyrow">
+                <div className="ins">Company retention<small><span className="bl-rate">{billerRate}%</span> of what the practice keeps · {companyRow.claims} claim{companyRow.claims === 1 ? "" : "s"}</small></div>
+                <div className="bo-ctrack teal"><i style={{ width: `${pctW(companyRow.cut, cutMax)}%` }} /></div>
+                <div className="bo-cright">
+                  <span className="bo-hint" style={{ whiteSpace: "nowrap" }}>{money0(companyRow.retained)} retained</span>
+                  <span className="bo-camt">{money(companyRow.cut)}</span>
+                  <span className="bl-toyou" style={{ minWidth: 92 }}>{companyRow.pending > 0 ? `+${money0(companyRow.pending)} pending` : "—"}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* recent activity */}

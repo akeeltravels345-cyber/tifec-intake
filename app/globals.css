@@ -4108,3 +4108,12 @@ body:has(.bk-page) .brandbar { display: none; }
 /* Photo fills the round avatar chips (account header + sidebar). */
 .avatar .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .bo-uav img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* Biller "where your cut came from": the company-retention line, set apart from
+   the per-clinician rows. */
+.bl-companyrow { border-top: 1px dashed #d7deea; margin-top: 4px; padding-top: 10px; }
+.bl-companyrow .ins { font-weight: 700; }
+
+/* Statement caption line (biller payout statement). */
+.stmt-sub { font-size: 12.5px; color: #6b7280; line-height: 1.5; margin: 0 0 10px; }
+@media print { .stmt-sub { color: #555; } }
