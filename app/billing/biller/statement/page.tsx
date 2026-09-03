@@ -33,6 +33,14 @@ export default async function BillerPayoutStatement({ searchParams }: { searchPa
   const clinRows = bm.byClinician.filter((c) => c.cut > 0);
   const hasCompany = bm.company.cut > 0;
 
+  // The biller can also carry a pension (e.g. Nick, who is a practicum clinician
+  // too). It's a % of their earnings — the commission — taken from THEIR Setup
+  // pension rate. Net payout is the commission less that pension.
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const pensionPct = (biller ? settingsList.find((s) => s.clinicianId === biller.id)?.pensionPct : 0) ?? 0;
+  const pension = r2((bm.commission * pensionPct) / 100);
+  const netPayout = r2(bm.commission - pension);
+
   return (
     <div className="stmt-wrap">
       <div className="stmt-actions">
@@ -61,7 +69,7 @@ export default async function BillerPayoutStatement({ searchParams }: { searchPa
           </div>
           <div className="stmt-net">
             <div className="stmt-label">Net payout</div>
-            <div className="stmt-net-val">{money(bm.commission)}</div>
+            <div className="stmt-net-val">{money(netPayout)}</div>
           </div>
         </section>
 
@@ -88,7 +96,9 @@ export default async function BillerPayoutStatement({ searchParams }: { searchPa
                   )}
                 </>
               )}
-              <tr className="total"><td>Net payout</td><td className="num">{money(bm.commission)}</td></tr>
+              <tr className="sub"><td>Commission earned</td><td className="num">{money(bm.commission)}</td></tr>
+              {pension > 0 && <tr><td>Pension ({pensionPct}% of earnings)</td><td className="num minus">−{money(pension)}</td></tr>}
+              <tr className="total"><td>Net payout</td><td className="num">{money(netPayout)}</td></tr>
             </tbody>
           </table>
         </section>
