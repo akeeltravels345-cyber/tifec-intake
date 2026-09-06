@@ -38,10 +38,17 @@ git push -u origin main
    | `ENCRYPTION_KEY` | from `PRODUCTION-SECRETS.local.txt` |
    | `SESSION_SECRET` | from `PRODUCTION-SECRETS.local.txt` |
    | `ADMIN_PASSWORD` | from `PRODUCTION-SECRETS.local.txt` |
+   | `PRACTICUM_SYNC_SECRET` | from `PRODUCTION-SECRETS.local.txt` |
    | `DATABASE_URL` | your Neon string from Step 1 |
    | `APP_URL` | `https://temp` (you'll fix this in Step 4) |
 
    Optional (only if demoing email notifications): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+
+   `PRACTICUM_SYNC_SECRET` signs the bearer tokens the practicum dashboard uses
+   to read `/api/practicum/roster`. Without it, that route and
+   `/api/practicum/token` throw rather than failing quietly. Rotating the value
+   revokes every token already issued, which is the intended way to cut a
+   dashboard off.
 4. Click **Deploy**. You'll get a URL like `https://tifec-intake-xxxx.vercel.app`.
 
 ## Step 4 — Point APP_URL at the real domain
