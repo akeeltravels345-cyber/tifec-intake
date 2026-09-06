@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
-import { createSyncToken } from "@/lib/practicumSync";
+import { createSyncToken, syncSecretConfigured } from "@/lib/practicumSync";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +28,16 @@ export async function GET(req: Request) {
   if (!target) return NextResponse.json({ error: "Unknown clinician." }, { status: 404 });
   if (!target.practicum) {
     return NextResponse.json({ error: "Not a practicum clinician." }, { status: 400 });
+  }
+
+  if (!syncSecretConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          "This deployment is missing PRACTICUM_SYNC_SECRET, so no token can be issued. Set it in the hosting environment (openssl rand -hex 32) and redeploy.",
+      },
+      { status: 503 },
+    );
   }
 
   return NextResponse.json({

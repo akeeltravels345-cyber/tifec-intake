@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildPracticumRoster, verifySyncToken } from "@/lib/practicumSync";
+import { buildPracticumRoster, verifySyncToken, syncSecretConfigured } from "@/lib/practicumSync";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +35,18 @@ export async function GET(req: Request) {
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   if (!token) {
     return NextResponse.json({ error: "Missing bearer token." }, { status: 401, headers });
+  }
+
+  // Checked before verifying, so a deployment missing its secret says so
+  // instead of throwing an opaque 500 that looks like a broken route.
+  if (!syncSecretConfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          "This deployment is missing PRACTICUM_SYNC_SECRET, so sync tokens cannot be verified. Set it in the hosting environment (openssl rand -hex 32) and redeploy.",
+      },
+      { status: 503, headers },
+    );
   }
 
   const clinicianId = verifySyncToken(token);

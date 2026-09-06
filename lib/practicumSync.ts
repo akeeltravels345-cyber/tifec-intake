@@ -125,10 +125,27 @@ export async function buildPracticumRoster(clinicianId: string): Promise<Practic
 // by rotating PRACTICUM_SYNC_SECRET.
 // ---------------------------------------------------------------------------
 
+/** Thrown when the signing secret is absent or too weak to be worth trusting. */
+export class SyncSecretMissing extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "SyncSecretMissing";
+  }
+}
+
+/** True when tokens can be signed and verified at all. */
+export function syncSecretConfigured(): boolean {
+  const s = process.env.PRACTICUM_SYNC_SECRET;
+  return !!s && s.length >= 32;
+}
+
 function syncSecret(): string {
   const s = process.env.PRACTICUM_SYNC_SECRET;
-  if (!s || s.length < 32) {
-    throw new Error("PRACTICUM_SYNC_SECRET must be set (32+ chars). Generate with: openssl rand -hex 32");
+  if (!s) {
+    throw new SyncSecretMissing("PRACTICUM_SYNC_SECRET is not set on this deployment.");
+  }
+  if (s.length < 32) {
+    throw new SyncSecretMissing("PRACTICUM_SYNC_SECRET is set but shorter than 32 characters.");
   }
   return s;
 }
