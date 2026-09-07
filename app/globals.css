@@ -4117,3 +4117,36 @@ body:has(.bk-page) .brandbar { display: none; }
 /* Statement caption line (biller payout statement). */
 .stmt-sub { font-size: 12.5px; color: #6b7280; line-height: 1.5; margin: 0 0 10px; }
 @media print { .stmt-sub { color: #555; } }
+
+/* Client deductible & unapplied money. */
+.ded-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ded-lab { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ded-amt { font: 700 20px "Open Sans"; color: #2a3350; }
+.ded-year { font-weight: 600; font-size: 14px; color: var(--muted); }
+.ded-link { background: none; border: none; color: var(--indigo); font: 600 13px "Open Sans"; cursor: pointer; padding: 4px 2px; }
+.ded-link:hover { text-decoration: underline; }
+.ded-editrow, .ded-addpay { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 12px 0; padding: 12px; background: #f5f7fb; border-radius: 10px; }
+.ded-editrow label, .ded-addpay label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #55607d; }
+.ded-addpay label.grow { flex: 1 1 160px; }
+.ded-editrow .ls-in, .ded-addpay .ls-in { max-width: 150px; }
+.ded-addpay label.grow .ls-in { max-width: none; }
+.ded-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 14px 0; }
+.ded-stat { background: #fff; border: 1px solid #e7ebf3; border-radius: 10px; padding: 10px 12px; }
+.ded-stat .k { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.ded-stat .v { font: 700 17px "Open Sans"; color: #2a3350; }
+.ded-stat.hl { background: #eef4f3; border-color: #cfe0da; }
+.ded-stat.hl .v { color: #2c7a55; }
+.ded-stat.done { background: #eaf5ee; border-color: #bfe0c9; }
+.ded-stat.done .v { color: #1f7a52; }
+.ded-paylist-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 6px; font: 700 13px "Open Sans"; color: #55607d; }
+.ded-paylist { list-style: none; margin: 0; padding: 0; border: 1px solid #eee; border-radius: 9px; }
+.ded-paylist li { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-bottom: 1px solid #f2f2f2; font-size: 13px; }
+.ded-paylist li:last-child { border-bottom: none; }
+.ded-paylist .amt { font-weight: 700; color: #2a3350; min-width: 84px; }
+.ded-paylist .date { color: var(--muted); font-variant-numeric: tabular-nums; }
+.ded-paylist .meth { color: var(--muted); flex: 1; }
+.ded-x { background: none; border: none; color: var(--neg); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.ded-x:disabled { opacity: .4; cursor: not-allowed; }
+.ded-empty { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.ded-err { color: var(--neg); font-size: 12.5px; font-weight: 600; margin: 10px 0 0; }
+.ded-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 12px 0 0; }

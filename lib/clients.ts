@@ -45,7 +45,35 @@ export interface ClientProfile {
   referral?: ClientReferral;    // insurer referral + its validity window
   documents?: ClientDocument[]; // referral letter, intake form, other files/links
   notes?: ClientNote[];         // shared cross-role notes (benefits, admin, etc.)
+  // Insurance deductible (per client, annual) and the client's payments toward
+  // it. A payment sits as "unapplied money" until the insurer's EOB confirms the
+  // theoretical liability, not money we hold. It counts DOWN: each session the
+  // patient pays out of pocket (while unmet) draws its total off the balance,
+  // recorded in deductibleApplied, until the balance reaches zero.
+  deductible?: ClientDeductible;
+  deductibleApplied?: DeductibleApplied[]; // sessions/amounts drawn down against it
 }
+
+/** A client's insurance deductible for a plan year (resets annually). The amount
+ *  is a figure the INSURER sets — the patient's out-of-pocket responsibility
+ *  before insurance pays — not money the practice has collected. */
+export interface ClientDeductible {
+  amount: number; // the annual deductible, e.g. 500
+  year: number;   // the plan year it applies to
+}
+
+/** One date of service drawn down against the deductible: the patient paid this
+ *  much out of pocket (because the deductible wasn't met), so it comes off the
+ *  balance. The last one is capped at whatever is left of the deductible. */
+export interface DeductibleApplied {
+  id: string;
+  sessionId: string | null; // the charge it came from (null if entered by hand)
+  date: string;             // date of service (YYYY-MM-DD)
+  amount: number;           // amount drawn off the deductible
+  note?: string;
+}
+
+const money2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /** A referral authorises billing for a window of time. Sessions with a date of
  *  service AFTER endDate can't be paid, so endDate is the number that matters. */
@@ -397,6 +425,41 @@ export async function setClientDiagnoses(id: string, codes: string[], by: string
   ];
   const profile = { ...client.profile, diagnosis: next, diagnosisLog: [...(client.profile.diagnosisLog ?? []), ...entries] };
   return updateClient(id, client.insurerId, profile);
+}
+
+/** Set (or clear) a client's annual deductible. Amount 0 clears it. */
+export async function setDeductible(id: string, amount: number, year: number): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const amt = Math.max(0, money2(amount));
+  const deductible = amt > 0 ? { amount: amt, year: Math.floor(year) } : undefined;
+  return updateClient(id, client.insurerId, { ...client.profile, deductible });
+}
+
+/** Draw a session down against the deductible. The amount is capped at whatever
+ *  is LEFT of the deductible (so the boundary session takes only the remainder),
+ *  and refuses to add anything once the deductible is already met. Returns the
+ *  updated client, plus the amount actually applied. */
+export async function applyToDeductible(id: string, input: { sessionId?: string | null; date: string; amount: number; note?: string }): Promise<{ client: Client; applied: number } | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const amount = client.profile.deductible?.amount ?? 0;
+  const already = money2((client.profile.deductibleApplied ?? []).reduce((t, a) => t + (a.amount || 0), 0));
+  const remaining = money2(Math.max(0, amount - already));
+  const applied = money2(Math.min(Math.max(0, input.amount), remaining)); // cap at what's left
+  if (applied <= 0) return { client, applied: 0 }; // deductible already met — nothing to draw
+  const entry: DeductibleApplied = { id: randomId(), sessionId: input.sessionId ?? null, date: input.date, amount: applied, note: input.note?.trim() || undefined };
+  const list = [...(client.profile.deductibleApplied ?? []), entry];
+  const updated = await updateClient(id, client.insurerId, { ...client.profile, deductibleApplied: list });
+  return updated ? { client: updated, applied } : null;
+}
+
+/** Undo a session's draw-down against the deductible. */
+export async function removeDeductibleApplied(id: string, entryId: string): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const list = (client.profile.deductibleApplied ?? []).filter((a) => a.id !== entryId);
+  return updateClient(id, client.insurerId, { ...client.profile, deductibleApplied: list });
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */

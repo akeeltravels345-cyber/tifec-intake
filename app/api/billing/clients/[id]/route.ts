@@ -111,6 +111,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Shared notes are managed only through the /notes endpoint; never let a
     // record edit (which doesn't carry them) wipe the existing stream.
     notes: client.profile.notes,
+    // Deductible + its draw-downs are managed only through the /deductible
+    // endpoint; preserve them across a plain record edit.
+    deductible: client.profile.deductible,
+    deductibleApplied: client.profile.deductibleApplied,
     // Preserve the demo marker so editing a sample client doesn't make it
     // un-cleanable by the sample-data purge.
     sample: client.profile.sample || undefined,

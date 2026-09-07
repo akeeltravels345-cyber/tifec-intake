@@ -4,7 +4,9 @@ import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ClientProfile } from "@/lib/clients";
+import { deductibleSummary } from "@/lib/deductible";
 import Icd10Section from "./Icd10Section";
+import DeductiblePanel from "./DeductiblePanel";
 import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral } from "@/lib/referral";
 import DobInput from "./DobInput";
@@ -507,6 +509,23 @@ export default function ClientDetail({
             </div>
           </div>
         )}
+      </div>
+
+      {/* ---- Insurance deductible ---- */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Insurance deductible</h2>
+          <span className="su-hint">The annual deductible the insurer sets for this client. It counts down as the patient pays out of pocket for sessions while it&apos;s unmet; once met, sessions run through insurance as normal.</span></div>
+        <div className="su-card" style={{ padding: 16 }}>
+          <DeductiblePanel
+            clientId={id}
+            deductible={profile.deductible ?? null}
+            applied={profile.deductibleApplied ?? []}
+            summary={deductibleSummary(profile)}
+            sessions={activity.map((a) => ({ id: a.id, date: a.date, total: a.total }))}
+            today={today}
+            canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
+          />
+        </div>
       </div>
 
       {/* ---- Diagnoses ---- */}
