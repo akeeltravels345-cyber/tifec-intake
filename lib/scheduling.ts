@@ -83,7 +83,9 @@ export async function listAppointmentTypes(): Promise<AppointmentType[]> {
       const res = (await sql`SELECT * FROM scheduling_appointment_types`) as Record<string, unknown>[];
       rows = res.map(rowToType);
     } else {
-      rows = readJson<AppointmentType[]>(FILE, []);
+      // Default fields added after some records were written (capacity), so old
+      // dev rows read back consistently.
+      rows = readJson<AppointmentType[]>(FILE, []).map((r) => ({ ...r, capacity: Math.max(1, Number(r.capacity) || 1) }));
     }
   } catch {
     return []; // table not migrated yet — don't break the page
@@ -542,21 +544,30 @@ function workingBlocksForAvail(av: ClinicianAvailability, dateStr: string): { s:
 
 /** Open start times (Cayman minutes) for one clinician on one date, honouring
  *  their hours, existing appointments, min-notice, and max-per-day. */
-export async function availableSlots(clinicianId: string, dateStr: string, durationMin: number, nowMs = Date.now()): Promise<number[]> {
+export async function availableSlots(clinicianId: string, dateStr: string, durationMin: number, nowMs = Date.now(), bufBefore = 0, bufAfter = 0): Promise<number[]> {
   const av = await getAvailability(clinicianId);
   const blocks = workingBlocksForAvail(av, dateStr);
   if (!blocks.length) return [];
-  const appts = (await listAppointments({ clinicianId, from: utcAtCayMidnightStr(dateStr), to: utcAtCayMidnightStr(addDaysStr(dateStr, 1)) }))
-    .filter((a) => a.status !== "cancelled");
+  const [apptsAll, types] = await Promise.all([
+    listAppointments({ clinicianId, from: utcAtCayMidnightStr(dateStr), to: utcAtCayMidnightStr(addDaysStr(dateStr, 1)) }),
+    listAppointmentTypes(),
+  ]);
+  const appts = apptsAll.filter((a) => a.status !== "cancelled");
   if (av.maxPerDay > 0 && appts.filter((a) => a.kind === "appointment").length >= av.maxPerDay) return [];
-  const busy = appts.map((a) => ({ s: cayMinutesOf(a.startAt), e: cayMinutesOf(a.endAt) }));
+  // Each existing appointment blocks its time PLUS its type's padding, so back-to-
+  // back bookings keep the clinician's buffer. The new slot's own padding must
+  // clear too.
+  const busy = appts.map((a) => {
+    const ty = types.find((t) => t.id === a.typeId);
+    return { s: cayMinutesOf(a.startAt) - (ty?.bufferBeforeMin || 0), e: cayMinutesOf(a.endAt) + (ty?.bufferAfterMin || 0) };
+  });
   const step = av.slotIntervalMin || 30;
   const cutoff = nowMs + av.minNoticeHours * 3600e3;
   const out: number[] = [];
   for (const blk of blocks) {
     for (let t = blk.s; t + durationMin <= blk.e; t += step) {
-      const overlaps = busy.some((b) => t < b.e && t + durationMin > b.s);
-      if (overlaps) continue;
+      const ws = t - bufBefore, we = t + durationMin + bufAfter;
+      if (busy.some((b) => ws < b.e && we > b.s)) continue;
       if (Date.parse(utcFromCayMinutes(dateStr, t)) < cutoff) continue;
       out.push(t);
     }
@@ -566,8 +577,8 @@ export async function availableSlots(clinicianId: string, dateStr: string, durat
 
 /** For "any available": the open minutes across a set of clinicians, each with
  *  the first free clinician for that time. */
-export async function availableSlotsAny(clinicianIds: string[], dateStr: string, durationMin: number, nowMs = Date.now()): Promise<{ minute: number; clinicianId: string }[]> {
-  const per = await Promise.all(clinicianIds.map(async (id) => ({ id, mins: new Set(await availableSlots(id, dateStr, durationMin, nowMs)) })));
+export async function availableSlotsAny(clinicianIds: string[], dateStr: string, durationMin: number, nowMs = Date.now(), bufBefore = 0, bufAfter = 0): Promise<{ minute: number; clinicianId: string }[]> {
+  const per = await Promise.all(clinicianIds.map(async (id) => ({ id, mins: new Set(await availableSlots(id, dateStr, durationMin, nowMs, bufBefore, bufAfter)) })));
   const all = new Set<number>();
   per.forEach((p) => p.mins.forEach((m) => all.add(m)));
   return [...all].sort((a, b) => a - b).map((minute) => ({ minute, clinicianId: per.find((p) => p.mins.has(minute))!.id }));
@@ -705,7 +716,7 @@ export async function setWaitlistStatus(id: string, status: WaitStatus): Promise
 
 export interface NotifyTemplate { subject: string; body: string; }
 export interface SchedulingSettings {
-  booking: { welcome: string; accent: string };
+  booking: { welcome: string; accent: string; policy: string; cancelWindowHours: number };
   bridge: { seenToBilling: boolean }; // off by default; marking "seen" makes a billing session
   notifications: {
     enabled: boolean;                 // master switch; false = nothing sends
@@ -717,7 +728,7 @@ export interface SchedulingSettings {
 
 const SET_FILE = "scheduling-settings.local.json";
 export const DEFAULT_SETTINGS: SchedulingSettings = {
-  booking: { welcome: "", accent: "#256e72" },
+  booking: { welcome: "", accent: "#256e72", policy: "", cancelWindowHours: 24 },
   bridge: { seenToBilling: false },
   notifications: {
     enabled: false,

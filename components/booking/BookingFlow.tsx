@@ -16,13 +16,16 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const initials = (name: string) => name.replace(/\(.*?\)/g, "").split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss)\.?$/i.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const MODE_LABEL: Record<Mode, string> = { in_person: "In person", virtual: "Virtual", either: "In person or virtual" };
 
-export default function BookingFlow({ practiceName, types, clinicians, insurers, preview, welcome, accent }: {
-  practiceName: string; types: Type[]; clinicians: Clin[]; insurers: Insurer[]; preview: string; welcome?: string; accent?: string;
+export default function BookingFlow({ practiceName, types, clinicians, insurers, preview, welcome, accent, policy, initialTypeId, initialClinician }: {
+  practiceName: string; types: Type[]; clinicians: Clin[]; insurers: Insurer[]; preview: string; welcome?: string; accent?: string; policy?: string; initialTypeId?: string; initialClinician?: string;
 }) {
   const tz = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return "your timezone"; } }, []);
-  const [step, setStep] = useState<Step>("service");
-  const [type, setType] = useState<Type | null>(null);
-  const [clin, setClin] = useState<string>("any"); // "any" or id
+  // Direct scheduling links: /book?type=<id>&clinician=<id> jumps straight in.
+  const deepType = initialTypeId ? types.find((t) => t.id === initialTypeId) || null : null;
+  const deepClin = initialClinician && clinicians.some((c) => c.id === initialClinician) ? initialClinician : "";
+  const [step, setStep] = useState<Step>(deepType ? (deepClin ? "time" : "clinician") : "service");
+  const [type, setType] = useState<Type | null>(deepType);
+  const [clin, setClin] = useState<string>(deepClin || "any"); // "any" or id
   const [date, setDate] = useState<string>("");
   const [slot, setSlot] = useState<Slot | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -30,6 +33,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [details, setDetails] = useState({ name: "", email: "", phone: "", path: "self_pay" as "self_pay" | "insurance", insurerId: "", policyNo: "", notes: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
 
@@ -266,8 +270,9 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <label className="bk-f"><span>Anything you&apos;d like us to know? <em>(optional)</em></span><textarea rows={2} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} /></label>
             </div>
             {type.hasIntake && <p className="bk-intake">New here? We&apos;ll email you a short intake form to complete before your first visit. It helps your clinician prepare.</p>}
+            {policy && <label className="bk-policy"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> <span><b>Cancellation policy.</b> {policy}</span></label>}
             {err && <p className="bk-err">{err}</p>}
-            <button className="bk-cta" onClick={() => { setErr(""); setStep("confirm"); }}>Review booking</button>
+            <button className="bk-cta" onClick={() => { if (policy && !agreed) { setErr("Please accept the cancellation policy."); return; } setErr(""); setStep("confirm"); }} disabled={!!policy && !agreed}>Review booking</button>
           </section>
         )}
 

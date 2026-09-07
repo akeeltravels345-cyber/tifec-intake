@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClinician } from "@/lib/clinicians";
-import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes, utcFromCayMinutes } from "@/lib/scheduling";
+import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes, utcFromCayMinutes, getSchedulingSettings } from "@/lib/scheduling";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,15 @@ export async function POST(req: Request) {
 
   const action = String(body.action || "");
 
+  // Cancellation window: clients can't self-reschedule or cancel too close to the
+  // appointment (they must call). Enforced server-side so it can't be bypassed.
+  if (action === "cancel" || action === "reschedule") {
+    const win = (await getSchedulingSettings()).booking.cancelWindowHours || 0;
+    if (win > 0 && Date.parse(a.startAt) - Date.now() < win * 3600e3) {
+      return NextResponse.json({ error: `Changes must be made at least ${win} hours before the appointment. Please call us to make a change.` }, { status: 409 });
+    }
+  }
+
   if (action === "cancel") {
     await updateAppointment(id, { status: "cancelled" } as never);
     return NextResponse.json({ ok: true, cancelled: true });
@@ -51,7 +60,7 @@ export async function POST(req: Request) {
     const startAt = utcFromCayMinutes(date, minute);
     if (startAt !== a.startAt) {
       // Any different time must be genuinely open for this clinician.
-      const free = await availableSlots(a.clinicianId, date, dur);
+      const free = await availableSlots(a.clinicianId, date, dur, Date.now(), type?.bufferBeforeMin || 0, type?.bufferAfterMin || 0);
       if (!free.includes(minute)) return NextResponse.json({ error: "Sorry, that time isn't open. Please pick another." }, { status: 409 });
     }
     const endAt = utcFromCayMinutes(date, minute + dur);

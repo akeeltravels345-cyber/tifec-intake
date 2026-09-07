@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!bookable().some((c) => c.id === clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
 
   // Re-check the slot is still free, so two people can't grab the same time.
-  const free = await availableSlots(clinicianId, date, type.durationMin);
+  const free = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
   if (!free.includes(minute)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
 
   const startAt = utcFromCayMinutes(date, minute);

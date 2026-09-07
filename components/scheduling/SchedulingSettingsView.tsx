@@ -7,8 +7,12 @@ const ACCENTS = ["#256e72", "#2f8e93", "#2e3192", "#3f8f5f", "#7a4fa3", "#b1543c
 const sample = { client: "Ada Rivers", service: "Individual therapy", clinician: "Dr. Shion O'Connor", when: "Mon, 8 Sep at 10:00 AM", practice: "Cayman Essential Care" };
 const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => (sample as Record<string, string>)[k] ?? `{${k}}`);
 
-export default function SchedulingSettingsView({ initial }: { initial: SchedulingSettings }) {
+export default function SchedulingSettingsView({ initial, types = [] }: { initial: SchedulingSettings; types?: { id: string; name: string }[] }) {
   const [s, setS] = useState<SchedulingSettings>(initial);
+  const [copied, setCopied] = useState("");
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const baseLink = `${origin}/book`;
+  const copy = (text: string, key: string) => { try { navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500); } catch { /* ignore */ } };
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -39,6 +43,19 @@ export default function SchedulingSettingsView({ initial }: { initial: Schedulin
         <div className="ss-f"><span>Accent colour</span>
           <div className="ss-swatches">{ACCENTS.map((c) => <button key={c} type="button" className={`ss-sw ${s.booking.accent === c ? "on" : ""}`} style={{ background: c }} onClick={() => setBooking({ accent: c })} aria-label={c} />)}</div>
         </div>
+        <label className="ss-f"><span>Cancellation policy <em>(shown at booking; clients tick to accept)</em></span>
+          <textarea rows={2} value={s.booking.policy} onChange={(e) => setBooking({ policy: e.target.value })} placeholder="e.g. Please give at least 24 hours notice to cancel or reschedule." /></label>
+        <label className="ss-f"><span>Change window (hours) <em>clients can&apos;t self-cancel/reschedule inside this</em></span>
+          <input type="number" min={0} value={s.booking.cancelWindowHours} onChange={(e) => setBooking({ cancelWindowHours: Math.max(0, Number(e.target.value)) })} /></label>
+      </div>
+
+      <div className="ss-card">
+        <h2>Share your booking page</h2>
+        <p className="ss-hint">Send clients straight to the right service. While the prototype is admin-only these open for you; they go public when you lift the gate.</p>
+        <div className="ss-link"><span className="ss-linkname">Everything</span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button></div>
+        {types.map((t) => { const l = `${baseLink}?type=${t.id}`; return (
+          <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button></div>
+        ); })}
       </div>
 
       <div className="ss-card">

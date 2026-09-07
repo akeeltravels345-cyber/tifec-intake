@@ -24,8 +24,8 @@ export async function GET(req: Request) {
   const ids = bookable().map((c) => c.id);
   if (clinicianId !== "any") {
     if (!ids.includes(clinicianId)) return NextResponse.json({ error: "Unknown clinician." }, { status: 404 });
-    const mins = await availableSlots(clinicianId, date, type.durationMin);
+    const mins = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
     return NextResponse.json({ slots: mins.map((minute) => ({ minute, clinicianId })) });
   }
-  return NextResponse.json({ slots: await availableSlotsAny(ids, date, type.durationMin) });
+  return NextResponse.json({ slots: await availableSlotsAny(ids, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin) });
 }
