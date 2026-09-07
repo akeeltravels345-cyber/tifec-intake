@@ -257,6 +257,22 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
             {err && <p className="cal-err">{err}</p>}
 
+            {draft.id && draft.kind !== "block" && (() => {
+              const phone = (draft.notes || "").match(/phone:\s*([+\d][\d\s()-]{4,})/i)?.[1]?.trim();
+              const intake = draft.intakeStatus === "pending" ? "Intake: not in yet" : draft.intakeStatus === "received" ? "Intake: received" : "Intake: not needed";
+              return (
+                <div className="cal-details">
+                  <span className={`cal-chip ${draft.source === "client" ? "src-client" : "src-staff"}`}>{draft.source === "client" ? "Client booked" : "Staff booked"}</span>
+                  <span className={`cal-chip ${draft.intakeStatus === "pending" ? "warn" : ""}`}>{intake}</span>
+                  {draft.insurancePath === "insurance" && <span className="cal-chip">Insurance{draft.insurerId ? ` · ${insurers.find((i) => i.id === draft.insurerId)?.name || ""}` : ""}</span>}
+                  {phone && <span className="cal-chip">☎ {phone}</span>}
+                  {draft.capacity && draft.capacity > 1 ? <span className="cal-chip">{(draft.attendees || []).length}/{draft.capacity} seats</span> : null}
+                  {draft.billingSessionId && <span className="cal-chip ok">In billing queue</span>}
+                  {draft.createdAt && <span className="cal-chip-when">added {prettyDate(cayDay(draft.createdAt))}{draft.source === "client" ? " online" : ""}</span>}
+                </div>
+              );
+            })()}
+
             <div className="cal-form">
               {draft.kind !== "block" ? (
                 <>

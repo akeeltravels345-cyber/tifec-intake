@@ -2853,6 +2853,35 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-pin { display: inline-block; font: 700 10px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: #8a5d17; background: #F6ECD9; border-radius: 5px; padding: 2px 7px; margin-right: 8px; vertical-align: middle; }
 .tm-meet { font: 600 13px "Open Sans"; color: var(--teal-dark); background: #E9F3F3; border-radius: 8px; padding: 7px 11px; margin: 10px 0 0; display: inline-block; }
 .tm-nb { font-size: 14px; line-height: 1.6; color: #3d474b; margin: 10px 0 0; white-space: pre-wrap; }
+.tm-nb .rt-link, .rt-link { color: var(--brand, #2E3192); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+.tm-nb .rt-link:hover, .rt-link:hover { text-decoration-thickness: 2px; }
+
+/* Email-invoice-to-client modal (invoice page) */
+.iem-back { position: fixed; inset: 0; z-index: 200; background: rgba(20,26,40,.44); display: flex; align-items: flex-start; justify-content: center; padding: 7vh 16px 24px; overflow-y: auto; }
+.iem-card { width: 100%; max-width: 520px; background: #fff; border-radius: 14px; box-shadow: 0 20px 60px rgba(20,26,40,.3); overflow: hidden; }
+.iem-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--edge, #ECE6DA); }
+.iem-head h3 { margin: 0; font: 500 18px "Newsreader", Georgia, serif; color: var(--ink, #21201c); }
+.iem-x { background: none; border: none; font-size: 24px; line-height: 1; color: var(--muted, #6b6b66); cursor: pointer; padding: 0 4px; }
+.iem-x:hover { color: var(--ink, #21201c); }
+.iem-body { padding: 20px 22px 22px; }
+.iem-note { padding: 26px 22px; color: var(--muted, #6b6b66); }
+.iem-field { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid #f1ede4; font-size: 13.5px; }
+.iem-lab { flex: 0 0 74px; color: var(--muted, #6b6b66); text-transform: uppercase; font-size: 11px; letter-spacing: .5px; padding-top: 2px; }
+.iem-val { color: var(--ink, #21201c); word-break: break-word; }
+.iem-msglab { display: block; margin: 16px 0 6px; font-size: 13px; font-weight: 600; color: var(--ink, #21201c); }
+.iem-msglab span { font-weight: 400; color: var(--muted, #6b6b66); }
+.iem-msg { width: 100%; box-sizing: border-box; border: 1px solid var(--edge, #d8d2c4); border-radius: 10px; padding: 11px 13px; font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink, #21201c); resize: vertical; }
+.iem-msg:focus { outline: 2px solid var(--brand, #2E3192); outline-offset: 1px; border-color: transparent; }
+.iem-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.iem-cancel { background: none; border: 1px solid var(--edge, #d8d2c4); border-radius: 9px; padding: 9px 16px; font-size: 14px; font-weight: 600; color: var(--muted, #6b6b66); cursor: pointer; }
+.iem-cancel:hover { color: var(--ink, #21201c); border-color: var(--muted, #6b6b66); }
+.iem-err { color: #b4451f; font-size: 13.5px; margin: 12px 0 0; }
+.iem-warn { color: #8a6d1a; font-size: 14px; line-height: 1.6; margin: 4px 0 0; }
+.iem-sent { text-align: center; padding: 20px 8px 8px; }
+.iem-tick { width: 46px; height: 46px; border-radius: 50%; background: #dff0e5; color: #2c7a55; font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+.iem-sent p { color: var(--ink, #21201c); font-size: 15px; margin: 0 0 18px; }
+.cd-invlink { display: inline-block; margin-left: 8px; font-size: 11.5px; font-weight: 600; color: var(--brand, #2E3192); text-decoration: none; border: 1px solid var(--edge, #d8d2c4); border-radius: 7px; padding: 1px 8px; white-space: nowrap; vertical-align: middle; }
+.cd-invlink:hover { border-color: var(--brand, #2E3192); background: rgba(46,49,146,.06); }
 .tm-nfoot { font-size: 12px; color: var(--muted); margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 /* --- messages -------------------------------------------------------------- */
@@ -4150,3 +4179,12 @@ body:has(.bk-page) .brandbar { display: none; }
 .ded-empty { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
 .ded-err { color: var(--neg); font-size: 12.5px; font-weight: 600; margin: 10px 0 0; }
 .ded-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 12px 0 0; }
+
+/* Calendar: appointment details strip in the edit panel */
+.cal-details { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 12px 16px 0; }
+.cal-chip { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--surface-2, #f4f7f6); color: var(--ink); border: 1px solid var(--line); }
+.cal-chip.src-client { background: var(--indigo-bg, #e9eaf6); color: var(--indigo); border-color: transparent; }
+.cal-chip.src-staff { background: var(--teal-bg, #e2efef); color: var(--teal-deep); border-color: transparent; }
+.cal-chip.warn { background: var(--maybe-bg, #f6ecd6); color: #8a5a1a; border-color: transparent; }
+.cal-chip.ok { background: var(--green-bg, #e2efe6); color: var(--green, #3f8f5f); border-color: transparent; }
+.cal-chip-when { font-size: 11.5px; color: var(--muted); margin-left: auto; }
