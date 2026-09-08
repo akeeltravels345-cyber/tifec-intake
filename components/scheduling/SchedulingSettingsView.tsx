@@ -1,24 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import type { SchedulingSettings } from "@/lib/scheduling";
+import QRCode from "qrcode";
+import type { SchedulingSettings, VideoProvider } from "@/lib/scheduling";
 
 const ACCENTS = ["#256e72", "#2f8e93", "#2e3192", "#3f8f5f", "#7a4fa3", "#b1543c", "#c2841d"];
 const sample = { client: "Ada Rivers", service: "Individual therapy", clinician: "Dr. Shion O'Connor", when: "Mon, 8 Sep at 10:00 AM", practice: "Cayman Essential Care" };
 const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => (sample as Record<string, string>)[k] ?? `{${k}}`);
+const PROVIDER_LABEL: Record<VideoProvider, string> = { none: "Off (enter links manually)", zoom: "Zoom", google_meet: "Google Meet" };
 
-export default function SchedulingSettingsView({ initial, types = [] }: { initial: SchedulingSettings; types?: { id: string; name: string }[] }) {
+export default function SchedulingSettingsView({ initial, types = [], clinicians = [], videoEnv = { zoom: false, google: false } }: {
+  initial: SchedulingSettings; types?: { id: string; name: string }[]; clinicians?: { id: string; name: string }[]; videoEnv?: { zoom: boolean; google: boolean };
+}) {
   const [s, setS] = useState<SchedulingSettings>(initial);
   const [copied, setCopied] = useState("");
+  const [qr, setQr] = useState<{ label: string; url: string; img: string } | null>(null);
+  const [vtest, setVtest] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [vtesting, setVtesting] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const baseLink = `${origin}/book`;
   const copy = (text: string, key: string) => { try { navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500); } catch { /* ignore */ } };
+  const showQr = async (label: string, url: string) => { try { const img = await QRCode.toDataURL(url, { width: 320, margin: 1 }); setQr({ label, url, img }); } catch { /* ignore */ } };
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
   const setBooking = (patch: Partial<SchedulingSettings["booking"]>) => { setS((x) => ({ ...x, booking: { ...x.booking, ...patch } })); setDirty(true); setMsg(""); };
   const setBridge = (patch: Partial<SchedulingSettings["bridge"]>) => { setS((x) => ({ ...x, bridge: { ...x.bridge, ...patch } })); setDirty(true); setMsg(""); };
+  const setVideo = (patch: Partial<SchedulingSettings["video"]>) => { setS((x) => ({ ...x, video: { ...x.video, ...patch } })); setDirty(true); setMsg(""); setVtest(null); };
+  const setHost = (clinId: string, email: string) => setVideo({ hostMap: { ...s.video.hostMap, [clinId]: email } });
+
+  async function testVideo() {
+    setVtesting(true); setVtest(null);
+    const res = await fetch("/api/scheduling/video-test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider: s.video.provider, host: s.video.defaultHost }) });
+    const data = await res.json().catch(() => ({ ok: false, detail: "Request failed." }));
+    setVtesting(false); setVtest({ ok: !!data.ok, detail: data.detail || "" });
+  }
   const setNotif = (patch: Partial<SchedulingSettings["notifications"]>) => { setS((x) => ({ ...x, notifications: { ...x.notifications, ...patch } })); setDirty(true); setMsg(""); };
   const setTpl = (which: "confirmation" | "reminder", patch: Partial<SchedulingSettings["notifications"]["templates"]["confirmation"]>) =>
     setNotif({ templates: { ...s.notifications.templates, [which]: { ...s.notifications.templates[which], ...patch } } });
@@ -52,10 +69,62 @@ export default function SchedulingSettingsView({ initial, types = [] }: { initia
       <div className="ss-card">
         <h2>Share your booking page</h2>
         <p className="ss-hint">Send clients straight to the right service. While the prototype is admin-only these open for you; they go public when you lift the gate.</p>
-        <div className="ss-link"><span className="ss-linkname">Everything</span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button></div>
+        <div className="ss-link"><span className="ss-linkname">Everything</span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button><button onClick={() => showQr("Everything", baseLink)}>QR</button></div>
         {types.map((t) => { const l = `${baseLink}?type=${t.id}`; return (
-          <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button></div>
+          <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button><button onClick={() => showQr(t.name, l)}>QR</button></div>
         ); })}
+      </div>
+
+      {qr && (
+        <div className="ss-qrmodal" onClick={() => setQr(null)}>
+          <div className="ss-qrsheet" onClick={(e) => e.stopPropagation()}>
+            <div className="ss-qrname">{qr.label}</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr.img} alt={`QR code for ${qr.label}`} width={280} height={280} />
+            <code className="ss-qrurl">{qr.url}</code>
+            <div className="ss-qrbtns">
+              <a className="ss-btn" href={qr.img} download={`booking-${qr.label.replace(/\s+/g, "-").toLowerCase()}.png`}>Download PNG</a>
+              <button className="ss-btn primary" onClick={() => setQr(null)}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="ss-card">
+        <h2>Video appointments</h2>
+        <p className="ss-hint">When a virtual appointment is booked, a meeting link is created automatically and attached to it. Secrets stay in the server&apos;s environment variables — this only chooses the provider and each clinician&apos;s host account.</p>
+        <label className="ss-f"><span>Provider</span>
+          <select value={s.video.provider} onChange={(e) => setVideo({ provider: e.target.value as VideoProvider })}>
+            {(["none", "zoom", "google_meet"] as VideoProvider[]).map((p) => <option key={p} value={p}>{PROVIDER_LABEL[p]}</option>)}
+          </select>
+        </label>
+        {s.video.provider === "zoom" && (
+          <p className={`ss-warn ${videoEnv.zoom ? "ok" : ""}`} style={videoEnv.zoom ? { color: "#226e72", background: "var(--teal-bg, #e2efef)" } : undefined}>
+            {videoEnv.zoom ? "Zoom credentials detected in the environment." : "Not connected yet. Set ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET (a Server-to-Server OAuth app) in the server environment."}
+          </p>
+        )}
+        {s.video.provider === "google_meet" && (
+          <p className={`ss-warn ${videoEnv.google ? "ok" : ""}`} style={videoEnv.google ? { color: "#226e72", background: "var(--teal-bg, #e2efef)" } : undefined}>
+            {videoEnv.google ? "Google service-account credentials detected." : "Not connected yet. Set GOOGLE_SA_EMAIL and GOOGLE_SA_PRIVATE_KEY (a Workspace service account with domain-wide delegation) in the server environment."}
+          </p>
+        )}
+        {s.video.provider !== "none" && (
+          <>
+            <label className="ss-f"><span>Default host {s.video.provider === "zoom" ? "(Zoom user email)" : "(Workspace user to impersonate)"}</span>
+              <input value={s.video.defaultHost} onChange={(e) => setVideo({ defaultHost: e.target.value })} placeholder="e.g. clinic@tifec.org" /></label>
+            <div className="ss-hosts">
+              <div className="ss-hostshead">Per-clinician host <em>(optional; falls back to the default)</em></div>
+              {clinicians.map((c) => (
+                <label key={c.id} className="ss-hostrow"><span>{c.name}</span>
+                  <input value={s.video.hostMap[c.id] || ""} onChange={(e) => setHost(c.id, e.target.value)} placeholder={s.video.defaultHost || "host email"} /></label>
+              ))}
+            </div>
+            <div className="ss-vtest">
+              <button className="ss-btn" onClick={testVideo} disabled={vtesting}>{vtesting ? "Testing…" : "Test connection"}</button>
+              {vtest && <span className={`ss-msg ${vtest.ok ? "ok" : "err"}`}>{vtest.detail}</span>}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="ss-card">

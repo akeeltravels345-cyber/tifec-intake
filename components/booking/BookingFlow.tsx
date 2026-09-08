@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type Mode = "in_person" | "virtual" | "either";
-interface Type { id: string; name: string; category: string; durationMin: number; price: number; mode: Mode; color: string; hasIntake: boolean; newClientIntakeOnly: boolean; }
+type QKind = "text" | "textarea" | "select" | "checkbox";
+interface BookingQuestion { id: string; label: string; kind: QKind; required: boolean; options: string[]; }
+interface Type { id: string; name: string; category: string; description: string; durationMin: number; price: number; mode: Mode; color: string; hasIntake: boolean; newClientIntakeOnly: boolean; questions: BookingQuestion[]; }
 interface Clin { id: string; name: string; credentials: string; }
 interface Insurer { id: string; name: string; }
 interface Slot { minute: number; clinicianId: string; }
@@ -31,6 +33,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState({ name: "", email: "", phone: "", path: "self_pay" as "self_pay" | "insurance", insurerId: "", policyNo: "", notes: "" });
+  const [answers, setAnswers] = useState<Record<string, string>>({}); // questionId -> value
+  const [chosenMode, setChosenMode] = useState<"in_person" | "virtual">("in_person"); // for "either" services
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -103,10 +107,12 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     if (!type || !slot) return;
     if (!details.name.trim()) { setErr("Please enter your name."); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(details.email)) { setErr("Please enter a valid email."); return; }
+    const missing = type.questions.find((q) => q.required && !String(answers[q.id] || "").trim());
+    if (missing) { setErr(`Please answer: ${missing.label}`); return; }
     setBusy(true); setErr("");
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path }),
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, answers }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
@@ -157,6 +163,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                   <span className="bk-accent" style={{ background: t.color }} />
                   <span className="bk-cardmain">
                     <span className="bk-cardname">{t.name}</span>
+                    {t.description && <span className="bk-carddesc">{t.description}</span>}
                     <span className="bk-cardmeta">{t.durationMin} min · {MODE_LABEL[t.mode]}{t.price > 0 ? ` · ${money(t.price)}` : ""}</span>
                   </span>
                   <span className="bk-chev">→</span>
@@ -267,7 +274,29 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                   <label className="bk-f"><span>Policy / member no.</span><input value={details.policyNo} onChange={(e) => setDetails({ ...details, policyNo: e.target.value })} /></label>
                 </>
               )}
-              <label className="bk-f"><span>Anything you&apos;d like us to know? <em>(optional)</em></span><textarea rows={2} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} /></label>
+              {type.mode === "either" && (
+                <div className="bk-f"><span>How would you like to meet?</span>
+                  <div className="bk-seg">
+                    <button className={chosenMode === "in_person" ? "on" : ""} onClick={() => setChosenMode("in_person")}>In person</button>
+                    <button className={chosenMode === "virtual" ? "on" : ""} onClick={() => setChosenMode("virtual")}>Virtual</button>
+                  </div>
+                </div>
+              )}
+              {type.questions.map((q) => (
+                <label key={q.id} className="bk-f"><span>{q.label}{q.required && <em> (required)</em>}</span>
+                  {q.kind === "textarea" ? (
+                    <textarea rows={2} value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+                  ) : q.kind === "select" ? (
+                    <select value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}>
+                      <option value="">Choose…</option>{q.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : q.kind === "checkbox" ? (
+                    <span className="bk-qcheck"><input type="checkbox" checked={answers[q.id] === "Yes"} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.checked ? "Yes" : "" })} /> Yes</span>
+                  ) : (
+                    <input value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
+                  )}
+                </label>
+              ))}
             </div>
             {type.hasIntake && <p className="bk-intake">New here? We&apos;ll email you a short intake form to complete before your first visit. It helps your clinician prepare.</p>}
             {policy && <label className="bk-policy"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> <span><b>Cancellation policy.</b> {policy}</span></label>}

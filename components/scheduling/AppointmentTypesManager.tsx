@@ -1,19 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import type { AppointmentType, AppointmentMode } from "@/lib/scheduling";
+import type { AppointmentType, AppointmentMode, BookingQuestion, QuestionKind } from "@/lib/scheduling";
 
 interface CptOpt { code: string; description: string; }
 interface FormOpt { key: string; label: string; }
 
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
+const QKIND_LABEL: Record<QuestionKind, string> = { text: "Short text", textarea: "Long text", select: "Choose one", checkbox: "Checkbox" };
 const COLORS = ["#2f8e93", "#2e3192", "#3f8f5f", "#c2841d", "#b1543c", "#7a4fa3", "#3b7ea1", "#8a8f2f"];
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const qid = () => Math.random().toString(36).slice(2, 10);
 
 type Draft = Omit<AppointmentType, "id" | "createdAt" | "updatedAt"> & { id?: string };
 const blank = (): Draft => ({
-  name: "", category: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0, price: 0,
-  color: COLORS[0], mode: "in_person", capacity: 1, baselineCptCodes: [], intakeFormKey: null,
+  name: "", category: "", description: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0, price: 0,
+  color: COLORS[0], mode: "in_person", capacity: 1, baselineCptCodes: [], questions: [], intakeFormKey: null,
   newClientIntakeOnly: true, active: true, sortOrder: 0,
 });
 
@@ -75,6 +77,11 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
   const addCode = (code: string) => { if (code && draft && !draft.baselineCptCodes.includes(code)) set("baselineCptCodes", [...draft.baselineCptCodes, code]); };
   const codeLabel = (code: string) => { const c = cptCodes.find((x) => x.code === code); return c ? `${c.code} · ${c.description}` : code; };
 
+  // ---- custom booking questions ----
+  const addQuestion = () => set("questions", [...(draft?.questions || []), { id: qid(), label: "", kind: "text", required: false, options: [] }]);
+  const updateQuestion = (i: number, patch: Partial<BookingQuestion>) => set("questions", (draft?.questions || []).map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  const removeQuestion = (i: number) => set("questions", (draft?.questions || []).filter((_, j) => j !== i));
+
   return (
     <div className="st">
       <div className="st-head">
@@ -94,6 +101,11 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
               <input value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Individual therapy" autoFocus /></label>
             <label className="st-f"><span>Category</span>
               <input value={draft.category} onChange={(e) => set("category", e.target.value)} placeholder="e.g. Therapy" /></label>
+          </div>
+
+          <div className="st-erow">
+            <label className="st-f grow"><span>Description <em>(shown to clients on the booking page)</em></span>
+              <textarea rows={2} value={draft.description} onChange={(e) => set("description", e.target.value)} placeholder="A short line or two about this service…" /></label>
           </div>
 
           <div className="st-erow">
@@ -152,6 +164,24 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
             {draft.intakeFormKey && (
               <label className="st-check"><input type="checkbox" checked={draft.newClientIntakeOnly} onChange={(e) => set("newClientIntakeOnly", e.target.checked)} /> New clients only</label>
             )}
+          </div>
+
+          <div className="st-qs">
+            <div className="st-qshead"><span>Booking questions <em>(asked on the booking page)</em></span>
+              <button type="button" className="st-btn" onClick={addQuestion}>+ Add question</button></div>
+            {(draft.questions || []).map((q, i) => (
+              <div key={q.id} className="st-q">
+                <input className="st-qlabel" value={q.label} onChange={(e) => updateQuestion(i, { label: e.target.value })} placeholder="Question, e.g. What brings you in?" />
+                <select value={q.kind} onChange={(e) => updateQuestion(i, { kind: e.target.value as QuestionKind })}>
+                  {(Object.keys(QKIND_LABEL) as QuestionKind[]).map((k) => <option key={k} value={k}>{QKIND_LABEL[k]}</option>)}
+                </select>
+                {q.kind === "select" && (
+                  <input className="st-qopts" value={q.options.join(", ")} onChange={(e) => updateQuestion(i, { options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="Options, comma-separated" />
+                )}
+                <label className="st-check"><input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(i, { required: e.target.checked })} /> Required</label>
+                <button type="button" className="st-qdel" title="Remove" onClick={() => removeQuestion(i)}>×</button>
+              </div>
+            ))}
           </div>
 
           <div className="st-actions">

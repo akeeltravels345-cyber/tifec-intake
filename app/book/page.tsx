@@ -25,8 +25,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       accent={settings.booking.accent}
       policy={settings.booking.policy}
       types={types.filter((t) => t.active).map((t) => ({
-        id: t.id, name: t.name, category: t.category, durationMin: t.durationMin, price: t.price,
-        mode: t.mode, color: t.color, hasIntake: !!t.intakeFormKey, newClientIntakeOnly: t.newClientIntakeOnly,
+        id: t.id, name: t.name, category: t.category, description: t.description, durationMin: t.durationMin, price: t.price,
+        mode: t.mode, color: t.color, hasIntake: !!t.intakeFormKey, newClientIntakeOnly: t.newClientIntakeOnly, questions: t.questions,
       }))}
       clinicians={bookable.map((c) => ({ id: c.id, name: c.name, credentials: c.credentials }))}
       insurers={insurers.map((i) => ({ id: i.id, name: i.name }))}

@@ -14,10 +14,24 @@ import { randomId } from "./crypto";
 
 export type AppointmentMode = "in_person" | "virtual" | "either";
 
+// A custom question a client answers when booking this service.
+export type QuestionKind = "text" | "textarea" | "select" | "checkbox";
+export interface BookingQuestion {
+  id: string;
+  label: string;
+  kind: QuestionKind;
+  required: boolean;
+  options: string[]; // for "select"
+}
+// A client's answer, captured on the appointment (label kept so it reads even
+// if the question is later edited/removed).
+export interface QuestionAnswer { questionId: string; label: string; value: string }
+
 export interface AppointmentType {
   id: string;
   name: string;
   category: string;
+  description: string;           // shown to clients on the booking page
   durationMin: number;
   bufferBeforeMin: number;
   bufferAfterMin: number;
@@ -26,12 +40,31 @@ export interface AppointmentType {
   mode: AppointmentMode;
   capacity: number;              // 1 = individual; >1 = group/workshop (seats)
   baselineCptCodes: string[];    // starting codes; editable on the session later
+  questions: BookingQuestion[];  // custom intake questions asked at booking
   intakeFormKey: string | null;  // which intake form to attach, if any
   newClientIntakeOnly: boolean;  // only require the form for new clients
   active: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+const QKINDS: QuestionKind[] = ["text", "textarea", "select", "checkbox"];
+function parseQuestions(v: unknown): BookingQuestion[] {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((q: Record<string, unknown>) => ({
+    id: str(q.id) || randomId(),
+    label: str(q.label).trim(),
+    kind: QKINDS.includes(q.kind as QuestionKind) ? (q.kind as QuestionKind) : "text",
+    required: !!q.required,
+    options: Array.isArray(q.options) ? q.options.map(str).map((s) => s.trim()).filter(Boolean) : [],
+  })).filter((q) => q.label);
+}
+function parseAnswers(v: unknown): QuestionAnswer[] {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((a: Record<string, unknown>) => ({ questionId: str(a.questionId), label: str(a.label), value: str(a.value) })).filter((a) => a.label);
 }
 
 const usePostgres = !!process.env.DATABASE_URL;
@@ -63,11 +96,12 @@ function parseCodes(v: unknown): string[] {
 
 function rowToType(r: Record<string, unknown>): AppointmentType {
   return {
-    id: str(r.id), name: str(r.name), category: str(r.category),
+    id: str(r.id), name: str(r.name), category: str(r.category), description: str(r.description),
     durationMin: num(r.duration_min), bufferBeforeMin: num(r.buffer_before_min), bufferAfterMin: num(r.buffer_after_min),
     price: num(r.price), color: str(r.color) || "#2f8e93", mode: asMode(r.mode),
     capacity: Math.max(1, num(r.capacity) || 1),
     baselineCptCodes: parseCodes(r.baseline_cpt_codes),
+    questions: parseQuestions(r.questions),
     intakeFormKey: r.intake_form_key ? str(r.intake_form_key) : null,
     newClientIntakeOnly: !!r.new_client_intake_only,
     active: r.active == null ? true : !!r.active,
@@ -85,7 +119,7 @@ export async function listAppointmentTypes(): Promise<AppointmentType[]> {
     } else {
       // Default fields added after some records were written (capacity), so old
       // dev rows read back consistently.
-      rows = readJson<AppointmentType[]>(FILE, []).map((r) => ({ ...r, capacity: Math.max(1, Number(r.capacity) || 1) }));
+      rows = readJson<AppointmentType[]>(FILE, []).map((r) => ({ ...r, capacity: Math.max(1, Number(r.capacity) || 1), description: str(r.description), questions: parseQuestions(r.questions) }));
     }
   } catch {
     return []; // table not migrated yet — don't break the page
@@ -98,8 +132,8 @@ type TypeInput = Partial<Omit<AppointmentType, "id" | "createdAt" | "updatedAt">
 function normalize(input: TypeInput, base?: AppointmentType): AppointmentType {
   const t = now();
   const b = base ?? {
-    id: randomId(), name: "", category: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0,
-    price: 0, color: "#2f8e93", mode: "in_person" as AppointmentMode, capacity: 1, baselineCptCodes: [],
+    id: randomId(), name: "", category: "", description: "", durationMin: 50, bufferBeforeMin: 0, bufferAfterMin: 0,
+    price: 0, color: "#2f8e93", mode: "in_person" as AppointmentMode, capacity: 1, baselineCptCodes: [], questions: [],
     intakeFormKey: null, newClientIntakeOnly: true, active: true, sortOrder: 0, createdAt: t, updatedAt: t,
   };
   return {
@@ -107,6 +141,8 @@ function normalize(input: TypeInput, base?: AppointmentType): AppointmentType {
     capacity: input.capacity != null ? Math.max(1, num(input.capacity)) : b.capacity,
     name: input.name != null ? str(input.name).trim() : b.name,
     category: input.category != null ? str(input.category).trim() : b.category,
+    description: input.description != null ? str(input.description).trim() : b.description,
+    questions: input.questions != null ? parseQuestions(input.questions) : b.questions,
     durationMin: input.durationMin != null ? Math.max(5, num(input.durationMin)) : b.durationMin,
     bufferBeforeMin: input.bufferBeforeMin != null ? Math.max(0, num(input.bufferBeforeMin)) : b.bufferBeforeMin,
     bufferAfterMin: input.bufferAfterMin != null ? Math.max(0, num(input.bufferAfterMin)) : b.bufferAfterMin,
@@ -143,6 +179,8 @@ async function persist(row: AppointmentType, isNew: boolean) {
     // Guarded: capacity was added later, so set it separately (a pre-migration
     // table without the column still saves the type fine).
     try { await sql`UPDATE scheduling_appointment_types SET capacity=${row.capacity} WHERE id=${row.id}`; } catch { /* column not migrated */ }
+    // Guarded: description + questions added later still.
+    try { await sql`UPDATE scheduling_appointment_types SET description=${row.description}, questions=${JSON.stringify(row.questions)}::jsonb WHERE id=${row.id}`; } catch { /* columns not migrated */ }
   } else {
     const all = readJson<AppointmentType[]>(FILE, []);
     const i = all.findIndex((t) => t.id === row.id);
@@ -331,6 +369,7 @@ export interface Appointment {
   policyNo: string;
   intakeStatus: IntakeStatus;
   billingSessionId: string | null;
+  answers: QuestionAnswer[];     // client's answers to the type's custom questions
   notes: string;
   createdBy: string;
   source: "staff" | "client";
@@ -358,6 +397,7 @@ function rowToAppt(r: Record<string, unknown>): Appointment {
     startAt: iso(r.start_at), endAt: iso(r.end_at), mode: asMode(r.mode), locationOrLink: str(r.location_or_link),
     status: asStatus(r.status), insurancePath: asPath(r.insurance_path), insurerId: r.insurer_id ? str(r.insurer_id) : null,
     policyNo: str(r.policy_no), intakeStatus: asIntake(r.intake_status), billingSessionId: r.billing_session_id ? str(r.billing_session_id) : null,
+    answers: parseAnswers(r.answers),
     notes: str(r.notes), createdBy: str(r.created_by), source: r.source === "client" ? "client" : "staff",
     createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
   };
@@ -401,7 +441,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     id: randomId(), seriesId: null, kind: "appointment", capacity: 1, attendees: [], clientId: null, clientName: "", clientEmail: "", clinicianId: "",
     typeId: null, title: "", startAt: t, endAt: t, mode: "in_person", locationOrLink: "", status: "booked",
     insurancePath: null, insurerId: null, policyNo: "", intakeStatus: "not_required", billingSessionId: null,
-    notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
+    answers: [], notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
   };
   return {
     ...b,
@@ -424,6 +464,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     policyNo: input.policyNo !== undefined ? str(input.policyNo).trim() : b.policyNo,
     intakeStatus: input.intakeStatus !== undefined ? asIntake(input.intakeStatus) : b.intakeStatus,
     billingSessionId: input.billingSessionId !== undefined ? (input.billingSessionId ? str(input.billingSessionId) : null) : b.billingSessionId,
+    answers: input.answers !== undefined ? parseAnswers(input.answers) : b.answers,
     notes: input.notes !== undefined ? str(input.notes) : b.notes,
     createdBy: input.createdBy !== undefined ? str(input.createdBy) : b.createdBy,
     source: input.source === "client" ? "client" : b.source,
@@ -457,6 +498,8 @@ async function persistAppt(row: Appointment, isNew: boolean) {
     }
     // Guarded: capacity + attendees were added later.
     try { await sql`UPDATE scheduling_appointments SET capacity=${row.capacity}, attendees=${JSON.stringify(row.attendees)}::jsonb WHERE id=${row.id}`; } catch { /* columns not migrated */ }
+    // Guarded: answers to custom booking questions, added later still.
+    try { await sql`UPDATE scheduling_appointments SET answers=${JSON.stringify(row.answers)}::jsonb WHERE id=${row.id}`; } catch { /* column not migrated */ }
   } else {
     const all = readJson<Appointment[]>(APPT_FILE, []);
     const i = all.findIndex((a) => a.id === row.id);
@@ -715,9 +758,17 @@ export async function setWaitlistStatus(id: string, status: WaitStatus): Promise
 // =============================================================================
 
 export interface NotifyTemplate { subject: string; body: string; }
+export type VideoProvider = "none" | "zoom" | "google_meet";
 export interface SchedulingSettings {
   booking: { welcome: string; accent: string; policy: string; cancelWindowHours: number };
   bridge: { seenToBilling: boolean }; // off by default; marking "seen" makes a billing session
+  // Auto video links for virtual appointments. Secrets live in env vars; this
+  // only chooses the provider and maps clinicians to their meeting host account.
+  video: {
+    provider: VideoProvider;             // default for virtual appointments
+    defaultHost: string;                 // fallback host email (Zoom user / Google user)
+    hostMap: Record<string, string>;     // clinicianId -> host email override
+  };
   notifications: {
     enabled: boolean;                 // master switch; false = nothing sends
     confirmation: boolean; reminder: boolean; reschedule: boolean; cancellation: boolean;
@@ -730,6 +781,7 @@ const SET_FILE = "scheduling-settings.local.json";
 export const DEFAULT_SETTINGS: SchedulingSettings = {
   booking: { welcome: "", accent: "#256e72", policy: "", cancelWindowHours: 24 },
   bridge: { seenToBilling: false },
+  video: { provider: "none", defaultHost: "", hostMap: {} },
   notifications: {
     enabled: false,
     confirmation: true, reminder: true, reschedule: true, cancellation: true,
@@ -747,6 +799,7 @@ function mergeSettings(saved: Partial<SchedulingSettings> | null): SchedulingSet
   return {
     booking: { ...d.booking, ...(saved.booking || {}) },
     bridge: { ...d.bridge, ...(saved.bridge || {}) },
+    video: { ...d.video, ...(saved.video || {}), hostMap: { ...((saved.video || {}).hostMap || {}) } },
     notifications: {
       ...d.notifications, ...(saved.notifications || {}),
       templates: { ...d.notifications.templates, ...((saved.notifications || {}).templates || {}) },

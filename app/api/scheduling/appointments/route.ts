@@ -3,11 +3,27 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom, getAppointment,
+  createRecurring, deleteSeriesFrom, getAppointment, getSchedulingSettings,
+  type Appointment,
 } from "@/lib/scheduling";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
+import { createVideoLink } from "@/lib/videoLinks";
 
 export const dynamic = "force-dynamic";
+
+// For a virtual individual appointment with no link yet, auto-create a Zoom/Meet
+// link from the practice's chosen provider. Best-effort: never blocks the booking.
+async function attachVideo(appt: Appointment): Promise<Appointment> {
+  if (appt.kind === "block" || appt.mode !== "virtual" || appt.locationOrLink || appt.capacity > 1) return appt;
+  const { video } = await getSchedulingSettings();
+  const link = await createVideoLink(video, {
+    clinicianId: appt.clinicianId,
+    topic: `TIFEC session${appt.clientName ? ` - ${appt.clientName}` : ""}`,
+    startAtISO: appt.startAt, durationMin: Math.round((Date.parse(appt.endAt) - Date.parse(appt.startAt)) / 60000),
+  });
+  if (!link) return appt;
+  return (await updateAppointment(appt.id, { locationOrLink: link.url })) || appt;
+}
 
 // Reads and writes are scoped: a treating clinician sees and edits only their
 // own agenda; the owner, Donnet O'Connor and the admin see and edit everyone.
@@ -64,9 +80,10 @@ export async function POST(req: Request) {
       const count = Number(body.repeatCount) || 1;
       if (everyDays > 0 && count > 1) {
         const made = await createRecurring(base as never, everyDays, count);
-        return NextResponse.json({ ok: true, appointment: made[0], count: made.length });
+        const withVideo = await Promise.all(made.map((a) => attachVideo(a)));
+        return NextResponse.json({ ok: true, appointment: withVideo[0], count: withVideo.length });
       }
-      const appt = await createAppointment(base as never);
+      const appt = await attachVideo(await createAppointment(base as never));
       return NextResponse.json({ ok: true, appointment: appt });
     }
 

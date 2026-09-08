@@ -34,8 +34,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -198,6 +198,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
+        {hoursHref && <a className="cal-hours" href={hoursHref}>My hours</a>}
         {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
       </div>
 
@@ -430,7 +431,11 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 {a.kind !== "block" && <>
                   <Row k="Service" v={t?.name || "Visit"} />
                   <Row k="Clinician" v={clinName(a.clinicianId)} />
-                  <Row k="Mode" v={a.mode === "virtual" ? `Virtual${a.locationOrLink ? " · " + a.locationOrLink : ""}` : `In person${a.locationOrLink ? " · " + a.locationOrLink : ""}`} />
+                  <Row k="Mode" v={a.mode === "virtual" ? "Virtual" : "In person"} />
+                  {a.locationOrLink && (
+                    <div className="cvr-row"><span>{a.mode === "virtual" ? "Meeting link" : "Location"}</span>
+                      <span>{/^https?:\/\//.test(a.locationOrLink) ? <a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Join link</a> : a.locationOrLink}</span></div>
+                  )}
                   <Row k="Status" v={STATUS.find((x) => x.key === a.status)?.label || a.status} />
                   <Row k="Payment" v={a.insurancePath === "insurance" ? `Insurance${a.insurerId ? " · " + (insurers.find((i) => i.id === a.insurerId)?.name || "") : ""}` : "Self-pay"} />
                   {a.clientEmail && <Row k="Email" v={a.clientEmail} />}
@@ -438,6 +443,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   {a.notes && <Row k="Notes" v={a.notes} />}
                 </>}
               </div>
+              {(a.answers || []).length > 0 && (
+                <div className="cvr-att"><div className="cvr-att-h">Booking answers</div>{(a.answers || []).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}</div>
+              )}
               {a.capacity > 1 && (a.attendees || []).length > 0 && (
                 <div className="cvr-att"><div className="cvr-att-h">Attendees</div>{(a.attendees || []).map((at, i) => <div key={i} className="cvr-att-row">{at.name}{at.email ? ` · ${at.email}` : ""}</div>)}</div>
               )}

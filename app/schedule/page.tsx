@@ -44,6 +44,7 @@ export default async function SchedulePage() {
       initial={appts}
       canEditAll={all}
       lockedClinicianId={all ? null : me.id}
+      hoursHref="/schedule/hours"
     />
   );
 }
