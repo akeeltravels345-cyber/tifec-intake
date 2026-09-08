@@ -34,8 +34,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null, connectionsHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null; connectionsHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -199,6 +199,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           </select>
         )}
         {hoursHref && <a className="cal-hours" href={hoursHref}>My hours</a>}
+        {connectionsHref && <a className="cal-hours" href={connectionsHref}>Video</a>}
         {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
       </div>
 

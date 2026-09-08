@@ -758,17 +758,9 @@ export async function setWaitlistStatus(id: string, status: WaitStatus): Promise
 // =============================================================================
 
 export interface NotifyTemplate { subject: string; body: string; }
-export type VideoProvider = "none" | "zoom" | "google_meet";
 export interface SchedulingSettings {
   booking: { welcome: string; accent: string; policy: string; cancelWindowHours: number };
   bridge: { seenToBilling: boolean }; // off by default; marking "seen" makes a billing session
-  // Auto video links for virtual appointments. Secrets live in env vars; this
-  // only chooses the provider and maps clinicians to their meeting host account.
-  video: {
-    provider: VideoProvider;             // default for virtual appointments
-    defaultHost: string;                 // fallback host email (Zoom user / Google user)
-    hostMap: Record<string, string>;     // clinicianId -> host email override
-  };
   notifications: {
     enabled: boolean;                 // master switch; false = nothing sends
     confirmation: boolean; reminder: boolean; reschedule: boolean; cancellation: boolean;
@@ -781,7 +773,6 @@ const SET_FILE = "scheduling-settings.local.json";
 export const DEFAULT_SETTINGS: SchedulingSettings = {
   booking: { welcome: "", accent: "#256e72", policy: "", cancelWindowHours: 24 },
   bridge: { seenToBilling: false },
-  video: { provider: "none", defaultHost: "", hostMap: {} },
   notifications: {
     enabled: false,
     confirmation: true, reminder: true, reschedule: true, cancellation: true,
@@ -799,7 +790,6 @@ function mergeSettings(saved: Partial<SchedulingSettings> | null): SchedulingSet
   return {
     booking: { ...d.booking, ...(saved.booking || {}) },
     bridge: { ...d.bridge, ...(saved.bridge || {}) },
-    video: { ...d.video, ...(saved.video || {}), hostMap: { ...((saved.video || {}).hostMap || {}) } },
     notifications: {
       ...d.notifications, ...(saved.notifications || {}),
       templates: { ...d.notifications.templates, ...((saved.notifications || {}).templates || {}) },

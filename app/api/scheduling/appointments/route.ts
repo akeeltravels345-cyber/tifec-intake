@@ -3,21 +3,19 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom, getAppointment, getSchedulingSettings,
+  createRecurring, deleteSeriesFrom, getAppointment,
   type Appointment,
 } from "@/lib/scheduling";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
-import { createVideoLink } from "@/lib/videoLinks";
+import { createVideoLink } from "@/lib/videoConnections";
 
 export const dynamic = "force-dynamic";
 
-// For a virtual individual appointment with no link yet, auto-create a Zoom/Meet
-// link from the practice's chosen provider. Best-effort: never blocks the booking.
+// For a virtual individual appointment with no link yet, auto-create a meeting
+// on the clinician's OWN connected Zoom/Meet account. Best-effort: never blocks.
 async function attachVideo(appt: Appointment): Promise<Appointment> {
   if (appt.kind === "block" || appt.mode !== "virtual" || appt.locationOrLink || appt.capacity > 1) return appt;
-  const { video } = await getSchedulingSettings();
-  const link = await createVideoLink(video, {
-    clinicianId: appt.clinicianId,
+  const link = await createVideoLink(appt.clinicianId, {
     topic: `TIFEC session${appt.clientName ? ` - ${appt.clientName}` : ""}`,
     startAtISO: appt.startAt, durationMin: Math.round((Date.parse(appt.endAt) - Date.parse(appt.startAt)) / 60000),
   });

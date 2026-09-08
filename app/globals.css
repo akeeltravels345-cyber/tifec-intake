@@ -4258,3 +4258,30 @@ body:has(.bk-page) .brandbar { display: none; }
 .sh-bar { padding: 14px 20px 0; }
 .sh-back { text-decoration: none; font-size: 13px; font-weight: 600; color: #256e72; }
 .sh-back:hover { text-decoration: underline; }
+
+/* ===== Video connections page (per-clinician Zoom/Meet) ===== */
+.vc { max-width: 760px; margin: 0 auto; padding: 18px 20px 40px; }
+.vc-head { margin-bottom: 16px; }
+.vc-h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+.vc-sub { color: var(--muted, #6b7280); font-size: 13.5px; margin: 0; max-width: 560px; line-height: 1.5; }
+.vc-msg { border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+.vc-msg.ok { background: #e2efef; color: #226e72; }
+.vc-msg.err { background: #fbeae6; color: #b1543c; }
+.vc-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 620px) { .vc-cards { grid-template-columns: 1fr; } }
+.vc-card { border: 1px solid var(--line, #e4e8ea); border-radius: 12px; padding: 16px; background: #fff; display: flex; flex-direction: column; }
+.vc-card.on { border-color: #bcdcdc; background: #fafdfd; }
+.vc-cardhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.vc-name { font-weight: 700; font-size: 15.5px; }
+.vc-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #226e72; background: #e2efef; border-radius: 20px; padding: 2px 9px; }
+.vc-blurb { font-size: 12.5px; color: var(--muted, #6b7280); line-height: 1.5; margin: 0 0 12px; flex: 1; }
+.vc-acct { font-size: 13px; font-weight: 600; margin-bottom: 10px; word-break: break-all; }
+.vc-row { display: flex; align-items: center; gap: 10px; }
+.vc-default { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #333; }
+.vc-sp { flex: 1; }
+.vc-connect { display: inline-block; text-decoration: none; text-align: center; font-weight: 600; font-size: 14px; color: #fff; background: #256e72; border-radius: 9px; padding: 9px 14px; }
+.vc-connect:hover { background: #1f5e62; }
+.vc-btn { border: 1px solid var(--line, #d8dee0); background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+.vc-btn:hover { background: #f6f8f8; }
+.vc-unavail { font-size: 12.5px; color: #9aa0a6; background: #f5f6f7; border-radius: 8px; padding: 9px 11px; line-height: 1.45; }
+.vc-hint { font-size: 12.5px; color: var(--muted, #6b7280); margin-top: 14px; }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CLINICIANS } from "@/lib/clinicians";
-import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, getSchedulingSettings, type QuestionAnswer } from "@/lib/scheduling";
-import { createVideoLink } from "@/lib/videoLinks";
+import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, type QuestionAnswer } from "@/lib/scheduling";
+import { createVideoLink } from "@/lib/videoConnections";
 
 export const dynamic = "force-dynamic";
 
@@ -58,10 +58,10 @@ export async function POST(req: Request) {
     notes: [phone ? `Phone: ${phone}` : "", clean(body.notes, 500)].filter(Boolean).join(" · "),
   } as never);
 
-  // Auto video link for a virtual booking (best-effort; never blocks).
+  // Auto video link for a virtual booking, on the clinician's own connected
+  // account (best-effort; never blocks).
   if (mode === "virtual" && !appt.locationOrLink) {
-    const { video } = await getSchedulingSettings();
-    const link = await createVideoLink(video, { clinicianId, topic: `TIFEC session - ${name}`, startAtISO: startAt, durationMin: type.durationMin });
+    const link = await createVideoLink(clinicianId, { topic: `TIFEC session - ${name}`, startAtISO: startAt, durationMin: type.durationMin });
     if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url })) || appt;
   }
 
