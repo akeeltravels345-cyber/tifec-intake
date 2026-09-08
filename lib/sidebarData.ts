@@ -18,6 +18,7 @@ export interface SidebarData {
   role: "owner" | "biller" | "clinician";
   hasBilling: boolean;
   isAdmin: boolean;
+  canSchedule: boolean; // can see the "my schedule" agenda (treating clinicians + owner + Donnet + admin)
   meId: string;
   name: string;
   avatar: string | null;
@@ -71,6 +72,8 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     // admin: true for oversight, but they are an OWNER and must see only the
     // owner's own menu — never the builder view.
     isAdmin: me.contact === "admin",
+    // Treating clinicians see their own agenda; the owner and Donnet see all.
+    canSchedule: isSystemAdmin(me) || (!me.intakeHidden && me.contact !== "biller"),
     meId: me.id,
     name: me.name,
     avatar,

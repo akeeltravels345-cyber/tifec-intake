@@ -34,7 +34,7 @@ function initialsOf(name: string): string {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, canSchedule, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   // Show the Session notes link only when notes are enabled AND this user has
   // their own caseload — so a pure biller (no linked clients) never sees a link
   // that would just bounce, but a biller who is also a clinician (Nick) does.
@@ -64,6 +64,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.
   const uToday: Item = { href: "/today", label: "Today", icon: IcToday, match: (p) => p === "/today" };
+  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p === "/schedule" };
   const uDash: Item = { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" };
   const uForms: Item = { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" };
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };
@@ -89,7 +90,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     ];
   } else {
     groups = [
-      { label: "", items: [uToday] },
+      { label: "", items: canSchedule ? [uToday, uSchedule] : [uToday] },
       { label: "Intake", items: [uDash, uForms] },
     ];
     if (hasBilling) {

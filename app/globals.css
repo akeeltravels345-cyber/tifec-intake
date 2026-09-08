@@ -4201,3 +4201,15 @@ body:has(.bk-page) .brandbar { display: none; }
 .ss-link code { flex: 1; min-width: 0; font: 400 12px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); background: var(--surface-2, #f4f7f6); border-radius: 7px; padding: 6px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-link button { font: 600 12px "Open Sans"; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 6px 11px; cursor: pointer; flex: none; }
 .ss-link button:hover { border-color: var(--teal); }
+
+/* Calendar: read-only "my schedule" mode */
+.cal-mine { font: 600 14px "Open Sans"; color: var(--ink); background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 9px; padding: 8px 13px; }
+.cvr .cal-sheethead strong { font-family: "Newsreader", serif; font-weight: 500; font-size: 18px; }
+.cvr-body { padding: 6px 16px 4px; }
+.cvr-row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--line-soft, #eef2f4); font-size: 14px; }
+.cvr-row:last-child { border-bottom: 0; }
+.cvr-row span:first-child { color: var(--muted); flex: none; }
+.cvr-row span:last-child { font-weight: 600; text-align: right; }
+.cvr-att { padding: 4px 16px 12px; }
+.cvr-att-h { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+.cvr-att-row { font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line-soft, #eef2f4); }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin } from "@/lib/clinicians";
+import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
   createRecurring, deleteSeriesFrom,
@@ -9,7 +9,11 @@ import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 
 export const dynamic = "force-dynamic";
 
-// Prototype: admin only, read and write.
+// Writes stay admin-only (prototype). Reads are scoped: a treating clinician
+// sees only their own agenda; the owner and Donnet O'Connor see everyone.
+const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
+const isTreating = (c: Clinician) => !c.intakeHidden && c.contact !== "biller" && c.contact !== "admin";
+
 async function requireAdmin() {
   const user = await getBillingUser();
   if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
@@ -18,15 +22,20 @@ async function requireAdmin() {
 }
 
 export async function GET(req: Request) {
-  const { error } = await requireAdmin();
-  if (error) return error;
+  const user = await getBillingUser();
+  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const me = user.clinician;
+  const all = seesAll(me);
+  if (!all && !isTreating(me)) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
   const p = new URL(req.url).searchParams;
+  // Clinicians are locked to their own id no matter what they ask for.
+  const clinicianId = all ? (p.get("clinicianId") || undefined) : me.id;
   const appointments = await listAppointments({
     from: p.get("from") || undefined,
     to: p.get("to") || undefined,
-    clinicianId: p.get("clinicianId") || undefined,
+    clinicianId,
   });
-  return NextResponse.json({ appointments });
+  return NextResponse.json({ appointments, viewer: { seesAll: all, meId: me.id } });
 }
 
 export async function POST(req: Request) {
