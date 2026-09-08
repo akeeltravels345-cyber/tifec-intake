@@ -34,9 +34,12 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, readOnly = false, lockedClinicianId = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; readOnly?: boolean; lockedClinicianId?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null;
 }) {
+  // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
+  const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
+  const canCreate = canEditAll || !!lockedClinicianId;
   const availMap = new Map(availabilities.map((a) => [a.clinicianId, a]));
   // Working intervals (minutes) for a clinician on a date; null = we don't know.
   function workingBlocks(clinId: string, dayStr: string): { s: number; e: number }[] | null {
@@ -88,7 +91,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const t = types[0];
     setErr("");
     setDraft({
-      kind: "appointment", clientName: "", clientEmail: "", clinicianId: who !== "all" ? who : (clinicians[0]?.id || ""),
+      kind: "appointment", clientName: "", clientEmail: "", clinicianId: lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || "")),
       typeId: t?.id || null, mode: t?.mode || "in_person", locationOrLink: "", status: "booked",
       insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "",
       capacity: t?.capacity || 1, attendees: [],
@@ -195,7 +198,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
-        {!readOnly && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
+        {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
       </div>
 
       <div className="cal-gridwrap">
@@ -215,10 +218,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               <div key={day} className={`cal-col ${isToday ? "today" : ""}`}>
                 <div className="cal-colhead"><b>{DOW[weekdayMon(day)]}</b> {new Date(Date.UTC(y, m - 1, d)).getUTCDate()}</div>
                 <div className="cal-slots"
-                  onDragOver={(e) => { if (!readOnly) e.preventDefault(); }}
-                  onDrop={(e) => { if (!readOnly) onDrop(e, day); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => onDrop(e, day)}
                   onClick={(e) => {
-                  if (readOnly) return;
+                  if (!canCreate) return;
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                   const min = DAY_START * 60 + Math.floor(((e.clientY - rect.top) / HOUR) * 60 / 15) * 15;
                   openNew(day, Math.max(DAY_START * 60, Math.min(min, (DAY_END - 1) * 60)));
@@ -235,8 +238,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const color = a.kind === "block" ? "#8a929a" : (t?.color || "#2f8e93");
                     return (
                       <div key={a.id} className={`cal-appt st-${a.status}`} style={{ top, height, left: `${left}%`, width: `calc(${width}% - 3px)`, borderLeftColor: color }}
-                        draggable={!readOnly} onDragStart={(ev) => { if (readOnly) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
-                        onClick={(ev) => { ev.stopPropagation(); if (readOnly) setViewAppt(a); else openEdit(a); }}>
+                        draggable={canEdit(a)} onDragStart={(ev) => { if (!canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
+                        onClick={(ev) => { ev.stopPropagation(); if (canEdit(a)) openEdit(a); else setViewAppt(a); }}>
                         <div className="cal-appt-t">{label12(s)}</div>
                         <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : (a.capacity > 1 ? `${(t?.name || "Group")} 👥` : a.clientName)}</div>
                         {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{a.capacity > 1 ? `${(a.attendees || []).length}/${a.capacity} seats` : (t?.name || "Visit")}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
@@ -298,9 +301,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               )}
 
               <label className="cal-f"><span>Clinician</span>
-                <select value={draft.clinicianId || ""} onChange={(e) => setDraft({ ...draft, clinicianId: e.target.value })}>
-                  {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                {canEditAll ? (
+                  <select value={draft.clinicianId || ""} onChange={(e) => setDraft({ ...draft, clinicianId: e.target.value })}>
+                    {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                ) : (
+                  <input value={clinName(draft.clinicianId || lockedClinicianId || "")} readOnly disabled />
+                )}
               </label>
               <label className="cal-f"><span>Date</span><input type="date" value={draft._date || ""} onChange={(e) => setDraft({ ...draft, _date: e.target.value })} /></label>
               <label className="cal-f"><span>Start</span><input type="time" value={hhmm(draft._startMin || 540)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); setDraft({ ...draft, _startMin: h * 60 + m }); }} /></label>

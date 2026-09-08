@@ -42,7 +42,7 @@ export default async function SchedulePage() {
       availabilities={avails.map((a) => ({ clinicianId: a.clinicianId, weekly: a.weekly, overrides: a.overrides }))}
       todayCayman={today}
       initial={appts}
-      readOnly
+      canEditAll={all}
       lockedClinicianId={all ? null : me.id}
     />
   );

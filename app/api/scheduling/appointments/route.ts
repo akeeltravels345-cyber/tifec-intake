@@ -3,23 +3,16 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom,
+  createRecurring, deleteSeriesFrom, getAppointment,
 } from "@/lib/scheduling";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 
 export const dynamic = "force-dynamic";
 
-// Writes stay admin-only (prototype). Reads are scoped: a treating clinician
-// sees only their own agenda; the owner and Donnet O'Connor see everyone.
+// Reads and writes are scoped: a treating clinician sees and edits only their
+// own agenda; the owner, Donnet O'Connor and the admin see and edit everyone.
 const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
 const isTreating = (c: Clinician) => !c.intakeHidden && c.contact !== "biller" && c.contact !== "admin";
-
-async function requireAdmin() {
-  const user = await getBillingUser();
-  if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (!isSystemAdmin(user.clinician)) return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
-  return { user };
-}
 
 export async function GET(req: Request) {
   const user = await getBillingUser();
@@ -39,21 +32,33 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { user, error } = await requireAdmin();
-  if (error) return error;
+  const user = await getBillingUser();
+  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const me = user.clinician;
+  const all = seesAll(me);
+  if (!all && !isTreating(me)) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
   const action = String(body.action || "");
 
+  // A treating clinician may only touch their own appointments.
+  async function ownsTarget(id: string): Promise<boolean> {
+    if (all) return true;
+    const existing = await getAppointment(id);
+    return !!existing && existing.clinicianId === me.id;
+  }
+
   try {
     if (action === "create") {
-      if (!body.clinicianId) return NextResponse.json({ error: "Pick a clinician." }, { status: 400 });
+      // Clinicians are forced onto their own id; owner/Donnet/admin may pick anyone.
+      const clinicianId = all ? String(body.clinicianId || "") : me.id;
+      if (!clinicianId) return NextResponse.json({ error: "Pick a clinician." }, { status: 400 });
       if (!body.startAt || !body.endAt) return NextResponse.json({ error: "When is it?" }, { status: 400 });
       if (body.kind !== "block" && !String(body.clientName || "").trim()) {
         return NextResponse.json({ error: "Who is it for?" }, { status: 400 });
       }
-      const base = { ...body, createdBy: user.clinician.id, source: "staff" } as Record<string, unknown>;
+      const base = { ...body, clinicianId, createdBy: me.id, source: "staff" } as Record<string, unknown>;
       delete base.repeatEveryDays; delete base.repeatCount;
       const everyDays = Number(body.repeatEveryDays) || 0;
       const count = Number(body.repeatCount) || 1;
@@ -66,11 +71,17 @@ export async function POST(req: Request) {
     }
 
     if (action === "series:removeFrom") {
+      // Bulk series delete stays with the schedule owners only.
+      if (!all) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
       const removed = await deleteSeriesFrom(String(body.seriesId), String(body.fromStartAt));
       return NextResponse.json({ ok: true, removed });
     }
     if (action === "update" || action === "status") {
-      const appt = await updateAppointment(String(body.id), body as never);
+      const id = String(body.id);
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      // A clinician can't reassign their appointment to someone else.
+      const patch = all ? body : { ...body, clinicianId: me.id };
+      const appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
       // Seen -> billing session, only if the admin turned the bridge on.
       let billingSessionId: string | null = appt.billingSessionId;
@@ -80,7 +91,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, appointment: { ...appt, billingSessionId } });
     }
     if (action === "delete") {
-      await deleteAppointment(String(body.id));
+      const id = String(body.id);
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      await deleteAppointment(id);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });
