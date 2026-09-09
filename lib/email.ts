@@ -338,3 +338,149 @@ export async function sendTeamEmail(args: TeamEmailArgs): Promise<{ sent: boolea
     return { sent: false, reason: "send failed" };
   }
 }
+
+/** Generic client-facing email (used by the scheduler for confirmations,
+ *  reminders, reschedule/cancel notices). Dev-safe: logs instead of sending when
+ *  SMTP isn't configured, so nothing goes out in local dev. */
+export async function sendClientEmail(to: string, subject: string, text: string): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    if (!process.env.SMTP_HOST) {
+      console.log(`[email:dev] would email ${to} — "${subject}"`);
+      return { sent: false, reason: "SMTP not configured (dev mode)" };
+    }
+    await transport().sendMail({
+      from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+      to, subject, text,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Client email failed:", err);
+    return { sent: false, reason: "send failed" };
+  }
+}
+
+// ---- Client-facing invoice email -------------------------------------------
+
+const invMoney = (n: number) => `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export interface InvoiceEmailArgs {
+  to: string;                 // client's email
+  clientName: string;         // full name, for the greeting
+  practiceName: string;       // e.g. "TIFEC · Essential Care"
+  invoiceNo: string;
+  amountDue: number;
+  message: string;            // the body the sender reviewed (plain text, may have line breaks)
+  replyToName?: string;       // fallback: the sender, if no clinician is resolved
+  replyToEmail?: string;
+  /** The clinician who saw the client — replies go here, and their email shows in
+   *  the footer as the contact (not the billing address). */
+  clinician?: { name?: string; email?: string };
+  /** Practice contact details for the footer (from the Setup provider config). */
+  practice?: { addressLines?: string[]; phone?: string; email?: string; website?: string };
+}
+
+// Brand palette — the same indigo / teal / gold as the app's header stripe.
+const INV_INDIGO = "#2E3192", INV_TEAL = "#2F8E93", INV_GOLD = "#BE8127";
+
+/** The default message shown in the preview before sending — the sender can edit
+ *  it. Kept as a helper so the preview and the actual send start from one text. */
+export function defaultInvoiceMessage(clientFirstName: string, practiceName: string, amountDue: number, invoiceNo: string): string {
+  const hi = clientFirstName ? `Hi ${clientFirstName},` : "Hello,";
+  return [
+    hi,
+    "",
+    "Thank you so much for coming in to see us. We really appreciate you trusting us with your care.",
+    "",
+    `Your invoice is attached (no. ${invoiceNo}) for ${invMoney(amountDue)}. We kindly ask that it's settled before your next visit. If that's tricky right now, that's completely okay; just let your clinician know and they'll be glad to work out a payment plan with you.`,
+    "",
+    "Have any questions? Just hit reply and we'll be right here to help.",
+    "",
+    "Warmly,",
+    practiceName,
+  ].join("\n");
+}
+
+/** Subject + text + HTML for the invoice email (exported so it can be previewed). */
+export function buildInvoiceEmail(args: InvoiceEmailArgs): { subject: string; text: string; html: string } {
+  const subject = `Your invoice from ${args.practiceName}`;
+  const text = args.message;
+  const bodyHtml = escapeHtml(args.message).replace(/\n/g, "<br>");
+
+  // Hotlink the logo from the app's public URL (no attachment). Falls back to the
+  // practice name as text if APP_URL isn't set or the image can't load.
+  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
+  const logoUrl = appUrl ? `${appUrl}/tifec-logo.png` : "";
+  const header = logoUrl
+    ? `<img src="${logoUrl}" alt="${escapeHtml(args.practiceName)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
+    : `<div style="font-size:20px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.practiceName)}</div>`;
+
+  const addressLine = (args.practice?.addressLines ?? []).map(escapeHtml).join(", ");
+  const clinicianEmail = args.clinician?.email;
+  // Contact row: phone + website. The billing email is only shown as a fallback
+  // when there's no clinician email to point the client at.
+  const contactLine = [args.practice?.phone, clinicianEmail ? undefined : args.practice?.email, args.practice?.website]
+    .filter(Boolean).map((s) => escapeHtml(String(s))).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+  const clinicianLine = clinicianEmail
+    ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.7;margin-top:6px;">Questions? Contact ${escapeHtml(args.clinician?.name ?? "your clinician")} at <a href="mailto:${escapeHtml(clinicianEmail)}" style="color:${INV_INDIGO};text-decoration:none;font-weight:600;">${escapeHtml(clinicianEmail)}</a></div>`
+    : "";
+
+  // Table-based, inline-styled layout for mail-client compatibility. The stripe
+  // and amount carry the brand; the gradient degrades to solid indigo in Outlook.
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${BRAND_CREAM};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CREAM};padding:30px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND_CHARCOAL};">
+        <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td align="center" style="padding:32px 40px 0;">${header}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 0;">
+          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${BRAND_MUTED};">Invoice ${escapeHtml(args.invoiceNo)}</div>
+          <div style="font-size:34px;font-weight:700;color:${INV_INDIGO};margin:7px 0 3px;">${invMoney(args.amountDue)}</div>
+          <div style="font-size:12.5px;color:${BRAND_MUTED};">due before your next visit</div>
+        </td></tr>
+        <tr><td style="padding:22px 40px 0;"><div style="border-top:1px solid ${BRAND_LINE};font-size:0;line-height:0;">&nbsp;</div></td></tr>
+        <tr><td style="padding:22px 40px 26px;font-size:15px;line-height:1.7;color:${BRAND_CHARCOAL};">${bodyHtml}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 26px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};">
+          <div style="font-size:13.5px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:5px;">${escapeHtml(args.practiceName)}</div>
+          ${addressLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${addressLine}</div>` : ""}
+          ${contactLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${contactLine}</div>` : ""}
+          ${clinicianLine}
+          <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;margin-top:9px;">This email and its attachment are confidential and intended only for the named client.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  return { subject, text, html };
+}
+
+/** Send an invoice PDF to a client. `pdf` is the raw bytes; it's attached as
+ *  Invoice-<no>.pdf. Replies go to the clinician/biller who sent it. */
+export async function sendInvoiceEmail(args: InvoiceEmailArgs & { pdf: Uint8Array }): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    const { subject, text, html } = buildInvoiceEmail(args);
+    if (!process.env.SMTP_HOST) {
+      console.log(`[email:dev] would email invoice ${args.invoiceNo} to ${args.to} — "${subject}"`);
+      return { sent: false, reason: "SMTP not configured (dev mode)" };
+    }
+    // Only the invoice PDF is attached; the logo is hotlinked, not attached.
+    const attachments = [
+      { filename: `Invoice-${args.invoiceNo}.pdf`, content: Buffer.from(args.pdf), contentType: "application/pdf" },
+    ];
+    // Replies go to the clinician who saw the client, not the billing mailbox.
+    const replyEmail = args.clinician?.email || args.replyToEmail;
+    const replyName = args.clinician?.email ? (args.clinician?.name || "") : (args.replyToName || "");
+    await transport().sendMail({
+      from: { name: args.practiceName || FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+      to: args.to,
+      replyTo: replyEmail ? { name: replyName, address: replyEmail } : undefined,
+      subject, text, html,
+      attachments,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Invoice email failed:", err);
+    return { sent: false, reason: "send failed" };
+  }
+}

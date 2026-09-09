@@ -773,6 +773,18 @@ export default function ClientDetail({
                         <td>
                           <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
                           {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date — this won't be paid">⚠ after referral</span>}
+                          {(() => {
+                            // What the client owes on this specific visit: the full fee
+                            // for a self-pay visit, or just the outstanding co-pay for an
+                            // insured one. When there's something owed, offer a one-visit
+                            // invoice PDF (that page can also email it to the client).
+                            const owedCopay = Math.max(0, (a.copayDue || 0) - (a.copay || 0));
+                            if (a.insurerId && owedCopay <= 0) return null;
+                            const href = a.insurerId
+                              ? `/billing/clients/${id}/invoice?type=copay&sessions=${a.id}`
+                              : `/billing/clients/${id}/invoice?sessions=${a.id}`;
+                            return <a className="cd-invlink" href={href} title={a.insurerId ? "Invoice the outstanding co-pay for this visit" : "Invoice this self-pay visit"}>Invoice</a>;
+                          })()}
                         </td>
                         {canManageCharges && (
                           <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>

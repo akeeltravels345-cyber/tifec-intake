@@ -23,7 +23,6 @@ export default function Invoice({ inv, printedAt }: { inv: InvoiceData; printedA
           <div className="inv-meta">
             <div><span>No.</span><span>{inv.number}</span></div>
             <div><span>Issued</span><span>{inv.issueDate}</span></div>
-            {inv.dueDate && <div><span>Due</span><span>{inv.dueDate}</span></div>}
           </div>
         </div>
       </header>
@@ -62,7 +61,7 @@ export default function Invoice({ inv, printedAt }: { inv: InvoiceData; printedA
 
       <section className="inv-notes">
         {inv.managingProvider && <div className="inv-mp">Managing provider: {inv.managingProvider}</div>}
-        <div>Please settle this invoice within 30 days{inv.dueDate ? `, by ${inv.dueDate}` : ""}. Thank you for trusting us with your care.</div>
+        <div>Please settle this invoice before your next visit. If you need support, speak with your clinician about a payment plan. Thank you for trusting us with your care.</div>
       </section>
 
       <footer className="inv-pagefoot">
