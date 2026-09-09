@@ -34,6 +34,12 @@ const nextConfig = {
   // pdf-parse (and its pdfjs dependency) must run as a real Node module, not be
   // bundled — bundling breaks its worker/module resolution on the server.
   serverExternalPackages: ["pdf-parse"],
+  // The invoice-email route reads public/tifec-mark.png from disk to stamp the
+  // logo on the emailed PDF. Vercel doesn't bundle public/ into a function by
+  // default, so trace the file into any billing route that generates a PDF.
+  outputFileTracingIncludes: {
+    "/api/billing/**": ["./public/tifec-mark.png"],
+  },
   // Pin the workspace root so Next doesn't get confused by other lockfiles
   // that may exist higher up in the home directory.
   turbopack: {
