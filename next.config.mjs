@@ -38,7 +38,7 @@ const nextConfig = {
   // logo on the emailed PDF. Vercel doesn't bundle public/ into a function by
   // default, so trace the file into any billing route that generates a PDF.
   outputFileTracingIncludes: {
-    "/api/billing/**": ["./public/tifec-mark.png"],
+    "/api/billing/**": ["./public/tifec-mark.png", "./public/tifec-logo.png"],
   },
   // Pin the workspace root so Next doesn't get confused by other lockfiles
   // that may exist higher up in the home directory.

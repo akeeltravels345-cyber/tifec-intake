@@ -12,6 +12,8 @@
 // answers and NO client name - only a secure link. PHI stays in the encrypted DB.
 
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
 
 // ---- Branding (edit these to re-brand the notification email) --------------
 const PRACTICE_NAME = "The Institute for Essential Care";
@@ -377,10 +379,24 @@ export interface InvoiceEmailArgs {
   clinician?: { name?: string; email?: string };
   /** Practice contact details for the footer (from the Setup provider config). */
   practice?: { addressLines?: string[]; phone?: string; email?: string; website?: string };
+  /** Content-ID of the logo, set by the sender when it's embedded inline. */
+  logoCid?: string;
 }
 
 // Brand palette — the same indigo / teal / gold as the app's header stripe.
 const INV_INDIGO = "#2E3192", INV_TEAL = "#2F8E93", INV_GOLD = "#BE8127";
+
+// The logo is embedded INLINE (as a CID attachment), not hotlinked, so it renders
+// in the email body in every client with no dependency on a live URL or on the
+// recipient allowing remote images. Read once and cache.
+let cachedInvoiceLogo: Buffer | null | undefined;
+export function invoiceEmailLogo(): Buffer | null {
+  if (cachedInvoiceLogo !== undefined) return cachedInvoiceLogo;
+  try { cachedInvoiceLogo = fs.readFileSync(path.join(process.cwd(), "public", "tifec-logo.png")); }
+  catch { cachedInvoiceLogo = null; }
+  return cachedInvoiceLogo;
+}
+export const INVOICE_LOGO_CID = "tifec-invoice-logo";
 
 /** The default message shown in the preview before sending — the sender can edit
  *  it. Kept as a helper so the preview and the actual send start from one text. */
@@ -406,12 +422,11 @@ export function buildInvoiceEmail(args: InvoiceEmailArgs): { subject: string; te
   const text = args.message;
   const bodyHtml = escapeHtml(args.message).replace(/\n/g, "<br>");
 
-  // Hotlink the logo from the app's public URL (no attachment). Falls back to the
-  // practice name as text if APP_URL isn't set or the image can't load.
-  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
-  const logoUrl = appUrl ? `${appUrl}/tifec-logo.png` : "";
-  const header = logoUrl
-    ? `<img src="${logoUrl}" alt="${escapeHtml(args.practiceName)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
+  // The logo is embedded inline via its Content-ID (see sendInvoiceEmail), so it
+  // renders in the body of every client. Falls back to the practice name as text
+  // only when no logo is embedded (e.g. the preview, which shows text anyway).
+  const header = args.logoCid
+    ? `<img src="cid:${args.logoCid}" alt="${escapeHtml(args.practiceName)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
     : `<div style="font-size:20px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.practiceName)}</div>`;
 
   const addressLine = (args.practice?.addressLines ?? []).map(escapeHtml).join(", ");
@@ -459,15 +474,21 @@ export function buildInvoiceEmail(args: InvoiceEmailArgs): { subject: string; te
  *  Invoice-<no>.pdf. Replies go to the clinician/biller who sent it. */
 export async function sendInvoiceEmail(args: InvoiceEmailArgs & { pdf: Uint8Array }): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const { subject, text, html } = buildInvoiceEmail(args);
+    // Embed the logo inline (Content-Disposition: inline) so it renders in the
+    // email body, not as a downloadable attachment.
+    const logo = invoiceEmailLogo();
+    const logoCid = logo ? INVOICE_LOGO_CID : undefined;
+    const { subject, text, html } = buildInvoiceEmail({ ...args, logoCid });
     if (!process.env.SMTP_HOST) {
       console.log(`[email:dev] would email invoice ${args.invoiceNo} to ${args.to} — "${subject}"`);
       return { sent: false, reason: "SMTP not configured (dev mode)" };
     }
-    // Only the invoice PDF is attached; the logo is hotlinked, not attached.
-    const attachments = [
+    const attachments: nodemailer.SendMailOptions["attachments"] = [
       { filename: `Invoice-${args.invoiceNo}.pdf`, content: Buffer.from(args.pdf), contentType: "application/pdf" },
     ];
+    if (logo && logoCid) {
+      attachments.push({ filename: "logo.png", content: logo, cid: logoCid, contentType: "image/png", contentDisposition: "inline" });
+    }
     // Replies go to the clinician who saw the client, not the billing mailbox.
     const replyEmail = args.clinician?.email || args.replyToEmail;
     const replyName = args.clinician?.email ? (args.clinician?.name || "") : (args.replyToName || "");
