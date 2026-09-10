@@ -18,6 +18,24 @@ export default function OutstandingCopays({ rows, today, showClinician, canToggl
   const shown = q.trim() ? rows.filter((r) => r.client.toLowerCase().includes(q.toLowerCase())) : rows;
   const total = Math.round((rows.reduce((t, r) => t + r.owed, 0) + Number.EPSILON) * 100) / 100;
 
+  // Multi-select: tick several charges for ONE client and bill them on a single
+  // invoice. An invoice is per-client, so selecting a different client's charge
+  // starts a fresh selection for that client.
+  const [selected, setSelected] = useState<string[]>([]);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const selClientId = selected.length ? byId.get(selected[0])?.clientId ?? null : null;
+  const selClientName = selected.length ? byId.get(selected[0])?.client ?? "" : "";
+  const selTotal = Math.round((selected.reduce((t, id) => t + (byId.get(id)?.owed || 0), 0) + Number.EPSILON) * 100) / 100;
+  const canSelect = (r: CopayRow) => !!r.clientId && (!selClientId || r.clientId === selClientId);
+  function toggle(r: CopayRow) {
+    if (!r.clientId) return;
+    setSelected((prev) => {
+      if (prev.includes(r.id)) return prev.filter((x) => x !== r.id);
+      const cur = prev.length ? byId.get(prev[0])?.clientId : null;
+      return cur && cur !== r.clientId ? [r.id] : [...prev, r.id]; // switching client resets the selection
+    });
+  }
+
   async function collect(id: string) {
     setBusy(id); setErr("");
     try {
@@ -57,15 +75,24 @@ export default function OutstandingCopays({ rows, today, showClinician, canToggl
             <input className="cp-search" placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           {err && <p className="ls-err" style={{ margin: "0 0 10px" }}>{err}</p>}
+          {selected.length > 0 && selClientId && (
+            <div className="cp-selbar">
+              <span className="cp-selinfo"><b>{selected.length}</b> co-pay{selected.length > 1 ? "s" : ""} for <b>{selClientName}</b> · {money(selTotal)}</span>
+              <span style={{ flex: 1 }} />
+              <button type="button" className="cp-selclear" onClick={() => setSelected([])}>Clear</button>
+              <Link href={`/billing/clients/${selClientId}/invoice?type=copay&sessions=${selected.join(",")}`} className="cp-invoice">Create one invoice</Link>
+            </div>
+          )}
           <div className="su-tblwrap"><table className="su-tbl cp-tbl">
             <thead>
-              <tr><th>Client</th>{showClinician && <th>Clinician</th>}<th>Visit date</th><th className="num">Co-pay due</th><th></th></tr>
+              <tr><th className="cp-selcol"></th><th>Client</th>{showClinician && <th>Clinician</th>}<th>Visit date</th><th className="num">Co-pay due</th><th></th></tr>
             </thead>
             <tbody>
               {shown.length === 0 ? (
-                <tr><td colSpan={showClinician ? 5 : 4} className="su-expempty">No client matches &ldquo;{q}&rdquo;.</td></tr>
+                <tr><td colSpan={showClinician ? 6 : 5} className="su-expempty">No client matches &ldquo;{q}&rdquo;.</td></tr>
               ) : shown.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} className={selected.includes(r.id) ? "cp-selrow" : ""}>
+                  <td className="cp-selcol"><input type="checkbox" checked={selected.includes(r.id)} disabled={!canSelect(r)} onChange={() => toggle(r)} title={r.clientId ? (canSelect(r) ? "Select this co-pay" : "Clear the selection to invoice a different client") : "No client record to invoice"} /></td>
                   <td className="nm">{r.clientId ? <Link href={`/billing/clients/${r.clientId}`} className="bal-name">{r.client}</Link> : r.client}</td>
                   {showClinician && <td>{r.clinician}</td>}
                   <td>{r.date}</td>
