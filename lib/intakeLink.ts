@@ -137,7 +137,7 @@ export async function listIntakeClientsForClinician(clinicianId: string): Promis
  *  (Email has its own resolver, findIntakeEmailsForClient, that handles couples
  *  forms.) Metadata only in spirit: these are the client's own contact fields,
  *  not clinical answers. */
-export interface IntakeContact { dob?: string; sex?: "M" | "F" | "U"; phone?: string; address?: string; conflicts: string[] }
+export interface IntakeContact { dob?: string; sex?: "M" | "F" | "U"; phone?: string; address?: string; conflicts: string[]; matched: boolean }
 const pickAnswer = (a: Record<string, unknown>, keys: string[]): string | undefined => {
   for (const k of keys) { const v = a[k]; if (v != null && String(v).trim()) return String(v).trim(); }
   return undefined;
@@ -148,9 +148,10 @@ const asSex = (g: unknown): "M" | "F" | undefined => {
 };
 export async function findIntakeContactForClient(first: string, last: string, dob?: string): Promise<IntakeContact> {
   let rows;
-  try { rows = await listSubmissions(); } catch { return { conflicts: [] }; }
+  try { rows = await listSubmissions(); } catch { return { conflicts: [], matched: false }; }
   const target = norm(`${first} ${last}`), firstN = norm(first), lastN = norm(last);
   const sets = { dob: new Set<string>(), sex: new Set<string>(), phone: new Set<string>(), address: new Set<string>() };
+  let matched = false;
   for (const r of rows) {
     let a: Record<string, unknown>;
     try { a = JSON.parse(decrypt(r.answers_encrypted)) as Record<string, unknown>; } catch { continue; }
@@ -163,6 +164,7 @@ export async function findIntakeContactForClient(first: string, last: string, do
       return false;
     });
     if (!hit) continue;
+    matched = true;
     const d = pickAnswer(a, ["dob"]); if (d) sets.dob.add(d);
     const sx = asSex(a.gender); if (sx) sets.sex.add(sx);
     const ph = pickAnswer(a, ["cell_phone", "home_phone", "work_phone"]); if (ph) sets.phone.add(ph);
@@ -180,5 +182,6 @@ export async function findIntakeContactForClient(first: string, last: string, do
     phone: one(sets.phone, "phone"),
     address: one(sets.address, "address"),
     conflicts,
+    matched,
   };
 }

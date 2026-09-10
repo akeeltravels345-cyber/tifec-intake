@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface Result {
   apply: boolean;
-  totals: { clients: number; matched: number; ambiguous: number; skipped: number; updated: number };
+  totals: { clients: number; matched: number; ambiguous: number; alreadyComplete: number; noMatch: number; updated: number };
   proposed: { name: string; fields: string[] }[];
   ambiguous: { name: string; note: string }[];
 }
@@ -64,7 +64,8 @@ export default function ImportIntakeEmails() {
             <span><b>{t.clients}</b> clients</span>
             <span><b>{applied ? t.updated : t.matched}</b> {applied ? "updated" : "to fill"}</span>
             <span><b>{t.ambiguous}</b> need a look</span>
-            <span><b>{t.skipped}</b> nothing to fill</span>
+            <span><b>{t.alreadyComplete}</b> already complete</span>
+            <span><b>{t.noMatch}</b> no intake match</span>
           </div>
 
           {applied ? (

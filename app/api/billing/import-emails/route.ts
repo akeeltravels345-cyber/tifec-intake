@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const apply = body.apply === true;
 
   const clients = await listAllClients();
-  let updated = 0, skipped = 0;
+  let updated = 0, alreadyComplete = 0, noMatch = 0;
   const proposed: { name: string; fields: string[] }[] = [];
   const ambiguous: { name: string; note: string }[] = [];
 
@@ -61,8 +61,10 @@ export async function POST(req: Request) {
         const ok = await updateClient(c.id, c.insurerId, { ...p, ...fill });
         if (ok) { updated++; await logChange(me.id, `client:${c.id}`, "edit", `imported ${fields.join(", ")} from intake`); }
       }
+    } else if (contact.matched) {
+      alreadyComplete++;   // has an intake form, but nothing empty to fill
     } else {
-      skipped++;
+      noMatch++;           // no intake form matches this client
     }
     if (conflicts.length > 0) ambiguous.push({ name: `${c.first} ${c.last}`, note: conflicts.join(", ") });
   }
@@ -74,7 +76,8 @@ export async function POST(req: Request) {
       clients: clients.length,
       matched: proposed.length,
       ambiguous: ambiguous.length,
-      skipped,
+      alreadyComplete,
+      noMatch,
       updated,
     },
     proposed: proposed.slice(0, 300),
