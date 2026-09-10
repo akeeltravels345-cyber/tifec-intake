@@ -31,6 +31,7 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
   const [all, cfg] = await Promise.all([listSessions(), getPracticeConfig()]);
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
   const rows = CLINICIANS.map((c, i) => ({ c, m: computeClinicianMonth(all.filter((s: BillingSession) => s.clinicianId === c.id), settingsList[i], year, month, c.intakeHidden ? 0 : cfg.billerCommissionPct) }))
+    .filter(({ c }) => !c.test) // keep the throwaway test account out of billing
     .sort((a, b) => b.m.collected - a.m.collected);
 
   const totalPayout = rows.reduce((t, r) => t + r.m.payout, 0);

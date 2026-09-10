@@ -73,7 +73,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     // owner's own menu — never the builder view.
     isAdmin: me.contact === "admin",
     // Treating clinicians see their own agenda; the owner and Donnet see all.
-    canSchedule: isSystemAdmin(me) || (!me.intakeHidden && me.contact !== "biller"),
+    canSchedule: isSystemAdmin(me) || !!me.test || (!me.intakeHidden && me.contact !== "biller"),
     meId: me.id,
     name: me.name,
     avatar,

@@ -59,6 +59,11 @@ export interface Clinician {
   /** Reachable in the team area as this contact. Clinicians message and assign
    *  tickets to a ROLE, so this is what puts a real person behind it. */
   contact?: ContactRole;
+  /** A throwaway TEST account. Kept out of billing, booking, intake and client
+   *  assignment (it is also `intakeHidden`), but allowed into the schedule +
+   *  video-connection screens so the flow can be exercised. Remove before real
+   *  use. */
+  test?: boolean;
 }
 
 // TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.
@@ -368,6 +373,19 @@ export const CLINICIANS: Clinician[] = [
     extraSections: [],
     admin: true,
     intakeHidden: true, // admin-only account - not a clinician clients can be assigned to
+  },
+  // TEST clinician for exercising the schedule + video-connection flow.
+  // Hidden from billing / booking / intake / client assignment; only the
+  // schedule and video screens let it in. Remove before go-live.
+  {
+    id: "test-clinician",
+    name: "Test Clinician",
+    credentials: "Test account",
+    email: "test-clinician@caymanessentialcare.com",
+    forms: ["individual"],
+    extraSections: [],
+    intakeHidden: true, // keeps it out of booking, intake, client lists and billing rosters
+    test: true,         // opens the schedule + video-connection gates for it
   },
 ];
 

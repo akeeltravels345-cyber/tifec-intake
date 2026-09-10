@@ -7,7 +7,7 @@ import { exchangeCode, saveConnection, type VideoProviderId } from "@/lib/videoC
 export const dynamic = "force-dynamic";
 
 const canConnect = (c: Clinician) =>
-  isSystemAdmin(c) || c.contact === "owner" || (!c.intakeHidden && c.contact !== "biller");
+  isSystemAdmin(c) || c.contact === "owner" || !!c.test || (!c.intakeHidden && c.contact !== "biller");
 const back = (req: Request, params: string) => NextResponse.redirect(new URL(`/schedule/connections?${params}`, req.url));
 
 // OAuth redirect target. Exchanges the code and stores the connection against

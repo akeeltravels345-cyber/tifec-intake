@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 // "My schedule" — each clinician's own agenda. Owner + Donnet see everyone.
 // Open to treating clinicians (and those two); the biller and unsigned are out.
 export const seesAllSchedule = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
-export const isTreatingClinician = (c: Clinician) => !c.intakeHidden && c.contact !== "biller" && c.contact !== "admin";
+export const isTreatingClinician = (c: Clinician) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
 
 export default async function ScheduleLayout({ children }: { children: React.ReactNode }) {
   const user = await getBillingUser();

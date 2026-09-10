@@ -30,7 +30,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const settingsList = await Promise.all(CLINICIANS.map((c) => getClinicianSettings(c.id)));
   const settingsMap = new Map(CLINICIANS.map((c, i) => [c.id, settingsList[i]]));
   const bizFor = (y: number, m: number) =>
-    computeBusinessMonth(CLINICIANS.map((c) => computeClinicianMonth(allSessions.filter((s) => s.clinicianId === c.id), settingsMap.get(c.id)!, y, m, c.intakeHidden ? 0 : cfg.billerCommissionPct)), y, m);
+    computeBusinessMonth(CLINICIANS.filter((c) => !c.test).map((c) => computeClinicianMonth(allSessions.filter((s) => s.clinicianId === c.id), settingsMap.get(c.id)!, y, m, c.intakeHidden ? 0 : cfg.billerCommissionPct)), y, m);
 
   const biz = bizFor(year, month);
   const prev = bizFor(prevY, prevM);

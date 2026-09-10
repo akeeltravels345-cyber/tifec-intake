@@ -26,7 +26,7 @@ async function attachVideo(appt: Appointment): Promise<Appointment> {
 // Reads and writes are scoped: a treating clinician sees and edits only their
 // own agenda; the owner, Donnet O'Connor and the admin see and edit everyone.
 const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
-const isTreating = (c: Clinician) => !c.intakeHidden && c.contact !== "biller" && c.contact !== "admin";
+const isTreating = (c: Clinician) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
 
 export async function GET(req: Request) {
   const user = await getBillingUser();

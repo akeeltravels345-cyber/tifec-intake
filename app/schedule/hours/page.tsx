@@ -17,7 +17,8 @@ export default async function MyHoursPage() {
   const all = seesAllSchedule(me);
   if (!all && !isTreatingClinician(me)) redirect("/today");
 
-  const visible = all ? bookable : bookable.filter((c) => c.id === me.id);
+  const self = CLINICIANS.find((c) => c.id === me.id);
+  const visible = all ? bookable : (self ? [self] : []);
   const selectedId = visible.find((c) => c.id === me.id)?.id ?? visible[0]?.id ?? "";
   const initial = selectedId ? await getAvailability(selectedId)
     : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, updatedAt: "" };

@@ -23,7 +23,10 @@ export default async function SchedulePage() {
   if (!all && !isTreatingClinician(me)) redirect("/today");
 
   // Who the viewer can see: everyone (owner/Donnet/admin) or just themselves.
-  const visible = all ? bookable : bookable.filter((c) => c.id === me.id);
+  // A treating clinician sees themselves even if they're not in the bookable
+  // list (e.g. the hidden test account).
+  const self = CLINICIANS.find((c) => c.id === me.id);
+  const visible = all ? bookable : (self ? [self] : []);
   const today = caymanToday();
   const monday = mondayOf(today);
 

@@ -7,7 +7,7 @@ import { authorizeUrl, oauthConfigured, type VideoProviderId } from "@/lib/video
 export const dynamic = "force-dynamic";
 
 const canConnect = (c: Clinician) =>
-  isSystemAdmin(c) || c.contact === "owner" || (!c.intakeHidden && c.contact !== "biller");
+  isSystemAdmin(c) || c.contact === "owner" || !!c.test || (!c.intakeHidden && c.contact !== "biller");
 
 // Kicks off the OAuth flow for the signed-in clinician's OWN account.
 export async function GET(req: Request) {

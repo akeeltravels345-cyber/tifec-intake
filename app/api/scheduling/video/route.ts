@@ -6,7 +6,7 @@ import { listConnections, setPreferred, deleteConnection, type VideoProviderId }
 export const dynamic = "force-dynamic";
 
 const canConnect = (c: Clinician) =>
-  isSystemAdmin(c) || c.contact === "owner" || (!c.intakeHidden && c.contact !== "biller");
+  isSystemAdmin(c) || c.contact === "owner" || !!c.test || (!c.intakeHidden && c.contact !== "biller");
 const asProvider = (v: unknown): VideoProviderId | null => (v === "zoom" || v === "google" ? v : null);
 
 // Manage the signed-in clinician's OWN video connections (choose default, remove).
