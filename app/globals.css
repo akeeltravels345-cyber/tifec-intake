@@ -4338,3 +4338,9 @@ body:has(.bk-page) .brandbar { display: none; }
 .lgl a { color: #256e72; }
 .lgl .lgl-note { background: #f6f4ee; border: 1px solid #e6e0d2; border-radius: 10px; padding: 12px 15px; font-size: 13.5px; color: #6b6b66; margin: 26px 0 0; }
 .lgl-foot { margin-top: 40px; padding-top: 18px; border-top: 1px solid #eae5da; font-size: 13px; color: #8a877f; }
+
+/* Privacy / Terms footer links */
+.auth-foot { text-align: center; margin-top: 18px; font-size: 12.5px; color: #8a877f; display: flex; gap: 8px; justify-content: center; align-items: center; }
+.auth-foot a { color: #6b7576; text-decoration: none; }
+.auth-foot a:hover { text-decoration: underline; }
+.bk-foot a { color: inherit; text-decoration: underline; opacity: .85; }
