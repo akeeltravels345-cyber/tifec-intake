@@ -336,7 +336,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       {(["in_person", "virtual", "either"] as AppointmentMode[]).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
                     </select>
                   </label>
-                  <label className="cal-f grow"><span>{draft.mode === "virtual" ? "Video link" : "Room / location"}</span><input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder={draft.mode === "virtual" ? "Zoom / Meet link" : "Room"} /></label>
+                  <label className="cal-f grow"><span>{draft.mode === "virtual" ? "Video link (optional)" : "Room / location"}</span><input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder={draft.mode === "virtual" ? "Leave blank to auto-create a Zoom/Meet link" : "Room"} /></label>
                   <label className="cal-f"><span>Payment path</span>
                     <select value={draft.insurancePath || "self_pay"} onChange={(e) => setDraft({ ...draft, insurancePath: e.target.value as "self_pay" | "insurance" })}>
                       <option value="self_pay">Self-pay</option><option value="insurance">Insurance</option>
