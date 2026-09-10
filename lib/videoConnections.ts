@@ -115,7 +115,8 @@ export async function deleteConnection(clinicianId: string, provider: VideoProvi
 // ---------------------------------------------------------------------------
 // OAuth — authorize URLs, code exchange, token refresh
 // ---------------------------------------------------------------------------
-const ZOOM_SCOPE = "meeting:write:meeting meeting:write"; // both new + legacy scope strings
+// Granular scopes: create a meeting (write) + cancel it on delete (delete).
+const ZOOM_SCOPE = "meeting:write:meeting meeting:delete:meeting";
 const GOOGLE_SCOPE = "openid email https://www.googleapis.com/auth/calendar.events";
 
 export function authorizeUrl(provider: VideoProviderId, redirectUri: string, state: string): string {
