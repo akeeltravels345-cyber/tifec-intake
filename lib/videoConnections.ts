@@ -50,7 +50,8 @@ function rowToConn(r: Record<string, unknown>): VideoConnection {
     clinicianId: String(r.clinician_id), provider: (r.provider === "google" ? "google" : "zoom"),
     accessToken: String(r.access_token || ""), refreshToken: String(r.refresh_token || ""),
     expiresAt: Number(r.expires_at) || 0, accountEmail: String(r.account_email || ""),
-    preferred: !!r.preferred, connectedAt: r.connected_at ? String(r.connected_at) : new Date().toISOString(),
+    // Postgres returns timestamptz as a Date; keep it ISO so it re-inserts cleanly.
+    preferred: !!r.preferred, connectedAt: r.connected_at instanceof Date ? r.connected_at.toISOString() : (r.connected_at ? String(r.connected_at) : new Date().toISOString()),
   };
 }
 
