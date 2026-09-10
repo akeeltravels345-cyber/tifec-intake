@@ -192,7 +192,9 @@ async function validAccessToken(conn: VideoConnection): Promise<string> {
 async function zoomCreate(token: string, { topic, startAtISO, durationMin }: MeetingArgs): Promise<string> {
   const res = await fetch("https://api.zoom.us/v2/users/me/meetings", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ topic: topic.slice(0, 200), type: 2, start_time: startAtISO, duration: Math.max(1, Math.round(durationMin)), timezone: "UTC", settings: { join_before_host: true, waiting_room: true } }),
+    // Confidentiality: waiting room on + no join-before-host, so clients wait
+    // until the clinician admits them and nobody is in the room beforehand.
+    body: JSON.stringify({ topic: topic.slice(0, 200), type: 2, start_time: startAtISO, duration: Math.max(1, Math.round(durationMin)), timezone: "UTC", settings: { waiting_room: true, join_before_host: false } }),
   });
   if (!res.ok) throw new Error(`Zoom meeting ${res.status}: ${await res.text()}`);
   const j = await res.json() as { join_url: string };
