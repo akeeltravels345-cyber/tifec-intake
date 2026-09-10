@@ -7,7 +7,7 @@ import {
   type Appointment,
 } from "@/lib/scheduling";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
-import { createVideoLink } from "@/lib/videoConnections";
+import { createVideoLink, cancelVideoLink } from "@/lib/videoConnections";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +98,8 @@ export async function POST(req: Request) {
       const patch = all ? body : { ...body, clinicianId: me.id };
       const appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      // Cancelling frees the Zoom meeting from the clinician's account.
+      if (body.status === "cancelled" && appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink);
       // Seen -> billing session, only if the admin turned the bridge on.
       let billingSessionId: string | null = appt.billingSessionId;
       if (appt.status === "seen" && !appt.billingSessionId) {
@@ -108,6 +110,9 @@ export async function POST(req: Request) {
     if (action === "delete") {
       const id = String(body.id);
       if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      // Cancel the Zoom meeting too, so it isn't orphaned on the clinician's account.
+      const existing = await getAppointment(id);
+      if (existing?.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink);
       await deleteAppointment(id);
       return NextResponse.json({ ok: true });
     }

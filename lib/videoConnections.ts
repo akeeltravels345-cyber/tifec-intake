@@ -230,3 +230,28 @@ export async function createVideoLink(clinicianId: string, args: MeetingArgs): P
     return null;
   }
 }
+
+// The numeric meeting id lives in a Zoom join url, e.g. https://zoom.us/j/1234567890?pwd=...
+function zoomMeetingId(url: string): string | null {
+  const m = (url || "").match(/zoom\.us\/(?:j|wc\/join)\/(\d+)/i);
+  return m ? m[1] : null;
+}
+
+/** Best-effort cancel of the meeting behind a stored link, on the clinician's
+ *  own account, so deleting/cancelling an appointment doesn't orphan the Zoom
+ *  meeting. Only Zoom is handled today (its id is in the join url); other links
+ *  are ignored. Never throws. */
+export async function cancelVideoLink(clinicianId: string, locationOrLink: string): Promise<void> {
+  const id = zoomMeetingId(locationOrLink);
+  if (!id) return;
+  const conn = (await listConnections(clinicianId)).find((c) => c.provider === "zoom");
+  if (!conn) return;
+  try {
+    const token = await validAccessToken(conn);
+    const res = await fetch(`https://api.zoom.us/v2/meetings/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    // 404 = already gone; treat as success.
+    if (!res.ok && res.status !== 404) throw new Error(`Zoom delete ${res.status}: ${await res.text()}`);
+  } catch (e) {
+    console.error(`cancelVideoLink (zoom) failed for ${clinicianId}`, e);
+  }
+}
