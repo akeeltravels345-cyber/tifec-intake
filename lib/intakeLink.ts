@@ -129,3 +129,56 @@ export async function listIntakeClientsForClinician(clinicianId: string): Promis
   }
   return [...seen.values()].sort((x, y) => `${x.last}${x.first}`.localeCompare(`${y.last}${y.first}`));
 }
+
+/** Contact details for a billing client, pulled from their matched intake
+ *  submission(s): date of birth, sex, phone and address. For each field it uses
+ *  the value only when every matched submission agrees; a field with conflicting
+ *  values is left out and named in `conflicts`, so the caller never guesses.
+ *  (Email has its own resolver, findIntakeEmailsForClient, that handles couples
+ *  forms.) Metadata only in spirit: these are the client's own contact fields,
+ *  not clinical answers. */
+export interface IntakeContact { dob?: string; sex?: "M" | "F" | "U"; phone?: string; address?: string; conflicts: string[] }
+const pickAnswer = (a: Record<string, unknown>, keys: string[]): string | undefined => {
+  for (const k of keys) { const v = a[k]; if (v != null && String(v).trim()) return String(v).trim(); }
+  return undefined;
+};
+const asSex = (g: unknown): "M" | "F" | undefined => {
+  const s = norm(String(g ?? "")); if (!s) return undefined;
+  if (s[0] === "m") return "M"; if (s[0] === "f") return "F"; return undefined;
+};
+export async function findIntakeContactForClient(first: string, last: string, dob?: string): Promise<IntakeContact> {
+  let rows;
+  try { rows = await listSubmissions(); } catch { return { conflicts: [] }; }
+  const target = norm(`${first} ${last}`), firstN = norm(first), lastN = norm(last);
+  const sets = { dob: new Set<string>(), sex: new Set<string>(), phone: new Set<string>(), address: new Set<string>() };
+  for (const r of rows) {
+    let a: Record<string, unknown>;
+    try { a = JSON.parse(decrypt(r.answers_encrypted)) as Record<string, unknown>; } catch { continue; }
+    const names = [a.full_name, a.his_name, a.hers_name, a.consent_signature_name].filter(Boolean).map((n) => String(n));
+    const subDob = a.dob ? String(a.dob) : undefined;
+    const hit = names.some((n) => {
+      const nn = norm(n);
+      if (nn === target) return true;
+      if (dob && subDob && dob === subDob && (nn.includes(lastN) || nn.includes(firstN))) return true;
+      return false;
+    });
+    if (!hit) continue;
+    const d = pickAnswer(a, ["dob"]); if (d) sets.dob.add(d);
+    const sx = asSex(a.gender); if (sx) sets.sex.add(sx);
+    const ph = pickAnswer(a, ["cell_phone", "home_phone", "work_phone"]); if (ph) sets.phone.add(ph);
+    const ad = pickAnswer(a, ["address"]); if (ad) sets.address.add(ad);
+  }
+  const conflicts: string[] = [];
+  const one = (s: Set<string>, field: string): string | undefined => {
+    if (s.size === 1) return [...s][0];
+    if (s.size > 1) conflicts.push(field);
+    return undefined;
+  };
+  return {
+    dob: one(sets.dob, "date of birth"),
+    sex: one(sets.sex, "sex") as "M" | "F" | "U" | undefined,
+    phone: one(sets.phone, "phone"),
+    address: one(sets.address, "address"),
+    conflicts,
+  };
+}
