@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   // account (best-effort; never blocks).
   if (mode === "virtual" && !appt.locationOrLink) {
     const link = await createVideoLink(clinicianId, { topic: `TIFEC session - ${name}`, startAtISO: startAt, durationMin: type.durationMin });
-    if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url })) || appt;
+    if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
   }
 
   return NextResponse.json({ ok: true, appointment: { id: appt.id, startAt: appt.startAt, endAt: appt.endAt } });

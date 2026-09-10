@@ -20,7 +20,7 @@ async function attachVideo(appt: Appointment): Promise<Appointment> {
     startAtISO: appt.startAt, durationMin: Math.round((Date.parse(appt.endAt) - Date.parse(appt.startAt)) / 60000),
   });
   if (!link) return appt;
-  return (await updateAppointment(appt.id, { locationOrLink: link.url })) || appt;
+  return (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
 }
 
 // Reads and writes are scoped: a treating clinician sees and edits only their
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       const appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
       // Cancelling frees the Zoom meeting from the clinician's account.
-      if (body.status === "cancelled" && appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink);
+      if (body.status === "cancelled" && appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink, appt.videoEventId || undefined);
       // Seen -> billing session, only if the admin turned the bridge on.
       let billingSessionId: string | null = appt.billingSessionId;
       if (appt.status === "seen" && !appt.billingSessionId) {
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
       // Cancel the Zoom meeting too, so it isn't orphaned on the clinician's account.
       const existing = await getAppointment(id);
-      if (existing?.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink);
+      if (existing?.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink, existing.videoEventId || undefined);
       await deleteAppointment(id);
       return NextResponse.json({ ok: true });
     }

@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   if (action === "cancel") {
     await updateAppointment(id, { status: "cancelled" } as never);
     // Free the Zoom meeting from the clinician's account too.
-    if (a.mode === "virtual" && a.locationOrLink) await cancelVideoLink(a.clinicianId, a.locationOrLink);
+    if (a.mode === "virtual" && a.locationOrLink) await cancelVideoLink(a.clinicianId, a.locationOrLink, a.videoEventId || undefined);
     return NextResponse.json({ ok: true, cancelled: true });
   }
 

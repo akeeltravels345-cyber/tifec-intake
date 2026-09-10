@@ -27,7 +27,7 @@ export interface VideoConnection {
   preferred: boolean;     // which one wins when a clinician has both
   connectedAt: string;
 }
-export interface VideoLink { url: string; provider: VideoProviderId }
+export interface VideoLink { url: string; provider: VideoProviderId; ref: string } // ref = cancellation key (Google event id; "" for Zoom, whose id is in the url)
 interface MeetingArgs { topic: string; startAtISO: string; durationMin: number }
 
 export const PROVIDER_LABEL: Record<VideoProviderId, string> = { zoom: "Zoom", google: "Google Meet" };
@@ -202,7 +202,7 @@ async function zoomCreate(token: string, { topic, startAtISO, durationMin }: Mee
   if (!j.join_url) throw new Error("Zoom returned no join_url");
   return j.join_url;
 }
-async function googleCreate(token: string, { topic, startAtISO, durationMin }: MeetingArgs): Promise<string> {
+async function googleCreate(token: string, { topic, startAtISO, durationMin }: MeetingArgs): Promise<{ url: string; eventId: string }> {
   const end = new Date(Date.parse(startAtISO) + Math.max(1, durationMin) * 60_000).toISOString();
   const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -212,10 +212,10 @@ async function googleCreate(token: string, { topic, startAtISO, durationMin }: M
     }),
   });
   if (!res.ok) throw new Error(`Google event ${res.status}: ${await res.text()}`);
-  const j = await res.json() as { hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] } };
+  const j = await res.json() as { id?: string; hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] } };
   const link = j.hangoutLink || j.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video")?.uri;
   if (!link) throw new Error("Google returned no Meet link");
-  return link;
+  return { url: link, eventId: j.id || "" };
 }
 
 /** Create a meeting link on the clinician's preferred connected account, or null. */
@@ -224,8 +224,9 @@ export async function createVideoLink(clinicianId: string, args: MeetingArgs): P
   if (!conn) return null;
   try {
     const token = await validAccessToken(conn);
-    const url = conn.provider === "zoom" ? await zoomCreate(token, args) : await googleCreate(token, args);
-    return { url, provider: conn.provider };
+    if (conn.provider === "zoom") return { url: await zoomCreate(token, args), provider: "zoom", ref: "" };
+    const g = await googleCreate(token, args);
+    return { url: g.url, provider: "google", ref: g.eventId };
   } catch (e) {
     console.error(`createVideoLink (${conn.provider}) failed for ${clinicianId}`, e);
     return null;
@@ -240,19 +241,23 @@ function zoomMeetingId(url: string): string | null {
 
 /** Best-effort cancel of the meeting behind a stored link, on the clinician's
  *  own account, so deleting/cancelling an appointment doesn't orphan the Zoom
- *  meeting. Only Zoom is handled today (its id is in the join url); other links
- *  are ignored. Never throws. */
-export async function cancelVideoLink(clinicianId: string, locationOrLink: string): Promise<void> {
-  const id = zoomMeetingId(locationOrLink);
-  if (!id) return;
-  const conn = (await listConnections(clinicianId)).find((c) => c.provider === "zoom");
+ *  meeting or Google Calendar event. `ref` is the Google event id (Zoom's id is
+ *  read from the join url). Never throws. */
+export async function cancelVideoLink(clinicianId: string, locationOrLink: string, ref?: string): Promise<void> {
+  const zoomId = zoomMeetingId(locationOrLink);
+  const isMeet = /meet\.google\.com/i.test(locationOrLink || "");
+  const provider: VideoProviderId | null = zoomId ? "zoom" : (isMeet && ref ? "google" : null);
+  if (!provider) return;
+  const conn = (await listConnections(clinicianId)).find((c) => c.provider === provider);
   if (!conn) return;
   try {
     const token = await validAccessToken(conn);
-    const res = await fetch(`https://api.zoom.us/v2/meetings/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-    // 404 = already gone; treat as success.
-    if (!res.ok && res.status !== 404) throw new Error(`Zoom delete ${res.status}: ${await res.text()}`);
+    const res = provider === "zoom"
+      ? await fetch(`https://api.zoom.us/v2/meetings/${zoomId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+      : await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(ref as string)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    // 404 / 410 = already gone; treat as success.
+    if (!res.ok && res.status !== 404 && res.status !== 410) throw new Error(`${provider} cancel ${res.status}: ${await res.text()}`);
   } catch (e) {
-    console.error(`cancelVideoLink (zoom) failed for ${clinicianId}`, e);
+    console.error(`cancelVideoLink (${provider}) failed for ${clinicianId}`, e);
   }
 }

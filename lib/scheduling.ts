@@ -369,6 +369,7 @@ export interface Appointment {
   policyNo: string;
   intakeStatus: IntakeStatus;
   billingSessionId: string | null;
+  videoEventId: string | null;   // provider cancellation key (Google Calendar event id)
   answers: QuestionAnswer[];     // client's answers to the type's custom questions
   notes: string;
   createdBy: string;
@@ -397,6 +398,7 @@ function rowToAppt(r: Record<string, unknown>): Appointment {
     startAt: iso(r.start_at), endAt: iso(r.end_at), mode: asMode(r.mode), locationOrLink: str(r.location_or_link),
     status: asStatus(r.status), insurancePath: asPath(r.insurance_path), insurerId: r.insurer_id ? str(r.insurer_id) : null,
     policyNo: str(r.policy_no), intakeStatus: asIntake(r.intake_status), billingSessionId: r.billing_session_id ? str(r.billing_session_id) : null,
+    videoEventId: r.video_event_id ? str(r.video_event_id) : null,
     answers: parseAnswers(r.answers),
     notes: str(r.notes), createdBy: str(r.created_by), source: r.source === "client" ? "client" : "staff",
     createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
@@ -441,7 +443,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     id: randomId(), seriesId: null, kind: "appointment", capacity: 1, attendees: [], clientId: null, clientName: "", clientEmail: "", clinicianId: "",
     typeId: null, title: "", startAt: t, endAt: t, mode: "in_person", locationOrLink: "", status: "booked",
     insurancePath: null, insurerId: null, policyNo: "", intakeStatus: "not_required", billingSessionId: null,
-    answers: [], notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
+    videoEventId: null, answers: [], notes: "", createdBy: "", source: "staff", createdAt: t, updatedAt: t,
   };
   return {
     ...b,
@@ -464,6 +466,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     policyNo: input.policyNo !== undefined ? str(input.policyNo).trim() : b.policyNo,
     intakeStatus: input.intakeStatus !== undefined ? asIntake(input.intakeStatus) : b.intakeStatus,
     billingSessionId: input.billingSessionId !== undefined ? (input.billingSessionId ? str(input.billingSessionId) : null) : b.billingSessionId,
+    videoEventId: input.videoEventId !== undefined ? (input.videoEventId ? str(input.videoEventId) : null) : b.videoEventId,
     answers: input.answers !== undefined ? parseAnswers(input.answers) : b.answers,
     notes: input.notes !== undefined ? str(input.notes) : b.notes,
     createdBy: input.createdBy !== undefined ? str(input.createdBy) : b.createdBy,
@@ -500,6 +503,8 @@ async function persistAppt(row: Appointment, isNew: boolean) {
     try { await sql`UPDATE scheduling_appointments SET capacity=${row.capacity}, attendees=${JSON.stringify(row.attendees)}::jsonb WHERE id=${row.id}`; } catch { /* columns not migrated */ }
     // Guarded: answers to custom booking questions, added later still.
     try { await sql`UPDATE scheduling_appointments SET answers=${JSON.stringify(row.answers)}::jsonb WHERE id=${row.id}`; } catch { /* column not migrated */ }
+    // Guarded: video_event_id (Google cancellation key), added later still.
+    try { await sql`UPDATE scheduling_appointments SET video_event_id=${row.videoEventId} WHERE id=${row.id}`; } catch { /* column not migrated */ }
   } else {
     const all = readJson<Appointment[]>(APPT_FILE, []);
     const i = all.findIndex((a) => a.id === row.id);
