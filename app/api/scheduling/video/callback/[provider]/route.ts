@@ -36,9 +36,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ provider: strin
   const redirectUri = `${base}/api/scheduling/video/callback/${prov}`;
   try {
     const t = await exchangeCode(prov, code, redirectUri);
-    if (prov === "google" && !t.refreshToken) {
-      // No refresh token means Google won't let us mint links later; ask again.
-      return back(req, "error=Please+allow+offline+access+(try+reconnecting)");
+    if (prov === "google") {
+      if (!t.refreshToken) {
+        // No refresh token means Google won't let us mint links later; ask again.
+        return back(req, "error=Please+allow+offline+access+(try+reconnecting)");
+      }
+      if (!t.scope.includes("calendar.events")) {
+        // Calendar box wasn't ticked, so we can't create Meet links. Don't save a
+        // useless connection; tell them to allow Calendar access and retry.
+        return back(req, "error=Please+tick+the+Google+Calendar+permission+when+connecting,+then+try+again");
+      }
     }
     await saveConnection({ clinicianId: me.id, provider: prov, accessToken: t.accessToken, refreshToken: t.refreshToken, expiresAt: t.expiresAt, accountEmail: t.accountEmail });
   } catch (e) {

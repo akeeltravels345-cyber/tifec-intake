@@ -130,7 +130,7 @@ export function authorizeUrl(provider: VideoProviderId, redirectUri: string, sta
   return `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
 }
 
-interface TokenSet { accessToken: string; refreshToken: string; expiresAt: number; accountEmail: string }
+interface TokenSet { accessToken: string; refreshToken: string; expiresAt: number; accountEmail: string; scope: string }
 
 // decode a JWT payload without verifying (only to read the email claim)
 function jwtEmail(idToken: string): string {
@@ -148,15 +148,15 @@ export async function exchangeCode(provider: VideoProviderId, code: string, redi
     const j = await res.json() as { access_token: string; refresh_token: string; expires_in: number };
     let email = "";
     try { const me = await fetch("https://api.zoom.us/v2/users/me", { headers: { Authorization: `Bearer ${j.access_token}` } }); if (me.ok) email = (await me.json()).email || ""; } catch { /* email optional */ }
-    return { accessToken: j.access_token, refreshToken: j.refresh_token, expiresAt: Date.now() + (j.expires_in || 3600) * 1000, accountEmail: email };
+    return { accessToken: j.access_token, refreshToken: j.refresh_token, expiresAt: Date.now() + (j.expires_in || 3600) * 1000, accountEmail: email, scope: "" };
   }
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: process.env.GOOGLE_CLIENT_ID as string, client_secret: process.env.GOOGLE_CLIENT_SECRET as string }),
   });
   if (!res.ok) throw new Error(`Google token ${res.status}: ${await res.text()}`);
-  const j = await res.json() as { access_token: string; refresh_token: string; expires_in: number; id_token?: string };
-  return { accessToken: j.access_token, refreshToken: j.refresh_token || "", expiresAt: Date.now() + (j.expires_in || 3600) * 1000, accountEmail: j.id_token ? jwtEmail(j.id_token) : "" };
+  const j = await res.json() as { access_token: string; refresh_token: string; expires_in: number; id_token?: string; scope?: string };
+  return { accessToken: j.access_token, refreshToken: j.refresh_token || "", expiresAt: Date.now() + (j.expires_in || 3600) * 1000, accountEmail: j.id_token ? jwtEmail(j.id_token) : "", scope: j.scope || "" };
 }
 
 async function refreshToken(conn: VideoConnection): Promise<string> {
