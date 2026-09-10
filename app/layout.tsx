@@ -29,6 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
         {children}
+        <footer className="sitefoot">
+          <a href="/privacy">Privacy Policy</a>
+          <span aria-hidden="true">·</span>
+          <a href="/terms">Terms of Use</a>
+        </footer>
       </body>
     </html>
   );

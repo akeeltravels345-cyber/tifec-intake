@@ -342,7 +342,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
           </section>
         )}
 
-        <footer className="bk-foot">{practiceName} · Cayman Islands<br /><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Use</a></footer>
+        <footer className="bk-foot">{practiceName} · Cayman Islands</footer>
       </div>
     </div>
   );

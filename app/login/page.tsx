@@ -40,11 +40,6 @@ export default async function LoginPage({
           <LoginForm next={safeNext} />
         </div>
       </div>
-      <footer className="auth-foot">
-        <a href="/privacy">Privacy Policy</a>
-        <span aria-hidden="true">·</span>
-        <a href="/terms">Terms of Use</a>
-      </footer>
     </div>
   );
 }
