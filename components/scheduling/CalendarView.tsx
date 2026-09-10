@@ -66,6 +66,14 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [appts, setAppts] = useState<Appointment[]>(initial);
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
+  // Phase 0 surfacing: does this appointment's client already exist elsewhere?
+  const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number } } | null>(null);
+  async function loadLinks(a: Appointment) {
+    setLinks(null);
+    if (a.kind === "block" || !a.clientName) return;
+    try { const res = await fetch(`/api/scheduling/appointments/links?id=${encodeURIComponent(a.id)}`); const d = await res.json(); if (res.ok) setLinks(d); } catch { /* best-effort */ }
+  }
+  function openView(a: Appointment) { setViewAppt(a); loadLinks(a); }
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -139,6 +147,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   function openEdit(a: Appointment) {
     setErr("");
     setDraft({ ...a, _date: cayDay(a.startAt), _startMin: cayMinutes(a.startAt), _durMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) });
+    loadLinks(a);
   }
   // Pre-filled "block time" from a drag: time auto-set to the range dragged.
   function openBlock(date: string, startMin: number, endMin: number) {
@@ -291,7 +300,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     return (
                       <div key={a.id} className={`cal-appt st-${a.status}`} style={{ top, height, left: `${left}%`, width: `calc(${width}% - 3px)`, borderLeftColor: color }}
                         draggable={canEdit(a)} onDragStart={(ev) => { if (!canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
-                        onClick={(ev) => { ev.stopPropagation(); if (canEdit(a)) openEdit(a); else setViewAppt(a); }}>
+                        onClick={(ev) => { ev.stopPropagation(); if (canEdit(a)) openEdit(a); else openView(a); }}>
                         <div className="cal-appt-t">{label12(s)}</div>
                         <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : (a.capacity > 1 ? `${(t?.name || "Group")} 👥` : a.clientName)}</div>
                         {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{a.capacity > 1 ? `${(a.attendees || []).length}/${a.capacity} seats` : (t?.name || "Visit")}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
@@ -329,6 +338,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   {phone && <span className="cal-chip">☎ {phone}</span>}
                   {draft.capacity && draft.capacity > 1 ? <span className="cal-chip">{(draft.attendees || []).length}/{draft.capacity} seats</span> : null}
                   {draft.billingSessionId && <span className="cal-chip ok">In billing queue</span>}
+                  {links?.billingClient && <a className="cal-chip link" href={`/billing/clients/${links.billingClient.id}`} title="This client already has a billing record">Billing record ↗</a>}
+                  {links && links.intake.count > 0 && <span className="cal-chip">Intake on file · {links.intake.count}</span>}
                   {draft.createdAt && <span className="cal-chip-when">added {prettyDate(cayDay(draft.createdAt))}{draft.source === "client" ? " online" : ""}</span>}
                 </div>
               );
@@ -494,6 +505,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   {a.notes && <Row k="Notes" v={a.notes} />}
                 </>}
               </div>
+              {a.kind !== "block" && links && (links.billingClient || links.intake.count > 0) && (
+                <div className="cvr-links">
+                  {links.billingClient && <a className="cal-chip link" href={`/billing/clients/${links.billingClient.id}`}>Billing record ↗</a>}
+                  {links.intake.count > 0 && <span className="cal-chip">Intake on file · {links.intake.count}</span>}
+                </div>
+              )}
               {(a.answers || []).length > 0 && (
                 <div className="cvr-att"><div className="cvr-att-h">Booking answers</div>{(a.answers || []).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}</div>
               )}

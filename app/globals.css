@@ -4321,3 +4321,8 @@ body:has(.bk-page) .brandbar { display: none; }
 .cp-selinfo b { font-weight: 700; }
 .cp-selclear { border: 1px solid #bcdcdc; background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #1c5457; }
 .cp-selclear:hover { background: #f5fafa; }
+
+/* Phase 0: "also in the system" links on an appointment */
+.cal-chip.link { text-decoration: none; color: #256e72; border: 1px solid #cfe0e0; background: #eef4f4; }
+.cal-chip.link:hover { background: #e2efef; }
+.cvr-links { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 16px 12px; }
