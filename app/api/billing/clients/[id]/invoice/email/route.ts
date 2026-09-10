@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
 import { resolveClientInvoice } from "@/lib/invoiceServer";
+import { recordSentEmail } from "@/lib/clients";
 import { invoicePdf } from "@/lib/invoicePdf";
 import { buildInvoiceEmail, defaultInvoiceMessage, sendInvoiceEmail } from "@/lib/email";
 import { logChange } from "@/lib/db";
@@ -67,6 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const message = typeof body.message === "string" && body.message.trim()
     ? body.message
     : defaultInvoiceMessage(client.first, inv.practice.name, inv.amountDue, inv.number);
+  const subjectOverride = typeof body.subject === "string" && body.subject.trim() ? body.subject.trim() : undefined;
 
   const printedAt = new Date().toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const pdf = await invoicePdf(inv, printedAt);
@@ -77,6 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     practiceName: inv.practice.name,
     invoiceNo: inv.number,
     amountDue: inv.amountDue,
+    subject: subjectOverride,
     message,
     replyToName: user.clinician.name,
     replyToEmail: user.clinician.email || undefined,
@@ -90,11 +93,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     pdf,
   });
 
+  const { subject } = buildInvoiceEmail({ to, clientName: "", practiceName: inv.practice.name, invoiceNo: inv.number, amountDue: inv.amountDue, subject: subjectOverride, message });
+
+  // Record the send on the client record — both successes and failures — so the
+  // history is a truthful paper trail of what actually went out.
+  await recordSentEmail(id, {
+    kind: "invoice", to, subject, invoiceNo: inv.number, amount: inv.amountDue,
+    byId: user.clinician.id, byName: user.clinician.name,
+    ok: result.sent, reason: result.sent ? undefined : result.reason,
+  });
+
   if (!result.sent) {
     return NextResponse.json({ ok: false, error: result.reason || "Could not send the email." }, { status: 502 });
   }
 
   await logChange(user.clinician.id, `client:${id}`, "status", `emailed invoice ${inv.number} (${isCopay ? "co-pay" : "self-pay"}) to the client`);
-  const { subject } = buildInvoiceEmail({ to, clientName: "", practiceName: inv.practice.name, invoiceNo: inv.number, amountDue: inv.amountDue, message });
   return NextResponse.json({ ok: true, sent: true, to, subject });
 }

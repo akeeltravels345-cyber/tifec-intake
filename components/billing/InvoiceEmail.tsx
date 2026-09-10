@@ -21,6 +21,7 @@ export default function InvoiceEmail({
   const [err, setErr] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [message, setMessage] = useState("");
+  const [subject, setSubject] = useState("");
   const [sentTo, setSentTo] = useState("");
 
   const base = `/api/billing/clients/${clientId}/invoice/email${query ? `?${query}` : ""}`;
@@ -31,7 +32,7 @@ export default function InvoiceEmail({
       const res = await fetch(base, { headers: { Accept: "application/json" } });
       const data = await res.json();
       if (!res.ok) { setErr(data.error || "Could not prepare the email."); return; }
-      setPreview(data); setMessage(data.message || "");
+      setPreview(data); setMessage(data.message || ""); setSubject(data.subject || "");
     } catch { setErr("Could not reach the server."); }
     finally { setLoading(false); }
   }
@@ -41,7 +42,7 @@ export default function InvoiceEmail({
     try {
       const res = await fetch(base, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, subject }),
       });
       const data = await res.json();
       if (!res.ok || !data.sent) { setErr(data.error || "Could not send the email."); return; }
@@ -80,7 +81,7 @@ export default function InvoiceEmail({
             ) : preview ? (
               <div className="iem-body">
                 <div className="iem-field"><span className="iem-lab">To</span><span className="iem-val">{clientName} &lt;{preview.to}&gt;</span></div>
-                <div className="iem-field"><span className="iem-lab">Subject</span><span className="iem-val">{preview.subject}</span></div>
+                <label className="iem-field iem-fieldedit"><span className="iem-lab">Subject</span><input className="iem-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={preview.subject} /></label>
                 <div className="iem-field"><span className="iem-lab">Attached</span><span className="iem-val">Invoice-{invoiceNo}.pdf &middot; {money(amountDue)} due</span></div>
                 {preview.replyTo && <div className="iem-field"><span className="iem-lab">Replies to</span><span className="iem-val">{preview.replyToName ? `${preview.replyToName} · ` : ""}{preview.replyTo}</span></div>}
 

@@ -253,6 +253,13 @@ export default function ClientDetail({
   const activityTotal = activity.reduce((t, a) => t + a.total, 0);
   const canManageCharges = canDelete || clinicians.length > 0;
 
+  // Emails the system has sent this client, most recent first.
+  const sentEmails = [...(profile.sentEmails ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+  const fmtWhen = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return isNaN(d.getTime()) ? isoStr : d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
   // Flat form state mirrors the nested profile; assembled back on save.
   const [ins, setIns] = useState(insurerId ?? "");
   const [dob, setDob] = useState(profile.dob ?? "");
@@ -874,6 +881,31 @@ export default function ClientDetail({
             </Foldable>
           )}
         </div>
+      </div>
+
+      {/* ---- Emails sent ---- */}
+      <div className="su-sec">
+        <div className="su-sechead">
+          <h2 className="su-sech">Emails sent{sentEmails.length > 0 && <span className="su-tag">{sentEmails.length}</span>}</h2>
+          <span className="su-hint">Every invoice the system has emailed this client, most recent first.</span>
+        </div>
+        {sentEmails.length === 0 ? (
+          <p className="cd-emails-empty">Nothing emailed yet. When you send an invoice to this client, it&apos;s recorded here.</p>
+        ) : (
+          <ul className="cd-emails">
+            {sentEmails.map((e) => (
+              <li key={e.id} className={e.ok ? "" : "failed"}>
+                <span className={`cd-em-badge ${e.ok ? "ok" : "bad"}`}>{e.ok ? "Sent" : "Failed"}</span>
+                <span className="cd-em-main">
+                  <span className="cd-em-subj">{e.subject}</span>
+                  <span className="cd-em-meta">to {e.to}{e.invoiceNo ? ` · invoice ${e.invoiceNo}` : ""}{e.amount != null ? ` · ${money(e.amount)}` : ""}</span>
+                  {!e.ok && e.reason && <span className="cd-em-reason">{e.reason}</span>}
+                </span>
+                <span className="cd-em-when">{fmtWhen(e.at)}<span className="cd-em-by">{e.byName}</span></span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

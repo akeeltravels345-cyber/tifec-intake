@@ -371,6 +371,7 @@ export interface InvoiceEmailArgs {
   practiceName: string;       // e.g. "TIFEC · Essential Care"
   invoiceNo: string;
   amountDue: number;
+  subject?: string;           // sender-edited subject; falls back to the default when blank
   message: string;            // the body the sender reviewed (plain text, may have line breaks)
   replyToName?: string;       // fallback: the sender, if no clinician is resolved
   replyToEmail?: string;
@@ -418,7 +419,7 @@ export function defaultInvoiceMessage(clientFirstName: string, practiceName: str
 
 /** Subject + text + HTML for the invoice email (exported so it can be previewed). */
 export function buildInvoiceEmail(args: InvoiceEmailArgs): { subject: string; text: string; html: string } {
-  const subject = `Your invoice from ${args.practiceName}`;
+  const subject = args.subject?.trim() || `Your invoice from ${args.practiceName}`;
   const text = args.message;
   const bodyHtml = escapeHtml(args.message).replace(/\n/g, "<br>");
 

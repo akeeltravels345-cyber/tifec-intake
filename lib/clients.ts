@@ -52,6 +52,24 @@ export interface ClientProfile {
   // recorded in deductibleApplied, until the balance reaches zero.
   deductible?: ClientDeductible;
   deductibleApplied?: DeductibleApplied[]; // sessions/amounts drawn down against it
+  // A record of every email the system has sent this client (e.g. invoices), so
+  // there's a paper trail on the record of what went out, to whom, and when.
+  sentEmails?: SentEmail[];
+}
+
+/** One email the system sent to a client — the audit trail shown on their record. */
+export interface SentEmail {
+  id: string;
+  at: string;                 // ISO timestamp
+  kind: "invoice";            // what was sent (room to grow)
+  to: string;                 // recipient address at the time
+  subject: string;
+  invoiceNo?: string;
+  amount?: number;
+  byId: string;               // clinician/biller who sent it
+  byName: string;
+  ok: boolean;                // did it actually send?
+  reason?: string;            // failure reason when ok is false
 }
 
 /** A client's insurance deductible for a plan year (resets annually). The amount
@@ -460,6 +478,16 @@ export async function removeDeductibleApplied(id: string, entryId: string): Prom
   if (!client) return null;
   const list = (client.profile.deductibleApplied ?? []).filter((a) => a.id !== entryId);
   return updateClient(id, client.insurerId, { ...client.profile, deductibleApplied: list });
+}
+
+/** Append an entry to a client's sent-email history (newest kept last). Records
+ *  both successes and failures so the record is a truthful paper trail. */
+export async function recordSentEmail(id: string, entry: Omit<SentEmail, "id" | "at">): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const row: SentEmail = { id: randomId(), at: new Date().toISOString(), ...entry };
+  const list = [...(client.profile.sentEmails ?? []), row];
+  return updateClient(id, client.insurerId, { ...client.profile, sentEmails: list });
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */
