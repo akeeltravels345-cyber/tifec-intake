@@ -65,14 +65,14 @@ export default function VideoConnections({ initial, configured, notice }: {
     <div className="vc">
       <div className="vc-head">
         <h1 className="vc-h1">Video connections</h1>
-        <p className="vc-sub">Connect your own Zoom or Google Meet so virtual appointments get a meeting link automatically. Only you use these — they stay on your account.</p>
+        <p className="vc-sub">Connect your own Zoom or Google Meet so virtual appointments get a meeting link automatically. Only you use these, and they stay on your account.</p>
       </div>
       {msg && <p className={`vc-msg ${isErr ? "err" : "ok"}`}>{msg}</p>}
       <div className="vc-cards">
         <Card p="zoom" />
         <Card p="google" />
       </div>
-      {both && <p className="vc-hint">You have both connected — the one marked <b>Default</b> is used for your virtual sessions.</p>}
+      {both && <p className="vc-hint">You have both connected. The one marked <b>Default</b> is used for your virtual sessions.</p>}
     </div>
   );
 }

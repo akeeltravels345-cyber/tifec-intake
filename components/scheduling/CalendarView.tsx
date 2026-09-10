@@ -236,7 +236,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     return placed.map((p) => ({ ...p, laneCount }));
   }
 
-  const weekLabel = `${prettyDate(monday)} – ${prettyDate(addDays(monday, 6))}`;
+  const weekLabel = `${prettyDate(monday)} to ${prettyDate(addDays(monday, 6))}`;
 
   return (
     <div className="cal">
@@ -289,7 +289,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   ))}
                   {sel && sel.day === day && Math.abs(sel.to - sel.from) >= 15 && (() => {
                     const a = Math.min(sel.from, sel.to), b = Math.max(sel.from, sel.to);
-                    return <div className="cal-select" style={{ top: ((a - DAY_START * 60) / 60) * HOUR, height: ((b - a) / 60) * HOUR }}>{label12(a)}–{label12(b)}</div>;
+                    return <div className="cal-select" style={{ top: ((a - DAY_START * 60) / 60) * HOUR, height: ((b - a) / 60) * HOUR }}>{label12(a)}-{label12(b)}</div>;
                   })()}
                   {placed.map(({ a, s, e, lane, laneCount }) => {
                     const t = typeById(a.typeId);
@@ -453,7 +453,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             )}
             {draft.id && draft.status === "seen" && draft.kind !== "block" && (
               <p className="cal-bridge">{draft.billingSessionId
-                ? "✓ A billing session was created for this visit — it's in the billing queue for the biller."
+                ? "✓ A billing session was created for this visit. It's in the billing queue for the biller."
                 : "Marked seen. Turn on “Connect to billing” in Settings to make seen visits into billing sessions automatically."}</p>
             )}
             {draft.id && draft.seriesId && (
@@ -489,7 +489,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 <button className="cal-close" onClick={() => setViewAppt(null)}>×</button>
               </div>
               <div className="cvr-body">
-                <Row k="When" v={`${prettyDate(cayDay(a.startAt))} · ${label12(s)}–${label12(s + dur)}`} />
+                <Row k="When" v={`${prettyDate(cayDay(a.startAt))} · ${label12(s)}-${label12(s + dur)}`} />
                 {a.kind !== "block" && <>
                   <Row k="Service" v={t?.name || "Visit"} />
                   <Row k="Clinician" v={clinName(a.clinicianId)} />

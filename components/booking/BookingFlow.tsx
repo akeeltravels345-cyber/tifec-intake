@@ -253,7 +253,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         {step === "details" && type && slot && (
           <section className="bk-sec">
             <h2 className="bk-h2">Your details</h2>
-            {remembered && <p className="bk-welcome">Welcome back{details.name ? `, ${details.name.split(" ")[0]}` : ""} — we&apos;ve filled in your details. <button type="button" onClick={forgetMe}>Not you?</button></p>}
+            {remembered && <p className="bk-welcome">Welcome back{details.name ? `, ${details.name.split(" ")[0]}` : ""}, we&apos;ve filled in your details. <button type="button" onClick={forgetMe}>Not you?</button></p>}
             <div className="bk-form">
               <label className="bk-f"><span>Full name</span><input value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoFocus /></label>
               <label className="bk-f"><span>Email</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="For your confirmation & reminders" /></label>
