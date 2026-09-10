@@ -2,13 +2,12 @@
 // CMS-1500 (08-05) claim building (pure, server-safe). Turns a client + their
 // billable sessions into one or more claim "forms": one per payer, and — because
 // the form holds only 6 service lines (box 24) — a fresh continuation form every
-// 6 lines. Each CPT code is its own service line with its own charge, matching a
-// real submission.
+// 6 lines. Each CPT-code OCCURRENCE is its own service line with its own charge
+// (a code billed three times prints three lines), matching a real submission.
 // =============================================================================
 
 import type { BillingSession, ProviderConfig } from "./billing";
 import type { ClientProfile } from "./clients";
-import { collapseUnits } from "./cptUnits";
 
 export const CMS_LINES_PER_FORM = 6;
 
@@ -50,20 +49,38 @@ export interface ClaimResolvers {
   carrierCode?: (insurerId: string) => string; // optional payer code for box 10d
 }
 
-/** Expand a session into one service line per DISTINCT CPT code, with box 24G
- *  units set from how many times that code was billed (e.g. two extended
- *  assessment hours → one 99355 line, units 2). A single-code session charges the
- *  session total exactly (so a chosen time/value variant is honoured); a
- *  multi-code one charges each code its catalogue fee × its units; a session with
- *  no codes (e.g. an imported balance) is one line at the session total. */
+/** Split a total charge across n lines so each line shows a per-unit amount and
+ *  the lines still sum EXACTLY to the total (any rounding penny lands on the last
+ *  line). */
+function splitCharge(total: number, n: number): number[] {
+  if (n <= 1) return [r2(total)];
+  const per = r2(total / n);
+  const out = Array<number>(n).fill(per);
+  out[n - 1] = r2(total - per * (n - 1));
+  return out;
+}
+
+/** Expand a session into ONE service line per CPT-code OCCURRENCE (so a code
+ *  billed three times prints three separate lines, each units 1, each with its
+ *  own charge), preserving the order the codes were entered. A session billed
+ *  under a single code splits its total across those lines (honouring a chosen
+ *  time/value total); a session mixing codes charges each occurrence that code's
+ *  catalogue fee; a session with no codes (e.g. an imported balance) is one line
+ *  at the session total. */
 function sessionLines(s: BillingSession, r: ClaimResolvers, dxPointer: string): ClaimLine[] {
   const date = mdy(s.dateOfService);
   const npi = r.renderingNpi(s.clinicianId), name = r.clinName(s.clinicianId);
   const base = { date, pos: "11", mod: "", dxPointer, renderingNpi: npi, renderingName: name };
-  const grouped = collapseUnits(s.cptCodes ?? []);
-  if (grouped.length === 0) return [{ ...base, units: Math.max(1, Math.round(s.durationHours || 1)), cpt: "", charge: r2(s.totalCost) }];
-  if (grouped.length === 1) return [{ ...base, units: grouped[0].units, cpt: grouped[0].code, charge: r2(s.totalCost) }];
-  return grouped.map(({ code, units }) => ({ ...base, units, cpt: code, charge: r2(r.cptFee(code) * units) }));
+  const codes = (s.cptCodes ?? []).filter(Boolean);
+  if (codes.length === 0) return [{ ...base, units: Math.max(1, Math.round(s.durationHours || 1)), cpt: "", charge: r2(s.totalCost) }];
+  // One distinct code (possibly repeated): split the session total across each
+  // occurrence, so 90791 x3 at $450 prints three 90791 lines of $150.
+  if (new Set(codes).size === 1) {
+    const charges = splitCharge(r2(s.totalCost), codes.length);
+    return codes.map((code, i) => ({ ...base, units: 1, cpt: code, charge: charges[i] }));
+  }
+  // Mixed codes: each occurrence is its own line at that code's catalogue fee.
+  return codes.map((code) => ({ ...base, units: 1, cpt: code, charge: r2(r.cptFee(code)) }));
 }
 
 /** Build every CMS-1500 form for one client from their billable (insured)

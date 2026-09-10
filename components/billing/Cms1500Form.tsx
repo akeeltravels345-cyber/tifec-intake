@@ -7,7 +7,7 @@ function Cell({ n, label, v, wide }: { n: string; label: string; v?: string | nu
     <div className={`hcfa-cell ${wide ? "wide" : ""}`}>
       <div className="hcfa-boxn">{n}</div>
       <div className="hcfa-cl">{label}</div>
-      <div className="hcfa-cv">{v ? v : <span className="muted">—</span>}</div>
+      <div className="hcfa-cv">{v ? v : <span className="muted">-</span>}</div>
     </div>
   );
 }
@@ -39,7 +39,7 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
         <Cell n="10d" label="Reserved for local use" v={f.carrierCode ? `# ${f.carrierCode}` : ""} />
       </div>
 
-      {/* Standard authorisations — boxes 10a-c, 12/13, 27. */}
+      {/* Standard authorisations: boxes 10a-c, 12/13, 27. */}
       <div className="hcfa-static">
         <span><b>10a-c</b> Condition related to employment / auto / other: <b>No</b></span>
         <span><b>12 &amp; 13</b> Patient / insured signature: <b>Signature on file</b></span>
@@ -50,7 +50,7 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
         <div className="hcfa-boxn">21</div>
         <div className="hcfa-dxlab">Diagnosis (ICD-10) · pointers 1-4</div>
         <div className="hcfa-dxlist">
-          {f.diagnosis.length === 0 ? <span className="muted">— none on file —</span> :
+          {f.diagnosis.length === 0 ? <span className="muted">none on file</span> :
             f.diagnosis.slice(0, 4).map((d, i) => <span className="hcfa-dxi" key={d}><b>{i + 1}</b> {d}</span>)}
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function Cms1500Form({ f, provider }: { f: ClaimForm; provider: {
             <tr key={i}>
               <td>{l.date}</td>
               <td>{l.pos}</td>
-              <td>{l.cpt || "—"}</td>
+              <td>{l.cpt || "-"}</td>
               <td>{l.mod}</td>
               <td>{l.dxPointer}</td>
               <td className="r">{money(l.charge)}</td>
