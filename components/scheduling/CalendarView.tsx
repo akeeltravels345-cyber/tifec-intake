@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Appointment, AppointmentType, AppointmentMode, AppointmentStatus, DayHours, DateOverride } from "@/lib/scheduling";
 
 interface Clin { id: string; name: string; }
@@ -9,7 +9,7 @@ interface Avail { clinicianId: string; weekly: DayHours[]; overrides: DateOverri
 
 const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_START = 7, DAY_END = 20, HOUR = 46; // 7am-8pm, 46px/hour
+const DAY_START = 7, DAY_END = 20, HOUR = 64; // 7am-8pm, 64px/hour (taller so appointments read clearly)
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
 const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "booked", label: "Booked" }, { key: "confirmed", label: "Confirmed" },
@@ -73,6 +73,43 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [attEmail, setAttEmail] = useState("");
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
+  // ---- drag-to-block: press on empty time and drag to select a range ----
+  const dragRef = useRef<{ day: string; anchor: number } | null>(null);
+  const [sel, setSel] = useState<{ day: string; from: number; to: number } | null>(null);
+  const minAtY = (el: HTMLElement, clientY: number) => {
+    const rect = el.getBoundingClientRect();
+    const raw = DAY_START * 60 + ((clientY - rect.top) / HOUR) * 60;
+    return Math.max(DAY_START * 60, Math.min(DAY_END * 60, Math.round(raw / 15) * 15));
+  };
+  function slotDown(e: React.MouseEvent<HTMLDivElement>, day: string) {
+    if (!canCreate || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest(".cal-appt")) return; // clicks on an appointment are handled there
+    const m = minAtY(e.currentTarget, e.clientY);
+    dragRef.current = { day, anchor: m };
+    setSel({ day, from: m, to: m });
+  }
+  function slotMove(e: React.MouseEvent<HTMLDivElement>, day: string) {
+    const d = dragRef.current;
+    if (!d || d.day !== day) return;
+    setSel({ day, from: d.anchor, to: minAtY(e.currentTarget, e.clientY) });
+  }
+  function slotUp(e: React.MouseEvent<HTMLDivElement>, day: string) {
+    const d = dragRef.current;
+    if (!d || d.day !== day) return;
+    const to = minAtY(e.currentTarget, e.clientY);
+    dragRef.current = null;
+    setSel(null);
+    const from = Math.min(d.anchor, to), end = Math.max(d.anchor, to);
+    if (end - from >= 15) openBlock(day, from, end);          // a real drag → block that range
+    else openNew(day, from);                                   // a plain click → new appointment
+  }
+  // If the mouse is released outside a column, cancel the in-progress selection.
+  useEffect(() => {
+    const cancel = () => { if (dragRef.current) { dragRef.current = null; setSel(null); } };
+    window.addEventListener("mouseup", cancel);
+    return () => window.removeEventListener("mouseup", cancel);
+  }, []);
+
   async function load(mon: string, clin: string) {
     const from = utcFromCay(mon, 0), to = utcFromCay(addDays(mon, 7), 0);
     const q = new URLSearchParams({ from, to });
@@ -102,6 +139,18 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   function openEdit(a: Appointment) {
     setErr("");
     setDraft({ ...a, _date: cayDay(a.startAt), _startMin: cayMinutes(a.startAt), _durMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) });
+  }
+  // Pre-filled "block time" from a drag: time auto-set to the range dragged.
+  function openBlock(date: string, startMin: number, endMin: number) {
+    setErr("");
+    setDraft({
+      kind: "block", clientName: "", clientEmail: "", clinicianId: lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || "")),
+      typeId: null, mode: "in_person", locationOrLink: "", status: "booked",
+      insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "", title: "",
+      capacity: 1, attendees: [],
+      _date: date, _startMin: startMin, _durMin: Math.max(15, endMin - startMin),
+      _repeatEvery: 0, _repeatCount: 4,
+    });
   }
   function pickType(id: string) {
     const t = typeById(id);
@@ -222,16 +271,17 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 <div className="cal-slots"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => onDrop(e, day)}
-                  onClick={(e) => {
-                  if (!canCreate) return;
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  const min = DAY_START * 60 + Math.floor(((e.clientY - rect.top) / HOUR) * 60 / 15) * 15;
-                  openNew(day, Math.max(DAY_START * 60, Math.min(min, (DAY_END - 1) * 60)));
-                }}>
+                  onMouseDown={(e) => slotDown(e, day)}
+                  onMouseMove={(e) => slotMove(e, day)}
+                  onMouseUp={(e) => slotUp(e, day)}>
                   {Array.from({ length: DAY_END - DAY_START }, (_, i) => <div key={i} className="cal-line" style={{ top: i * HOUR }} />)}
                   {who !== "all" && closedRegions(who, day).map((r, i) => (
                     <div key={`c${i}`} className="cal-closed" style={{ top: ((r.s - DAY_START * 60) / 60) * HOUR, height: ((r.e - r.s) / 60) * HOUR }} />
                   ))}
+                  {sel && sel.day === day && Math.abs(sel.to - sel.from) >= 15 && (() => {
+                    const a = Math.min(sel.from, sel.to), b = Math.max(sel.from, sel.to);
+                    return <div className="cal-select" style={{ top: ((a - DAY_START * 60) / 60) * HOUR, height: ((b - a) / 60) * HOUR }}>{label12(a)}–{label12(b)}</div>;
+                  })()}
                   {placed.map(({ a, s, e, lane, laneCount }) => {
                     const t = typeById(a.typeId);
                     const top = ((s - DAY_START * 60) / 60) * HOUR;

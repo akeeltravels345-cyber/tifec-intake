@@ -2882,6 +2882,25 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .iem-sent p { color: var(--ink, #21201c); font-size: 15px; margin: 0 0 18px; }
 .cd-invlink { display: inline-block; margin-left: 8px; font-size: 11.5px; font-weight: 600; color: var(--brand, #2E3192); text-decoration: none; border: 1px solid var(--edge, #d8d2c4); border-radius: 7px; padding: 1px 8px; white-space: nowrap; vertical-align: middle; }
 .cd-invlink:hover { border-color: var(--brand, #2E3192); background: rgba(46,49,146,.06); }
+
+/* Emails-sent history on the client record */
+.cd-emails-empty { font-size: 13.5px; color: var(--muted, #6b6b66); margin: 4px 0 0; }
+.cd-emails { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; }
+.cd-emails li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--edge, #ECE6DA); }
+.cd-emails li:last-child { border-bottom: none; }
+.cd-em-badge { flex: 0 0 auto; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; margin-top: 1px; }
+.cd-em-badge.ok { background: #dff0e5; color: #2c7a55; }
+.cd-em-badge.bad { background: #f8e3dc; color: #b4451f; }
+.cd-em-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cd-em-subj { font-size: 14px; font-weight: 600; color: var(--ink, #21201c); }
+.cd-em-meta { font-size: 12.5px; color: var(--muted, #6b6b66); word-break: break-word; }
+.cd-em-reason { font-size: 12px; color: #b4451f; }
+.cd-em-when { flex: 0 0 auto; text-align: right; font-size: 12px; color: var(--muted, #6b6b66); display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.cd-em-by { font-size: 11.5px; color: #a2a8b3; }
+@media (max-width: 560px) {
+  .cd-emails li { flex-wrap: wrap; }
+  .cd-em-when { text-align: left; flex-direction: row; gap: 8px; width: 100%; padding-left: 44px; }
+}
 .tm-nfoot { font-size: 12px; color: var(--muted); margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 /* --- messages -------------------------------------------------------------- */
@@ -4285,3 +4304,6 @@ body:has(.bk-page) .brandbar { display: none; }
 .vc-btn:hover { background: #f6f8f8; }
 .vc-unavail { font-size: 12.5px; color: #9aa0a6; background: #f5f6f7; border-radius: 8px; padding: 9px 11px; line-height: 1.45; }
 .vc-hint { font-size: 12.5px; color: var(--muted, #6b7280); margin-top: 14px; }
+
+/* Drag-to-block selection rectangle on the calendar */
+.cal-select { position: absolute; left: 1px; right: 3px; background: rgba(37,110,114,.18); border: 1.5px solid #256e72; border-radius: 6px; z-index: 5; font-size: 11px; font-weight: 700; color: #1c5457; padding: 2px 5px; pointer-events: none; box-sizing: border-box; overflow: hidden; }
