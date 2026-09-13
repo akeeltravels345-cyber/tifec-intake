@@ -49,6 +49,7 @@ export default async function BillingQueuePage() {
     amount: insurancePortion(s), billedDate: s.billedDate, paid: s.insurancePaid, paidDate: s.paidDate,
     commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
     afterReferral: s.clientId ? chargeAfterReferral(s.dateOfService, referralEndOf.get(s.clientId)) : false,
+    note: s.billNote,
   });
 
   // Whose claims the biller reconciles: practising clinicians only. Not the

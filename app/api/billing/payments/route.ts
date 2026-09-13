@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkPaid } from "@/lib/billingRole";
-import { markSessionPaid, markSessionBilled, markSelfPayPaid, markSessionAdjusted, markSessionUnadjusted, getSession } from "@/lib/billing";
+import { markSessionPaid, markSessionBilled, markSelfPayPaid, markSessionAdjusted, markSessionUnadjusted, setBillNote, getSession } from "@/lib/billing";
 import { logChange } from "@/lib/db";
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -55,6 +55,14 @@ export async function POST(req: Request) {
     const ok = await markSessionUnadjusted(sessionId);
     if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
     await logChange(me.id, `session:${sessionId}`, "status", "reversed a claim write-off/down");
+    return NextResponse.json({ ok: true });
+  }
+
+  // action "note" → set/clear the short biller note shown on the claim in the queue.
+  if (action === "note") {
+    const note = typeof body.note === "string" ? body.note : "";
+    const ok = await setBillNote(sessionId, note);
+    if (!ok) return NextResponse.json({ error: "Session not found." }, { status: 404 });
     return NextResponse.json({ ok: true });
   }
 

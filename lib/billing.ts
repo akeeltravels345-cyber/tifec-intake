@@ -176,6 +176,9 @@ export interface BillingSession {
   insuranceDisposition: InsuranceDisposition; // writeoff | writedown | null
   insuranceCollected: number | null;          // cash collected when adjusted (null = n/a)
   notes: string;
+  /** A short biller note on the claim (e.g. why it isn't billed yet). Operational,
+   *  not clinical — shows in the billing queue so the clinician sees the reason. */
+  billNote?: string;
   createdBy: string;
   createdAt: string;
 }
@@ -459,6 +462,7 @@ interface StoredSession {
   insuranceDisposition?: InsuranceDisposition;
   insuranceCollected?: number | null;
   notes: string;
+  billNote?: string;
   createdBy: string;
   createdAt: string;
 }
@@ -482,6 +486,7 @@ function decryptSession(s: StoredSession): BillingSession {
     insuranceDisposition: s.insuranceDisposition === "writeoff" || s.insuranceDisposition === "writedown" ? s.insuranceDisposition : null,
     insuranceCollected: s.insuranceCollected == null ? null : num(s.insuranceCollected),
     notes: s.notes || "",
+    billNote: s.billNote || undefined,
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -594,6 +599,12 @@ async function loadStored(): Promise<StoredSession[]> {
       const crows = (await sql`SELECT id, copay_paid_date::text AS copay_paid_date FROM billing_sessions WHERE copay_paid_date IS NOT NULL`) as Record<string, unknown>[];
       for (const c of crows) copayDates[c.id as string] = String(c.copay_paid_date).slice(0, 10);
     } catch { /* column not migrated yet */ }
+    // Biller's short claim note lives in its own (optionally-migrated) column.
+    const billNotes: Record<string, string> = {};
+    try {
+      const nrows = (await sql`SELECT id, bill_note FROM billing_sessions WHERE bill_note IS NOT NULL AND bill_note <> ''`) as Record<string, unknown>[];
+      for (const n of nrows) billNotes[n.id as string] = String(n.bill_note);
+    } catch { /* column not migrated yet */ }
     return rows.map((r) => ({
       id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, clientId: (r.client_id as string) ?? null, insurerId: (r.insurer_id as string) ?? null,
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
@@ -605,7 +616,8 @@ async function loadStored(): Promise<StoredSession[]> {
       billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null,
       insuranceDisposition: adj[r.id as string]?.disposition ?? null, insuranceCollected: adj[r.id as string]?.collected ?? null,
-      notes: (r.notes as string) || "", createdBy: r.created_by as string, createdAt: String(r.created_at),
+      notes: (r.notes as string) || "", billNote: billNotes[r.id as string] || undefined,
+      createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }
   return readJson<StoredSession[]>(SESS_FILE, []).sort((a, b) => b.dateOfService.localeCompare(a.dateOfService));
@@ -664,6 +676,28 @@ export async function markSessionBilled(id: string, billed: boolean, billedDate:
   if (!s) return false;
   s.billedDate = billed ? billedDate : null;
   if (!billed) { s.insurancePaid = false; s.paidDate = null; }
+  writeJson(SESS_FILE, all);
+  return true;
+}
+
+/** Set (or clear) a claim's short biller note — the "why it isn't billed yet"
+ *  line shown in the billing queue. Trimmed and capped; empty clears it. The
+ *  bill_note column is optionally-migrated, so a Postgres write degrades quietly
+ *  until the column exists. */
+export async function setBillNote(id: string, note: string): Promise<boolean> {
+  const clean = note.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (usePostgres) {
+    const sql = await pg();
+    // Confirm the row exists regardless of whether bill_note is migrated yet.
+    const found = (await sql`SELECT id FROM billing_sessions WHERE id = ${id}`) as { id: string }[];
+    if (found.length === 0) return false;
+    try { await sql`UPDATE billing_sessions SET bill_note = ${clean || null} WHERE id = ${id}`; } catch { /* column not migrated yet */ }
+    return true;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return false;
+  s.billNote = clean || undefined;
   writeJson(SESS_FILE, all);
   return true;
 }

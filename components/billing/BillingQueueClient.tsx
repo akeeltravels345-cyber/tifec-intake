@@ -21,6 +21,8 @@ export interface Claim {
   /** On the Written off / down tab: the amount written off/down, and which. */
   off?: number;
   disposition?: "writeoff" | "writedown";
+  /** Short biller note (e.g. why it isn't billed yet), shown in the To-bill queue. */
+  note?: string;
 }
 export interface QueueData {
   toBill: Claim[]; awaiting: Claim[]; selfPay: Claim[]; paid: Claim[]; adjusted: Claim[];
@@ -162,6 +164,13 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   // real, changed date.
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   const editBilled = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markBilled([id], val); };
+  // Save a claim's short note without a full refresh, so the field keeps focus
+  // while the biller types. Fire-and-forget on blur; only posts when it changed.
+  const saveNote = (id: string, cur: string | undefined, val: string) => {
+    const next = val.trim().slice(0, 40);
+    if (next === (cur ?? "")) return;
+    fetch("/api/billing/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, action: "note", note: next }) }).catch(() => {});
+  };
   const editPaid = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markPaid([id], val); };
   // Build CMS-1500 claims for exactly the selected claims (each id is a session).
   const generateClaims = () => { if (selected.size) router.push(`/billing/clients/batch?sessions=${[...selected].join(",")}`); };
@@ -291,7 +300,12 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                         ? <input type="date" className="bq-dateedit lead" value={c.billedDate ?? ""} max={data.today} disabled={busy} onChange={(e) => editBilled(c.id, c.billedDate, e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} title="Billed date — back-date to when the claim actually came in" />
                         : c.dos}</div>
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
-                      <div className="who"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
+                      <div className={`who ${tab === "tobill" ? "bq-whonote" : ""}`}>
+                        <div className="whoinfo"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
+                        {tab === "tobill" && (
+                          <input className="bq-note" defaultValue={c.note ?? ""} maxLength={40} placeholder="+ note" title="Short note — e.g. why this claim isn't billed yet. The clinician sees it here." onBlur={(e) => saveNote(c.id, c.note, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { const el = e.target as HTMLInputElement; saveNote(c.id, c.note, el.value); el.blur(); } }} />
+                        )}
+                      </div>
                       <div className="amt">{money(c.amount)}</div>
                       {tab === "awaiting" && c.insurerId !== "self" && <div className="bq-rowacts"><button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button><button className="bq-undo" disabled={busy} onClick={() => (adjustId === c.id ? setAdjustId(null) : openAdjust(c.id))} title="Settle with a contractual write-off or write-down">Write off/down</button></div>}
                     </div>
