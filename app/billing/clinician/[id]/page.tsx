@@ -78,6 +78,7 @@ export default async function ClinicianDetail({ params, searchParams }: { params
     insurerId: s.insurerId,
     copayDue: s.copayDue,
     billed: !!s.billedDate,
+    billNote: s.billNote,
   });
 
   // What's still with the insurers. This is the clinician's future pay — payout

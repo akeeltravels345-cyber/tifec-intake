@@ -20,6 +20,8 @@ export interface SessionRow {
   insurerId: string | null;
   copayDue: number;
   billed: boolean;
+  /** The biller's short note on an unbilled claim, so the clinician sees the status. */
+  billNote?: string;
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -153,7 +155,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
               <td className="num">{money(s.fee)}</td>
               <td className="num">{money(s.copay)}</td>
               <td className="num">{money(s.insurance)}</td>
-              <td>{pill(s)}</td>
+              <td>{pill(s)}{s.billNote && <span className="cd-billnote" title="Note from billing on why this isn't billed yet">{s.billNote}</span>}</td>
               {canManage && (
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   {delId === s.id ? (
