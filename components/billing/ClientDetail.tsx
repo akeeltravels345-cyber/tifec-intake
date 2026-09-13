@@ -179,7 +179,7 @@ export default function ClientDetail({
     try {
       const adjusting = ecInsurer && (ecStage === "writeoff" || ecStage === "writedown");
       // Is this charge being marked Collected? If so and no collected date was
-      // chosen, default it to today — a payment recorded now lands on today, not
+      // chosen, default it to today, since a payment recorded now lands on today, not
       // the date of service.
       const markedPaid = ecInsurer ? ecStage === "paid" : ecSelfPay === "paid";
       const res = await fetch(`/api/billing/sessions/${sid}`, {
@@ -296,7 +296,7 @@ export default function ClientDetail({
   const [noteText, setNoteText] = useState("");
   const canModerate = currentUserRole === "owner" || currentUserRole === "admin";
 
-  // Assemble the WHOLE profile from state — every PATCH must send it complete,
+  // Assemble the WHOLE profile from state; every PATCH must send it complete,
   // or fields it omits get wiped. `documents` can be overridden (add/remove).
   function buildProfile(documents = docs): ClientProfile {
     return {
@@ -410,7 +410,7 @@ export default function ClientDetail({
   const field = (label: string, node: React.ReactNode) => (
     <div className="cd-f"><span className="cd-fl">{label}</span>{node}</div>
   );
-  const val = (v: string) => (v ? <span className="cd-v">{v}</span> : <span className="cd-v muted">—</span>);
+  const val = (v: string) => (v ? <span className="cd-v">{v}</span> : <span className="cd-v muted">-</span>);
 
   return (
     <div className="cd-wrap">
@@ -446,9 +446,9 @@ export default function ClientDetail({
         <div className="cd-refrow">
           <span className="cd-reflab">Referral</span>
           {referral.state === "none" ? (
-            <span className="cd-refval">No referral on file — add one so claims stay payable.</span>
+            <span className="cd-refval">No referral on file. Add one so claims stay payable.</span>
           ) : referral.state === "expired" ? (
-            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b> — coverage has ended; sessions after this date can&apos;t be billed.</span>
+            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b>. Sessions after this date can&apos;t be billed.</span>
           ) : (
             <span className="cd-refval">
               Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
@@ -461,7 +461,7 @@ export default function ClientDetail({
       {(referral.state === "expiring" || referral.state === "expired") && (
         <div className={`cd-refprompt ${referral.state}`}>
           ⚠ {referral.state === "expiring"
-            ? <>This referral ends in <b>{refDays} day{refDays === 1 ? "" : "s"}</b> ({profile.referral?.endDate}). Apply for a new referral now so {first}&apos;s coverage doesn&apos;t lapse — sessions after the end date can&apos;t be billed.</>
+            ? <>This referral ends in <b>{refDays} day{refDays === 1 ? "" : "s"}</b> ({profile.referral?.endDate}). Apply for a new one now. Sessions after the end date can&apos;t be billed.</>
             : <>This referral has <b>expired</b>. Apply for a new referral before billing further sessions for {first}.</>}
           {canEdit && !edit && <button className="cd-refprompt-btn" onClick={() => setEdit(true)}>Renew referral</button>}
         </div>
@@ -488,7 +488,7 @@ export default function ClientDetail({
         ) : (
           <div className="su-card cd-grid">
             {field("Date of birth", <DobInput value={dob} onChange={setDob} />)}
-            {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">—</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
+            {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
             {field("Email", <input className="ls-in" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
@@ -505,13 +505,13 @@ export default function ClientDetail({
               {field("Insured last name", <input className="ls-in" value={insuredLast} onChange={(e) => setInsuredLast(e.target.value)} />)}
               {field("Insured date of birth", <DobInput value={insuredDob} onChange={setInsuredDob} />)}
             </>}
-            <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in — after the end date they can&apos;t be paid</span></div>
+            <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in. After the end date they can&apos;t be paid.</span></div>
             {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
             {field("Referral / auth number", <input className="ls-in" value={refAuth} onChange={(e) => setRefAuth(e.target.value)} />)}
             {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
             {field("Valid until (end date)", <input type="date" className="ls-in" value={refEnd} onChange={(e) => setRefEnd(e.target.value)} />)}
             {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
-            <div className="cd-refupload-hint">📎 Upload the referral letter itself in <b>Documents</b> below — it&apos;s stored securely on this record. The end date above flags the clinician 30 days before it lapses.</div>
+            <div className="cd-refupload-hint">📎 Upload the referral letter in <b>Documents</b> below. The end date flags the clinician 30 days before it lapses.</div>
             <div className="cd-save">
               <button className="ls-save" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</button>
               <button className="su-del" disabled={busy} onClick={() => { setEdit(false); setMsg(""); }}>Cancel</button>
@@ -523,7 +523,7 @@ export default function ClientDetail({
       {/* ---- Insurance deductible ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Insurance deductible</h2>
-          <span className="su-hint">The annual deductible the insurer sets for this client. It counts down as the patient pays out of pocket for sessions while it&apos;s unmet; once met, sessions run through insurance as normal.</span></div>
+          <span className="su-hint">The insurer&apos;s annual deductible. It counts down as the client pays out of pocket. Once met, sessions run through insurance.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
           <DeductiblePanel
             clientId={id}
@@ -540,7 +540,7 @@ export default function ClientDetail({
       {/* ---- Diagnoses ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Diagnoses</h2>
-          <span className="su-hint">The client&apos;s ICD-10 diagnoses (CMS-1500 box 21). Anyone on the record can edit; every add and removal is logged.</span></div>
+          <span className="su-hint">ICD-10 diagnoses (CMS-1500 box 21). Anyone on the record can edit; changes are logged.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
           <Icd10Section clientId={id} initial={profile.diagnosis ?? []} initialLog={profile.diagnosisLog ?? []} />
         </div>
@@ -620,7 +620,7 @@ export default function ClientDetail({
       {/* ---- Shared notes (all roles) ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Team notes</h2>
-          <span className="su-hint">Shared with everyone who works this record — clinicians, biller, owner, admin. For admin and billing details: benefits, authorisations, calls with the insurer, anything the team should see. <b>Not for clinical or sensitive notes</b> — those go in the encrypted Session notes below, visible only to this client&apos;s clinicians.</span></div>
+          <span className="su-hint">Admin and billing notes the whole team can see (clinicians, biller, owner, admin): benefits, authorisations, insurer calls. <b>Not for clinical or sensitive info.</b> That goes in Session notes below, seen only by this client&apos;s clinicians.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
           {notes.length === 0 ? (
             <p className="su-hint" style={{ margin: "0 0 12px" }}>No team notes yet.</p>
@@ -652,7 +652,7 @@ export default function ClientDetail({
       <div className="su-sec">
         <div className="su-sechead">
           <h2 className="su-sech">Appointments &amp; charges{activity.length > 0 && <span className="su-tag">{money(activityTotal)} total</span>}</h2>
-          <span className="su-hint">Every date of service that makes up this client&apos;s total. Tick insured visits to build a CMS-1500, or self-pay visits to build an invoice. Add and remove charges below.</span>
+          <span className="su-hint">Every date of service for this client. Tick insured visits to build a CMS-1500, or self-pay visits for an invoice.</span>
         </div>
 
         {sel.size > 0 && (
@@ -703,7 +703,7 @@ export default function ClientDetail({
                   <label>Insurer<select className="ls-in" value={acInsurer} onChange={(e) => setAcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                   <label>Amount<input type="number" step="0.01" min="0" className="ls-in" placeholder="0.00" value={acAmount} onChange={(e) => setAcAmount(e.target.value)} /></label>
                   <label>Stage<select className="ls-in" value={acStage} onChange={(e) => setAcStage(e.target.value as typeof acStage)}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option></select></label>
-                  {acStage === "paid" && <label>Collected date<input type="date" className="ls-in" value={acPaidDate} max={today} onChange={(e) => setAcPaidDate(e.target.value)} title="When the payment actually came in — this books it to the right month" /></label>}
+                  {acStage === "paid" && <label>Collected date<input type="date" className="ls-in" value={acPaidDate} max={today} onChange={(e) => setAcPaidDate(e.target.value)} title="When the payment came in. Books it to the right month." /></label>}
                 </div>
                 {cptCodes.length > 0 && (
                   <div className="cd-editcodes">
@@ -731,15 +731,15 @@ export default function ClientDetail({
                   </div>
                 )}
                 {chargeAfterReferral(acDate, profile.referral?.endDate) && (
-                  <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}) — it won&apos;t be paid.</p>
+                  <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}). It won&apos;t be paid.</p>
                 )}
                 {acDateWarn && (
                   <div className="ls-doswarn">
                     <div className="ls-doswarn-h">⚠️ Check the date of service</div>
                     <p className="ls-doswarn-b">
                       {acDateWarn.future
-                        ? <>You have entered the date <b>{longDateOf(acDate)}</b> — that&apos;s in the <b>future</b>, and a session can&apos;t have happened yet. Is that the date you meant? Fix it above if not.</>
-                        : <>You have entered the date <b>{longDateOf(acDate)}</b>, which is in <b>{monthNameOf(acDate)}</b> — not the current month, <b>{monthNameOf(today)}</b>. Is that the date you meant? Fix it above if not.</>}
+                        ? <>The date <b>{longDateOf(acDate)}</b> is in the <b>future</b>, so the session can&apos;t have happened yet. Fix it above if that&apos;s not right.</>
+                        : <>The date <b>{longDateOf(acDate)}</b> is in <b>{monthNameOf(acDate)}</b>, not the current month (<b>{monthNameOf(today)}</b>). Fix it above if that&apos;s not right.</>}
                     </p>
                     <div className="ls-doswarn-acts">
                       <button type="button" className="ls-save" onClick={() => { setAcDateOk(acDate); setAcDateWarn(null); }}>Yes, that&apos;s correct</button>
@@ -776,12 +776,12 @@ export default function ClientDetail({
                         <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>
-                        <td>{codeSummary(a.codes) || "—"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
+                        <td>{codeSummary(a.codes) || "-"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
                         <td>{a.insurer}</td>
                         <td className="num">{money(a.total)}</td>
                         <td>
                           <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
-                          {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date — this won't be paid">⚠ after referral</span>}
+                          {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date. It won't be paid.">⚠ after referral</span>}
                           {a.billNote && <span className="cd-billnote" title={`Billing note: ${a.billNote}`}>⚑ Read note</span>}
                           {(() => {
                             // What the client owes on this specific visit: the full fee
@@ -849,18 +849,18 @@ export default function ClientDetail({
                               {!ecInsurer && <>
                                 <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => { const v = e.target.value as typeof ecSelfPay; setEcSelfPay(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
                                 {ecSelfPay === "owing" && <label>Collected so far<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>}
-                                {ecSelfPay !== "waived" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected — set independently of the date of service" /></label>}
+                                {ecSelfPay !== "waived" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected. Set independently of the date of service." /></label>}
                               </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
                                 <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
                                 <label>Status<select className="ls-in" value={ecStage} onChange={(e) => { const v = e.target.value as typeof ecStage; setEcStage(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
-                                {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer — back-date to the real date if needed" /></label>}
-                                {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer actually settled — this drives the payout month" /></label>}
+                                {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer. Back-date to the real date if needed." /></label>}
+                                {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer settled. Drives the payout month." /></label>}
                                 {(ecStage === "writeoff" || ecStage === "writedown") && <>
                                   <label>Amount is<select className="ls-in" value={ecAdjMode} onChange={(e) => setEcAdjMode(e.target.value as typeof ecAdjMode)}><option value="adjusted">{ecStage === "writeoff" ? "Written off" : "Written down"}</option><option value="collected">Collected</option></select></label>
                                   <label>{ecAdjMode === "adjusted" ? (ecStage === "writeoff" ? "Written off" : "Written down") : "Collected"}<input type="number" step="0.01" min="0" className="ls-in" value={ecAdjAmt} onChange={(e) => setEcAdjAmt(e.target.value)} placeholder="0.00" /></label>
-                                  <label>Settled date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When this claim was settled — drives the month it lands in" /></label>
+                                  <label>Settled date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When this claim was settled. Drives the month it lands in." /></label>
                                   <div className="cd-adjnote">Of {money(ecBilledInsurance)} billed: collected <b>{money(ecInsuranceCollected())}</b>, {ecStage === "writeoff" ? "written off" : "written down"} <b>{money(round2(ecBilledInsurance - ecInsuranceCollected()))}</b>. Only the collected part pays out; the rest tracks in its own bucket, not with waived co-pays.</div>
                                 </>}
                               </>}
