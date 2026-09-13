@@ -155,7 +155,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
               <td className="num">{money(s.fee)}</td>
               <td className="num">{money(s.copay)}</td>
               <td className="num">{money(s.insurance)}</td>
-              <td>{pill(s)}{s.billNote && <span className="cd-billnote" title="Note from billing on why this isn't billed yet">{s.billNote}</span>}</td>
+              <td>{pill(s)}{s.billNote && <span className="cd-billnote" title={`Billing note: ${s.billNote}`}>⚑ Read note</span>}</td>
               {canManage && (
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   {delId === s.id ? (

@@ -782,7 +782,7 @@ export default function ClientDetail({
                         <td>
                           <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
                           {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date — this won't be paid">⚠ after referral</span>}
-                          {a.billNote && <span className="cd-billnote" title="Note from billing on why this isn't billed yet">{a.billNote}</span>}
+                          {a.billNote && <span className="cd-billnote" title={`Billing note: ${a.billNote}`}>⚑ Read note</span>}
                           {(() => {
                             // What the client owes on this specific visit: the full fee
                             // for a self-pay visit, or just the outstanding co-pay for an

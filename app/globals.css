@@ -2892,7 +2892,8 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .iem-sent { text-align: center; padding: 20px 8px 8px; }
 .iem-tick { width: 46px; height: 46px; border-radius: 50%; background: #dff0e5; color: #2c7a55; font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
 .iem-sent p { color: var(--ink, #21201c); font-size: 15px; margin: 0 0 18px; }
-.cd-billnote { display: inline-block; margin-left: 8px; font-size: 11.5px; font-weight: 500; color: #8a6d1a; background: #F8EEDC; border: 1px solid #ecdcb8; border-radius: 999px; padding: 1px 9px; vertical-align: middle; }
+.cd-billnote { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; color: #c0392b; background: #fbe6e2; border: 1px solid #f1c4bb; border-radius: 999px; padding: 1px 9px; vertical-align: middle; white-space: nowrap; cursor: help; }
+.cd-billnote:hover { background: #f7d7d1; border-color: #e0a89e; }
 .cd-invlink { display: inline-block; margin-left: 8px; font-size: 11.5px; font-weight: 600; color: var(--brand, #2E3192); text-decoration: none; border: 1px solid var(--edge, #d8d2c4); border-radius: 7px; padding: 1px 8px; white-space: nowrap; vertical-align: middle; }
 .cd-invlink:hover { border-color: var(--brand, #2E3192); background: rgba(46,49,146,.06); }
 
