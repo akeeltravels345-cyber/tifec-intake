@@ -55,6 +55,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
       ticket={{
         id: t.id, ref: t.ref, subject: t.subject, area: t.area, body: t.body, status: t.status,
         createdAt: t.createdAt,
+        mine: t.createdBy === me.id,
         raisedBy: nm(t.createdBy),
         enteredBy: t.enteredBy ? nm(t.enteredBy) : null,
         assignees: t.assignees.map((id) => ({ id, name: nm(id) })),

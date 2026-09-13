@@ -519,6 +519,72 @@ export async function deleteTicket(id: string): Promise<void> {
   writeJson(MSG_FILE, readJson<StoredMessage[]>(MSG_FILE, []).filter((m) => m.threadId !== threadId));
 }
 
+// ---- Editing a ticket post ---------------------------------------------------
+// You can fix your own wording, but only while it's safe to: before anyone has
+// replied after it, or within a short grace window after posting. After that the
+// text is locked so a conversation can't be quietly rewritten under people.
+export const EDIT_GRACE_MS = 10 * 60 * 1000; // 10 minutes
+export type EditResult = { ok: boolean; reason?: "empty" | "not_found" | "not_yours" | "locked" };
+
+/** A post is still editable while nothing came after it in its thread, OR it's
+ *  within the grace window of being posted. */
+async function stillEditable(threadId: string, id: string, createdAt: string): Promise<boolean> {
+  if (Date.now() - Date.parse(createdAt) < EDIT_GRACE_MS) return true;
+  const msgs = await listMessages(threadId);       // ascending by createdAt
+  const last = msgs[msgs.length - 1];
+  return !!last && last.id === id;                  // it's the last thing said
+}
+
+/** Edit your own ticket comment. Only the sender, and only while it's still the
+ *  last message OR inside the grace window. Just the text changes. */
+export async function editMessage(id: string, senderId: string, body: string): Promise<EditResult> {
+  const clean = body.trim();
+  if (!clean) return { ok: false, reason: "empty" };
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT thread_id, sender_id, created_at FROM comms_messages WHERE id = ${id}`) as Record<string, unknown>[];
+    const m = rows[0];
+    if (!m) return { ok: false, reason: "not_found" };
+    if (str(m.sender_id) !== senderId) return { ok: false, reason: "not_yours" };
+    if (!(await stillEditable(str(m.thread_id), id, iso(m.created_at)))) return { ok: false, reason: "locked" };
+    await sql`UPDATE comms_messages SET body_enc = ${encrypt(clean)} WHERE id = ${id}`;
+    return { ok: true };
+  }
+  const all = readJson<StoredMessage[]>(MSG_FILE, []);
+  const m = all.find((x) => x.id === id);
+  if (!m) return { ok: false, reason: "not_found" };
+  if (m.senderId !== senderId) return { ok: false, reason: "not_yours" };
+  if (!(await stillEditable(m.threadId, id, m.createdAt))) return { ok: false, reason: "locked" };
+  m.bodyEnc = encrypt(clean);
+  writeJson(MSG_FILE, all);
+  return { ok: true };
+}
+
+/** Edit your own ticket's description (the first post). Only the raiser, and only
+ *  while no one has replied yet OR inside the grace window. */
+export async function editTicketBody(id: string, userId: string, body: string): Promise<EditResult> {
+  const clean = body.trim();
+  if (!clean) return { ok: false, reason: "empty" };
+  const t = await getTicket(id);
+  if (!t) return { ok: false, reason: "not_found" };
+  if (t.createdBy !== userId) return { ok: false, reason: "not_yours" };
+  const msgs = await listMessages(ticketThreadId(id));
+  if (!(msgs.length === 0 || Date.now() - Date.parse(t.createdAt) < EDIT_GRACE_MS)) return { ok: false, reason: "locked" };
+  const now = new Date().toISOString();
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`UPDATE comms_tickets SET body_enc = ${encrypt(clean)}, updated_at = ${now} WHERE id = ${id}`;
+    return { ok: true };
+  }
+  const all = readJson<StoredTicket[]>(TIC_FILE, []);
+  const st = all.find((x) => x.id === id);
+  if (!st) return { ok: false, reason: "not_found" };
+  st.bodyEnc = encrypt(clean);
+  st.updatedAt = now;
+  writeJson(TIC_FILE, all);
+  return { ok: true };
+}
+
 // ============================ Notices =======================================
 interface StoredNotice extends Omit<Notice, "body" | "title" | "askAck" | "acks"> { bodyEnc: string; titleEnc: string }
 

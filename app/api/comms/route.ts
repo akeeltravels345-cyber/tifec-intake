@@ -7,7 +7,7 @@ import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
   isCustomGroup, getGroup, createGroup, setGroupMembers, renameGroup, deleteGroup,
-  createTicket, updateTicket, deleteTicket, getTicket,
+  createTicket, updateTicket, deleteTicket, getTicket, editMessage, editTicketBody, type EditResult,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
@@ -166,6 +166,27 @@ export async function POST(req: Request) {
       const threadId = String(body.threadId ?? "");
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
       await markThreadRead(threadId, me.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Edit your own words: a ticket comment or the ticket's first post. Allowed
+    // only while nothing has been said after it, or within a short grace window.
+    if (action === "message:edit" || action === "ticket:editbody") {
+      const text = String(body.body ?? "").trim();
+      if (!text) return NextResponse.json({ error: "Write something." }, { status: 400 });
+      if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
+      const id = String(body.id ?? "");
+      const res: EditResult = action === "message:edit"
+        ? await editMessage(id, me.id, text)
+        : await editTicketBody(id, me.id, text);
+      if (!res.ok) {
+        const msg = res.reason === "not_yours" ? "You can only edit your own posts."
+          : res.reason === "locked" ? "This can no longer be edited — someone has replied, or the edit window has passed."
+          : res.reason === "not_found" ? "Not found."
+          : "Write something.";
+        const status = res.reason === "not_yours" ? 403 : res.reason === "locked" ? 409 : res.reason === "not_found" ? 404 : 400;
+        return NextResponse.json({ error: msg }, { status });
+      }
       return NextResponse.json({ ok: true });
     }
 

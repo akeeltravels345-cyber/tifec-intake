@@ -12,7 +12,7 @@ import { IcoImage, IcoFile, IcoMic, IcoStop } from "./attachIcons";
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Ticket {
   id: string; ref: number; subject: string; area: string; body: string; status: TicketStatus;
-  createdAt: string; raisedBy: string; enteredBy?: string | null; assignees: { id: string; name: string }[];
+  createdAt: string; mine?: boolean; raisedBy: string; enteredBy?: string | null; assignees: { id: string; name: string }[];
 }
 interface Reply { id: string; body: string; at: string; who: string; mine: boolean; attachments: Att[] }
 interface Contact { id: string; name: string; label: string }
@@ -74,6 +74,29 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ids = ticket.assignees.map((a) => a.id);
+
+  // Inline editing of your own words. editingId is "body" for the first post, or a
+  // reply's id. You can edit until someone posts after it, or for 10 minutes.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const ageMin = (iso: string) => (Date.now() - Date.parse(iso)) / 60000;
+  const bodyEditable = !!ticket.mine && (replies.length === 0 || ageMin(ticket.createdAt) < 10);
+  const replyEditable = (r: Reply, idx: number) => r.mine && (idx === replies.length - 1 || ageMin(r.at) < 10);
+  function startEdit(which: string, body: string) { setError(""); setEditingId(which); setEditText(body); }
+  async function saveEdit(action: "message:edit" | "ticket:editbody", id: string) {
+    const t = editText.trim();
+    if (!t) { setError("Write something."); return; }
+    setEditBusy(true); setError("");
+    try {
+      const res = await fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id, body: t }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Could not save the edit."); return; }
+      setEditingId(null);
+      router.refresh();
+    } catch { setError("Could not reach the server."); }
+    finally { setEditBusy(false); }
+  }
 
   async function addFiles(list: FileList | null, asImage: boolean) {
     if (!list) return;
@@ -226,8 +249,20 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       )}
 
       <div className="tm-card tm-first">
-        <div className="tm-rwho">{ticket.raisedBy}</div>
-        <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(ticket.body) }} />
+        <div className="tm-rwho">{ticket.raisedBy}
+          {bodyEditable && editingId !== "body" && <button type="button" className="tm-editlink" onClick={() => startEdit("body", ticket.body)}>Edit</button>}
+        </div>
+        {editingId === "body" ? (
+          <div className="tm-editbox">
+            <RichTextArea id="edit-body" rows={4} value={editText} onChange={setEditText} placeholder="Edit the ticket…" />
+            <div className="tm-editactions">
+              <button type="button" className="tm-editsave" disabled={editBusy} onClick={() => saveEdit("ticket:editbody", ticket.id)}>{editBusy ? "Saving…" : "Save"}</button>
+              <button type="button" className="tm-editcancel" disabled={editBusy} onClick={() => setEditingId(null)}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(ticket.body) }} />
+        )}
         {firstAttachments.length > 0 && (
           <div className="tm-atts">
             {firstAttachments.map((a) => <AttView key={a.docId} a={a} />)}
@@ -236,10 +271,22 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       </div>
 
       <div className="tm-replies">
-        {replies.map((r) => (
+        {replies.map((r, idx) => (
           <div key={r.id} className={`tm-card tm-reply ${r.mine ? "me" : ""}`}>
-            <div className="tm-rwho">{r.who} <span className="tm-rwhen">{stamp(r.at)}</span></div>
-            {r.body && <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(r.body) }} />}
+            <div className="tm-rwho">{r.who} <span className="tm-rwhen">{stamp(r.at)}</span>
+              {replyEditable(r, idx) && editingId !== r.id && <button type="button" className="tm-editlink" onClick={() => startEdit(r.id, r.body)}>Edit</button>}
+            </div>
+            {editingId === r.id ? (
+              <div className="tm-editbox">
+                <RichTextArea id={`edit-${r.id}`} rows={3} value={editText} onChange={setEditText} placeholder="Edit your reply…" />
+                <div className="tm-editactions">
+                  <button type="button" className="tm-editsave" disabled={editBusy} onClick={() => saveEdit("message:edit", r.id)}>{editBusy ? "Saving…" : "Save"}</button>
+                  <button type="button" className="tm-editcancel" disabled={editBusy} onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              r.body && <p className="tm-nb" dangerouslySetInnerHTML={{ __html: formatText(r.body) }} />
+            )}
             {r.attachments.length > 0 && (
               <div className="tm-atts">
                 {r.attachments.map((a) => <AttView key={a.docId} a={a} />)}
