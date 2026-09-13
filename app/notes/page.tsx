@@ -11,7 +11,7 @@ import SessionNotes from "@/components/billing/SessionNotes";
 
 export const dynamic = "force-dynamic";
 
-/** A clinician's session-notes workspace: pick a client, read + write SOAP notes.
+/** A clinician's session-notes workspace: pick a client, read + write clinical notes.
  *  Clinicians only — the biller and system admin never see clinical content. */
 export default async function NotesPage({ searchParams }: { searchParams: Promise<{ client?: string }> }) {
   if (!NOTES_ENABLED) redirect("/today");
@@ -32,14 +32,14 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const today = caymanToday();
 
   const notes = active
-    ? (await listNotesForClient(active.id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: getClinician(n.clinicianId)?.name ?? "Clinician", noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
+    ? (await listNotesForClient(active.id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: getClinician(n.clinicianId)?.name ?? "Clinician", noteDate: n.noteDate, content: n.content, updatedAt: n.updatedAt }))
     : [];
 
   return (
     <div className="biz">
       <UnifiedSidebar data={sidebar} isDev={devMode()} />
       <main className="bo-main">
-        <div className="su-topbar"><h1 className="su-h1">Session notes</h1><p className="su-sub">Your clients&apos; encrypted SOAP notes. Pick a client, then read or write.</p></div>
+        <div className="su-topbar"><h1 className="su-h1">Session notes</h1><p className="su-sub">Your clients&apos; encrypted clinical notes. Pick a client, then read or write.</p></div>
 
         {roster.length === 0 ? (
           <div className="bq-empty" style={{ padding: 28 }}><div className="big">No clients yet</div><div className="small">Once you&apos;ve seen a client, they&apos;ll appear here to note on.</div></div>

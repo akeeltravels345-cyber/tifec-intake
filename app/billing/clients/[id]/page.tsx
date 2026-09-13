@@ -60,7 +60,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const linked = await clinicianSeesClient(id, user.clinician.id);
   const canSeeNotes = NOTES_ENABLED && user.clinician.contact !== "admin" && linked;
   const noteRows = canSeeNotes
-    ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, soap: n.soap, updatedAt: n.updatedAt }))
+    ? (await listNotesForClient(id)).map((n) => ({ id: n.id, clinicianId: n.clinicianId, author: clinName(n.clinicianId), noteDate: n.noteDate, content: n.content, updatedAt: n.updatedAt }))
     : [];
   const todayStr = caymanToday();
 
@@ -88,7 +88,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       {canSeeNotes && (
         <div className="su-card" style={{ marginTop: 20, padding: "18px 20px" }}>
           <h2 className="su-sech" style={{ margin: "0 0 3px" }}>Session notes</h2>
-          <p className="su-sub" style={{ margin: "0 0 14px" }}>Encrypted SOAP notes — visible only to this client&apos;s clinicians.</p>
+          <p className="su-sub" style={{ margin: "0 0 14px" }}>Encrypted clinical notes — visible only to this client&apos;s clinicians.</p>
           <SessionNotes clientId={client.id} notes={noteRows} meId={user.clinician.id} today={todayStr} />
         </div>
       )}

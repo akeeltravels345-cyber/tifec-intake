@@ -2,52 +2,43 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { NOTE_FORMATS, DEFAULT_FORMAT, type NoteFormat, type NoteContent } from "@/lib/noteFormats";
 
 export interface NoteRow {
   id: string;
   clinicianId: string;
   author: string;
   noteDate: string;
-  soap: { s: string; o: string; a: string; p: string };
+  content: NoteContent;
   updatedAt: string;
 }
-
-const FIELDS: { k: "s" | "o" | "a" | "p"; label: string; hint: string }[] = [
-  { k: "s", label: "Subjective", hint: "What the client reports: how they say they're doing." },
-  { k: "o", label: "Objective", hint: "What you observed: presentation, affect, measures." },
-  { k: "a", label: "Assessment", hint: "Your clinical impression / progress toward goals." },
-  { k: "p", label: "Plan", hint: "Next steps, interventions, homework, follow-up." },
-];
-const empty = { s: "", o: "", a: "", p: "" };
 
 // Where a clinician goes to write in Supanote. If your workspace lives at a
 // different address, tell me and I'll change this one line.
 const SUPANOTE_URL = "https://app.supanote.ai";
 
-// Split a note pasted from Supanote into SOAP by its section headers. Supanote
-// (and most templates) label the sections "Subjective/Objective/Assessment/Plan"
-// we find those at line starts (allowing a leading #, *, - or > and a : . - )
-// separator) and slice the text between them. Returns null when fewer than two
-// sections are found, so an unstructured note is never mangled.
-const SOAP_DEFS: { k: "s" | "o" | "a" | "p"; alts: string[] }[] = [
-  { k: "s", alts: ["subjective", "s"] },
-  { k: "o", alts: ["objective", "o"] },
-  { k: "a", alts: ["assessment", "analysis", "impression", "a"] },
-  { k: "p", alts: ["plan", "p"] },
-];
-function splitSoap(raw: string): { s: string; o: string; a: string; p: string } | null {
+const FORMAT_KEYS = Object.keys(NOTE_FORMATS) as NoteFormat[];
+const emptyFields = (f: NoteFormat): Record<string, string> =>
+  Object.fromEntries(NOTE_FORMATS[f].fields.map((x) => [x.key, ""]));
+
+// Split a note pasted from Supanote into the CURRENT format's sections by their
+// headings (allowing a leading #, *, - or > and a : . - ) separator). Returns
+// null when fewer than two headings are found, so an unstructured note is never
+// mangled.
+function splitByFormat(raw: string, format: NoteFormat): Record<string, string> | null {
   const text = raw.replace(/\r/g, "");
-  const hits: { k: "s" | "o" | "a" | "p"; start: number; end: number }[] = [];
-  for (const d of SOAP_DEFS) {
+  const defs = NOTE_FORMATS[format].fields;
+  const hits: { key: string; start: number; end: number }[] = [];
+  for (const d of defs) {
     const re = new RegExp(`(?:^|\\n)[ \\t]*[#>*\\-]*[ \\t]*(?:${d.alts.join("|")})[ \\t]*[:.\\-–)]`, "i");
     const m = re.exec(text);
-    if (m) hits.push({ k: d.k, start: m.index + (m[0][0] === "\n" ? 1 : 0), end: m.index + m[0].length });
+    if (m) hits.push({ key: d.key, start: m.index + (m[0][0] === "\n" ? 1 : 0), end: m.index + m[0].length });
   }
   if (hits.length < 2) return null;
   hits.sort((a, b) => a.start - b.start);
-  const out = { s: "", o: "", a: "", p: "" };
+  const out = emptyFields(format);
   for (let i = 0; i < hits.length; i++) {
-    out[hits[i].k] = text.slice(hits[i].end, i + 1 < hits.length ? hits[i + 1].start : undefined).trim();
+    out[hits[i].key] = text.slice(hits[i].end, i + 1 < hits.length ? hits[i + 1].start : undefined).trim();
   }
   return out;
 }
@@ -62,40 +53,58 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [date, setDate] = useState(today);
-  const [soap, setSoap] = useState({ ...empty });
+  const [format, setFormat] = useState<NoteFormat>(DEFAULT_FORMAT);
+  const [fields, setFields] = useState<Record<string, string>>(emptyFields(DEFAULT_FORMAT));
   const [paste, setPaste] = useState("");
   const [pasteMsg, setPasteMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // Saved notes fold shut; open the ones you're reading.
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  function startAdd() { setEditId(null); setAdding(true); setDate(today); setSoap({ ...empty }); setPaste(""); setPasteMsg(""); setErr(""); }
-  function startEdit(n: NoteRow) { setAdding(false); setEditId(n.id); setDate(n.noteDate); setSoap({ ...n.soap }); setPaste(""); setPasteMsg(""); setErr(""); }
-  function cancel() { setAdding(false); setEditId(null); setSoap({ ...empty }); setPaste(""); setPasteMsg(""); setErr(""); }
+  function startAdd() { setEditId(null); setAdding(true); setDate(today); setFormat(DEFAULT_FORMAT); setFields(emptyFields(DEFAULT_FORMAT)); setPaste(""); setPasteMsg(""); setErr(""); }
+  function startEdit(n: NoteRow) {
+    setAdding(false); setEditId(n.id); setDate(n.noteDate);
+    setFormat(n.content.format);
+    setFields({ ...emptyFields(n.content.format), ...n.content.fields });
+    setPaste(""); setPasteMsg(""); setErr("");
+  }
+  function cancel() { setAdding(false); setEditId(null); setFields(emptyFields(format)); setPaste(""); setPasteMsg(""); setErr(""); }
 
-  // Take a note pasted from Supanote and lay it into the SOAP fields for review.
-  // If it splits cleanly, fill the four fields; if not, drop it all into
-  // Subjective so nothing is lost, and say so.
+  // Switching format keeps any text whose section carries across (e.g. Plan).
+  function changeFormat(f: NoteFormat) {
+    setFields((cur) => { const next = emptyFields(f); for (const k of Object.keys(next)) if (cur[k]) next[k] = cur[k]; return next; });
+    setFormat(f);
+    setPasteMsg("");
+  }
+
+  // Lay a pasted Supanote note into the chosen format for review. If it splits
+  // cleanly, fill the sections; if not, drop it all into the first box so nothing
+  // is lost, and say so.
   function applyPaste(text: string) {
     if (!text.trim()) return;
-    const parsed = splitSoap(text);
+    const defs = NOTE_FORMATS[format].fields;
+    const parsed = splitByFormat(text, format);
     if (parsed) {
-      setSoap(parsed);
-      setPasteMsg("Split into Subjective / Objective / Assessment / Plan. Check the fields below, then save.");
+      setFields(parsed);
+      setPasteMsg(`Split into ${defs.map((d) => d.label).join(" / ")}. Check the boxes below, then save.`);
     } else {
-      setSoap((s) => ({ ...s, s: [s.s, text.trim()].filter(Boolean).join("\n\n") }));
-      setPasteMsg("Couldn't spot SOAP headings, so the whole note went into Subjective. Move any parts to the right box, then save.");
+      const first = defs[0];
+      setFields((s) => ({ ...s, [first.key]: [s[first.key], text.trim()].filter(Boolean).join("\n\n") }));
+      setPasteMsg(`Couldn't spot ${NOTE_FORMATS[format].label} headings, so the whole note went into ${first.label}. Move any parts to the right box, then save.`);
     }
     setPaste("");
   }
 
   async function save() {
-    if (!soap.s.trim() && !soap.o.trim() && !soap.a.trim() && !soap.p.trim()) { setErr("Write something in the note first."); return; }
+    if (!Object.values(fields).some((v) => v.trim())) { setErr("Write something in the note first."); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch(`/api/billing/clients/${clientId}/notes`, {
         method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...(editId ? { noteId: editId } : {}), noteDate: date, ...soap }),
+        body: JSON.stringify({ ...(editId ? { noteId: editId } : {}), noteDate: date, format, fields }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
       cancel();
@@ -115,9 +124,16 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
 
   const editor = (
     <div className="sn-editor">
-      <label className="sn-datelab">Session date<input type="date" className="ls-in" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></label>
+      <div className="sn-editrow">
+        <label className="sn-datelab">Session date<input type="date" className="ls-in" value={date} max={today} onChange={(e) => setDate(e.target.value)} /></label>
+        <label className="sn-datelab">Note format
+          <select className="ls-in" value={format} onChange={(e) => changeFormat(e.target.value as NoteFormat)}>
+            {FORMAT_KEYS.map((f) => <option key={f} value={f}>{NOTE_FORMATS[f].label}</option>)}
+          </select>
+        </label>
+      </div>
       <div className="sn-paste">
-        <span className="sn-flab">Paste from Supanote <span className="opt">Write in Supanote, hit Copy, then paste here, and we&apos;ll split it into S/O/A/P below for you to review.</span></span>
+        <span className="sn-flab">Paste from Supanote <span className="opt">Write in Supanote, hit Copy, then paste here and we&apos;ll split it into the {NOTE_FORMATS[format].label} boxes below for you to review.</span></span>
         <textarea
           className="ls-in" rows={3} value={paste}
           placeholder="Paste a note copied from Supanote…"
@@ -125,14 +141,14 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
           onPaste={(e) => { const t = e.clipboardData.getData("text"); if (t.trim()) { e.preventDefault(); applyPaste(t); } }}
         />
         <div className="sn-pasterow">
-          {paste.trim() && <button type="button" className="sn-link" onClick={() => applyPaste(paste)}>Split into SOAP ↓</button>}
+          {paste.trim() && <button type="button" className="sn-link" onClick={() => applyPaste(paste)}>Split into {NOTE_FORMATS[format].label} ↓</button>}
           {pasteMsg && <span className="sn-pastemsg">{pasteMsg}</span>}
         </div>
       </div>
-      {FIELDS.map((f) => (
-        <label className="sn-field" key={f.k}>
+      {NOTE_FORMATS[format].fields.map((f) => (
+        <label className="sn-field" key={f.key}>
           <span className="sn-flab">{f.label} <span className="opt">{f.hint}</span></span>
-          <textarea className="ls-in" rows={3} value={soap[f.k]} onChange={(e) => setSoap((s) => ({ ...s, [f.k]: e.target.value }))} />
+          <textarea className="ls-in" rows={3} value={fields[f.key] ?? ""} onChange={(e) => setFields((s) => ({ ...s, [f.key]: e.target.value }))} />
         </label>
       ))}
       {err && <div className="ls-err">{err}</div>}
@@ -157,27 +173,37 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
         <p className="sn-empty">No session notes yet. Add the first one. It&apos;s encrypted and only visible to this client&apos;s clinicians.</p>
       ) : (
         <div className="sn-list">
-          {notes.map((n) => editId === n.id ? (
-            <div key={n.id}>{editor}</div>
-          ) : (
-            <div className="sn-note" key={n.id}>
-              <div className="sn-head">
-                <span className="sn-date">{n.noteDate}</span>
-                <span className="sn-by">{n.author}</span>
-                {n.clinicianId === meId && (
-                  <span className="sn-noteacts">
-                    <button type="button" className="sn-link" onClick={() => startEdit(n)}>Edit</button>
-                    <button type="button" className="sn-link del" onClick={() => remove(n.id)}>Delete</button>
-                  </span>
+          {notes.map((n, i) => {
+            // Number sessions chronologically — oldest is Session 1. `notes` is newest-first.
+            const sessionNo = notes.length - i;
+            const fmt = NOTE_FORMATS[n.content.format];
+            if (editId === n.id) return <div key={n.id}>{editor}</div>;
+            const isOpen = open.has(n.id);
+            return (
+              <div className={`sn-note ${isOpen ? "open" : ""}`} key={n.id}>
+                <button type="button" className="sn-head" onClick={() => toggle(n.id)} aria-expanded={isOpen}>
+                  <span className={`sn-chev ${isOpen ? "open" : ""}`} aria-hidden="true">›</span>
+                  <span className="sn-title">Session {sessionNo}</span>
+                  <span className="sn-date">{n.noteDate}</span>
+                  <span className="sn-fmt">{fmt.label}</span>
+                  <span className="sn-by">{n.author}</span>
+                </button>
+                {isOpen && (
+                  <div className="sn-body">
+                    {n.clinicianId === meId && (
+                      <div className="sn-noteacts">
+                        <button type="button" className="sn-link" onClick={() => startEdit(n)}>Edit</button>
+                        <button type="button" className="sn-link del" onClick={() => remove(n.id)}>Delete</button>
+                      </div>
+                    )}
+                    {fmt.fields.map((f) => (n.content.fields[f.key] || "").trim() ? (
+                      <div className="sn-seg" key={f.key}><span className="sn-seglab">{f.label}</span><p>{n.content.fields[f.key]}</p></div>
+                    ) : null)}
+                  </div>
                 )}
               </div>
-              <div className="sn-body">
-                {FIELDS.map((f) => n.soap[f.k].trim() ? (
-                  <div className="sn-seg" key={f.k}><span className="sn-seglab">{f.label}</span><p>{n.soap[f.k]}</p></div>
-                ) : null)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

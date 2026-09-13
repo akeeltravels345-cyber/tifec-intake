@@ -1,23 +1,29 @@
-// Clinical session notes (SOAP), encrypted at rest. Dual-mode: Postgres in prod,
-// a gitignored JSON file in local dev. The body holds { s, o, a, p } as encrypted
-// JSON — only clinicians linked to the client see it (access is enforced by the
-// API/pages, never here).
+// Clinical session notes, encrypted at rest. Dual-mode: Postgres in prod, a
+// gitignored JSON file in local dev. The body holds { format, fields } as
+// encrypted JSON (BIRP / SOAP / DAP); legacy notes stored a bare { s,o,a,p } and
+// decode as SOAP. Only clinicians linked to the client see it (access is enforced
+// by the API/pages, never here).
 import fs from "fs";
 import path from "path";
 import { encrypt, decrypt, randomId } from "./crypto";
+import { NOTE_FORMATS, DEFAULT_FORMAT, isNoteFormat, type NoteFormat, type NoteContent, type NoteFieldDef } from "./noteFormats";
+
+// Re-export the client-safe format definitions so existing server imports keep
+// working; the browser editor imports them straight from ./noteFormats.
+export { NOTE_FORMATS, DEFAULT_FORMAT, isNoteFormat };
+export type { NoteFormat, NoteContent, NoteFieldDef };
 
 // Feature flag: session notes are ON by default now that clinicians paste their
 // Supanote treatment notes in here. Set NOTES_ENABLED=0 to hide the feature.
 export const NOTES_ENABLED = process.env.NOTES_ENABLED !== "0";
 
-export interface Soap { s: string; o: string; a: string; p: string }
 export interface SessionNote {
   id: string;
   clientId: string;
   clinicianId: string;   // author
   sessionId: string | null;
   noteDate: string;      // YYYY-MM-DD
-  soap: Soap;
+  content: NoteContent;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,18 +43,26 @@ function writeLocal(rows: StoredNote[]) {
   fs.writeFileSync(LOCAL_FILE, JSON.stringify(rows, null, 2));
 }
 
-function decodeSoap(enc: string): Soap {
+function decodeContent(enc: string): NoteContent {
   try {
-    const o = JSON.parse(decrypt(enc)) as Partial<Soap>;
-    return { s: o.s || "", o: o.o || "", a: o.a || "", p: o.p || "" };
+    const o = JSON.parse(decrypt(enc)) as Record<string, unknown>;
+    // New shape: { format, fields }. Keep only the keys the format defines.
+    if (isNoteFormat(o.format) && o.fields && typeof o.fields === "object") {
+      const src = o.fields as Record<string, unknown>;
+      const fields: Record<string, string> = {};
+      for (const f of NOTE_FORMATS[o.format].fields) fields[f.key] = String(src[f.key] ?? "");
+      return { format: o.format, fields };
+    }
+    // Legacy shape: a bare SOAP { s, o, a, p }.
+    return { format: "soap", fields: { s: String(o.s ?? ""), o: String(o.o ?? ""), a: String(o.a ?? ""), p: String(o.p ?? "") } };
   } catch {
-    return { s: "", o: "", a: "", p: "" };
+    return { format: DEFAULT_FORMAT, fields: {} };
   }
 }
-const encodeSoap = (soap: Soap) => encrypt(JSON.stringify({ s: soap.s || "", o: soap.o || "", a: soap.a || "", p: soap.p || "" }));
+const encodeContent = (c: NoteContent) => encrypt(JSON.stringify({ format: c.format, fields: c.fields }));
 
 function toNote(r: StoredNote): SessionNote {
-  return { id: r.id, clientId: r.clientId, clinicianId: r.clinicianId, sessionId: r.sessionId ?? null, noteDate: r.noteDate, soap: decodeSoap(r.bodyEnc), createdAt: r.createdAt, updatedAt: r.updatedAt };
+  return { id: r.id, clientId: r.clientId, clinicianId: r.clinicianId, sessionId: r.sessionId ?? null, noteDate: r.noteDate, content: decodeContent(r.bodyEnc), createdAt: r.createdAt, updatedAt: r.updatedAt };
 }
 function rowToStored(r: Record<string, unknown>): StoredNote {
   return { id: String(r.id), clientId: String(r.client_id), clinicianId: String(r.clinician_id), sessionId: (r.session_id as string) ?? null, noteDate: String(r.note_date), bodyEnc: String(r.body_enc), createdAt: String(r.created_at), updatedAt: String(r.updated_at) };
@@ -90,9 +104,9 @@ export async function getNote(id: string): Promise<SessionNote | null> {
   return r ? toNote(r) : null;
 }
 
-export async function addNote(input: { clientId: string; clinicianId: string; sessionId?: string | null; noteDate: string; soap: Soap }): Promise<SessionNote> {
+export async function addNote(input: { clientId: string; clinicianId: string; sessionId?: string | null; noteDate: string; content: NoteContent }): Promise<SessionNote> {
   const now = new Date().toISOString();
-  const row: StoredNote = { id: randomId(), clientId: input.clientId, clinicianId: input.clinicianId, sessionId: input.sessionId ?? null, noteDate: input.noteDate, bodyEnc: encodeSoap(input.soap), createdAt: now, updatedAt: now };
+  const row: StoredNote = { id: randomId(), clientId: input.clientId, clinicianId: input.clinicianId, sessionId: input.sessionId ?? null, noteDate: input.noteDate, bodyEnc: encodeContent(input.content), createdAt: now, updatedAt: now };
   if (usePostgres) {
     const sql = await pg();
     await sql`INSERT INTO session_notes (id, client_id, clinician_id, session_id, note_date, body_enc, created_at, updated_at)
@@ -103,13 +117,13 @@ export async function addNote(input: { clientId: string; clinicianId: string; se
   return toNote(row);
 }
 
-export async function updateNote(id: string, patch: { noteDate?: string; soap?: Soap }): Promise<boolean> {
+export async function updateNote(id: string, patch: { noteDate?: string; content?: NoteContent }): Promise<boolean> {
   const now = new Date().toISOString();
   if (usePostgres) {
     const cur = await getNote(id);
     if (!cur) return false;
     const noteDate = patch.noteDate ?? cur.noteDate;
-    const bodyEnc = encodeSoap(patch.soap ?? cur.soap);
+    const bodyEnc = encodeContent(patch.content ?? cur.content);
     const sql = await pg();
     await sql`UPDATE session_notes SET note_date = ${noteDate}, body_enc = ${bodyEnc}, updated_at = ${now} WHERE id = ${id}`;
     return true;
@@ -118,7 +132,7 @@ export async function updateNote(id: string, patch: { noteDate?: string; soap?: 
   const i = all.findIndex((x) => x.id === id);
   if (i < 0) return false;
   if (patch.noteDate) all[i].noteDate = patch.noteDate;
-  if (patch.soap) all[i].bodyEnc = encodeSoap(patch.soap);
+  if (patch.content) all[i].bodyEnc = encodeContent(patch.content);
   all[i].updatedAt = now;
   writeLocal(all);
   return true;

@@ -2338,14 +2338,22 @@ body:has(.biz) { background: #F8F9F8; }
 .sn-acts { display: flex; gap: 8px; }
 .sn-empty { font-size: 13.5px; color: var(--muted); }
 .sn-list { display: flex; flex-direction: column; gap: 12px; }
-.sn-note { border: 1px solid var(--edge); border-radius: 12px; padding: 14px 16px; background: #fff; }
-.sn-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--hair, #F0EADE); margin-bottom: 10px; }
-.sn-date { font-weight: 700; color: var(--ink); }
-.sn-by { font-size: 12.5px; color: var(--muted); }
-.sn-noteacts { margin-left: auto; display: flex; gap: 12px; }
+.sn-note { border: 1px solid var(--edge); border-radius: 12px; background: #fff; overflow: hidden; }
+.sn-note.open { box-shadow: 0 1px 2px rgba(20,26,40,.04); }
+.sn-editrow { display: flex; gap: 16px; flex-wrap: wrap; }
+/* Foldable saved-note header — the whole row is the toggle. */
+.sn-head { width: 100%; display: flex; align-items: baseline; gap: 12px; padding: 13px 16px; background: none; border: none; text-align: left; cursor: pointer; font: inherit; }
+.sn-head:hover { background: #faf9f6; }
+.sn-chev { align-self: center; font-size: 16px; color: var(--muted, #8a93a3); transition: transform .15s ease; flex: 0 0 auto; }
+.sn-chev.open { transform: rotate(90deg); }
+.sn-title { font: 700 14px "Open Sans"; color: var(--ink); }
+.sn-date { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.sn-fmt { font: 700 10px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: var(--teal-deep, #1f6b6f); background: #e4efec; border-radius: 999px; padding: 1px 8px; align-self: center; }
+.sn-by { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+.sn-noteacts { display: flex; gap: 12px; margin-bottom: 4px; }
 .sn-link { background: none; border: none; padding: 0; font: 600 12.5px "Open Sans"; color: var(--indigo, #2E3192); cursor: pointer; }
 .sn-link.del { color: var(--neg, #a5432f); }
-.sn-body { display: flex; flex-direction: column; gap: 10px; }
+.sn-body { display: flex; flex-direction: column; gap: 10px; padding: 2px 16px 16px; border-top: 1px solid var(--hair, #F0EADE); padding-top: 12px; }
 .sn-seg .sn-seglab { font: 700 10.5px "Open Sans"; letter-spacing: .06em; text-transform: uppercase; color: var(--teal-deep, #1f6b6f); }
 .sn-seg p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink); line-height: 1.55; white-space: pre-wrap; }
 /* Dedicated Session-notes workspace */
