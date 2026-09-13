@@ -114,6 +114,11 @@ export async function POST(req: Request) {
       if (!text && atts.length === 0) return NextResponse.json({ error: "Write something, or add an image, file or voice note." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That message is too long." }, { status: 400 });
       if (!(await canPost(threadId, me.id))) return NextResponse.json({ error: "Not your conversation." }, { status: 403 });
+      // A ticket marked done is closed to new comments until someone reopens it.
+      if (threadId.startsWith("ticket:")) {
+        const tk = await getTicket(threadId.slice("ticket:".length));
+        if (tk?.status === "resolved") return NextResponse.json({ error: "This ticket is marked done. Reopen it to add a comment." }, { status: 409 });
+      }
       const m = await sendMessage(threadId, me.id, text);
       // Save each attachment against this specific comment: owner id
       // "ticket:<id>:msg:<messageId>" so the detail page can show it under the

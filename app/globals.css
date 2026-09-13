@@ -2838,6 +2838,7 @@ body:has(.rec) { background: radial-gradient(1100px 460px at 92% -12%, rgba(47,1
 .tm-del { background: none; border: none; color: var(--muted); font: 600 12px "Open Sans"; cursor: pointer; }
 .tm-del:hover { color: #a5432f; }
 
+.tm-closednote { padding: 16px 18px; margin-bottom: 20px; font: 500 13.5px "Open Sans"; color: var(--muted, #667); background: #f7faf9; border: 1px dashed var(--edge); line-height: 1.5; }
 .tm-form { padding: 18px; margin-bottom: 20px; }
 .tm-l { display: block; font: 600 12.5px "Open Sans"; color: var(--ink); margin: 12px 0 6px; }
 .tm-form > .tm-l:first-child { margin-top: 0; }

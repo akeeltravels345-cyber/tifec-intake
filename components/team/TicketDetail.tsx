@@ -74,6 +74,9 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ids = ticket.assignees.map((a) => a.id);
+  // The raiser can close/reopen their own ticket even if they aren't an assignee.
+  const canClose = canManage || !!ticket.mine;
+  const closed = ticket.status === "resolved";
 
   // Inline editing of your own words. editingId is "body" for the first post, or a
   // reply's id. You can edit until someone posts after it, or for 10 minutes.
@@ -206,6 +209,20 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
         </div>
       )}
 
+      {!canManage && canClose && (
+        <div className="tm-card tm-manage">
+          <span className="tm-l">Status</span>
+          <div className="tm-statusrow">
+            <span className={`tm-status ${ticket.status}`}>{TICKET_STATUS_LABEL[ticket.status]}</span>
+            <div className="tm-sbtns">
+              {closed
+                ? <button type="button" className="tm-sbtn ghost" onClick={() => set({ status: "open" })}>Reopen</button>
+                : <button type="button" className="tm-sbtn primary" onClick={() => set({ status: "resolved" })}>Mark done</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {canManage && (
         <div className="tm-card tm-manage">
           <span className="tm-l">Status</span>
@@ -297,6 +314,12 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       </div>
 
       {error && <p className="tm-err">{error}</p>}
+      {closed ? (
+        <div className="tm-card tm-closednote">
+          This ticket is marked done, so it&apos;s closed to new comments.{" "}
+          {canClose ? "Reopen it above if you need to add something." : "Ask whoever owns it to reopen it if you need to add something."}
+        </div>
+      ) : (
       <form className="tm-card tm-form" onSubmit={reply}>
         <label className="tm-l" htmlFor="rp">Reply</label>
         <RichTextArea id="rp" rows={3} value={text} onChange={setText} placeholder="Add an update, attach a screenshot, or record a voice note..." />
@@ -334,6 +357,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
           <button className="tm-cta" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)}>{busy ? "Sending..." : "Reply"}</button>
         </div>
       </form>
+      )}
     </>
   );
 }
