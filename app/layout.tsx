@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TIFEC Intake Forms",
-  description: "Secure client intake for TIFEC psychology practice.",
+  title: "The Institute for Essential Care",
+  description: "The Institute for Essential Care: secure scheduling, client intake, and billing.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <img src="/tifec-mark.png" alt="TIFEC" className="brand-mark" />
             <div>
               <h1>TIFEC</h1>
-              <p>Client Intake Forms</p>
+              <p>The Institute for Essential Care</p>
             </div>
           </div>
         </div>
