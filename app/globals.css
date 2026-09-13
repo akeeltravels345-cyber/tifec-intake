@@ -2341,9 +2341,11 @@ body:has(.biz) { background: #F8F9F8; }
 .sn-note { border: 1px solid var(--edge); border-radius: 12px; background: #fff; overflow: hidden; }
 .sn-note.open { box-shadow: 0 1px 2px rgba(20,26,40,.04); }
 .sn-editrow { display: flex; gap: 16px; flex-wrap: wrap; }
-/* Foldable saved-note header — the whole row is the toggle. */
-.sn-head { width: 100%; display: flex; align-items: baseline; gap: 12px; padding: 13px 16px; background: none; border: none; text-align: left; cursor: pointer; font: inherit; }
+/* Foldable saved-note header — the title row is the toggle; Edit/Delete sit beside it. */
+.sn-headrow { display: flex; align-items: stretch; }
+.sn-head { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 12px; padding: 13px 16px; background: none; border: none; text-align: left; cursor: pointer; font: inherit; }
 .sn-head:hover { background: #faf9f6; }
+.sn-headacts { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
 .sn-chev { align-self: center; font-size: 16px; color: var(--muted, #8a93a3); transition: transform .15s ease; flex: 0 0 auto; }
 .sn-chev.open { transform: rotate(90deg); }
 .sn-title { font: 700 14px "Open Sans"; color: var(--ink); }

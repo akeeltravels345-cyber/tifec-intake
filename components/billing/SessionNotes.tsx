@@ -181,21 +181,23 @@ export default function SessionNotes({ clientId, notes, meId, today }: {
             const isOpen = open.has(n.id);
             return (
               <div className={`sn-note ${isOpen ? "open" : ""}`} key={n.id}>
-                <button type="button" className="sn-head" onClick={() => toggle(n.id)} aria-expanded={isOpen}>
-                  <span className={`sn-chev ${isOpen ? "open" : ""}`} aria-hidden="true">›</span>
-                  <span className="sn-title">Session {sessionNo}</span>
-                  <span className="sn-date">{n.noteDate}</span>
-                  <span className="sn-fmt">{fmt.label}</span>
-                  <span className="sn-by">{n.author}</span>
-                </button>
+                <div className="sn-headrow">
+                  <button type="button" className="sn-head" onClick={() => toggle(n.id)} aria-expanded={isOpen}>
+                    <span className={`sn-chev ${isOpen ? "open" : ""}`} aria-hidden="true">›</span>
+                    <span className="sn-title">Session {sessionNo}</span>
+                    <span className="sn-date">{n.noteDate}</span>
+                    <span className="sn-fmt">{fmt.label}</span>
+                    <span className="sn-by">{n.author}</span>
+                  </button>
+                  {n.clinicianId === meId && (
+                    <span className="sn-headacts">
+                      <button type="button" className="sn-link" onClick={() => startEdit(n)}>Edit</button>
+                      <button type="button" className="sn-link del" onClick={() => remove(n.id)}>Delete</button>
+                    </span>
+                  )}
+                </div>
                 {isOpen && (
                   <div className="sn-body">
-                    {n.clinicianId === meId && (
-                      <div className="sn-noteacts">
-                        <button type="button" className="sn-link" onClick={() => startEdit(n)}>Edit</button>
-                        <button type="button" className="sn-link del" onClick={() => remove(n.id)}>Delete</button>
-                      </div>
-                    )}
                     {fmt.fields.map((f) => (n.content.fields[f.key] || "").trim() ? (
                       <div className="sn-seg" key={f.key}><span className="sn-seglab">{f.label}</span><p>{n.content.fields[f.key]}</p></div>
                     ) : null)}

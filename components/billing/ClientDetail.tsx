@@ -619,11 +619,11 @@ export default function ClientDetail({
 
       {/* ---- Shared notes (all roles) ---- */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Notes</h2>
-          <span className="su-hint">Shared across everyone who works this record — clinicians, biller, owner, admin. Add benefits, authorisations, calls with the insurer, anything the team should see. (Private clinical notes stay separate.)</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Team notes</h2>
+          <span className="su-hint">Shared with everyone who works this record — clinicians, biller, owner, admin. For admin and billing details: benefits, authorisations, calls with the insurer, anything the team should see. <b>Not for clinical or sensitive notes</b> — those go in the encrypted Session notes below, visible only to this client&apos;s clinicians.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
           {notes.length === 0 ? (
-            <p className="su-hint" style={{ margin: "0 0 12px" }}>No notes yet.</p>
+            <p className="su-hint" style={{ margin: "0 0 12px" }}>No team notes yet.</p>
           ) : (
             <div className="cd-notelist">
               {[...notes].reverse().map((n) => (
@@ -642,7 +642,7 @@ export default function ClientDetail({
             </div>
           )}
           <div className="cd-noteadd">
-            <textarea className="ls-in" rows={2} placeholder="Add a note for the team…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+            <textarea className="ls-in" rows={2} placeholder="Add a team note (admin/billing, not clinical)…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
             <button className="su-add" disabled={busy || !noteText.trim()} onClick={addNote}>{busy ? "Saving…" : "Add note"}</button>
           </div>
         </div>
