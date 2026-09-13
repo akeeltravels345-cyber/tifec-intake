@@ -436,29 +436,21 @@ export async function lastTicketCommenters(): Promise<Record<string, string>> {
   return out;
 }
 
-/** Whose turn it is on a ticket — the people it's waiting on. The ball follows the
- *  last comment: the raiser opening it (or speaking) puts it on the assignees; an
- *  assignee replying puts it back on the raiser; a resolved ticket waits on no one.
+/** Whose turn it is on a ticket — everyone on it who's still waiting to respond.
+ *  A ticket is waiting on every person on it (the raiser and all assignees) EXCEPT
+ *  whoever spoke last, so a ticket with several people stays flagged for ALL the
+ *  others, not just one. With no comments yet, the raiser's opening post counts as
+ *  them speaking, so it waits on the assignees. A resolved ticket waits on no one.
  *
- *  Whoever just replied is NEVER shown as still owing a reply — so even if a
- *  person is on both sides (they raised it AND it's assigned to them), their own
- *  comment always hands the ball to the other side. */
+ *  Whoever just spoke is never shown as still owing a reply (even if they're on
+ *  both sides — raiser and assignee). */
 export function ticketWaitingOn(
   t: { createdBy: string; assignees: string[]; status: TicketStatus },
   lastCommenterId: string | null,
 ): string[] {
   if (t.status === "resolved") return [];
-  const raiserSpokeLast = !lastCommenterId || lastCommenterId === t.createdBy;
-  // The ball sits on the OTHER side from whoever spoke last.
-  let ball = raiserSpokeLast ? t.assignees.slice() : [t.createdBy];
-  ball = ball.filter((id) => id && id !== lastCommenterId);
-  // If that left no one (e.g. the raiser is also the sole assignee), fall back to
-  // the side that just spoke — still never the last speaker themselves.
-  if (ball.length === 0) {
-    const other = raiserSpokeLast ? [t.createdBy] : t.assignees;
-    ball = other.filter((id) => id && id !== lastCommenterId);
-  }
-  return [...new Set(ball)];
+  const lastSpeaker = lastCommenterId ?? t.createdBy;
+  return [...new Set([t.createdBy, ...t.assignees])].filter((id) => id && id !== lastSpeaker);
 }
 
 export async function createTicket(input: {
