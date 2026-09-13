@@ -20,6 +20,8 @@ export interface Activity {
   insurer: string; insurerId: string | null; total: number; copay: number; copayDue: number;
   stage: "self" | "logged" | "billed" | "paid" | "writeoff" | "writedown"; paidDate: string | null; billedDate: string | null;
   selfPayStatus?: "owing" | "waived" | null; selfPayOwed?: number; insuranceCollected?: number | null;
+  /** The biller's short note on an unbilled claim, so the clinician sees the status. */
+  billNote?: string;
 }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -780,6 +782,7 @@ export default function ClientDetail({
                         <td>
                           <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
                           {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date — this won't be paid">⚠ after referral</span>}
+                          {a.billNote && <span className="cd-billnote" title="Note from billing on why this isn't billed yet">{a.billNote}</span>}
                           {(() => {
                             // What the client owes on this specific visit: the full fee
                             // for a self-pay visit, or just the outstanding co-pay for an

@@ -1,12 +1,50 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 /** A client's name that links to their record when we know the client id. */
 function ClientName({ id, name }: { id: string | null; name: string }) {
   return id ? <Link href={`/billing/clients/${id}`} className="bq-clientlink">{name}</Link> : <>{name}</>;
+}
+
+/** A claim's short billing note: a soft chip you click to edit inline. Empty
+ *  reads as a quiet "+ note" affordance; filled reads as a status reason the
+ *  clinician also sees. Keeps its own value so it updates without a page refresh. */
+function NoteChip({ note, onSave }: { note: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(note);
+  useEffect(() => { setVal(note); }, [note]);
+
+  if (editing) {
+    return (
+      <input
+        className="bq-noteinput"
+        autoFocus
+        defaultValue={val}
+        maxLength={40}
+        placeholder="e.g. waiting on auth"
+        onBlur={(e) => { const v = e.target.value.trim(); setVal(v); if (v !== note) onSave(v); setEditing(false); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") { (e.target as HTMLInputElement).value = val; setEditing(false); }
+        }}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={`bq-notechip ${val ? "filled" : "empty"}`}
+      onClick={() => setEditing(true)}
+      title={val ? `${val} — click to edit. Clinicians see this note too.` : "Add a short note (e.g. why this claim isn't billed yet). Clinicians see it too."}
+    >
+      {val
+        ? <><span className="bq-noteico" aria-hidden="true">✎</span><span className="bq-notetext">{val}</span></>
+        : <span className="bq-noteadd">+ note</span>}
+    </button>
+  );
 }
 
 export interface Claim {
@@ -164,12 +202,10 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
   // real, changed date.
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   const editBilled = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markBilled([id], val); };
-  // Save a claim's short note without a full refresh, so the field keeps focus
-  // while the biller types. Fire-and-forget on blur; only posts when it changed.
-  const saveNote = (id: string, cur: string | undefined, val: string) => {
-    const next = val.trim().slice(0, 40);
-    if (next === (cur ?? "")) return;
-    fetch("/api/billing/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, action: "note", note: next }) }).catch(() => {});
+  // Save a claim's short note without a full refresh (the chip keeps its own
+  // value). Fire-and-forget; the server trims and caps it.
+  const saveNote = (id: string, val: string) => {
+    fetch("/api/billing/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id, action: "note", note: val.trim().slice(0, 40) }) }).catch(() => {});
   };
   const editPaid = (id: string, cur: string | null, val: string) => { if (isDate(val) && val !== cur) markPaid([id], val); };
   // Build CMS-1500 claims for exactly the selected claims (each id is a session).
@@ -302,9 +338,7 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
                       <div><span className={`bq-age ${c.age >= 15 ? "warn" : ""}`}>{c.age} days</span></div>
                       <div className={`who ${tab === "tobill" ? "bq-whonote" : ""}`}>
                         <div className="whoinfo"><div className="cl"><ClientName id={c.clientId} name={c.clientName} />{c.afterReferral && <span className="bq-refflag" title="Date of service is after this client's referral ended — the insurer won't pay">⚠ after referral</span>}</div><div className="cn">{groupBy === "insurer" ? c.clinicianName : c.insurerName}</div></div>
-                        {tab === "tobill" && (
-                          <input className="bq-note" defaultValue={c.note ?? ""} maxLength={40} placeholder="+ note" title="Short note — e.g. why this claim isn't billed yet. The clinician sees it here." onBlur={(e) => saveNote(c.id, c.note, e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { const el = e.target as HTMLInputElement; saveNote(c.id, c.note, el.value); el.blur(); } }} />
-                        )}
+                        {tab === "tobill" && <div className="bq-notewrap"><NoteChip note={c.note ?? ""} onSave={(v) => saveNote(c.id, v)} /></div>}
                       </div>
                       <div className="amt">{money(c.amount)}</div>
                       {tab === "awaiting" && c.insurerId !== "self" && <div className="bq-rowacts"><button className="bq-undo" disabled={busy} onClick={() => unbill(c.id)} title="Move back to To bill">Un-bill</button><button className="bq-undo" disabled={busy} onClick={() => (adjustId === c.id ? setAdjustId(null) : openAdjust(c.id))} title="Settle with a contractual write-off or write-down">Write off/down</button></div>}

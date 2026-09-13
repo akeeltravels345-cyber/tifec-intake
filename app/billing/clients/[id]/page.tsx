@@ -49,6 +49,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       stage: !s.insurerId ? "self" : s.insuranceDisposition ? s.insuranceDisposition : s.insurancePaid ? "paid" : s.billedDate ? "billed" : "logged",
       paidDate: s.paidDate, billedDate: s.billedDate,
       selfPayStatus: s.selfPayStatus, selfPayOwed: selfPayOutstanding(s), insuranceCollected: s.insuranceCollected,
+      billNote: s.billNote,
     }));
 
   // Clinical notes: anyone clinically LINKED to this client (their treating
