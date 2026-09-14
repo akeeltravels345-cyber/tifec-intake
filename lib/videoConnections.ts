@@ -87,12 +87,15 @@ async function persistConnection(conn: VideoConnection) {
   }
 }
 
-/** Save a freshly authorized connection. First connection is preferred by default. */
+/** Save a freshly authorized connection. A newly connected provider becomes the
+ *  default (you just chose to connect it, so meetings use it); reconnecting an
+ *  existing provider leaves the current default alone. */
 export async function saveConnection(input: Omit<VideoConnection, "preferred" | "connectedAt">): Promise<void> {
   const existing = await listConnections(input.clinicianId);
   const already = existing.find((c) => c.provider === input.provider);
-  const preferred = already ? already.preferred : existing.length === 0; // keep prior choice, else default the first
-  await persistConnection({ ...input, preferred, connectedAt: already?.connectedAt || new Date().toISOString() });
+  await persistConnection({ ...input, preferred: already?.preferred ?? true, connectedAt: already?.connectedAt || new Date().toISOString() });
+  // Make the newly connected provider the sole default (clears it off the others).
+  if (!already) await setPreferred(input.clinicianId, input.provider);
 }
 
 export async function setPreferred(clinicianId: string, provider: VideoProviderId): Promise<void> {
