@@ -8,7 +8,7 @@ import { deductibleSummary } from "@/lib/deductible";
 import Icd10Section from "./Icd10Section";
 import DeductiblePanel from "./DeductiblePanel";
 import type { LinkedIntake } from "@/lib/intakeLink";
-import { referralStatus, chargeAfterReferral } from "@/lib/referral";
+import { referralStatus, chargeAfterReferral, addMonths, REFERRAL_MONTH_OPTIONS } from "@/lib/referral";
 import DobInput from "./DobInput";
 import Foldable from "./Foldable";
 import BillNoteFlag from "./BillNoteFlag";
@@ -282,10 +282,13 @@ export default function ClientDetail({
   const [insuredDob, setInsuredDob] = useState(profile.insurance?.insuredDob ?? "");
   // referral
   const [refSource, setRefSource] = useState(profile.referral?.source ?? "");
-  const [refAuth, setRefAuth] = useState(profile.referral?.authNumber ?? "");
   const [refStart, setRefStart] = useState(profile.referral?.startDate ?? "");
-  const [refEnd, setRefEnd] = useState(profile.referral?.endDate ?? "");
+  const [refMonths, setRefMonths] = useState(profile.referral?.months ? String(profile.referral.months) : "");
   const [refSessions, setRefSessions] = useState(profile.referral?.sessions ? String(profile.referral.sessions) : "");
+  // "Valid for" (1/3/6 months) drives the end date. Fall back to any stored end
+  // date for a legacy referral that predates the duration picker, so editing it
+  // without changing the window keeps its existing end date.
+  const refEnd = refStart && refMonths ? addMonths(refStart, Number(refMonths)) : (profile.referral?.endDate ?? "");
   // documents (edited live; add/remove sync back the returned list)
   const [docs, setDocs] = useState(profile.documents ?? []);
   const [ndName, setNdName] = useState("");
@@ -311,8 +314,10 @@ export default function ClientDetail({
       insurance: (memberId || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
         ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
-      referral: (refSource || refAuth || refStart || refEnd || refSessions)
-        ? { source: refSource || undefined, authNumber: refAuth || undefined, startDate: refStart || undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
+      // Whether a referral exists is decided by the fields the biller fills in,
+      // not the derived end date, so clearing the fields clears the referral.
+      referral: (refSource || refStart || refMonths || refSessions)
+        ? { source: refSource || undefined, startDate: refStart || undefined, months: refMonths ? Number(refMonths) : undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
         : undefined,
       documents,
     };
@@ -455,7 +460,7 @@ export default function ClientDetail({
               Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
             </span>
           )}
-          {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.authNumber ? ` · #${profile.referral.authNumber}` : ""}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
+          {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
         </div>
         {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
       </div>
@@ -508,9 +513,16 @@ export default function ClientDetail({
             </>}
             <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in. After the end date they can&apos;t be paid.</span></div>
             {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
-            {field("Referral / auth number", <input className="ls-in" value={refAuth} onChange={(e) => setRefAuth(e.target.value)} />)}
             {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
-            {field("Valid until (end date)", <input type="date" className="ls-in" value={refEnd} onChange={(e) => setRefEnd(e.target.value)} />)}
+            {field("Valid for", (
+              <select className="ls-in" value={refMonths} onChange={(e) => setRefMonths(e.target.value)}>
+                <option value="">Choose a length…</option>
+                {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
+              </select>
+            ))}
+            {field("Ends", refStart && refMonths
+              ? <span className="cd-v">{refEnd} <span className="su-hint">calculated automatically</span></span>
+              : <span className="cd-v muted">set a start date and a length</span>)}
             {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
             <div className="cd-refupload-hint">📎 Upload the referral letter in <b>Documents</b> below. The end date flags the clinician 30 days before it lapses.</div>
             <div className="cd-save">

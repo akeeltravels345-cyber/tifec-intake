@@ -5,6 +5,7 @@ import { getClient, clinicianSeesClient, updateClient, deleteClient, type Client
 import { deleteDocFilesForClient } from "@/lib/clientDocs";
 import { listSessions, deleteSession } from "@/lib/billing";
 import { logChange } from "@/lib/db";
+import { REFERRAL_MONTH_OPTIONS, addMonths } from "@/lib/referral";
 
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -13,10 +14,18 @@ function parseReferral(v: unknown): ClientProfile["referral"] {
   if (!v || typeof v !== "object") return undefined;
   const r = v as Record<string, unknown>;
   const sessions = Number(r.sessions);
+  const startDate = isDate(r.startDate) ? String(r.startDate) : undefined;
+  // "Valid for" drives the end date: only 1, 3 or 6 months are allowed. When set
+  // with a start date, the server computes the end date so it can never drift
+  // from the chosen window. Legacy referrals with only an end date still work.
+  const months = REFERRAL_MONTH_OPTIONS.includes(Number(r.months) as never) ? Number(r.months) : undefined;
+  const computedEnd = startDate && months ? addMonths(startDate, months) : undefined;
+  const endDate = computedEnd || (isDate(r.endDate) ? String(r.endDate) : undefined);
   const out = {
-    source: s(r.source), authNumber: s(r.authNumber),
-    startDate: isDate(r.startDate) ? String(r.startDate) : undefined,
-    endDate: isDate(r.endDate) ? String(r.endDate) : undefined,
+    source: s(r.source),
+    startDate,
+    months,
+    endDate,
     sessions: Number.isFinite(sessions) && sessions > 0 ? Math.floor(sessions) : undefined,
     notes: s(r.notes),
   };

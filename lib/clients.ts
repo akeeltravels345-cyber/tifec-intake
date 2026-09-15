@@ -97,9 +97,9 @@ const money2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  *  service AFTER endDate can't be paid, so endDate is the number that matters. */
 export interface ClientReferral {
   source?: string;      // referring provider / doctor
-  authNumber?: string;  // referral / authorization number
   startDate?: string;   // valid from (YYYY-MM-DD)
-  endDate?: string;     // valid until (YYYY-MM-DD) — after this, claims don't pay
+  months?: number;      // valid for: 1, 3 or 6 months (drives endDate)
+  endDate?: string;     // valid until (YYYY-MM-DD) — computed from startDate + months
   sessions?: number;    // sessions authorised (optional)
   notes?: string;
 }

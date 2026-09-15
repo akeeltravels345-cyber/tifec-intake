@@ -33,3 +33,21 @@ export function referralStatus(endDate: string | undefined, todayISO: string): R
 export function chargeAfterReferral(dateOfService: string, endDate: string | undefined): boolean {
   return !!endDate && dateOfService > endDate;
 }
+
+/** The referral durations a biller can pick, in months. */
+export const REFERRAL_MONTH_OPTIONS = [1, 3, 6] as const;
+export type ReferralMonths = (typeof REFERRAL_MONTH_OPTIONS)[number];
+
+/** Add N calendar months to a YYYY-MM-DD start date and return the end date as
+ *  YYYY-MM-DD. The day is clamped to the last valid day of the target month
+ *  (so 31 Jan + 1 month = 28/29 Feb). Returns "" when the start can't be parsed. */
+export function addMonths(startISO: string | undefined, months: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startISO ?? "");
+  if (!m || !Number.isFinite(months)) return "";
+  const y = +m[1], mo = +m[2] - 1, d = +m[3];
+  const target = new Date(Date.UTC(y, mo + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const dd = String(Math.min(d, lastDay)).padStart(2, "0");
+  const mm = String(target.getUTCMonth() + 1).padStart(2, "0");
+  return `${target.getUTCFullYear()}-${mm}-${dd}`;
+}

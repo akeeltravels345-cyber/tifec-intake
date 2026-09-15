@@ -26,7 +26,7 @@ interface Demo {
 const DEMO: Demo[] = [
   // Donnet — the walkthrough clinician. Valid referral, all co-pays collected.
   { first: "Ada", last: "Sample-Rivers", clinicianId: "donnet-oconnor", insurerId: "ins-cinico", dob: "1990-04-12", sex: "F", dx: ["F41.1"], memberId: "SMP-1001",
-    referral: (n) => ({ source: "Dr. Grace Bodden", authNumber: "REF-1001", startDate: rel(n, -60), endDate: rel(n, 180), sessions: 12 }),
+    referral: (n) => ({ source: "Dr. Grace Bodden", months: 6, startDate: rel(n, -60), endDate: rel(n, 180), sessions: 12 }),
     appts: (n) => [
       { date: rel(n, -20), code: "90791", fee: 276.51, copayDue: 40, copayCollected: 40, stage: "paid" },
       { date: rel(n, -6), code: "90837", fee: 211.77, copayDue: 40, copayCollected: 40, stage: "awaiting" },
@@ -34,21 +34,21 @@ const DEMO: Demo[] = [
     ] },
   // Donnet — referral EXPIRING soon + a co-pay NOT collected (write-off this month).
   { first: "Ben", last: "Sample-Wren", clinicianId: "donnet-oconnor", insurerId: "ins-britcay", dob: "1985-09-03", sex: "M", dx: ["F32.1"], memberId: "SMP-1002",
-    referral: (n) => ({ source: "Dr. Grace Bodden", authNumber: "REF-1002", startDate: rel(n, -120), endDate: rel(n, 15), sessions: 8 }),
+    referral: (n) => ({ source: "Dr. Grace Bodden", months: 1, startDate: rel(n, -120), endDate: rel(n, 15), sessions: 8 }),
     appts: (n) => [
       { date: rel(n, -10), code: "90834", fee: 160, copayDue: 30, copayCollected: 0, stage: "awaiting" },
       { date: rel(n, -3), code: "90834", fee: 160, copayDue: 30, copayCollected: 15, stage: "tobill" },
     ] },
   // Donnet — referral EXPIRED, with a session AFTER the end date (won't be paid).
   { first: "Cara", last: "Sample-Ivy", clinicianId: "donnet-oconnor", insurerId: "ins-cinico", dob: "2011-01-22", sex: "F", dx: ["F90.0"], memberId: "SMP-1003",
-    referral: (n) => ({ source: "Dr. Marcus Ebanks", authNumber: "REF-1003", startDate: rel(n, -200), endDate: rel(n, -14), sessions: 6 }),
+    referral: (n) => ({ source: "Dr. Marcus Ebanks", months: 1, startDate: rel(n, -200), endDate: rel(n, -14), sessions: 6 }),
     appts: (n) => [
       { date: rel(n, -30), code: "90837", fee: 211.77, copayDue: 40, copayCollected: 40, stage: "paid" },
       { date: rel(n, -2), code: "90837", fee: 211.77, copayDue: 40, copayCollected: 40, stage: "tobill" }, // after referral end
     ] },
   // Sofia — a second clinician, to show the biller's cross-clinician view.
   { first: "Dev", last: "Sample-Reed", clinicianId: "sofia-hamilton", insurerId: "ins-aetna", dob: "2009-06-30", sex: "M", dx: ["F80.9"], memberId: "SMP-1004",
-    referral: (n) => ({ source: "Dr. Grace Bodden", authNumber: "REF-1004", startDate: rel(n, -30), endDate: rel(n, 120), sessions: 10 }),
+    referral: (n) => ({ source: "Dr. Grace Bodden", months: 3, startDate: rel(n, -30), endDate: rel(n, 120), sessions: 10 }),
     appts: (n) => [
       { date: rel(n, -8), code: "90791", fee: 276.51, copayDue: 25, copayCollected: 25, stage: "tobill" },
     ] },
