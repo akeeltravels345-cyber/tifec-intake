@@ -10,7 +10,8 @@ import { isBiller, isOwner, type BillingUser } from "./billingRole";
 import { listSessions, getPracticeConfig, listExternalClinicians, listCptCodes } from "./billing";
 import { getClient, clinicianSeesClient, type Client } from "./clients";
 import { getClinician } from "./clinicians";
-import { uncollectedCopay } from "./billingCalc";
+import { uncollectedCopay, selfPayOutstanding } from "./billingCalc";
+import type { BillingSession } from "./billing";
 import { buildInvoice, type InvoiceData } from "./invoice";
 
 export interface ResolvedInvoice {
@@ -46,11 +47,18 @@ export async function resolveClientInvoice(
     seesAll ? listSessions({ clientId: id }) : listSessions({ clientId: id, clinicianId: user.clinician.id }),
   ]);
 
-  // Self-pay (no insurer, full fee) vs co-pay (insured visit with an outstanding
-  // co-pay, billed for just that piece).
+  // What the client still owes on a self-pay visit: the full fee when it hasn't
+  // been paid, or the remaining balance (fee minus what's already come in) once
+  // it's marked "owing". A waived visit is forgiven, so it's billed at nothing.
+  const selfPayPortion = (s: BillingSession) =>
+    s.selfPayStatus === "owing" ? selfPayOutstanding(s) : (s.totalCost || 0);
+
+  // Self-pay (no insurer, what the client still owes) vs co-pay (insured visit
+  // with an outstanding co-pay, billed for just that piece). Waived self-pay is
+  // excluded — there's nothing left to bill.
   let items = isCopay
     ? allForClient.filter((s) => s.insurerId && uncollectedCopay(s) > 0)
-    : allForClient.filter((s) => !s.insurerId);
+    : allForClient.filter((s) => !s.insurerId && s.selfPayStatus !== "waived");
   const wantIds = (sessionsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (wantIds.length) {
     const want = new Set(wantIds);
@@ -63,7 +71,7 @@ export async function resolveClientInvoice(
     clinName: (cid) => getClinician(cid)?.name ?? external.find((c) => c.id === cid)?.name ?? cid,
     clinCredentials: (cid) => getClinician(cid)?.credentials ?? "",
     cptDesc: (code) => cptCodes.find((c) => c.code === code)?.description ?? "",
-  }, isCopay ? { portionOf: uncollectedCopay, descriptionPrefix: "Co-pay: " } : {});
+  }, isCopay ? { portionOf: uncollectedCopay, descriptionPrefix: "Co-pay: " } : { portionOf: selfPayPortion });
 
   // The provider on this invoice — when every line is one clinician, their email
   // is the reply-to and the contact shown to the client.
