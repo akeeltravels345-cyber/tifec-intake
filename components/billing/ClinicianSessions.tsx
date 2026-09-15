@@ -4,6 +4,7 @@ import { useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Foldable from "./Foldable";
+import BillNoteFlag from "./BillNoteFlag";
 import { collapseUnits } from "@/lib/cptUnits";
 
 export interface SessionRow {
@@ -155,7 +156,7 @@ export default function ClinicianSessions({ month, insurers = [], canManage = fa
               <td className="num">{money(s.fee)}</td>
               <td className="num">{money(s.copay)}</td>
               <td className="num">{money(s.insurance)}</td>
-              <td>{pill(s)}{s.billNote && <span className="cd-billnote" title={`Billing note: ${s.billNote}`}>⚑ Read note</span>}</td>
+              <td>{pill(s)}{s.billNote && <BillNoteFlag note={s.billNote} />}</td>
               {canManage && (
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   {delId === s.id ? (
