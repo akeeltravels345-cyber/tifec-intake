@@ -40,6 +40,19 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
     return data;
   }
 
+  async function loadCatalogue() {
+    if (!confirm("Load the practice's standard catalogue? This adds any missing appointment types and never removes or overwrites what you already have.")) return;
+    setBusy(true);
+    const data = await post("seedCatalogue", {});
+    if (data) {
+      const refreshed = await fetch("/api/scheduling/types").then((r) => r.json()).catch(() => null);
+      if (refreshed?.types) setTypes(refreshed.types);
+      setErr(data.created > 0 ? "" : "");
+      alert(data.created > 0 ? `Added ${data.created} appointment type${data.created === 1 ? "" : "s"}.` : "Everything in the standard catalogue is already here. Nothing to add.");
+    }
+    setBusy(false);
+  }
+
   async function save() {
     if (!draft) return;
     if (!draft.name.trim()) { setErr("Give the appointment type a name."); return; }
@@ -89,7 +102,12 @@ export default function AppointmentTypesManager({ initial, cptCodes, formOptions
           <h1 className="st-h1">Appointment types</h1>
           <p className="st-sub">What clients can book, and how each one maps into intake and billing.</p>
         </div>
-        {!draft && <button className="st-add" onClick={() => setDraft(blank())}>+ New type</button>}
+        {!draft && (
+          <div className="st-headbtns">
+            <button className="st-btn" onClick={loadCatalogue} disabled={busy}>Load standard catalogue</button>
+            <button className="st-add" onClick={() => setDraft(blank())}>+ New type</button>
+          </div>
+        )}
       </div>
 
       {err && <p className="st-err">{err}</p>}

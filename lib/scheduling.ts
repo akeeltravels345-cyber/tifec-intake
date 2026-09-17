@@ -223,6 +223,31 @@ export async function reorderAppointmentTypes(orderedIds: string[]): Promise<voi
   }
 }
 
+// Load the practice's standard catalogue (lib/schedulingCatalogue.ts). Idempotent:
+// an item is created only when no active type with the same name and mode already
+// exists, so re-running never duplicates and never deletes anything.
+export async function seedStandardCatalogue(): Promise<{ created: number; skipped: number; names: string[] }> {
+  const { STANDARD_CATALOGUE } = await import("./schedulingCatalogue");
+  const existing = await listAppointmentTypes();
+  const seen = new Set(existing.map((t) => `${t.name.trim().toLowerCase()}|${t.mode}`));
+  let sort = existing.reduce((m, t) => Math.max(m, t.sortOrder), -1);
+  const created: string[] = [];
+  for (const item of STANDARD_CATALOGUE) {
+    const key = `${item.name.trim().toLowerCase()}|${item.mode}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sort += 1;
+    const row = normalize({
+      name: item.name, category: item.category, description: item.description ?? "",
+      durationMin: item.durationMin, mode: item.mode, capacity: item.capacity ?? 1,
+      active: true, sortOrder: sort,
+    });
+    await persist(row, true);
+    created.push(item.name);
+  }
+  return { created: created.length, skipped: STANDARD_CATALOGUE.length - created.length, names: created };
+}
+
 // =============================================================================
 // Availability — per-clinician bookable hours + booking rules.
 //   Postgres: scheduling_availability (one row per clinician)

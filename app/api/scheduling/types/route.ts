@@ -3,7 +3,7 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
 import {
   listAppointmentTypes, createAppointmentType, updateAppointmentType,
-  deleteAppointmentType, reorderAppointmentTypes,
+  deleteAppointmentType, reorderAppointmentTypes, seedStandardCatalogue,
 } from "@/lib/scheduling";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,10 @@ export async function POST(req: Request) {
     if (action === "delete") {
       await deleteAppointmentType(String(body.id));
       return NextResponse.json({ ok: true });
+    }
+    if (action === "seedCatalogue") {
+      const result = await seedStandardCatalogue();
+      return NextResponse.json({ ok: true, ...result });
     }
     if (action === "reorder") {
       const ids = Array.isArray(body.orderedIds) ? body.orderedIds.map((x) => String(x)) : [];

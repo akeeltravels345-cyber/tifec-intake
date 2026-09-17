@@ -377,7 +377,11 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   <label className="cal-f"><span>Appointment type</span>
                     <select value={draft.typeId || ""} onChange={(e) => pickType(e.target.value)}>
                       {types.length === 0 && <option value="">No types yet</option>}
-                      {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      {Array.from(new Map(types.map((t) => [t.category || "Other", true])).keys()).map((cat) => (
+                        <optgroup key={cat} label={cat}>
+                          {types.filter((t) => (t.category || "Other") === cat).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </label>
                 </>
