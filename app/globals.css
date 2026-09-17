@@ -4271,6 +4271,27 @@ body:has(.bk-page) .brandbar { display: none; }
 .cvr-att-h { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
 .cvr-att-row { font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line-soft, #eef2f4); }
 
+/* Calendar detail view: Acuity-style sectioned panel */
+.cvr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface, #fff); z-index: 2; }
+.cvr-hactions { display: flex; gap: 8px; }
+.cvr-hbtn { font: 600 14px "Open Sans"; color: var(--ink); background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.cvr-hbtn:hover { border-color: var(--teal); }
+.cvr-hbtn.danger { color: #c0392b; }
+.cvr-hbtn.danger:hover { border-color: #c0392b; background: #fdf1ef; }
+.cvr-title { padding: 16px 16px 4px; }
+.cvr-title strong { display: block; font-family: "Newsreader", serif; font-weight: 500; font-size: 21px; line-height: 1.25; color: var(--ink); }
+.cvr-title span { display: block; margin-top: 3px; font-size: 13.5px; color: var(--muted); }
+.cvr-sec { padding: 14px 16px; border-top: 1px solid var(--line-soft, #eef2f4); }
+.cvr-sec-h { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 8px; }
+.cvr-line { font-size: 15px; color: var(--ink); }
+.cvr-line.muted { color: var(--muted); font-style: italic; }
+.cvr-sub { margin-top: 3px; font-size: 13px; color: var(--muted); }
+.cvr-sec .cvr-links { padding: 8px 0 0; }
+.cvr-hist { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; background: none; border: 0; padding: 6px 0; cursor: pointer; font: inherit; color: var(--ink); }
+.cvr-hist:hover span:first-child { color: var(--teal); }
+.cvr-hist > span:first-child { font-size: 14.5px; }
+.cvr-hist-when { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
 /* ===== Scheduling: booking questions editor (types manager) ===== */
 .st-qs { border-top: 1px solid var(--line, #e4e8ea); margin-top: 14px; padding-top: 14px; }
 .st-qshead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }

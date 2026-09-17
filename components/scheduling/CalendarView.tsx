@@ -314,7 +314,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     return (
                       <div key={a.id} className={`cal-appt st-${a.status}${isBlock ? " cal-appt-block" : ""}`} style={style}
                         draggable={canEdit(a)} onDragStart={(ev) => { if (!canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
-                        onClick={(ev) => { ev.stopPropagation(); if (canEdit(a)) openEdit(a); else openView(a); }}>
+                        onClick={(ev) => { ev.stopPropagation(); openView(a); }}>
                         {isBlock ? (
                           <>
                             <div className="cal-appt-n">Unavailable{a.title ? `: ${a.title}` : ""}</div>
@@ -426,15 +426,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     </select>
                   </label>
                   {draft.insurancePath === "insurance" && (
-                    <>
-                      <label className="cal-f"><span>Insurer</span>
-                        <select value={draft.insurerId || ""} onChange={(e) => setDraft({ ...draft, insurerId: e.target.value || null })}>
-                          <option value="">Choose…</option>
-                          {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </select>
-                      </label>
-                      <label className="cal-f"><span>Policy no.</span><input value={draft.policyNo || ""} onChange={(e) => setDraft({ ...draft, policyNo: e.target.value })} /></label>
-                    </>
+                    <label className="cal-f"><span>Insurer</span>
+                      <select value={draft.insurerId || ""} onChange={(e) => setDraft({ ...draft, insurerId: e.target.value || null })}>
+                        <option value="">Choose…</option>
+                        {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                      </select>
+                    </label>
                   )}
                 </>
               )}
@@ -502,44 +499,110 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
       {viewAppt && (() => {
         const a = viewAppt; const t = typeById(a.typeId); const s = cayMinutes(a.startAt);
         const dur = Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000);
+        const isBlock = a.kind === "block";
+        const editable = canEdit(a);
+        const title = isBlock ? (a.title || "Blocked") : (a.capacity > 1 ? (t?.name || "Group session") : a.clientName);
         const Row = ({ k, v }: { k: string; v: string }) => v ? <div className="cvr-row"><span>{k}</span><span>{v}</span></div> : null;
+        // Prior appointment for this same client (name match), for the History section.
+        const clientKey = (x: Appointment) => (x.clientEmail || x.clientName || "").trim().toLowerCase();
+        const prev = isBlock ? null : appts
+          .filter((x) => x.kind !== "block" && x.id !== a.id && clientKey(x) === clientKey(a) && Date.parse(x.startAt) < Date.parse(a.startAt))
+          .sort((x, y) => Date.parse(y.startAt) - Date.parse(x.startAt))[0];
         return (
           <div className="cal-modal" onClick={() => setViewAppt(null)}>
             <div className="cal-sheet cvr" onClick={(e) => e.stopPropagation()}>
-              <div className="cal-sheethead">
-                <strong>{a.kind === "block" ? (a.title || "Blocked") : (a.capacity > 1 ? (t?.name || "Group") : a.clientName)}</strong>
-                <button className="cal-close" onClick={() => setViewAppt(null)}>×</button>
-              </div>
-              <div className="cvr-body">
-                <Row k="When" v={`${prettyDate(cayDay(a.startAt))} · ${label12(s)}-${label12(s + dur)}`} />
-                {a.kind !== "block" && <>
-                  <Row k="Service" v={t?.name || "Visit"} />
-                  <Row k="Clinician" v={clinName(a.clinicianId)} />
-                  <Row k="Mode" v={a.mode === "virtual" ? "Virtual" : "In person"} />
-                  {a.locationOrLink && (
-                    <div className="cvr-row"><span>{a.mode === "virtual" ? "Meeting link" : "Location"}</span>
-                      <span>{/^https?:\/\//.test(a.locationOrLink) ? <a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Join link</a> : a.locationOrLink}</span></div>
-                  )}
-                  <Row k="Status" v={STATUS.find((x) => x.key === a.status)?.label || a.status} />
-                  <Row k="Payment" v={a.insurancePath === "insurance" ? `Insurance${a.insurerId ? " · " + (insurers.find((i) => i.id === a.insurerId)?.name || "") : ""}` : "Self-pay"} />
-                  {a.clientEmail && <Row k="Email" v={a.clientEmail} />}
-                  {a.capacity > 1 && <Row k="Seats" v={`${(a.attendees || []).length} of ${a.capacity}`} />}
-                  {a.notes && <Row k="Notes" v={a.notes} />}
-                </>}
-              </div>
-              {a.kind !== "block" && links && (links.billingClient || links.intake.count > 0) && (
-                <div className="cvr-links">
-                  {links.billingClient && <a className="cal-chip link" href={`/billing/clients/${links.billingClient.id}`}>Billing record ↗</a>}
-                  {links.intake.count > 0 && <span className="cal-chip">Intake on file · {links.intake.count}</span>}
+              <div className="cvr-head">
+                <button className="cvr-hbtn" onClick={() => setViewAppt(null)}>Close</button>
+                <div className="cvr-hactions">
+                  {editable && <button className="cvr-hbtn" onClick={() => { openEdit(a); setViewAppt(null); }}>Edit</button>}
+                  {editable && a.status !== "cancelled" && <button className="cvr-hbtn danger" onClick={() => { if (confirm(`Cancel this ${isBlock ? "block" : "appointment"}?`)) { setStatus(a, "cancelled"); setViewAppt(null); } }}>Cancel</button>}
                 </div>
+              </div>
+
+              <div className="cvr-title">
+                <strong>{title}</strong>
+                <span>{prettyDate(cayDay(a.startAt))} · {label12(s)}-{label12(s + dur)}</span>
+              </div>
+
+              {isBlock ? (
+                <div className="cvr-sec">
+                  <div className="cvr-sec-h">Unavailable</div>
+                  <Row k="Clinician" v={clinName(a.clinicianId)} />
+                  {a.notes && <Row k="Note" v={a.notes} />}
+                </div>
+              ) : (
+                <>
+                  <div className="cvr-sec">
+                    <div className="cvr-sec-h">Location</div>
+                    {a.mode === "virtual" ? (
+                      <>
+                        <div className="cvr-line">{a.locationOrLink && /^https?:\/\//.test(a.locationOrLink)
+                          ? <a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Join video link</a>
+                          : "Online"}</div>
+                        <div className="cvr-sub">This session is held over video.</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="cvr-line">{a.locationOrLink || "The Institute for Essential Care"}</div>
+                        <div className="cvr-sub">This location comes from the calendar settings.</div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="cvr-sec">
+                    <div className="cvr-sec-h">Client</div>
+                    <div className="cvr-line">{a.clientName}</div>
+                    {a.clientEmail ? <div className="cvr-sub">{a.clientEmail}</div> : <div className="cvr-sub">No email on file.</div>}
+                    {links && (links.billingClient || links.intake.count > 0) && (
+                      <div className="cvr-links">
+                        {links.billingClient && <a className="cal-chip link" href={`/billing/clients/${links.billingClient.id}`}>Billing record ↗</a>}
+                        {links.intake.count > 0 && <span className="cal-chip">Intake on file · {links.intake.count}</span>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="cvr-sec">
+                    <div className="cvr-sec-h">Details</div>
+                    <Row k="Service" v={t?.name || "Visit"} />
+                    <Row k="Clinician" v={clinName(a.clinicianId)} />
+                    <Row k="Mode" v={a.mode === "virtual" ? "Online" : "In person"} />
+                    <Row k="Status" v={STATUS.find((x) => x.key === a.status)?.label || a.status} />
+                    <Row k="Payment" v={a.insurancePath === "insurance" ? `Insurance${a.insurerId ? " · " + (insurers.find((i) => i.id === a.insurerId)?.name || "") : ""}` : "Self-pay"} />
+                    {a.capacity > 1 && <Row k="Seats" v={`${(a.attendees || []).length} of ${a.capacity}`} />}
+                  </div>
+
+                  <div className="cvr-sec">
+                    <div className="cvr-sec-h">Notes about this appointment</div>
+                    <div className={a.notes ? "cvr-line" : "cvr-line muted"}>{a.notes || "No notes"}</div>
+                  </div>
+
+                  {(a.answers || []).length > 0 && (
+                    <div className="cvr-sec">
+                      <div className="cvr-sec-h">Booking answers</div>
+                      {(a.answers || []).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}
+                    </div>
+                  )}
+
+                  {a.capacity > 1 && (a.attendees || []).length > 0 && (
+                    <div className="cvr-sec">
+                      <div className="cvr-sec-h">Attendees</div>
+                      {(a.attendees || []).map((at, i) => <div key={i} className="cvr-att-row">{at.name}{at.email ? ` · ${at.email}` : ""}</div>)}
+                    </div>
+                  )}
+
+                  <div className="cvr-sec">
+                    <div className="cvr-sec-h">History</div>
+                    {prev ? (
+                      <button className="cvr-hist" onClick={() => openView(prev)}>
+                        <span>{typeById(prev.typeId)?.name || "Visit"}{prev.mode === "virtual" ? " - Online" : " - In Person"}</span>
+                        <span className="cvr-hist-when">{prettyDate(cayDay(prev.startAt))} at {label12(cayMinutes(prev.startAt))} ›</span>
+                      </button>
+                    ) : (
+                      <div className="cvr-line muted">No previous appointments for this client</div>
+                    )}
+                  </div>
+                </>
               )}
-              {(a.answers || []).length > 0 && (
-                <div className="cvr-att"><div className="cvr-att-h">Booking answers</div>{(a.answers || []).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}</div>
-              )}
-              {a.capacity > 1 && (a.attendees || []).length > 0 && (
-                <div className="cvr-att"><div className="cvr-att-h">Attendees</div>{(a.attendees || []).map((at, i) => <div key={i} className="cvr-att-row">{at.name}{at.email ? ` · ${at.email}` : ""}</div>)}</div>
-              )}
-              <div className="cal-actions"><span className="cal-sp" /><button className="cal-btn" onClick={() => setViewAppt(null)}>Close</button></div>
             </div>
           </div>
         );
