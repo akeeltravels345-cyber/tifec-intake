@@ -9,7 +9,7 @@ interface Avail { clinicianId: string; weekly: DayHours[]; overrides: DateOverri
 
 const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_START = 7, DAY_END = 20, HOUR = 64; // 7am-8pm, 64px/hour (taller so appointments read clearly)
+const DAY_START = 7, DAY_END = 20, HOUR = 92; // 7am-8pm, 92px/hour (roomy so a session's details fit)
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
 // How a mode reads on the calendar block (Acuity-style) and its colour.
 const CAL_MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In Person", virtual: "Online", either: "In Person / Online" };
