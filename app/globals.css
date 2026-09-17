@@ -3827,12 +3827,14 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-appt { position: absolute; border-radius: 6px; border-left: 3px solid var(--teal); background: var(--surface-2, #eef4f4); padding: 3px 5px; overflow: hidden; cursor: pointer; box-shadow: 0 1px 2px rgba(30,42,60,.08); font-size: 11px; }
 .cal-appt:hover { filter: brightness(0.98); box-shadow: 0 2px 6px rgba(30,42,60,.14); }
 .cal-appt-t { font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.cal-appt-n { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cal-appt-m { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-appt-n { font-weight: 600; white-space: normal; line-height: 1.22; overflow: hidden; }
+.cal-appt-m { color: inherit; opacity: .78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; margin-top: 1px; }
 .cal-appt.st-cancelled { opacity: .5; text-decoration: line-through; }
 .cal-appt.st-no_show { opacity: .62; }
-.cal-appt.st-seen { background: var(--green-bg, #e2efe6); }
-.cal-appt.st-confirmed .cal-appt-n::after { content: " ✓"; color: var(--green, #3f8f5f); }
+.cal-appt.st-confirmed .cal-appt-n::after { content: " ✓"; color: currentColor; opacity: .8; }
+/* "Unavailable" / blocked time: green diagonal stripes, Acuity-style. */
+.cal-appt-block { background: repeating-linear-gradient(45deg, #e7f0e9, #e7f0e9 7px, #d5e6d8 7px, #d5e6d8 14px); border-left-color: #86ab90; color: #3a634a; font-style: italic; }
+.cal-appt-block .cal-appt-n { font-weight: 700; }
 
 /* booking modal */
 .cal-modal { position: fixed; inset: 0; background: rgba(8,16,13,.5); display: grid; place-items: center; z-index: 60; padding: 16px; }
@@ -3865,7 +3867,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-btn:disabled { opacity: .5; cursor: default; }
 
 /* Calendar: closed / non-working time shading + outside-hours warning */
-.cal-closed { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(45deg, rgba(120,130,140,.05), rgba(120,130,140,.05) 6px, rgba(120,130,140,.09) 6px, rgba(120,130,140,.09) 12px); pointer-events: none; }
+.cal-closed { position: absolute; left: 0; right: 0; background: rgba(120,130,140,.11); pointer-events: none; }
 .cal-warn { font-size: 12.5px; color: #8a5a1a; background: var(--maybe-bg, #f6ecd6); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }
 
 /* ============================================================================

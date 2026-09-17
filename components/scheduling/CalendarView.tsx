@@ -11,6 +11,13 @@ const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_START = 7, DAY_END = 20, HOUR = 64; // 7am-8pm, 64px/hour (taller so appointments read clearly)
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
+// How a mode reads on the calendar block (Acuity-style) and its colour.
+const CAL_MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In Person", virtual: "Online", either: "In Person / Online" };
+const MODE_TINT: Record<AppointmentMode, { bg: string; bar: string; fg: string }> = {
+  in_person: { bg: "#dbe8f6", bar: "#4a86c7", fg: "#1d3f63" }, // blue
+  virtual: { bg: "#dcecdf", bar: "#3f8f5f", fg: "#1f5a3a" },   // green
+  either: { bg: "#d9ecea", bar: "#2f8e93", fg: "#1b5254" },    // teal
+};
 const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "booked", label: "Booked" }, { key: "confirmed", label: "Confirmed" },
   { key: "seen", label: "Seen" }, { key: "no_show", label: "No-show" }, { key: "cancelled", label: "Cancelled" },
@@ -296,14 +303,29 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const top = ((s - DAY_START * 60) / 60) * HOUR;
                     const height = Math.max(18, ((e - s) / 60) * HOUR - 2);
                     const width = 100 / laneCount, left = lane * width;
-                    const color = a.kind === "block" ? "#8a929a" : (t?.color || "#2f8e93");
+                    const isBlock = a.kind === "block";
+                    const tint = MODE_TINT[a.mode] || MODE_TINT.either;
+                    // Acuity-style label: "Client: Service - Format", then the time range.
+                    const service = a.capacity > 1 ? `${t?.name || "Group"} (${(a.attendees || []).length}/${a.capacity})` : (t?.name || "");
+                    const title = [service, CAL_MODE_LABEL[a.mode]].filter(Boolean).join(" - ");
+                    const timeRange = `${label12(s)}-${label12(e)}`;
+                    const style = { top, height, left: `${left}%`, width: `calc(${width}% - 3px)`,
+                      ...(isBlock ? {} : { background: tint.bg, borderLeftColor: tint.bar, color: tint.fg }) };
                     return (
-                      <div key={a.id} className={`cal-appt st-${a.status}`} style={{ top, height, left: `${left}%`, width: `calc(${width}% - 3px)`, borderLeftColor: color }}
+                      <div key={a.id} className={`cal-appt st-${a.status}${isBlock ? " cal-appt-block" : ""}`} style={style}
                         draggable={canEdit(a)} onDragStart={(ev) => { if (!canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
                         onClick={(ev) => { ev.stopPropagation(); if (canEdit(a)) openEdit(a); else openView(a); }}>
-                        <div className="cal-appt-t">{label12(s)}</div>
-                        <div className="cal-appt-n">{a.kind === "block" ? (a.title || "Blocked") : (a.capacity > 1 ? `${(t?.name || "Group")} 👥` : a.clientName)}</div>
-                        {a.kind !== "block" && <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{a.capacity > 1 ? `${(a.attendees || []).length}/${a.capacity} seats` : (t?.name || "Visit")}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>}
+                        {isBlock ? (
+                          <>
+                            <div className="cal-appt-n">Unavailable{a.title ? `: ${a.title}` : ""}</div>
+                            <div className="cal-appt-m">{timeRange}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="cal-appt-n"><b>{a.clientName || service || "Appointment"}</b>{title ? `: ${title}` : ""}</div>
+                            <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{timeRange}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>
+                          </>
+                        )}
                       </div>
                     );
                   })}
