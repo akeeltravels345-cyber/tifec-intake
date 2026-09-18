@@ -19,7 +19,9 @@ export interface CatalogueItem {
 const COUNSELLING_DESC =
   "Our counseling services encompass both individual and group sessions, extending support to individuals of all ages grappling with emotional, social, or behavioral difficulties. The overarching goal is to heighten individuals' awareness of challenges they may face in personal or professional spheres. Through tailored counseling, we impart the skills necessary to manage and regulate emotions, promoting mental health and fostering resilience.";
 
-const ADHD_DESC = "This is one of 3 assessments for your ADHD diagnosis.";
+const ADHD_DESC_1 = "This is your first of 3 assessments for your ADHD diagnosis.";
+const ADHD_DESC_2 = "This is your second of 3 assessments for your ADHD diagnosis.";
+const ADHD_DESC_3 = "This is your third of 3 assessments for your ADHD diagnosis.";
 
 const PSYCHOED_DESC =
   "Conducting thorough psycho-educational assessments is a cornerstone of our services. These assessments comprehensively evaluate an individual's intellectual functioning, academic achievement, and socio-emotional well-being. The results provide the foundation for personalized intervention strategies, including the development of Individualized Education Programs (IEPs), empowering parents and Special Education Needs Coordinators (SENCo) with the knowledge to assist learners effectively.";
@@ -46,9 +48,9 @@ export const STANDARD_CATALOGUE: CatalogueItem[] = [
   { category: "Mental Health Care", name: "Spiritual Care - In Person", durationMin: 60, mode: "in_person" },
   { category: "Mental Health Care", name: "Clinical Services - In Person", durationMin: 60, mode: "in_person" },
   { category: "Mental Health Care", name: "Corporate Consultation - In Person", durationMin: 60, mode: "in_person" },
-  { category: "Mental Health Care", name: "ADHD Assessment 1 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC },
-  { category: "Mental Health Care", name: "ADHD Assessment 2 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC },
-  { category: "Mental Health Care", name: "ADHD Assessment 3 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC },
+  { category: "Mental Health Care", name: "ADHD Assessment 1 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC_1 },
+  { category: "Mental Health Care", name: "ADHD Assessment 2 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC_2 },
+  { category: "Mental Health Care", name: "ADHD Assessment 3 - In Person", durationMin: 60, mode: "in_person", description: ADHD_DESC_3 },
   { category: "Mental Health Care", name: "Counselling (Group & individuals) - Online", durationMin: 60, mode: "virtual" },
   { category: "Mental Health Care", name: "Grief Counselling - Online", durationMin: 60, mode: "virtual" },
   { category: "Mental Health Care", name: "Crisis Management Counselling - Online", durationMin: 90, mode: "virtual" },
