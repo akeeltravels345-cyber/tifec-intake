@@ -26,8 +26,13 @@ export default function DeductiblePanel({ clientId, deductible, applied, summary
   const [err, setErr] = useState("");
 
   const [editAmt, setEditAmt] = useState(false);
+  // Most clients have no deductible, so the fields stay collapsed behind a Yes/No
+  // until someone answers Yes. "Yes" opens the amount editor; a saved deductible
+  // is always shown open.
+  const [wantDed, setWantDed] = useState(false);
   const [amtInput, setAmtInput] = useState(deductible ? String(deductible.amount) : "");
   const [yearInput, setYearInput] = useState(deductible ? String(deductible.year) : String(Number(today.slice(0, 4))));
+  const thisYear = String(Number(today.slice(0, 4)));
 
   // Apply-a-session form
   const [addOpen, setAddOpen] = useState(false);
@@ -83,12 +88,18 @@ export default function DeductiblePanel({ clientId, deductible, applied, summary
       <div className="ded-head">
         <div>
           <span className="ded-lab">Insurance deductible</span>
-          <span className="ded-amt">{ded ? money(ded.amount) : "None set"}{ded ? <span className="ded-year"> · {ded.year}</span> : null}</span>
+          {ded && <span className="ded-amt">{money(ded.amount)}<span className="ded-year"> · {ded.year}</span></span>}
+          {!ded && !canEdit && <span className="ded-amt muted">None on file</span>}
         </div>
-        {canEdit && !editAmt && (
-          <button type="button" className="ded-link" onClick={() => { setEditAmt(true); setAmtInput(ded ? String(ded.amount) : ""); setYearInput(ded ? String(ded.year) : String(Number(today.slice(0, 4)))); }}>
-            {ded ? "Change" : "Set deductible"}
-          </button>
+        {ded && canEdit && !editAmt && (
+          <button type="button" className="ded-link" onClick={() => { setEditAmt(true); setAmtInput(String(ded.amount)); setYearInput(String(ded.year)); }}>Change</button>
+        )}
+        {!ded && !editAmt && canEdit && (
+          <span className="ded-yn">
+            <span className="ded-q">Does their plan have one?</span>
+            <button type="button" className={`ded-ynbtn ${!wantDed ? "on" : ""}`} onClick={() => { setWantDed(false); setEditAmt(false); setErr(""); }}>No</button>
+            <button type="button" className={`ded-ynbtn ${wantDed ? "on" : ""}`} onClick={() => { setWantDed(true); setEditAmt(true); setAmtInput(""); setYearInput(thisYear); setErr(""); }}>Yes</button>
+          </span>
         )}
       </div>
 
@@ -97,7 +108,7 @@ export default function DeductiblePanel({ clientId, deductible, applied, summary
           <label>Amount (set by insurer)<input type="number" step="0.01" min="0" className="ls-in" value={amtInput} placeholder="0.00" onChange={(e) => setAmtInput(e.target.value)} /></label>
           <label>Plan year<input type="number" className="ls-in" style={{ maxWidth: 110 }} value={yearInput} onChange={(e) => setYearInput(e.target.value)} /></label>
           <button type="button" className="ls-save sm" disabled={busy} onClick={saveAmount}>Save</button>
-          <button type="button" className="su-del sm" onClick={() => setEditAmt(false)}>Cancel</button>
+          <button type="button" className="su-del sm" onClick={() => { setEditAmt(false); if (!ded) setWantDed(false); }}>Cancel</button>
         </div>
       )}
 
@@ -150,7 +161,7 @@ export default function DeductiblePanel({ clientId, deductible, applied, summary
       )}
 
       {err && <p className="ded-err">{err}</p>}
-      {!ded && <p className="ded-hint">Set the deductible the insurer has on file. It counts down as the patient pays out of pocket for their sessions.</p>}
+      {!ded && editAmt && <p className="ded-hint">Enter the deductible the insurer has on file. It counts down as the patient pays out of pocket for their sessions.</p>}
     </div>
   );
 }

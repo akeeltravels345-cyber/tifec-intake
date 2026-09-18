@@ -290,6 +290,10 @@ export default function ClientDetail({
   // date for a legacy referral that predates the duration picker, so editing it
   // without changing the window keeps its existing end date.
   const refEnd = refStart && refMonths ? addMonths(refStart, Number(refMonths)) : (profile.referral?.endDate ?? "");
+  // Address + referral are collapsed by default (most records don't need them
+  // open), and start open only when there's already something to show.
+  const [showAddr, setShowAddr] = useState(!!(profile.address?.line1 || profile.address?.line2 || profile.address?.city || profile.address?.region || profile.address?.postal || profile.address?.country));
+  const [wantRef, setWantRef] = useState(!!(profile.referral?.source || profile.referral?.startDate || profile.referral?.months || profile.referral?.sessions || profile.referral?.endDate));
   // documents (edited live; add/remove sync back the returned list)
   const [docs, setDocs] = useState(profile.documents ?? []);
   const [ndName, setNdName] = useState("");
@@ -317,7 +321,7 @@ export default function ClientDetail({
         : undefined,
       // Whether a referral exists is decided by the fields the biller fills in,
       // not the derived end date, so clearing the fields clears the referral.
-      referral: (refSource || refStart || refMonths || refSessions)
+      referral: (wantRef && (refSource || refStart || refMonths || refSessions))
         ? { source: refSource || undefined, startDate: refStart || undefined, months: refMonths ? Number(refMonths) : undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
         : undefined,
       documents,
@@ -377,7 +381,7 @@ export default function ClientDetail({
     if (!noteText.trim()) { setMsg("Write something first."); return; }
     setBusy(true); setMsg("");
     try {
-      const res = await fetch(`/api/billing/clients/${id}/notes`, {
+      const res = await fetch(`/api/billing/clients/${id}/team-notes`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: noteText.trim() }),
       });
@@ -390,7 +394,7 @@ export default function ClientDetail({
   async function removeNote(noteId: string) {
     setBusy(true); setMsg("");
     try {
-      const res = await fetch(`/api/billing/clients/${id}/notes?noteId=${noteId}`, { method: "DELETE" });
+      const res = await fetch(`/api/billing/clients/${id}/team-notes?noteId=${noteId}`, { method: "DELETE" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not remove note.");
       setNotes(j.notes); router.refresh();
@@ -506,12 +510,6 @@ export default function ClientDetail({
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
             {field("Email", <input className="ls-in" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
-            {field("Address line 1", <input className="ls-in" value={line1} onChange={(e) => setLine1(e.target.value)} />)}
-            {field("Address line 2", <input className="ls-in" value={line2} onChange={(e) => setLine2(e.target.value)} />)}
-            {field("City", <input className="ls-in" value={city} onChange={(e) => setCity(e.target.value)} />)}
-            {field("District / region", <input className="ls-in" value={region} onChange={(e) => setRegion(e.target.value)} />)}
-            {field("Postal code", <input className="ls-in" value={postal} onChange={(e) => setPostal(e.target.value)} />)}
-            {field("Country", <input className="ls-in" value={country} onChange={(e) => setCountry(e.target.value)} />)}
             {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />)}
             {field("Relationship to insured", <select className="ls-in" value={relationship} onChange={(e) => setRelationship(e.target.value as typeof relationship)}><option value="self">Self</option><option value="spouse">Spouse</option><option value="child">Child</option><option value="other">Other</option></select>)}
             {relationship !== "self" && <>
@@ -519,20 +517,54 @@ export default function ClientDetail({
               {field("Insured last name", <input className="ls-in" value={insuredLast} onChange={(e) => setInsuredLast(e.target.value)} />)}
               {field("Insured date of birth", <DobInput value={insuredDob} onChange={setInsuredDob} />)}
             </>}
-            <div className="cd-refhead">Referral <span className="cd-refhint">the window claims can be billed in. After the end date they can&apos;t be paid.</span></div>
-            {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
-            {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
-            {field("Valid for", (
-              <select className="ls-in" value={refMonths} onChange={(e) => setRefMonths(e.target.value)}>
-                <option value="">Choose a length…</option>
-                {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
-              </select>
-            ))}
-            {field("Ends", refStart && refMonths
-              ? <span className="cd-v">{refEnd} <span className="su-hint">calculated automatically</span></span>
-              : <span className="cd-v muted">set a start date and a length</span>)}
-            {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
-            <div className="cd-refupload-hint">📎 Upload the referral letter in <b>Documents</b> below. The end date flags the clinician 30 days before it lapses.</div>
+
+            {/* Address — collapsed by default; most records don't need it open. */}
+            <div className="cd-collapse" style={{ gridColumn: "1 / -1" }}>
+              <button type="button" className="cd-collapse-h" onClick={() => setShowAddr((v) => !v)} aria-expanded={showAddr}>
+                <span className={`cd-chev ${showAddr ? "open" : ""}`} aria-hidden="true">›</span>
+                <span className="cd-collapse-t">Address</span>
+                <span className="cd-collapse-hint">{showAddr ? "hide" : "optional · show"}</span>
+              </button>
+              {showAddr && (
+                <div className="cd-collapse-body cd-grid">
+                  {field("Address line 1", <input className="ls-in" value={line1} onChange={(e) => setLine1(e.target.value)} />)}
+                  {field("Address line 2", <input className="ls-in" value={line2} onChange={(e) => setLine2(e.target.value)} />)}
+                  {field("City", <input className="ls-in" value={city} onChange={(e) => setCity(e.target.value)} />)}
+                  {field("District / region", <input className="ls-in" value={region} onChange={(e) => setRegion(e.target.value)} />)}
+                  {field("Postal code", <input className="ls-in" value={postal} onChange={(e) => setPostal(e.target.value)} />)}
+                  {field("Country", <input className="ls-in" value={country} onChange={(e) => setCountry(e.target.value)} />)}
+                </div>
+              )}
+            </div>
+
+            {/* Referral — behind a Yes/No; only a minority of clients have one. */}
+            <div className="cd-collapse" style={{ gridColumn: "1 / -1" }}>
+              <div className="cd-collapse-h cd-collapse-yn">
+                <span className="cd-collapse-t">Does this client have a referral?</span>
+                <span className="ded-yn">
+                  <button type="button" className={`ded-ynbtn ${!wantRef ? "on" : ""}`} onClick={() => { setWantRef(false); setRefSource(""); setRefStart(""); setRefMonths(""); setRefSessions(""); }}>No</button>
+                  <button type="button" className={`ded-ynbtn ${wantRef ? "on" : ""}`} onClick={() => setWantRef(true)}>Yes</button>
+                </span>
+              </div>
+              {wantRef && (
+                <div className="cd-collapse-body cd-grid">
+                  {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
+                  {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
+                  {field("Valid for", (
+                    <select className="ls-in" value={refMonths} onChange={(e) => setRefMonths(e.target.value)}>
+                      <option value="">Choose a length…</option>
+                      {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
+                    </select>
+                  ))}
+                  {field("Ends", refStart && refMonths
+                    ? <span className="cd-v">{refEnd} <span className="su-hint">calculated automatically</span></span>
+                    : <span className="cd-v muted">set a start date and a length</span>)}
+                  {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
+                  <div className="cd-refupload-hint" style={{ gridColumn: "1 / -1" }}>📎 Upload the referral letter in <b>Documents</b> below. The end date flags the clinician 30 days before it lapses.</div>
+                </div>
+              )}
+            </div>
+
             <div className="cd-save">
               <button className="ls-save" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save record"}</button>
               <button className="su-del" disabled={busy} onClick={() => { setEdit(false); setMsg(""); }}>Cancel</button>
@@ -544,7 +576,7 @@ export default function ClientDetail({
       {/* ---- Insurance deductible ---- */}
       <div className="su-sec">
         <div className="su-sechead"><h2 className="su-sech">Insurance deductible</h2>
-          <span className="su-hint">The insurer&apos;s annual deductible. It counts down as the client pays out of pocket. Once met, sessions run through insurance.</span></div>
+          <span className="su-hint">Only the minority of plans with a deductible. It counts down as the client pays out of pocket, then sessions run through insurance.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
           <DeductiblePanel
             clientId={id}
@@ -905,6 +937,7 @@ export default function ClientDetail({
                               <div className="cd-editactions">
                                 <button className="ls-save sm" disabled={busy} onClick={() => saveEditCharge(a.id)}>{busy ? "Saving…" : "Save change"}</button>
                                 <button className="su-del sm" disabled={busy} onClick={() => setEditCharge(null)}>Cancel</button>
+                                {msg && <span className="ls-err" style={{ marginLeft: 6 }}>{msg}</span>}
                               </div>
                             </div>
                           </td>

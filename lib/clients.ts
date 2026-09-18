@@ -475,6 +475,29 @@ export async function setBenefit(id: string, amount: number, year: number): Prom
   return updateClient(id, client.insurerId, { ...client.profile, benefit });
 }
 
+/** Add a shared "team note" to a client (benefits, reminders, admin notes the
+ *  whole team sees). Returns the updated note list, newest last. */
+export async function addClientNote(id: string, note: { authorId: string; authorName: string; role: string; text: string }): Promise<ClientNote[] | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const entry: ClientNote = {
+    id: randomId(), authorId: note.authorId, authorName: note.authorName,
+    role: note.role, text: note.text.trim().slice(0, 4000), addedAt: new Date().toISOString(),
+  };
+  const notes = [...(client.profile.notes ?? []), entry];
+  await updateClient(id, client.insurerId, { ...client.profile, notes });
+  return notes;
+}
+
+/** Remove a team note by id. Returns the updated note list. */
+export async function deleteClientNote(id: string, noteId: string): Promise<ClientNote[] | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const notes = (client.profile.notes ?? []).filter((n) => n.id !== noteId);
+  await updateClient(id, client.insurerId, { ...client.profile, notes });
+  return notes;
+}
+
 /** Draw a session down against the deductible. The amount is capped at whatever
  *  is LEFT of the deductible (so the boundary session takes only the remainder),
  *  and refuses to add anything once the deductible is already met. Returns the

@@ -2436,6 +2436,16 @@ body:has(.biz) { background: var(--panel); }
 .cd-refprompt-btn { margin-left: auto; border: 1px solid currentColor; background: var(--surface); color: inherit; border-radius: 8px; padding: 6px 14px; font: 600 12.5px "Open Sans"; cursor: pointer; white-space: nowrap; }
 .cd-refprompt-btn:hover { background: rgba(0,0,0,.04); }
 .cd-refupload-hint { grid-column: 1 / -1; font-size: 12.5px; color: var(--faint, #8a93a3); background: var(--panel); border: 1px solid var(--hair, #eae6dc); border-radius: 8px; padding: 8px 12px; }
+/* Collapsible groups in the edit form (address, referral). */
+.cd-collapse { grid-column: 1 / -1; border-top: 1px solid var(--hair); padding-top: 12px; }
+.cd-collapse-h { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.cd-collapse-yn { cursor: default; }
+.cd-collapse-t { font: 600 14px "Newsreader", serif; color: var(--ink); }
+.cd-collapse-hint { font-size: 12px; color: var(--faint); font-weight: 400; margin-left: auto; }
+.cd-chev { display: inline-block; transition: transform .15s ease; color: var(--muted); font-size: 15px; line-height: 1; }
+.cd-chev.open { transform: rotate(90deg); }
+.cd-collapse-body { padding: 12px 0 2px !important; }
+.cd-collapse-yn .ded-yn { margin-left: auto; }
 
 /* Shared cross-role notes. */
 .cd-notelist { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
@@ -4224,6 +4234,12 @@ body:has(.bk-page) .brandbar { display: none; }
 .ded-year { font-weight: 600; font-size: 14px; color: var(--muted); }
 .ded-link { background: none; border: none; color: var(--indigo); font: 600 13px "Open Sans"; cursor: pointer; padding: 4px 2px; }
 .ded-link:hover { text-decoration: underline; }
+/* Yes/No prompt that keeps the deductible collapsed for the majority of clients. */
+.ded-yn { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ded-q { font-size: 12.5px; color: var(--muted); }
+.ded-ynbtn { border: 1px solid var(--edge); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 3px 15px; font: 600 12.5px "Open Sans"; cursor: pointer; }
+.ded-ynbtn:hover { border-color: var(--indigo); color: var(--ink); }
+.ded-ynbtn.on { background: var(--indigo); border-color: var(--indigo); color: #fff; }
 .ded-editrow, .ded-addpay { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 12px 0; padding: 12px; background: var(--panel); border-radius: 10px; }
 .ded-editrow label, .ded-addpay label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #55607d; }
 .ded-addpay label.grow { flex: 1 1 160px; }
