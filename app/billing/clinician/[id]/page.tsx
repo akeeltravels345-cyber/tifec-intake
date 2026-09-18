@@ -107,7 +107,10 @@ export default async function ClinicianDetail({ params, searchParams }: { params
             <p className="cd-sub">{clinician.credentials} · {MONTHS[month - 1]} {year} · KYD</p>
           </div>
         </div>
-        <MonthNav year={year} month={month} path={`/billing/clinician/${id}`} />
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {isSelf && <Link href="/billing/guide" className="bz-link">Handbook →</Link>}
+          <MonthNav year={year} month={month} path={`/billing/clinician/${id}`} />
+        </div>
       </div>
 
       <div className="cd-kpis">

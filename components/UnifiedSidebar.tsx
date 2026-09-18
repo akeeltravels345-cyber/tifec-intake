@@ -78,6 +78,9 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };
   const uMessages: Item = { href: "/team/messages", label: "Messages", icon: IcChat, badge: teamUnread, match: (p) => p.startsWith("/team/messages") };
   const uTickets: Item = { href: "/team/tickets", label: "Tickets", icon: IcTicket, badge: openTickets, match: (p) => p.startsWith("/team/tickets") };
+  // The reference handbook. One route, but /billing/guide renders the guide that
+  // matches the signed-in role, so every menu can link to the same place.
+  const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide") };
 
   let groups: Group[];
   if (isAdmin && hasBilling) {
@@ -94,6 +97,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
         // owner or anyone else until it's ready.
         { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling") },
         { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
+        uHandbook,
       ] },
     ];
   } else {
@@ -110,6 +114,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
             ...(showNotes ? [notesLink] : []),
+            uHandbook,
           ]
         : biller
           ? [
@@ -122,7 +127,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               // for their own caseload; a pure biller has no linked clients, so
               // showNotes is false and this link is hidden.
               ...(showNotes ? [notesLink] : []),
-              { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide") },
+              uHandbook,
               // Import, Import review and Fix dates removed from the menu — done
               // with them. Routes are kept in case they're needed again.
             ]
@@ -131,6 +136,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clients", label: "My clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
               ...(showNotes ? [notesLink] : []),
               { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
+              uHandbook,
             ];
       groups.push({ label: "Billing", items: billing });
     }
