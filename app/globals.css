@@ -4440,31 +4440,26 @@ body:has(.bk-page) .brandbar { display: none; }
    ===================================================================== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #171d24; --card: #171d24; --cream: #171d24;
-    --bg: #0f1319; --paper: #0f1319; --panel: #1b222b;
-    --ink: #e7ecf2; --charcoal: #e7ecf2; --muted: #9aa6b3; --faint: #7c8896;
-    --line: #2b323d; --edge: #2b323d; --hair: #232a34;
-    --brand: #8f93ec; --brand-dark: #a9ace6; --brand-tint: #21263a; --brand-glow: rgba(143,147,236,.30);
-    --indigo: #8f93ec; --indigo-soft: #a9ace6;
-    --teal: #4fb6b2; --teal-deep: #6fd0cc; --teal-dark: #6fd0cc;
-    --amber: #e0a44f; --amber-bg: #322810; --amber-line: #4a3a1a;
-    --neg: #ef8a7b; --pos: #63c187; --green: #63c187; --danger: #ef8a7b; --ok: #63c187; --neg-bg: #35201d; --pos-bg: #16281f;
+    --surface: #1e232b; --card: #1e232b; --cream: #1e232b;
+    --bg: #16191f; --paper: #16191f; --panel: #252b34;
+    --ink: #d7dce4; --charcoal: #d7dce4; --muted: #8f99a6; --faint: #69727e;
+    --line: #2f353f; --edge: #2f353f; --hair: #262c34;
+    --brand: #9297dd; --brand-dark: #a7abe6; --brand-tint: #23283a; --brand-glow: rgba(146,151,221,.20);
+    --indigo: #9297dd; --indigo-soft: #a7abe6;
+    --teal: #57ada8; --teal-deep: #6cc2bd; --teal-dark: #6cc2bd;
+    --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
+    --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --danger: #df8b7e; --ok: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
   }
   .biz {
-    --surface: #171d24; --paper: #0f1319; --panel: #1b222b;
-    --ink: #e7ecf2; --muted: #9aa6b3; --faint: #7c8896;
-    --edge: #2b323d; --hair: #232a34;
-    --indigo: #8f93ec; --indigo-soft: #a9ace6; --teal: #4fb6b2; --teal-deep: #6fd0cc;
-    --amber: #e0a44f; --amber-bg: #322810; --amber-line: #4a3a1a;
-    --neg: #ef8a7b; --pos: #63c187; --green: #63c187; --neg-bg: #35201d; --pos-bg: #16281f;
-    background: radial-gradient(1100px 460px at 92% -12%, rgba(79,182,178,.08), transparent 58%), var(--paper);
+    --surface: #1e232b; --paper: #16191f; --panel: #252b34;
+    --ink: #d7dce4; --muted: #8f99a6; --faint: #69727e;
+    --edge: #2f353f; --hair: #262c34;
+    --indigo: #9297dd; --indigo-soft: #a7abe6; --teal: #57ada8; --teal-deep: #6cc2bd;
+    --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
+    --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
+    background: var(--paper);
   }
-  html, body {
-    background:
-      radial-gradient(1100px 460px at 100% -8%, rgba(79,182,178,.08), transparent 60%),
-      radial-gradient(900px 420px at -10% 4%, rgba(143,147,236,.07), transparent 55%),
-      var(--bg);
-  }
+  html, body { background: var(--bg); }
   body:has(.biz) { background: var(--paper); }
 }
 
@@ -4474,15 +4469,15 @@ body:has(.bk-page) .brandbar { display: none; }
   .cd-stage.self { color: var(--muted); }
   .cd-stage.logged, .cd-stage.paid { color: var(--pos); }
   .cd-stage.billed { color: var(--amber); }
-  .cd-ref.none { background: #2a2410; border-color: #4a3f1c; color: #dcc78d; }
-  .cd-ref.valid { background: var(--pos-bg); border-color: #2f5a42; color: var(--pos); }
-  .cd-ref.expiring, .cd-refprompt.expiring { background: var(--amber-bg); border-color: #5a4620; color: var(--amber); }
-  .cd-ref.expired, .cd-refprompt.expired { background: var(--neg-bg); border-color: #5c332b; color: var(--neg); }
+  .cd-ref.none { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber); }
+  .cd-ref.valid { background: var(--pos-bg); border-color: #2b4638; color: var(--pos); }
+  .cd-ref.expiring, .cd-refprompt.expiring { background: var(--amber-bg); border-color: #473a20; color: var(--amber); }
+  .cd-ref.expired, .cd-refprompt.expired { background: var(--neg-bg); border-color: #4a342d; color: var(--neg); }
   .cd-dockind { color: var(--muted); }
   .cd-dockind.referral { background: var(--pos-bg); color: var(--pos); }
   .cd-dockind.intake { background: var(--brand-tint); color: var(--indigo); }
   .su-tag { background: var(--brand-tint); color: var(--teal-deep); }
   .biz .icd-chip-code { background: var(--brand-tint); color: var(--indigo); }
-  .cd-danger { color: var(--neg); border-color: #5c332b; }
+  .cd-danger { color: var(--neg); border-color: #4a342d; }
   .cd-refprompt-btn:hover { background: rgba(255,255,255,.06); }
 }
