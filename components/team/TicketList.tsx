@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL } from "@/lib/ticketStatus";
 import { prepareUpload } from "@/lib/imageUpload";
 import RichTextArea from "./RichTextArea";
+
+const MAX_BYTES = 4 * 1024 * 1024;
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
 
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
@@ -19,7 +29,7 @@ const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month:
 const nameList = (names: string[]) =>
   names.length <= 1 ? (names[0] ?? "nobody") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
-interface AttDraft { name: string; mime: string; base64: string; url: string; kind: "image" | "file" }
+interface AttDraft { name: string; mime: string; base64: string; url: string; kind: "image" | "file" | "audio" }
 const FILE_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf";
 const fileIcon = (name?: string | null) => {
   const ext = (name || "").split(".").pop()?.toLowerCase();
@@ -62,6 +72,39 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
     }
   }
   const removeAtt = (i: number) => setAtts((a) => a.filter((_, idx) => idx !== i));
+
+  // Voice notes, same as the reply composer: record, then attach as audio.
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  async function startRec() {
+    setError("");
+    if (!navigator.mediaDevices?.getUserMedia) { setError("This browser can't record audio."); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        stream.getTracks().forEach((t) => t.stop());
+        const mime = rec.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mime });
+        if (blob.size > MAX_BYTES) { setError("That voice note is over 4 MB — keep it shorter."); return; }
+        const base64 = await blobToBase64(blob);
+        setAtts((a) => [...a, { name: "Voice note", mime, base64, url: URL.createObjectURL(blob), kind: "audio" }]);
+      };
+      rec.start();
+      recRef.current = rec;
+      setRecording(true);
+      setRecSecs(0);
+      timerRef.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch { setError("Couldn't reach the microphone. Allow mic access for this site and try again."); }
+  }
+  function stopRec() { recRef.current?.stop(); setRecording(false); }
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const shown = tickets
     .filter((t) => (filter === "done" ? t.status === "resolved" : t.status !== "resolved"))
@@ -143,12 +186,17 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
             <label className="tm-imgbtn">📎 Add file
               <input type="file" accept={FILE_ACCEPT} multiple onChange={(e) => { addFiles(e.target.files, false); e.currentTarget.value = ""; }} style={{ display: "none" }} />
             </label>
+            <button type="button" className={`tm-imgbtn ${recording ? "rec" : ""}`} onClick={recording ? stopRec : startRec}>
+              {recording ? `⏹ Stop ${mmss(recSecs)}` : "🎤 Record voice note"}
+            </button>
           </div>
           {atts.length > 0 && (
             <div className="tm-imgdrafts">
               {atts.map((a, i) => (
                 <span key={i} className={`tm-imgdraft ${a.kind}`}>
-                  {a.kind === "image" ? <img src={a.url} alt={a.name} /> : <span className="tm-filechip">{fileIcon(a.name)} {a.name}</span>}
+                  {a.kind === "image" ? <img src={a.url} alt={a.name} />
+                    : a.kind === "audio" ? <audio controls preload="metadata" src={a.url} />
+                    : <span className="tm-filechip">{fileIcon(a.name)} {a.name}</span>}
                   <button type="button" onClick={() => removeAtt(i)} aria-label="Remove">×</button>
                 </span>
               ))}

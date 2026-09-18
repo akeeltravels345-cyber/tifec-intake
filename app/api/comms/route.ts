@@ -376,9 +376,11 @@ export async function POST(req: Request) {
       const id = String(body.id ?? "");
       const t = await getTicket(id);
       if (!t) return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
-      // Deleting removes the ticket for everyone, so only the admin/owner may.
+      // Deleting removes the ticket for everyone, so it's limited to the person
+      // who raised it, plus the admin/owner who oversee every ticket.
       const c = getClinician(me.id);
-      if (!(c?.contact === "admin" || c?.contact === "owner")) return NextResponse.json({ error: "Only an admin or owner can delete a ticket." }, { status: 403 });
+      const canDelete = c?.contact === "admin" || c?.contact === "owner" || t.createdBy === me.id;
+      if (!canDelete) return NextResponse.json({ error: "Only the person who raised it, or an admin or owner, can delete a ticket." }, { status: 403 });
       await deleteTicket(id);
       await deleteDocFilesByPrefix(`ticket:${id}`);
       return NextResponse.json({ ok: true });

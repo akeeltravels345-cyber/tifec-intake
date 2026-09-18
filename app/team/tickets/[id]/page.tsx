@@ -47,8 +47,8 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
     <TicketDetail
       threadId={threadId}
       firstAttachments={firstAttachments}
-      canManage={t.assignees.includes(me.id) || seesAll}
-      canDelete={seesAll}
+      canManage={t.assignees.includes(me.id) || seesAll || t.createdBy === me.id}
+      canDelete={seesAll || t.createdBy === me.id}
       waitingOn={waiting.map(nm)}
       yourTurn={waiting.includes(me.id)}
       contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}
