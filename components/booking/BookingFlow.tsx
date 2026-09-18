@@ -18,6 +18,17 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const initials = (name: string) => name.replace(/\(.*?\)/g, "").split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss)\.?$/i.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const MODE_LABEL: Record<Mode, string> = { in_person: "In person", virtual: "Virtual", either: "In person or virtual" };
 
+// A service can be offered in person, online, or both. The catalogue stores
+// those as separate types (e.g. "Grief Counselling - In Person" and
+// "Grief Counselling - Online"); we pair them by their base name so the client
+// picks the service once, then chooses the mode. Variants whose base name +
+// duration do not match (e.g. a 1hr in-person vs a 1.5hr online counselling)
+// simply stay as their own service, offered in the one mode.
+type BookMode = "in_person" | "virtual";
+interface Service { key: string; baseName: string; category: string; variants: Partial<Record<BookMode, Type>>; }
+const baseName = (name: string) =>
+  name.replace(/\s*-\s*(In Person Appointment|In Person|Online|Virtual)\b/i, "").replace(/\s{2,}/g, " ").trim();
+
 export default function BookingFlow({ practiceName, types, clinicians, insurers, preview, welcome, accent, policy, initialTypeId, initialClinician }: {
   practiceName: string; types: Type[]; clinicians: Clin[]; insurers: Insurer[]; preview: string; welcome?: string; accent?: string; policy?: string; initialTypeId?: string; initialClinician?: string;
 }) {
@@ -41,23 +52,51 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
   const [category, setCategory] = useState<string | null>(null); // chosen category on the service step
+  const [group, setGroup] = useState<Service | null>(null); // chosen service (its in-person/online variants)
+
+  // Pair the mode-specific types into one service each, so the client picks the
+  // service, then the mode (see Service above).
+  const services = useMemo(() => {
+    const list: Service[] = [];
+    const index = new Map<string, Service>();
+    for (const t of types) {
+      const cat = t.category.trim() || "Other";
+      const key = `${cat}|${baseName(t.name)}`;
+      let s = index.get(key);
+      if (!s) { s = { key, baseName: baseName(t.name), category: cat, variants: {} }; index.set(key, s); list.push(s); }
+      const m: BookMode = t.mode === "virtual" ? "virtual" : "in_person";
+      if (!s.variants[m]) s.variants[m] = t;
+    }
+    return list;
+  }, [types]);
 
   // Services grouped by category, in first-seen order, so clients pick a
   // category first (like Acuity) instead of scrolling one long list.
   const categories = useMemo(() => {
     const order: string[] = [];
-    const byCat = new Map<string, Type[]>();
-    for (const t of types) {
-      const cat = t.category.trim() || "Other";
-      if (!byCat.has(cat)) { byCat.set(cat, []); order.push(cat); }
-      byCat.get(cat)!.push(t);
+    const byCat = new Map<string, Service[]>();
+    for (const s of services) {
+      if (!byCat.has(s.category)) { byCat.set(s.category, []); order.push(s.category); }
+      byCat.get(s.category)!.push(s);
     }
     // Free Online Consultation leads, then the rest in their natural order.
     order.sort((a, b) => (/free online/i.test(b) ? 1 : 0) - (/free online/i.test(a) ? 1 : 0));
     return order.map((name) => ({ name, items: byCat.get(name)! }));
-  }, [types]);
+  }, [services]);
   const groupByCategory = categories.length > 1; // one category: keep the flat list
-  const shownTypes = category ? (categories.find((c) => c.name === category)?.items ?? []) : types;
+  const shownServices = category ? (categories.find((c) => c.name === category)?.items ?? []) : services;
+
+  // A service's default variant (in person if offered, else online) and its modes.
+  const svcDefault = (s: Service) => (s.variants.in_person || s.variants.virtual)!;
+  const svcModes = (s: Service) => [s.variants.in_person && "in_person", s.variants.virtual && "virtual"].filter(Boolean) as BookMode[];
+  function pickService(s: Service) {
+    const def = svcDefault(s);
+    setGroup(s); setType(def); setChosenMode(def.mode === "virtual" ? "virtual" : "in_person"); setStep("clinician");
+  }
+  function selectMode(m: BookMode) {
+    if (!group?.variants[m]) return;
+    setType(group.variants[m]!); setChosenMode(m);
+  }
 
   // Returning clients: remember their details in THEIR OWN browser only, so they
   // don't re-type name / email / insurance / policy. Never leaves the device.
@@ -197,17 +236,22 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 )}
                 <h2 className="bk-h2">{category || "What would you like to book?"}</h2>
                 <div className="bk-cards">
-                  {shownTypes.map((t) => (
-                    <button key={t.id} className="bk-card" onClick={() => { setType(t); setStep("clinician"); }}>
-                      <span className="bk-accent" style={{ background: t.color }} />
-                      <span className="bk-cardmain">
-                        <span className="bk-cardname">{t.name}</span>
-                        {t.description && <span className="bk-carddesc">{t.description}</span>}
-                        <span className="bk-cardmeta">{t.durationMin} min · {MODE_LABEL[t.mode]}{t.price > 0 ? ` · ${money(t.price)}` : ""}</span>
-                      </span>
-                      <span className="bk-chev">→</span>
-                    </button>
-                  ))}
+                  {shownServices.map((s) => {
+                    const def = svcDefault(s);
+                    const modes = svcModes(s);
+                    const modeText = modes.length > 1 ? "In person or Online" : modes[0] === "virtual" ? "Online" : "In person";
+                    return (
+                      <button key={s.key} className="bk-card" onClick={() => pickService(s)}>
+                        <span className="bk-accent" style={{ background: def.color }} />
+                        <span className="bk-cardmain">
+                          <span className="bk-cardname">{s.baseName}</span>
+                          {def.description && <span className="bk-carddesc">{def.description}</span>}
+                          <span className="bk-cardmeta">{def.durationMin} min · {modeText}{def.price > 0 ? ` · ${money(def.price)}` : ""}</span>
+                        </span>
+                        <span className="bk-chev">→</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -239,6 +283,15 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         {step === "time" && (
           <section className="bk-sec">
             <h2 className="bk-h2">Pick a time</h2>
+            {group && group.variants.in_person && group.variants.virtual && (
+              <div className="bk-modepick">
+                <span className="bk-modelbl">How would you like to meet?</span>
+                <div className="bk-seg">
+                  <button type="button" className={chosenMode === "in_person" ? "on" : ""} onClick={() => selectMode("in_person")}>In person</button>
+                  <button type="button" className={chosenMode === "virtual" ? "on" : ""} onClick={() => selectMode("virtual")}>Online</button>
+                </div>
+              </div>
+            )}
             <div className="bk-daystrip">
               {dayChips.map((c) => (
                 <button key={c.date} className={`bk-day ${date === c.date ? "on" : ""}`} onClick={() => setDate(c.date)}>

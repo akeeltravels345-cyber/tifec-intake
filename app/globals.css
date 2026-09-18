@@ -3944,6 +3944,8 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-seg button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid #dfe6e4; background: #fff; color: #6b7679; padding: 10px 20px; cursor: pointer; }
 .bk-seg button:first-child { border-left: 0; }
 .bk-seg button.on { background: #2f8e93; color: #fff; }
+.bk-modepick { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.bk-modelbl { font-size: 13px; font-weight: 600; color: #6b7679; }
 .bk-intake { font-size: 13.5px; color: #226e72; background: #eef6f5; border: 1px solid #dcebe9; border-radius: 12px; padding: 12px 14px; margin-top: 16px; line-height: 1.55; }
 .bk-err { color: #b3261e; font-size: 13.5px; margin-top: 14px; }
 
