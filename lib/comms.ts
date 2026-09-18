@@ -453,6 +453,42 @@ export function ticketWaitingOn(
   return [...new Set([t.createdBy, ...t.assignees])].filter((id) => id && id !== lastSpeaker);
 }
 
+// (thread, sender, time) for a set of ticket threads — no bodies, no decrypt —
+// so we can spot unread comments cheaply.
+async function ticketCommentTimes(threadIds: string[]): Promise<{ threadId: string; senderId: string; createdAt: string }[]> {
+  if (threadIds.length === 0) return [];
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT thread_id, sender_id, created_at FROM comms_messages WHERE thread_id = ANY(${threadIds})`) as Record<string, unknown>[];
+    return rows.map((r) => ({ threadId: str(r.thread_id), senderId: str(r.sender_id), createdAt: iso(r.created_at) }));
+  }
+  const set = new Set(threadIds);
+  return readJson<StoredMessage[]>(MSG_FILE, []).filter((m) => set.has(m.threadId)).map((m) => ({ threadId: m.threadId, senderId: m.senderId, createdAt: m.createdAt }));
+}
+
+/** How many OPEN tickets need this person's attention: it's their turn (the ball
+ *  is with them) OR there are comments on it they haven't read yet. Drives the
+ *  Tickets menu badge. */
+export async function ticketAttentionCount(me: string): Promise<number> {
+  const [tickets, lastCommenters, reads] = await Promise.all([listTickets(), lastTicketCommenters(), getReads(me)]);
+  const mine = tickets.filter((t) => t.status !== "resolved" && (t.createdBy === me || t.assignees.includes(me)));
+  if (mine.length === 0) return 0;
+
+  const unseen = new Set<string>(); // ticket ids with a comment I haven't read
+  const rows = await ticketCommentTimes(mine.map((t) => `ticket:${t.id}`));
+  for (const r of rows) {
+    const since = reads[r.threadId] ?? "";
+    if (r.senderId !== me && r.createdAt > since) unseen.add(r.threadId.slice("ticket:".length));
+  }
+
+  let count = 0;
+  for (const t of mine) {
+    const waiting = ticketWaitingOn(t, lastCommenters[t.id] ?? null).includes(me);
+    if (waiting || unseen.has(t.id)) count++;
+  }
+  return count;
+}
+
 export async function createTicket(input: {
   createdBy: string; enteredBy?: string | null; assignees: string[]; area: TicketArea; subject: string; body: string;
 }): Promise<Ticket> {

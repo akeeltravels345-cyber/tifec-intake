@@ -59,6 +59,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const { role, hasBilling, isAdmin, canSchedule, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const navGlow = useGlowBudget("copaynav");
   const notesGlow = useGlowBudget("notesnew");
+  const handbookGlow = useGlowBudget("handbooknew");
   const owner = role === "owner", biller = role === "biller";
   // Session notes are for the people who treat clients: every clinician and the
   // owner, plus a biller who also carries a caseload (Nick). A pure biller or the
@@ -80,7 +81,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const uTickets: Item = { href: "/team/tickets", label: "Tickets", icon: IcTicket, badge: openTickets, match: (p) => p.startsWith("/team/tickets") };
   // The reference handbook. One route, but /billing/guide renders the guide that
   // matches the signed-in role, so every menu can link to the same place.
-  const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide") };
+  const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide"), highlight: handbookGlow };
 
   let groups: Group[];
   if (isAdmin && hasBilling) {

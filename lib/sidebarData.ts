@@ -3,7 +3,7 @@
 // role gating in one place so the sidebar renders identically everywhere.
 
 import { getSubmissionsByClinician } from "@/lib/db";
-import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
+import { unreadCount, unreadNotifications, ticketAttentionCount } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { billingRoleOf, hasBillingBeta } from "@/lib/billingRole";
 import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
@@ -44,10 +44,10 @@ export interface SidebarData {
 export async function getSidebarData(me: Clinician): Promise<SidebarData> {
   void touchPresence(me.id); // stamp "active now" on every navigation (fire-and-forget)
   const hasBilling = hasBillingBeta(me);
-  const [subs, teamUnread, tickets, sessions, view, staged, noteCount, avatar, myClients] = await Promise.all([
+  const [subs, teamUnread, ticketAttention, sessions, view, staged, noteCount, avatar, myClients] = await Promise.all([
     getSubmissionsByClinician(me.id),
     unreadCount(me.id),
-    listTickets(),
+    ticketAttentionCount(me.id),
     hasBilling ? listSessions() : Promise.resolve([]),
     getViewAsState(),
     hasBilling ? listStaged("pending") : Promise.resolve([]),
@@ -81,7 +81,8 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     queueCount: sessions.filter((s) => s.insurerId && !s.insurancePaid).length,
     needReview: subs.filter((s) => s.status === "new").length,
     teamUnread,
-    openTickets: tickets.filter((t) => t.assignees.includes(me.id) && t.status !== "resolved").length,
+    // Tickets that need this person now: their turn, or an unread comment.
+    openTickets: ticketAttention,
     importPending: staged.length,
     noteCount,
     notesEnabled: NOTES_ENABLED,
