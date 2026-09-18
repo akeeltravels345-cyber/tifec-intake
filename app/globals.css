@@ -4242,6 +4242,8 @@ body:has(.bk-page) .brandbar { display: none; }
 .ded-link { background: none; border: none; color: var(--indigo); font: 600 13px "Open Sans"; cursor: pointer; padding: 4px 2px; }
 .ded-link:hover { text-decoration: underline; }
 /* Yes/No prompt that keeps the deductible collapsed for the majority of clients. */
+/* Divider between the two panels in the combined Insurance section. */
+.cd-insdiv { border-top: 1px solid var(--edge); margin: 16px 0; }
 .ded-yn { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ded-q { font-size: 12.5px; color: var(--muted); }
 .ded-ynbtn { border: 1px solid var(--edge); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 3px 15px; font: 600 12.5px "Open Sans"; cursor: pointer; }

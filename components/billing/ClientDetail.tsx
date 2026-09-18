@@ -301,6 +301,7 @@ export default function ClientDetail({
   const [ndKind, setNdKind] = useState("referral");
   const [ndUrl, setNdUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [showDocAdd, setShowDocAdd] = useState(false);
   // shared cross-role notes
   const [notes, setNotes] = useState(profile.notes ?? []);
   const [noteText, setNoteText] = useState("");
@@ -593,31 +594,24 @@ export default function ClientDetail({
         )}
       </div>
 
-      {/* ---- Insurance deductible ---- */}
+      {/* ---- Insurance (funds cap + deductible) ---- */}
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Insurance deductible</h2>
-          <span className="su-hint">Only the minority of plans with a deductible. It counts down as the client pays out of pocket, then sessions run through insurance.</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Insurance</h2>
+          <span className="su-hint">The plan&apos;s total funds and any deductible, if it has them. Both count down as insured visits are billed.</span></div>
         <div className="su-card" style={{ padding: 16 }}>
+          <BenefitPanel
+            clientId={id}
+            benefit={benefit}
+            today={today}
+            canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
+          />
+          <div className="cd-insdiv" />
           <DeductiblePanel
             clientId={id}
             deductible={profile.deductible ?? null}
             applied={profile.deductibleApplied ?? []}
             summary={deductibleSummary(profile)}
             sessions={activity.map((a) => ({ id: a.id, date: a.date, total: a.total }))}
-            today={today}
-            canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
-          />
-        </div>
-      </div>
-
-      {/* ---- Total insurance funds ---- */}
-      <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Insurance funds</h2>
-          <span className="su-hint">The total funds the insurer has authorised for the plan year. Each insured visit counts down against it; the remaining balance shows by the charges below.</span></div>
-        <div className="su-card" style={{ padding: 16 }}>
-          <BenefitPanel
-            clientId={id}
-            benefit={benefit}
             today={today}
             canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
           />
@@ -678,28 +672,33 @@ export default function ClientDetail({
             </div>
           )}
           {canEdit && (
-            <div className="cd-docadd-group">
-              <div className="cd-docadd">
-                <select className="ls-in" value={ndKind} onChange={(e) => setNdKind(e.target.value)}>
-                  <option value="referral">Referral</option>
-                  <option value="intake">Intake form</option>
-                  <option value="other">Other</option>
-                </select>
-                <input className="ls-in" placeholder="Name (optional)" value={ndName} onChange={(e) => setNdName(e.target.value)} />
+            !showDocAdd ? (
+              <button className="su-add" style={{ marginTop: docs.length ? 12 : 0 }} onClick={() => setShowDocAdd(true)}>+ Add a document</button>
+            ) : (
+              <div className="cd-docadd-group">
+                <div className="cd-docadd">
+                  <select className="ls-in" value={ndKind} onChange={(e) => setNdKind(e.target.value)}>
+                    <option value="referral">Referral</option>
+                    <option value="intake">Intake form</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input className="ls-in" placeholder="Name (optional)" value={ndName} onChange={(e) => setNdName(e.target.value)} />
+                </div>
+                <div className="cd-docadd">
+                  <label className="cd-filepick">
+                    <input type="file" style={{ display: "none" }} disabled={busy} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                    <span>{file ? `📄 ${file.name}` : "Choose a file…"}</span>
+                  </label>
+                  <button className="su-add" disabled={busy || !file} onClick={uploadFile}>{busy ? "Uploading…" : "Upload file"}</button>
+                </div>
+                <div className="cd-docadd">
+                  <input className="ls-in" placeholder="…or paste a link (URL)" value={ndUrl} onChange={(e) => setNdUrl(e.target.value)} />
+                  <button className="su-add" disabled={busy || !ndName.trim()} onClick={addDocument}>Add link</button>
+                  <button className="su-del sm" onClick={() => { setShowDocAdd(false); setFile(null); setNdUrl(""); setNdName(""); }}>Cancel</button>
+                </div>
+                <p className="su-hint" style={{ margin: "6px 2px 0" }}>Files up to 4&nbsp;MB (PDF, image, Word) are stored encrypted here; larger files add as a link.</p>
               </div>
-              <div className="cd-docadd">
-                <label className="cd-filepick">
-                  <input type="file" style={{ display: "none" }} disabled={busy} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                  <span>{file ? `📄 ${file.name}` : "Choose a file to upload…"}</span>
-                </label>
-                <button className="su-add" disabled={busy || !file} onClick={uploadFile}>{busy ? "Uploading…" : "Upload file"}</button>
-              </div>
-              <div className="cd-docadd">
-                <input className="ls-in" placeholder="…or paste a link (URL)" value={ndUrl} onChange={(e) => setNdUrl(e.target.value)} />
-                <button className="su-add" disabled={busy || !ndName.trim()} onClick={addDocument}>Add link</button>
-              </div>
-              <p className="su-hint" style={{ margin: "8px 2px 0" }}>Files up to 4&nbsp;MB (PDF, image, or Word) are stored securely, encrypted, on this record. Larger files can be added as a link.</p>
-            </div>
+            )
           )}
         </div>
       </div>
