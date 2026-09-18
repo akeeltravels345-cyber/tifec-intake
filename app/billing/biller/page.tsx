@@ -97,6 +97,7 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <MonthNav year={year} month={month} path="/billing/biller" />
+          <Link href="/billing/guide" className="bz-link">Handbook →</Link>
           <Link href={`/billing/biller/statement?y=${year}&m=${month}`} className="bz-link">Payout statement →</Link>
           <Link href="/billing/payments" className="bl-cta">Open billing queue →</Link>
         </div>

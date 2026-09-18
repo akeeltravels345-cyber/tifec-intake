@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TIFEC Biller Handbook</title>
+<meta name="description" content="A workflow-by-workflow guide to every biller page in the TIFEC billing app." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+
+<style>
+:root{
+  --ground:#f3f6f5; --surface:#ffffff; --surface-2:#eef3f2; --surface-3:#e7efed;
+  --ink:#16211f; --ink-2:#33423f; --muted:#5b6b68; --faint:#849693;
+  --accent:#1f6d70; --accent-ink:#124b4d; --accent-soft:#dcecea;
+  --edge:#dde6e4; --edge-2:#cdd9d6;
+  --good:#2f7d4f; --good-soft:#dcefe2;
+  --warn:#a86612; --warn-soft:#f6e8cf;
+  --bad:#bd3a29; --bad-soft:#f5ddd7;
+  --info:#2f5ea8; --info-soft:#dde6f5;
+  --shadow:0 1px 2px rgba(20,40,38,.05), 0 4px 16px rgba(20,40,38,.05);
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    --ground:#0e1514; --surface:#151e1c; --surface-2:#1b2624; --surface-3:#21302d;
+    --ink:#e7edeb; --ink-2:#c2cecb; --muted:#93a5a1; --faint:#6d7f7b;
+    --accent:#54b7b3; --accent-ink:#8fd6d2; --accent-soft:#1d3634;
+    --edge:#273533; --edge-2:#33443f;
+    --good:#63c088; --good-soft:#183226; --warn:#e0a54e; --warn-soft:#33270f;
+    --bad:#e8887a; --bad-soft:#341b17; --info:#7ba4e6; --info-soft:#16233c;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1514; --surface:#151e1c; --surface-2:#1b2624; --surface-3:#21302d;
+  --ink:#e7edeb; --ink-2:#c2cecb; --muted:#93a5a1; --faint:#6d7f7b;
+  --accent:#54b7b3; --accent-ink:#8fd6d2; --accent-soft:#1d3634;
+  --edge:#273533; --edge-2:#33443f;
+  --good:#63c088; --good-soft:#183226; --warn:#e0a54e; --warn-soft:#33270f;
+  --bad:#e8887a; --bad-soft:#341b17; --info:#7ba4e6; --info-soft:#16233c;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"Public Sans", system-ui, sans-serif;
+  font-size:15px; line-height:1.5; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding-inline:20px; padding-block:0;}
+.layout{display:grid; grid-template-columns:232px 1fr; gap:38px; align-items:start;}
+
+/* ---- masthead ---- */
+.mast{padding:46px 0 26px; border-bottom:1px solid var(--edge);}
+.mast .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 12px;}
+.mast h1{font-family:"Fraunces",serif; font-weight:600; font-size:clamp(2.1rem,5vw,3.05rem); line-height:1.04; margin:0; letter-spacing:-.01em; text-wrap:balance; color:var(--ink);}
+.mast p.sub{margin:14px 0 0; font-size:16px; color:var(--muted); max-width:60ch;}
+.mchips{display:flex; flex-wrap:wrap; gap:8px; margin-top:20px;}
+.mchip{font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:999px; background:var(--surface-2); color:var(--ink-2); border:1px solid var(--edge);}
+.mchip b{color:var(--accent-ink);}
+
+/* ---- table of contents ---- */
+.toc{position:sticky; top:calc(env(safe-area-inset-top,0px) + 18px); font-size:13.5px;}
+.toc .tl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); margin:0 0 10px 12px;}
+.toc ol{list-style:none; margin:0; padding:0; counter-reset:toc;}
+.toc a{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-2); padding:6px 12px; border-radius:8px; border-left:2px solid transparent;}
+.toc a:hover{background:var(--surface-2); color:var(--ink);}
+.toc a .n{counter-increment:toc; font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--accent); min-width:16px;}
+.toc a .n::before{content:counter(toc,decimal-leading-zero);}
+.toc a.plain .n{visibility:hidden;}
+
+/* ---- main flow ---- */
+main{padding-bottom:80px; min-width:0;}
+section.grp{padding-top:40px; scroll-margin-top:24px;}
+section.grp > .gh{margin:0 0 4px; display:flex; align-items:center; gap:12px;}
+section.grp > .gh h2{font-family:"Fraunces",serif; font-weight:600; font-size:1.72rem; margin:0; letter-spacing:-.01em; color:var(--ink);}
+section.grp > .gh .gn{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--accent); border:1px solid var(--accent-soft); background:var(--accent-soft); color:var(--accent-ink); border-radius:6px; padding:2px 8px;}
+section.grp > p.gintro{margin:2px 0 18px; color:var(--muted); max-width:66ch;}
+
+/* ---- page card ---- */
+.page{background:var(--surface); border:1px solid var(--edge); border-radius:14px; padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow);}
+.page .ph{display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin-bottom:6px;}
+.page .ph h3{font-family:"Fraunces",serif; font-weight:600; font-size:1.24rem; margin:0; color:var(--ink); letter-spacing:-.005em;}
+.route{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--accent-ink); background:var(--surface-3); border:1px solid var(--edge); border-radius:6px; padding:2.5px 8px; word-break:break-all;}
+.page .lede{margin:4px 0 14px; color:var(--ink-2); font-size:14.5px;}
+.gate{font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500; color:var(--muted); border:1px dashed var(--edge-2); border-radius:6px; padding:2px 7px; white-space:nowrap;}
+
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:14px 26px;}
+.block h4{font-size:11px; font-family:"IBM Plex Mono",monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin:0 0 7px;}
+.block.full{grid-column:1/-1;}
+ul.b{list-style:none; margin:0; padding:0;}
+ul.b li{position:relative; padding-left:16px; margin-bottom:6px; font-size:14px; color:var(--ink-2);}
+ul.b li::before{content:""; position:absolute; left:2px; top:8px; width:5px; height:5px; border-radius:50%; background:var(--edge-2);}
+ul.b li b{color:var(--ink); font-weight:600;}
+code.k{font-family:"IBM Plex Mono",monospace; font-size:12px; background:var(--surface-2); border:1px solid var(--edge); border-radius:5px; padding:1px 6px; color:var(--accent-ink); white-space:nowrap;}
+.mini{font-size:12.5px; color:var(--muted);}
+
+/* status pills */
+.pill{display:inline-block; font-size:11.5px; font-weight:700; padding:1.5px 9px; border-radius:999px; line-height:1.5; white-space:nowrap;}
+.pill.self{background:var(--accent-soft); color:var(--accent-ink);}
+.pill.tobill{background:var(--warn-soft); color:var(--warn);}
+.pill.await{background:var(--info-soft); color:var(--info);}
+.pill.collected{background:var(--good-soft); color:var(--good);}
+.pill.off{background:var(--surface-3); color:var(--muted); text-decoration:line-through;}
+
+/* legend / callouts */
+.legend{background:var(--surface); border:1px solid var(--edge); border-radius:14px; padding:18px 20px; margin-top:22px; box-shadow:var(--shadow);}
+.legend h4{margin:0 0 12px; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);}
+.legrow{display:flex; flex-wrap:wrap; gap:18px 30px;}
+.legcol{flex:1 1 240px; min-width:220px;}
+.legcol .li{display:flex; gap:10px; align-items:baseline; margin-bottom:7px; font-size:13px; color:var(--ink-2);}
+.legcol .li .lb{flex:0 0 auto;}
+.tip{background:var(--accent-soft); border-radius:10px; padding:11px 14px; margin:14px 0 2px; font-size:13.5px; color:var(--accent-ink); border:1px solid transparent;}
+.tip b{font-weight:700;}
+.warnbox{background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:11px 14px; margin:14px 0 2px; font-size:13.5px; font-weight:500;}
+
+/* cycle flow */
+.flow{display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; margin:6px 0 20px;}
+.step{flex:1 1 120px; background:var(--surface); border:1px solid var(--edge); border-radius:11px; padding:11px 13px; position:relative; box-shadow:var(--shadow);}
+.step .sn{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--accent);}
+.step .st{font-family:"Fraunces",serif; font-weight:600; font-size:15px; margin:2px 0 3px; color:var(--ink);}
+.step .sd{font-size:12px; color:var(--muted); line-height:1.35;}
+
+/* definition list (record anatomy, glossary) */
+.dl{border:1px solid var(--edge); border-radius:14px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow);}
+.dl .row{display:grid; grid-template-columns:200px 1fr; gap:0; border-top:1px solid var(--edge);}
+.dl .row:first-child{border-top:none;}
+.dl dt{padding:13px 16px; font-weight:600; color:var(--ink); background:var(--surface-2); font-size:14px; border-right:1px solid var(--edge);}
+.dl dd{padding:13px 16px; margin:0; color:var(--ink-2); font-size:14px;}
+.dl dd b{color:var(--ink);}
+
+footer.foot{border-top:1px solid var(--edge); margin-top:40px; padding:24px 0 10px; color:var(--faint); font-size:12.5px;}
+
+a.jump{color:var(--accent-ink); text-decoration:none; border-bottom:1px solid var(--accent-soft);}
+a.jump:hover{border-color:var(--accent);}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr; gap:0;}
+  .toc{position:static; margin:18px 0 4px; border:1px solid var(--edge); border-radius:12px; background:var(--surface); padding:10px 6px;}
+  .toc details{padding:0 6px;}
+  .toc summary{cursor:pointer; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); padding:6px;}
+  .cols{grid-template-columns:1fr;}
+  .dl .row{grid-template-columns:1fr;}
+  .dl dt{border-right:none; border-bottom:1px solid var(--edge);}
+}
+@media (min-width:861px){ .toc details > summary{display:none;} .toc details{display:block;} }
+</style>
+<style>*{box-sizing:border-box} html,body{margin:0} img{max-width:100%}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">TIFEC · Essential Care · Billing</p>
+    <h1>The Biller's Handbook</h1>
+    <p class="sub">Every screen you touch as the biller, grouped by the job it does. What the page is for, what each thing on it means, and what every button does.</p>
+    <div class="mchips">
+      <span class="mchip">Currency <b>KYD</b></span>
+      <span class="mchip">Dates pinned to <b>Cayman time</b></span>
+      <span class="mchip">Your role: <b>Biller</b></span>
+      <span class="mchip">For a functionality review</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc">
+      <details open>
+        <summary>Contents</summary>
+        <p class="tl">The workflows</p>
+        <ol>
+          <li><a class="plain" href="#start"><span class="n"></span>Start here</a></li>
+          <li><a href="#cycle"><span class="n"></span>The billing cycle</a></li>
+          <li><a href="#docs"><span class="n"></span>Claims &amp; invoices</a></li>
+          <li><a href="#chase"><span class="n"></span>Chasing money</a></li>
+          <li><a href="#clients"><span class="n"></span>Clients</a></li>
+          <li><a href="#payouts"><span class="n"></span>Money &amp; payouts</a></li>
+          <li><a href="#team"><span class="n"></span>Team &amp; tickets</a></li>
+          <li><a href="#setup"><span class="n"></span>Setup &amp; worklist</a></li>
+          <li><a class="plain" href="#glossary"><span class="n"></span>Money words</a></li>
+        </ol>
+      </details>
+    </nav>
+
+    <main>
+      <!-- ============ START ============ -->
+      <section class="grp" id="start">
+        <div class="gh"><h2>Start here</h2></div>
+        <p class="gintro">Three roles share the app. You are the <b>Biller</b>: you see the billing operation and the money owed, but not a clinician's private payout settings or their clinical notes.</p>
+
+        <div class="page">
+          <div class="ph"><h3>The three roles</h3></div>
+          <div class="cols">
+            <div class="block">
+              <h4>Who sees what</h4>
+              <ul class="b">
+                <li><b>Biller</b> (you): billing queue, claims, invoices, money owed, every client, the by-clinician numbers, Setup (claims + fees only).</li>
+                <li><b>Owner</b>: the whole business picture plus the money-management side of Setup (retention, expenses, splits).</li>
+                <li><b>Clinician</b>: only their own clients, sessions and payout.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Your left menu</h4>
+              <ul class="b">
+                <li><code class="k">Biller dashboard</code> your month and commission</li>
+                <li><code class="k">Billing queue</code> the daily workspace</li>
+                <li><code class="k">By clinician</code> per-person numbers</li>
+                <li><code class="k">Owed by clients</code> chase list</li>
+                <li><code class="k">Clients</code> the roster</li>
+                <li>Plus <b>Team</b> (Notices, Messages, Tickets) and <b>Setup</b> + <b>Worklist</b></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <h4>How to read this guide</h4>
+          <div class="legrow">
+            <div class="legcol">
+              <div class="li"><span class="lb"><code class="k">grey mono</code></span><span>= a real button or label exactly as it appears on screen.</span></div>
+              <div class="li"><span class="lb"><span class="route">/billing/…</span></span><span>= the page's web address (what shows in the browser bar).</span></div>
+              <div class="li"><span class="lb"><span class="gate">biller / owner only</span></span><span>= who is allowed on that page or control.</span></div>
+            </div>
+            <div class="legcol">
+              <div class="li"><span class="lb"><span class="pill self">Self-pay</span></span><span>client pays the full fee, goes on an invoice.</span></div>
+              <div class="li"><span class="lb"><span class="pill tobill">To bill</span></span><span>insured, not yet sent to the insurer.</span></div>
+              <div class="li"><span class="lb"><span class="pill await">Awaiting payment</span></span><span>claim submitted, waiting on the insurer.</span></div>
+              <div class="li"><span class="lb"><span class="pill collected">Collected</span></span><span>insurer paid, cash is in. This pays out.</span></div>
+              <div class="li"><span class="lb"><span class="pill off">Write-off</span></span><span>settled without full payment, never counts as collected.</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CYCLE ============ -->
+      <section class="grp" id="cycle">
+        <div class="gh"><h2>The billing cycle</h2><span class="gn">your day-to-day</span></div>
+        <p class="gintro">The heart of your job. A claim moves left to right as you work it. The <b>Billing queue</b> has one tab per stage.</p>
+
+        <div class="flow">
+          <div class="step"><div class="sn">01</div><div class="st">Session logged</div><div class="sd">A clinician records the visit.</div></div>
+          <div class="step"><div class="sn">02</div><div class="st">To bill</div><div class="sd">Build the CMS-1500, mark it submitted.</div></div>
+          <div class="step"><div class="sn">03</div><div class="st">Awaiting</div><div class="sd">Waiting on the insurer to pay.</div></div>
+          <div class="step"><div class="sn">04</div><div class="st">Collected</div><div class="sd">Money lands, you mark it collected.</div></div>
+          <div class="step"><div class="sn">05</div><div class="st">Payout</div><div class="sd">Only collected cash pays anyone.</div></div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Billing queue</h3><span class="route">/billing/payments</span><span class="gate">biller / owner</span></div>
+          <p class="lede">Your operational workspace: submit claims to insurers, then mark them collected as money lands.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>The tabs (a claim's life)</h4>
+              <ul class="b">
+                <li><span class="pill tobill">To bill</span> logged, not yet submitted. Sorted oldest first.</li>
+                <li><span class="pill await">Awaiting payment</span> submitted, waiting on the insurer.</li>
+                <li><span class="pill collected">Collected</span> paid in full. Scoped one month at a time.</li>
+                <li><span class="pill self">Self-pay</span> client balances (shows only if any exist).</li>
+                <li><span class="pill off">Written off / down</span> settled by adjustment, never pays out.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Top ribbon (at a glance)</h4>
+              <ul class="b">
+                <li><b>To bill</b> count, <b>Awaiting payment</b> total, <b>Collected this month</b>.</li>
+                <li><b>Oldest open</b> in days (turns amber at 15+).</li>
+                <li><b>Your cut so far</b> and <b>+pending on open</b>.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Working the rows</h4>
+              <ul class="b">
+                <li>Group <b>by insurer</b> or <b>by clinician</b>; search and filter by clinician.</li>
+                <li>Aging chips: <code class="k">0-14</code> <code class="k">15-30</code> <code class="k">31-60</code> <code class="k">60+ days</code>.</li>
+                <li>On <b>To bill</b> rows: a short <code class="k">+ note</code> (max 40 chars) the clinician can also see.</li>
+                <li><b>Awaiting</b> rows carry an editable <b>billed date</b>, back-date it to when the claim really went out.</li>
+                <li>A <b>⚠ after referral</b> flag warns a visit falls after the client's referral ended.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Buttons</h4>
+              <ul class="b">
+                <li><code class="k">Mark N billed</code> stamps the submitted date on ticked To-bill claims.</li>
+                <li><code class="k">Mark N collected</code> records payment on Awaiting / Self-pay rows.</li>
+                <li><code class="k">Generate CMS-1500</code> builds claim forms for ticked sessions.</li>
+                <li><code class="k">Un-bill</code> sends a claim back to To bill.</li>
+                <li><code class="k">Write off/down</code> then <code class="k">Settle</code> records a partial or nil payment.</li>
+                <li><code class="k">Undo</code> reverses a collected or written-off claim.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip"><b>Only collected money pays out.</b> Submitting a claim or writing one off never adds to anyone's payout. Cash landing (marked collected) is the only thing that does.</div>
+        </div>
+      </section>
+
+      <!-- ============ DOCS ============ -->
+      <section class="grp" id="docs">
+        <div class="gh"><h2>Claims &amp; invoices</h2><span class="gn">the paperwork</span></div>
+        <p class="gintro">Two documents leave the practice: the <b>CMS-1500</b> goes to the insurer, the <b>invoice</b> goes to the client. Insured visits go on a claim, self-pay visits go on an invoice.</p>
+
+        <div class="page">
+          <div class="ph"><h3>CMS-1500 claim</h3><span class="route">/billing/clients/[id]/cms1500</span><span class="route">/billing/clients/batch</span></div>
+          <p class="lede">A print-ready health-insurance claim form built from a client's insured sessions. Print or Save-as-PDF, then submit to the insurer.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>How sessions become lines</h4>
+              <ul class="b">
+                <li><b>One form per insurer</b>. Sessions are grouped by payer.</li>
+                <li>Each CPT code occurrence is its own service line in box 24.</li>
+                <li>Box 24 holds <b>6 lines</b>; more than 6 spills onto a continuation form (<span class="mini">"form 2 of 3"</span>).</li>
+                <li>Self-pay visits never appear here.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Two views &amp; where fields come from</h4>
+              <ul class="b">
+                <li><code class="k">Official form</code> (the red facsimile) and <code class="k">Review sheet</code> (plain, easy to scan). Only the visible one prints.</li>
+                <li>Patient / insured / diagnosis (box 21) come from the <b>client record</b>.</li>
+                <li>NPI, Tax ID, billing provider (boxes 25, 31-33) come from <b>Setup</b>. If unset, they print blank with a warning.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="cols" style="margin-top:8px">
+            <div class="block full">
+              <h4>Getting there</h4>
+              <ul class="b">
+                <li>From a client record: <code class="k">Generate CMS-1500</code> (all their insured visits), or tick rows and use <code class="k">CMS-1500 (N)</code>.</li>
+                <li>From the roster or queue: tick several and batch them. The button reads <code class="k">Print N claim / Save PDF</code>, where N is the total number of forms across everyone.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Client invoice</h3><span class="route">/billing/clients/[id]/invoice</span></div>
+          <p class="lede">A bill sent to the client for what they personally owe. Two kinds, chosen automatically by the visit type.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Two kinds</h4>
+              <ul class="b">
+                <li><b>Self-pay</b>: the full fee for visits with no insurer.</li>
+                <li><b>Co-pay</b> (<code class="k">type=copay</code>): just the outstanding co-pay on an insured visit, each line prefixed "Co-pay:".</li>
+                <li>A <code class="k">sessions=</code> list narrows it to exactly the visits you ticked; with none, it covers all that qualify.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Email to client</h4>
+              <ul class="b">
+                <li><code class="k">Email to client</code> opens a preview: To, editable <b>Subject</b>, the attached PDF, <b>Replies to</b> the treating clinician, and an editable message.</li>
+                <li><code class="k">Send to client</code> sends it; the send is logged on the client's record under <b>Emails sent</b>.</li>
+                <li>No email on file blocks the send and tells you to add one first.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="warnbox">Known gap you flagged: when you tick a <b>mix</b> of self-pay and insured charges, the <code class="k">Invoice (N)</code> button only carries the self-pay ones. A fix to bill a mixed selection on one invoice is queued.</div>
+        </div>
+      </section>
+
+      <!-- ============ CHASE ============ -->
+      <section class="grp" id="chase">
+        <div class="gh"><h2>Chasing money</h2><span class="gn">what's still owed</span></div>
+        <p class="gintro">Three lists of outstanding money: what clients owe, co-pays not yet collected, and insurance claims that are getting old.</p>
+
+        <div class="page">
+          <div class="ph"><h3>Owed by clients</h3><span class="route">/billing/balances</span><span class="gate">biller / owner</span></div>
+          <p class="lede">Everything clients still owe, oldest first, so you know who to chase.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Top cards</h4>
+              <ul class="b">
+                <li><b>Total owed</b> = self-pay balances + uncollected co-pays.</li>
+                <li><b>Self-pay balances</b> and <b>Co-pays not collected</b> (jumps to the co-pays page).</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>The list</h4>
+              <ul class="b">
+                <li>Per client: self-pay owed, co-pay not collected, total, and <b>Oldest</b> visit date.</li>
+                <li>Sorted oldest first, chase the top of the list.</li>
+                <li><code class="k">Invoice →</code> for a self-pay balance, <code class="k">Open →</code> for a co-pay-only client.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Outstanding co-pays</h3><span class="route">/billing/copays</span></div>
+          <p class="lede">Every insured visit where a co-pay was due but hasn't come in. Record it when it arrives.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Controls</h4>
+              <ul class="b">
+                <li><b>Received on</b> date sets the day a collected co-pay books to (defaults today).</li>
+                <li>Search by client; toggle <b>My clients</b> / <b>Everyone</b>.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Actions</h4>
+              <ul class="b">
+                <li><code class="k">Collect</code> records the co-pay as received. This is how you mark a co-pay paid.</li>
+                <li><code class="k">Invoice</code> bills it instead.</li>
+                <li>Tick several for the <b>same client</b>, then <code class="k">Create one invoice</code>.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Aged insurance claims</h3><span class="route">/billing/aged-claims</span><span class="gate">biller / owner</span></div>
+          <p class="lede">Unpaid claims grouped by insurer, oldest first. Print a report to take into an insurer meeting.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>The index</h4>
+              <ul class="b">
+                <li>Cards: <b>Total outstanding</b> and <b>60+ days</b> (the threshold that matters).</li>
+                <li>One card per insurer, most 60+-day money first. Click through for their report.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Per-insurer report</h4>
+              <ul class="b">
+                <li>Age filter tabs <code class="k">All</code> <code class="k">60+</code> <code class="k">90+</code> <code class="k">120+</code>, plus <code class="k">Print / Save PDF</code>.</li>
+                <li>Aging bands (0-14 / 15-30 / 31-60 / 60+) then a claim table with <b>Days out</b>; 60+ rows highlighted.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CLIENTS ============ -->
+      <section class="grp" id="clients">
+        <div class="gh"><h2>Clients</h2><span class="gn">records</span></div>
+        <p class="gintro">The roster is the master list; each client record holds everything a claim or invoice needs.</p>
+
+        <div class="page">
+          <div class="ph"><h3>Client roster</h3><span class="route">/billing/clients</span></div>
+          <p class="lede">Every client in the practice. Open one, or tick several and build their claims in one run.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Columns</h4>
+              <ul class="b">
+                <li>Client, Date of birth (+ age), Usual insurer (or <span class="pill self">Self-pay</span>), Seen by, <b>Paid</b> (cash collected), Last visit.</li>
+                <li>Tap any heading to sort; a checkbox is disabled when a client has no insured sessions to claim.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Actions</h4>
+              <ul class="b">
+                <li>Search, filter by insurer or clinician.</li>
+                <li><code class="k">+ New client</code> adds a client to a clinician's book.</li>
+                <li>Tick several then <code class="k">Generate CMS-1500</code> to batch their claims.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Client record</h3><span class="route">/billing/clients/[id]</span></div>
+          <p class="lede">One client's full file. Sections top to bottom:</p>
+          <div class="dl">
+            <div class="row"><dt>Referral banner</dt><dd>Always visible, payment-critical. Shows days left / expiring / expired. Visits after the end date <b>can't be billed</b>. <code class="k">Add / Renew referral</code>.</dd></div>
+            <div class="row"><dt>Client record</dt><dd>Identity + insurance: DOB, sex, contact, address, insurer, member ID, relationship to insured. <code class="k">Edit details</code> to change; a referral sub-block sets the billing window.</dd></div>
+            <div class="row"><dt>Insurance deductible</dt><dd>The insurer's annual figure counting down as the client pays out of pocket. Not money you hold. <span class="gate">biller / owner / admin edit</span></dd></div>
+            <div class="row"><dt>Diagnoses</dt><dd>ICD-10 codes for box 21 of the claim. Anyone on the record can edit; changes are logged.</dd></div>
+            <div class="row"><dt>Documents</dt><dd>Intake form (auto-linked), referral letter, anything else. Upload a file (up to 4 MB) or add a link.</dd></div>
+            <div class="row"><dt>Team notes</dt><dd>Admin / billing notes the whole team sees (benefits, authorisations, insurer calls). <b>Not for clinical or sensitive info.</b></dd></div>
+            <div class="row"><dt>Appointments &amp; charges</dt><dd>Every date of service with its status pill. Tick insured visits for a claim, self-pay for an invoice. Per row: <b>⚠ after referral</b> and <b>⚑ Read note</b> flags, plus an inline <code class="k">Invoice</code> link when that visit is owed. <code class="k">Change selected…</code> bulk-edits ticked rows.</dd></div>
+            <div class="row"><dt>Emails sent</dt><dd>Every invoice the system emailed this client, with sent / failed status.</dd></div>
+            <div class="row"><dt>Session notes</dt><dd>Clinical, encrypted, treating clinicians only. A pure biller never sees these.</dd></div>
+          </div>
+          <div class="tip">The status pill on each charge is the single source of truth for where that visit sits: <span class="pill self">Self-pay</span> <span class="pill tobill">To bill</span> <span class="pill await">Awaiting payment</span> <span class="pill collected">Collected</span> <span class="pill off">Write-off</span>.</div>
+        </div>
+      </section>
+
+      <!-- ============ PAYOUTS ============ -->
+      <section class="grp" id="payouts">
+        <div class="gh"><h2>Money &amp; payouts</h2><span class="gn">the numbers</span></div>
+        <p class="gintro">Your own earnings, and each clinician's month. Every figure comes from the rates set in Setup, so the dashboard and the printed statements always agree.</p>
+
+        <div class="page">
+          <div class="ph"><h3>Biller dashboard</h3><span class="route">/billing/biller</span></div>
+          <p class="lede">Your month: commission earned, what's still owed to you, and where your cut came from.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>On the page</h4>
+              <ul class="b">
+                <li><b>Your commission</b> for the month (this equals your payout), with a 6-month trend.</li>
+                <li><b>Who owes you</b>: insurers with outstanding claims, oldest first, and your cut on each.</li>
+                <li><b>Where your cut came from</b>: per-clinician breakdown plus the company retention row.</li>
+                <li><b>Recently collected</b>: the last 8 paid claims.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Buttons</h4>
+              <ul class="b">
+                <li><code class="k">Payout statement →</code> the printable version.</li>
+                <li><code class="k">Open billing queue →</code> to reconcile.</li>
+                <li>Month navigator to step back through months.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="mini" style="margin-top:8px">Your <b>net payout</b> on the statement = commission earned minus your own pension.</div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>By clinician</h3><span class="route">/billing/clinicians</span><span class="route">/billing/clinician/[id]</span></div>
+          <p class="lede">The practice snapshot, one row per clinician, and a full month view for any one of them.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Directory</h4>
+              <ul class="b">
+                <li>Per clinician: collected vs outstanding this month, and their payout.</li>
+                <li>You can open any clinician to reconcile their numbers.</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Clinician detail</h4>
+              <ul class="b">
+                <li>KPI tiles (earned, collected at visit, insurance collected vs outstanding, co-pays, write-offs).</li>
+                <li>A payout breakdown, this month's work, and the session list.</li>
+                <li>Printable <code class="k">Collections report</code> and <code class="k">payout statement</code>.</li>
+                <li><span class="mini">Note: you can mark billed / collected in the queue, but session edit &amp; delete here are owner / self only.</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TEAM ============ -->
+      <section class="grp" id="team">
+        <div class="gh"><h2>Team &amp; tickets</h2><span class="gn">collaboration</span></div>
+        <p class="gintro">Chat for quick things, tickets for anything that needs tracking. Keep client names out of both. Attachments up to 4 MB.</p>
+
+        <div class="page">
+          <div class="ph"><h3>Notice board</h3><span class="route">/team/notices</span></div>
+          <p class="lede">Practice-wide announcements. As a contact you can post; anyone can read and acknowledge.</p>
+          <div class="cols">
+            <div class="block"><h4>On the page</h4><ul class="b"><li>Pinned notices float to top; meeting notices show a live countdown.</li><li>Filter tabs: All, Needs your nod, Meetings.</li></ul></div>
+            <div class="block"><h4>Buttons</h4><ul class="b"><li><code class="k">Post a notice</code> with optional meeting time, pin, and ask-to-acknowledge.</li><li>Acknowledge with <code class="k">I'll be there</code> or <code class="k">Got it</code>.</li></ul></div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Messages</h3><span class="route">/team/messages</span></div>
+          <p class="lede">Direct chats, custom groups, and the whole-team channel. Text, images, files, voice notes.</p>
+          <div class="cols">
+            <div class="block"><h4>On the page</h4><ul class="b"><li><b>Everyone</b> channel, your groups, DMs, and teammates you haven't messaged.</li><li>Green dot = online in the last 3 minutes.</li></ul></div>
+            <div class="block"><h4>Good to know</h4><ul class="b"><li>Enter sends, Shift+Enter is a new line.</li><li>Not a clinical record: use initials, not client names. Need it tracked? Raise a ticket.</li></ul></div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Tickets</h3><span class="route">/team/tickets</span></div>
+          <p class="lede">The tracked, accountable channel for anything needing follow-through (payouts, HR, IT, billing issues).</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Status lifecycle</h4>
+              <ul class="b">
+                <li><b>Not started</b> → <code class="k">Start</code></li>
+                <li><b>Being sorted</b> → <code class="k">Mark done</code> / <code class="k">Need info</code></li>
+                <li><b>Needs info</b> / <b>On hold</b> → <code class="k">Resume</code></li>
+                <li><b>Done</b> → <code class="k">Reopen</code></li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>How it works</h4>
+              <ul class="b">
+                <li>The "ball" sits with everyone who hasn't replied since the last comment. Yours shows <b>Your turn</b>; otherwise <b>Waiting on…</b> with a <code class="k">Nudge</code>.</li>
+                <li>Edit your own posts within 10 minutes (or until someone replies).</li>
+                <li>The person who raised it can <code class="k">Mark done</code> too. A done ticket is <b>closed to comments</b> until reopened.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SETUP ============ -->
+      <section class="grp" id="setup">
+        <div class="gh"><h2>Setup &amp; worklist</h2><span class="gn">configuration</span></div>
+        <p class="gintro">The rules behind every claim, invoice and payout, and the shared list of what to build next.</p>
+
+        <div class="page">
+          <div class="ph"><h3>Setup</h3><span class="route">/billing/config</span><span class="gate">biller / owner</span></div>
+          <p class="lede">What you see is scoped: as biller you set the claims, fees and practice details, not the owner's money-management sections.</p>
+          <div class="cols">
+            <div class="block">
+              <h4>Your sections</h4>
+              <ul class="b">
+                <li><b>My rates</b>: your commission % per clinician.</li>
+                <li><b>Practice details</b>: name, address, contact, and the claim identifiers (Billing NPI box 33a, Tax ID box 25, taxonomy, rendering NPI per clinician box 24J). These print on claims and invoices.</li>
+                <li><b>Insurers &amp; co-pay</b>: each insurer's co-pay rule and payer claim code.</li>
+                <li><b>Service codes</b>: CPT codes with time / fee options (first is the default).</li>
+              </ul>
+            </div>
+            <div class="block">
+              <h4>Owner-only sections</h4>
+              <ul class="b">
+                <li>Biller commission %, running expenses, and per-clinician splits (retention, pension, biller base).</li>
+                <li>You won't see these; they feed the payout math behind the scenes.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip"><b>Every number traces back here.</b> If a payout or claim looks wrong, the cause is almost always a rate or identifier on this page.</div>
+        </div>
+
+        <div class="page">
+          <div class="ph"><h3>Worklist</h3><span class="route">/billing/worklist</span></div>
+          <p class="lede">The shared list of features and fixes you and the team want built.</p>
+          <div class="cols">
+            <div class="block"><h4>A feature has</h4><ul class="b"><li>Name, what it does, a flow (start → end), priority, status, attachments, and a notes thread.</li></ul></div>
+            <div class="block"><h4>Buttons</h4><ul class="b"><li><code class="k">+ Add a feature</code>, then <code class="k">Mark done</code> / <code class="k">Start</code> / <code class="k">Reopen</code> and <code class="k">Ask / reply</code>.</li></ul></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ GLOSSARY ============ -->
+      <section class="grp" id="glossary">
+        <div class="gh"><h2>Money words</h2></div>
+        <p class="gintro">The terms behind the figures. All amounts are KYD.</p>
+        <div class="dl">
+          <div class="row"><dt>Collected</dt><dd>Cash actually received: co-pays taken at the visit + insurance payments in. <b>Only collected money pays anyone.</b></dd></div>
+          <div class="row"><dt>Insurance portion</dt><dd>The fee minus the contracted co-pay. An uncollected co-pay is the practice's loss, not extra insurance revenue.</dd></div>
+          <div class="row"><dt>Outstanding</dt><dd>Insurance not yet collected, either to bill or awaiting payment.</dd></div>
+          <div class="row"><dt>Retention</dt><dd>The company's cut of collected money (set per clinician). What's left after it is the clinician's share.</dd></div>
+          <div class="row"><dt>Write-off vs write-down</dt><dd>A claim settled for less than billed. Both are a <b>separate bucket</b>, reported on their own, never counted as collected and never paid out.</dd></div>
+          <div class="row"><dt>Your commission</dt><dd>Your cut per claim: each clinician's own rate on their insurance, plus a share of the company's retention where it applies. Charged on the after-retention share, not the gross.</dd></div>
+          <div class="row"><dt>Net payout</dt><dd>Commission earned minus the earner's own pension.</dd></div>
+          <div class="row"><dt>Aging buckets</dt><dd>How old an unpaid claim is by date of service: 0-14, 15-30, 31-60, and 60+ days (the one that matters).</dd></div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        TIFEC Biller Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
+      </footer>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  function post(){ try{ var h=Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); parent.postMessage({type:"bhb-height", height:h}, "*"); }catch(e){} }
+  window.addEventListener("load", post);
+  window.addEventListener("resize", post);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(post); }
+  var n=0, t=setInterval(function(){ post(); if(++n>12) clearInterval(t); }, 500);
+  post();
+})();
+</script>
+</body>
+</html>

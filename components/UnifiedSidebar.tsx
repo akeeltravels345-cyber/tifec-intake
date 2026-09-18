@@ -114,6 +114,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               // for their own caseload; a pure biller has no linked clients, so
               // showNotes is false and this link is hidden.
               ...(showNotes ? [notesLink] : []),
+              { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide") },
               // Import, Import review and Fix dates removed from the menu — done
               // with them. Routes are kept in case they're needed again.
             ]
