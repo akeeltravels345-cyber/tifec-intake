@@ -31,34 +31,42 @@ function initialsOf(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
 }
 
-export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
-  const path = usePathname();
-  const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, canSchedule, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
-  // Show the Session notes link only when notes are enabled AND this user has
-  // their own caseload — so a pure biller (no linked clients) never sees a link
-  // that would just bounce, but a biller who is also a clinician (Nick) does.
-  const showNotes = notesEnabled && hasOwnClients;
-  const notesLink = { href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes") };
-  const owner = role === "owner", biller = role === "biller";
-
-  // Glow the nav entry that leads to a new feature, for a person's first 3
-  // sessions, then stop. Shares the "copaynav" budget with the KPI glow on the
-  // destination page, so both fade together. Advances once per session.
-  const [navGlow, setNavGlow] = useState(false);
+// Glow a nav entry that leads to a new feature for a person's first 3 sessions,
+// then stop. Each feature keeps its OWN budget (a separate counter), so a newer
+// feature still highlights even after an older one has faded. Advances once per
+// browser session.
+function useGlowBudget(key: string): boolean {
+  const [on, setOn] = useState(false);
   useEffect(() => {
     try {
-      const countKey = "glow_copaynav_count";
+      const countKey = `glow_${key}_count`;
       const count = Number(localStorage.getItem(countKey) || "0");
       if (count >= 3) return;
-      const sessKey = "glow_copaynav_session";
+      const sessKey = `glow_${key}_session`;
       if (!sessionStorage.getItem(sessKey)) {
         localStorage.setItem(countKey, String(count + 1));
         sessionStorage.setItem(sessKey, "1");
       }
-      setNavGlow(true);
+      setOn(true);
     } catch { /* storage unavailable — no glow */ }
-  }, []);
+  }, [key]);
+  return on;
+}
+
+export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
+  const path = usePathname();
+  const tab = useSearchParams().get("tab");
+  const { role, hasBilling, isAdmin, canSchedule, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const navGlow = useGlowBudget("copaynav");
+  const notesGlow = useGlowBudget("notesnew");
+  const owner = role === "owner", biller = role === "biller";
+  // Session notes are for the people who treat clients: every clinician and the
+  // owner, plus a biller who also carries a caseload (Nick). A pure biller or the
+  // oversight admin never sees clinical content. Access to any one client's notes
+  // is still limited to that client's own clinicians (enforced on the page).
+  const showNotes = notesEnabled && (role === "clinician" || owner || hasOwnClients);
+  // Highlighted "New" while the feature is fresh (first 3 sessions per person).
+  const notesLink = { href: "/notes", label: "Session notes", icon: IcDoc, match: (p: string) => p.startsWith("/notes"), highlight: notesGlow };
 
 
   // Items every role shares, identical for all — defined once and reused so each

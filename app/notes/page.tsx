@@ -26,7 +26,8 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const [sidebar, clients] = await Promise.all([getSidebarData(user.clinician), listClients(user.clinician.id)]);
   const roster = [...clients].sort((a, b) => `${a.last}${a.first}`.localeCompare(`${b.last}${b.first}`));
-  if (roster.length === 0) redirect("/today");
+  // No redirect when the caseload is empty: a clinician who hasn't logged a
+  // client yet still reaches the page and sees the "no clients yet" empty state.
   const activeId = sp.client && roster.some((c) => c.id === sp.client) ? sp.client! : roster[0]?.id;
   const active = roster.find((c) => c.id === activeId);
   const today = caymanToday();
