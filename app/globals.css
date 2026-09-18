@@ -4226,6 +4226,17 @@ body:has(.bk-page) .brandbar { display: none; }
 .ded-stat.hl .v { color: #2c7a55; }
 .ded-stat.done { background: #eaf5ee; border-color: #bfe0c9; }
 .ded-stat.done .v { color: #1f7a52; }
+/* Total insurance funds: remaining stat turns red when used up. */
+.ded-stat.out { background: #fbecea; border-color: #f0c8c0; }
+.ded-stat.out .v { color: #bd3a29; }
+
+/* Funds-left chip beside the "Appointments & charges" heading. */
+.cd-funds { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .01em; color: #1f6d70; background: #e3efee; border: 1px solid #cfe0da; border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: middle; }
+.cd-funds.out { color: #bd3a29; background: #fbecea; border-color: #f0c8c0; }
+
+/* Funds-used-up alert near the top of the client record. */
+.cd-fundsalert { display: flex; gap: 8px; align-items: baseline; margin: 0 0 14px; padding: 11px 14px; font-size: 13.5px; color: #8a2b1e; background: #fbecea; border: 1px solid #f0c8c0; border-radius: 10px; line-height: 1.45; }
+.cd-fundsalert b { color: #7a2115; }
 .ded-paylist-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 6px; font: 700 13px "Open Sans"; color: #55607d; }
 .ded-paylist { list-style: none; margin: 0; padding: 0; border: 1px solid #eee; border-radius: 9px; }
 .ded-paylist li { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-bottom: 1px solid #f2f2f2; font-size: 13px; }

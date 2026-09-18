@@ -52,6 +52,10 @@ export interface ClientProfile {
   // recorded in deductibleApplied, until the balance reaches zero.
   deductible?: ClientDeductible;
   deductibleApplied?: DeductibleApplied[]; // sessions/amounts drawn down against it
+  // Total insurance funds available for a plan year. Each insured date of service
+  // draws it down by the amount billed to the insurer (the insurance portion),
+  // so the remaining balance is computed from the sessions, not stored.
+  benefit?: ClientBenefit;
   // A record of every email the system has sent this client (e.g. invoices), so
   // there's a paper trail on the record of what went out, to whom, and when.
   sentEmails?: SentEmail[];
@@ -77,6 +81,14 @@ export interface SentEmail {
  *  before insurance pays — not money the practice has collected. */
 export interface ClientDeductible {
   amount: number; // the annual deductible, e.g. 500
+  year: number;   // the plan year it applies to
+}
+
+/** A client's total insurance funds available for a plan year (resets annually).
+ *  Each insured date of service draws it down by the amount billed to the insurer
+ *  (the insurance portion). The remaining balance is computed from the sessions. */
+export interface ClientBenefit {
+  amount: number; // total insurance funds available for the plan year
   year: number;   // the plan year it applies to
 }
 
@@ -452,6 +464,15 @@ export async function setDeductible(id: string, amount: number, year: number): P
   const amt = Math.max(0, money2(amount));
   const deductible = amt > 0 ? { amount: amt, year: Math.floor(year) } : undefined;
   return updateClient(id, client.insurerId, { ...client.profile, deductible });
+}
+
+/** Set (or clear) a client's total insurance funds for a plan year. Amount 0 clears it. */
+export async function setBenefit(id: string, amount: number, year: number): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  const amt = Math.max(0, money2(amount));
+  const benefit = amt > 0 ? { amount: amt, year: Math.floor(year) } : undefined;
+  return updateClient(id, client.insurerId, { ...client.profile, benefit });
 }
 
 /** Draw a session down against the deductible. The amount is capped at whatever

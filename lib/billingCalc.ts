@@ -34,6 +34,13 @@ export function insurancePortion(s: BillingSession): number {
   const due = s.copayDue == null ? s.copayCollected : s.copayDue;
   return round2(Math.max(0, (s.totalCost || 0) - (due || 0)));
 }
+/** Insurance funds used in a plan year: the sum of the insurance portion of every
+ *  insured visit whose date of service falls in that calendar year. Drives the
+ *  remaining balance of a client's total insurance funds (benefit). */
+export function benefitUsed(sessions: BillingSession[], year: number): number {
+  return round2(sessions.reduce((t, s) =>
+    (s.insurerId && Number(s.dateOfService.slice(0, 4)) === year ? t + insurancePortion(s) : t), 0));
+}
 /** Cash actually collected for this visit: the co-pay (insured), or for self-pay
  *  the amount paid. Self-pay disposition: undefined/"paid" = paid in full at the
  *  visit (default, so legacy self-pay is unchanged); "owing" = only copayCollected

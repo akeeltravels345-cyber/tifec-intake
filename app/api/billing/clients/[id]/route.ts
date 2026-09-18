@@ -124,6 +124,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // endpoint; preserve them across a plain record edit.
     deductible: client.profile.deductible,
     deductibleApplied: client.profile.deductibleApplied,
+    // Insurance funds are set only through the /benefit endpoint; preserve across a record edit.
+    benefit: client.profile.benefit,
     // The sent-email history is appended by the system; never let an edit wipe it.
     sentEmails: client.profile.sentEmails,
     // Preserve the demo marker so editing a sample client doesn't make it

@@ -7,7 +7,7 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
 import { findIntakeForClient } from "@/lib/intakeLink";
-import { selfPayOutstanding } from "@/lib/billingCalc";
+import { selfPayOutstanding, benefitUsed } from "@/lib/billingCalc";
 import { listNotesForClient, NOTES_ENABLED } from "@/lib/sessionNotes";
 import ClientDetail, { type Activity } from "@/components/billing/ClientDetail";
 import SessionNotes from "@/components/billing/SessionNotes";
@@ -64,6 +64,17 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     : [];
   const todayStr = caymanToday();
 
+  // Total insurance funds: the pot the biller set for a plan year, drawn down by
+  // the insurance portion of every insured visit in that year. Computed here (we
+  // have the sessions) and shown on the record so clinicians see what's left.
+  const benefit = client.profile.benefit
+    ? (() => {
+        const { amount, year } = client.profile.benefit!;
+        const used = benefitUsed(sessions, year);
+        return { amount, year, used, remaining: Math.round((amount - used) * 100) / 100 };
+      })()
+    : null;
+
   return (
     <>
       <Link href="/billing/clients" className="ls-back">← All clients</Link>
@@ -77,6 +88,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))}
         clinicians={client.clinicianIds.map((cid) => ({ id: cid, name: clinName(cid) }))}
         activity={activity}
+        benefit={benefit}
         canEdit
         canDelete={seesAll}
         today={caymanToday()}

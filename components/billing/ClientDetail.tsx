@@ -7,6 +7,7 @@ import type { ClientProfile } from "@/lib/clients";
 import { deductibleSummary } from "@/lib/deductible";
 import Icd10Section from "./Icd10Section";
 import DeductiblePanel from "./DeductiblePanel";
+import BenefitPanel, { type BenefitSummary } from "./BenefitPanel";
 import type { LinkedIntake } from "@/lib/intakeLink";
 import { referralStatus, chargeAfterReferral, addMonths, REFERRAL_MONTH_OPTIONS } from "@/lib/referral";
 import DobInput from "./DobInput";
@@ -41,12 +42,12 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician", cptCodes = [],
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, benefit = null, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician", cptCodes = [],
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
   insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
-  activity: Activity[]; canEdit: boolean; canDelete?: boolean; today?: string;
+  activity: Activity[]; benefit?: BenefitSummary | null; canEdit: boolean; canDelete?: boolean; today?: string;
   intakeForms?: LinkedIntake[]; currentUserId?: string; currentUserRole?: string;
   cptCodes?: { code: string; description: string; fee: number }[];
 }) {
@@ -447,6 +448,13 @@ export default function ClientDetail({
 
       {msg && <div className="ls-saved" style={{ margin: "0 0 14px" }}>{msg}</div>}
 
+      {/* ---- Insurance funds used up (alerts on open) ---- */}
+      {benefit && benefit.remaining <= 0 && (
+        <div className="cd-fundsalert">
+          ⚠ <b>Insurance funds used up.</b> {money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left for {benefit.year}. Any new insured charge will exceed {first}&apos;s available funds.
+        </div>
+      )}
+
       {/* ---- Referral status (payment-critical) ---- */}
       <div className={`cd-ref ${referral.state}`}>
         <div className="cd-refrow">
@@ -544,6 +552,20 @@ export default function ClientDetail({
             applied={profile.deductibleApplied ?? []}
             summary={deductibleSummary(profile)}
             sessions={activity.map((a) => ({ id: a.id, date: a.date, total: a.total }))}
+            today={today}
+            canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
+          />
+        </div>
+      </div>
+
+      {/* ---- Total insurance funds ---- */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">Insurance funds</h2>
+          <span className="su-hint">The total funds the insurer has authorised for the plan year. Each insured visit counts down against it; the remaining balance shows by the charges below.</span></div>
+        <div className="su-card" style={{ padding: 16 }}>
+          <BenefitPanel
+            clientId={id}
+            benefit={benefit}
             today={today}
             canEdit={currentUserRole === "owner" || currentUserRole === "biller" || currentUserRole === "admin"}
           />
@@ -664,7 +686,7 @@ export default function ClientDetail({
       {/* ---- Activity ---- */}
       <div className="su-sec">
         <div className="su-sechead">
-          <h2 className="su-sech">Appointments &amp; charges{activity.length > 0 && <span className="su-tag">{money(activityTotal)} total</span>}</h2>
+          <h2 className="su-sech">Appointments &amp; charges{activity.length > 0 && <span className="su-tag">{money(activityTotal)} total</span>}{benefit && <span className={`cd-funds ${benefit.remaining <= 0 ? "out" : ""}`}>Insurance funds: {money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left · {benefit.year}</span>}</h2>
           <span className="su-hint">Every date of service for this client. Tick insured visits to build a CMS-1500, or self-pay visits for an invoice.</span>
         </div>
 
@@ -742,6 +764,9 @@ export default function ClientDetail({
                       ))}
                     </select>
                   </div>
+                )}
+                {benefit && benefit.remaining <= 0 && (
+                  <p className="cd-refwarn">⚠ {first}&apos;s insurance funds for {benefit.year} are used up ({money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left). This charge will exceed their available funds.</p>
                 )}
                 {chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}). It won&apos;t be paid.</p>
