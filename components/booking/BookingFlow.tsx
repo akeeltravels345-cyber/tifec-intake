@@ -51,6 +51,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [agreed, setAgreed] = useState(false);
   const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
+  const [firstVisit, setFirstVisit] = useState<"" | "yes" | "no">(""); // "have you been here before?"
+  const [intakeSent, setIntakeSent] = useState<string[]>([]); // forms emailed on booking
   const [category, setCategory] = useState<string | null>(null); // chosen category on the service step
   const [group, setGroup] = useState<Service | null>(null); // chosen service (its in-person/online variants)
 
@@ -169,11 +171,12 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     setBusy(true); setErr("");
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, answers }),
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not book. Please try again."); if (res.status === 409) { setStep("time"); } return; }
+    setIntakeSent(Array.isArray(data.intakeSent) ? data.intakeSent : []);
     try {
       localStorage.setItem(REMEMBER_KEY, JSON.stringify({
         name: details.name, email: details.email, phone: details.phone,
@@ -391,8 +394,18 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                   )}
                 </label>
               ))}
+              {!/free\s+online\s+consultation/i.test(type.name) && (
+                <div className="bk-f"><span>Have you completed an intake form with us before?</span>
+                  <div className="bk-seg">
+                    <button type="button" className={firstVisit === "no" ? "on" : ""} onClick={() => setFirstVisit("no")}>Yes, I have</button>
+                    <button type="button" className={firstVisit === "yes" ? "on" : ""} onClick={() => setFirstVisit("yes")}>No, I&apos;m new</button>
+                  </div>
+                </div>
+              )}
             </div>
-            {type.hasIntake && <p className="bk-intake">New here? We&apos;ll email you a short intake form to complete before your first visit. It helps your clinician prepare.</p>}
+            {!/free\s+online\s+consultation/i.test(type.name) && (firstVisit !== "no") && (
+              <p className="bk-intake">We&apos;ll email you your intake form{/couples?|marriage|pre[\s-]?marital/i.test(type.name) ? "" : " and a short wellbeing screening"} to complete before your visit. It helps your clinician prepare.</p>
+            )}
             {policy && <label className="bk-policy"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> <span><b>Cancellation policy.</b> {policy}</span></label>}
             {err && <p className="bk-err">{err}</p>}
             <button className="bk-cta" onClick={() => { if (policy && !agreed) { setErr("Please accept the cancellation policy."); return; } setErr(""); setStep("confirm"); }} disabled={!!policy && !agreed}>Review booking</button>
@@ -430,7 +443,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <Row k="Clinician" v={clinName(slot!.clinicianId)} />
               <Row k="When" v={`${fmtDay(confirmed.startAt)} · ${fmtTime(confirmed.startAt)}`} />
             </div>
-            {type.hasIntake && <p className="bk-intake">Look out for a short intake form by email. Completing it before your visit helps us give you the best care.</p>}
+            {intakeSent.length > 0 && <p className="bk-intake">We&apos;ve emailed your {intakeSent.join(" and ")} to <b>{details.email}</b>. Completing {intakeSent.length > 1 ? "them" : "it"} before your visit helps us give you the best care.</p>}
             <a className="bk-managelink" href={`/book/manage?preview=${preview}&id=${confirmed.id}`}>Need to change it? Manage this booking →</a>
             <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
           </section>

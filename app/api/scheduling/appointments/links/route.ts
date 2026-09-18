@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
-import { getAppointment } from "@/lib/scheduling";
+import { getAppointment, listAppointmentTypes } from "@/lib/scheduling";
 import { listClients, listAllClients } from "@/lib/clients";
 import { findIntakeForClient } from "@/lib/intakeLink";
+import { requiredIntakeForms, formShortLabel } from "@/lib/intakeRouting";
 
 export const dynamic = "force-dynamic";
 
@@ -44,11 +45,28 @@ export async function GET(req: Request) {
   // Intake match — metadata only. Owner/admin see any; everyone else only their own.
   const intakeSeesAll = isOwner(user.role) || isSystemAdmin(me);
   let intakeCount = 0;
+  let submitted: string[] = [];
   try {
     let hits = await findIntakeForClient(first, last);
     if (!intakeSeesAll) hits = hits.filter((h) => h.clinicianId === me.id);
     intakeCount = hits.length;
+    submitted = [...new Set(hits.map((h) => h.formKey))];
   } catch { /* surfacing is best-effort */ }
 
-  return NextResponse.json({ billingClient, intake: { count: intakeCount } });
+  // Intake completion for THIS appointment: which forms its service needs, and
+  // whether the client has them on file. "received" = all in; "pending" = some
+  // still missing; "not_required" = this service needs none.
+  let intakeStatus: "not_required" | "pending" | "received" = "not_required";
+  let missing: string[] = [];
+  try {
+    const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+    const required = type ? requiredIntakeForms(type.name) : [];
+    if (required.length > 0) {
+      const missingForms = required.filter((f) => !submitted.includes(f));
+      missing = missingForms.map((f) => formShortLabel(f));
+      intakeStatus = missingForms.length === 0 ? "received" : "pending";
+    }
+  } catch { /* best-effort */ }
+
+  return NextResponse.json({ billingClient, intake: { count: intakeCount, status: intakeStatus, missing } });
 }

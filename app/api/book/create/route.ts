@@ -1,13 +1,35 @@
 import { NextResponse } from "next/server";
-import { CLINICIANS } from "@/lib/clinicians";
+import { randomBytes } from "crypto";
+import { CLINICIANS, getClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, type QuestionAnswer } from "@/lib/scheduling";
 import { createVideoLink } from "@/lib/videoConnections";
+import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
+import { sendClientEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
 const bookable = () => CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
 const clean = (v: unknown, cap = 200) => String(v ?? "").trim().slice(0, cap);
+const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
+
+// Email the client their outstanding intake link(s). Best-effort: dev logs
+// instead of sending, and a send failure never blocks the booking.
+async function sendIntakeInvite(args: {
+  origin: string; to: string; clientName: string; clinicianId: string; clinicianName: string;
+  forms: { form: string; url: string }[];
+}): Promise<void> {
+  if (args.forms.length === 0) return;
+  const lines = args.forms.map((f) => `${formShortLabel(f.form as never)}:\n${f.url}`).join("\n\n");
+  const text =
+    `Hi ${firstNameOf(args.clientName)},\n\n` +
+    `Thank you for booking with The Institute for Essential Care. Before your appointment with ${args.clinicianName}, please complete the following so we're ready for you:\n\n` +
+    `${lines}\n\n` +
+    `Each form takes a few minutes and is kept confidential. If you have any trouble, just reply to this email.\n\n` +
+    `Warmly,\nThe Institute for Essential Care`;
+  try { await sendClientEmail(args.to, "Your intake forms for The Institute for Essential Care", text); }
+  catch { /* never block a booking on email */ }
+}
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -48,15 +70,38 @@ export async function POST(req: Request) {
   // For an "either" service the client picks; otherwise the service dictates.
   const mode = type.mode === "either" ? (body.mode === "virtual" ? "virtual" : "in_person") : type.mode;
 
+  // New-client intake: which forms this service needs and whether the client
+  // already has them on file (matched by name). Couples/Marriage/Pre-Marital
+  // get the couples intake; other services get General + DSM-5; the free
+  // consultation needs none. If the client tells us they're new, treat every
+  // required form as outstanding even if a same-name match exists.
+  const assessment = await assessClientIntake(name, type.name);
+  const firstVisit = body.firstVisit === true;
+  const missingForms = firstVisit && assessment.requiredForms.length > 0 ? assessment.requiredForms : assessment.missingForms;
+  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
+  const intakeStatus = assessment.requiredForms.length === 0 ? "not_required" : (needsIntake ? "pending" : "received");
+
   let appt = await createAppointment({
     kind: "appointment", clientName: name, clientEmail: email, clinicianId, typeId: type.id,
     startAt, endAt, mode, status: "booked", source: "client",
     insurancePath: path, insurerId: path === "insurance" ? clean(body.insurerId, 64) || null : null,
     policyNo: path === "insurance" ? clean(body.policyNo, 60) : "",
-    intakeStatus: type.intakeFormKey ? "pending" : "not_required",
+    intakeStatus,
     answers,
     notes: [phone ? `Phone: ${phone}` : "", clean(body.notes, 500)].filter(Boolean).join(" · "),
   } as never);
+
+  // Auto-email the outstanding intake link(s) to a new (or not-yet-completed)
+  // client. One couple id ties both partners' couples submissions together.
+  if (needsIntake) {
+    const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+    const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
+    const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId)}` }));
+    await sendIntakeInvite({
+      origin, to: email, clientName: name, clinicianId,
+      clinicianName: getClinician(clinicianId)?.name || "your clinician", forms,
+    });
+  }
 
   // Auto video link for a virtual booking, on the clinician's own connected
   // account (best-effort; never blocks).
@@ -65,5 +110,9 @@ export async function POST(req: Request) {
     if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
   }
 
-  return NextResponse.json({ ok: true, appointment: { id: appt.id, startAt: appt.startAt, endAt: appt.endAt } });
+  return NextResponse.json({
+    ok: true,
+    appointment: { id: appt.id, startAt: appt.startAt, endAt: appt.endAt },
+    intakeSent: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
+  });
 }

@@ -74,7 +74,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
-  const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number } } | null>(null);
+  const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number; status?: "not_required" | "pending" | "received"; missing?: string[] } } | null>(null);
   async function loadLinks(a: Appointment) {
     setLinks(null);
     if (a.kind === "block" || !a.clientName) return;
@@ -557,10 +557,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     <div className="cvr-sec-h">Client</div>
                     <div className="cvr-line">{a.clientName}</div>
                     {a.clientEmail ? <div className="cvr-sub">{a.clientEmail}</div> : <div className="cvr-sub">No email on file.</div>}
-                    {links && (links.billingClient || links.intake.count > 0) && (
+                    {links && (links.billingClient || links.intake.count > 0 || (links.intake.status && links.intake.status !== "not_required")) && (
                       <div className="cvr-links">
                         {links.billingClient && <a className="cal-chip link" href={`/billing/clients/${links.billingClient.id}`}>Billing record ↗</a>}
-                        {links.intake.count > 0 && <span className="cal-chip">Intake on file · {links.intake.count}</span>}
+                        {links.intake.status === "received" && <span className="cal-chip ok">Intake complete</span>}
+                        {links.intake.status === "pending" && <span className="cal-chip warn">Intake outstanding{links.intake.missing && links.intake.missing.length ? `: ${links.intake.missing.join(", ")}` : ""}</span>}
+                        {links.intake.count > 0 && <span className="cal-chip">On file · {links.intake.count}</span>}
                       </div>
                     )}
                   </div>

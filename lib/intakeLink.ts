@@ -12,6 +12,7 @@ import { templateLabel, type FormTemplateKey } from "./forms";
 
 export interface LinkedIntake {
   token: string;
+  formKey: FormTemplateKey;
   formLabel: string;
   clinicianId: string;
   clinicianName: string;
@@ -49,6 +50,7 @@ export async function findIntakeForClient(first: string, last: string, dob?: str
 
     out.push({
       token: r.token,
+      formKey: (r.form_key || "individual") as FormTemplateKey,
       formLabel: templateLabel((r.form_key || "individual") as FormTemplateKey),
       clinicianId: r.clinician_id,
       clinicianName: getClinician(r.clinician_id)?.name ?? r.clinician_id,
