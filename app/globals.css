@@ -3909,6 +3909,7 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-accent { width: 6px; align-self: stretch; border-radius: 6px; flex: none; }
 .bk-avatar { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(135deg, #2f8e93, #256e72); }
 .bk-avatar.any { background: linear-gradient(135deg, #3a7ea1, #2e3192); font-size: 18px; }
+.bk-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; display: block; }
 .bk-cardmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .bk-cardname { font-size: 16px; font-weight: 600; color: #223038; letter-spacing: -.01em; }
 .bk-cardmeta { font-size: 13px; color: #6b7679; }

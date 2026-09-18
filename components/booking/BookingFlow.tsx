@@ -6,7 +6,7 @@ type Mode = "in_person" | "virtual" | "either";
 type QKind = "text" | "textarea" | "select" | "checkbox";
 interface BookingQuestion { id: string; label: string; kind: QKind; required: boolean; options: string[]; }
 interface Type { id: string; name: string; category: string; description: string; durationMin: number; price: number; mode: Mode; color: string; hasIntake: boolean; newClientIntakeOnly: boolean; questions: BookingQuestion[]; }
-interface Clin { id: string; name: string; credentials: string; }
+interface Clin { id: string; name: string; credentials: string; photo?: string; }
 interface Insurer { id: string; name: string; }
 interface Slot { minute: number; clinicianId: string; }
 type Step = "service" | "clinician" | "time" | "details" | "confirm" | "done" | "waitlist" | "waitlisted";
@@ -224,7 +224,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               </button>
               {clinicians.map((c) => (
                 <button key={c.id} className="bk-card" onClick={() => { setClin(c.id); setStep("time"); }}>
-                  <span className="bk-avatar">{initials(c.name)}</span>
+                  <span className="bk-avatar">{c.photo ? <img className="bk-avatar-img" src={c.photo} alt="" /> : initials(c.name)}</span>
                   <span className="bk-cardmain"><span className="bk-cardname">{c.name}</span><span className="bk-cardmeta">{c.credentials.split("·")[0].trim()}</span></span>
                   <span className="bk-chev">→</span>
                 </button>

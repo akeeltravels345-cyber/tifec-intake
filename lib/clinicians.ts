@@ -33,6 +33,8 @@ export interface Clinician {
   id: string;
   name: string;
   credentials: string; // e.g. "Ph.D., Clinical Psychologist"
+  /** Headshot in /public/clinicians, shown on the booking page and calendar. */
+  photo?: string;
   email: string; // where the "new submission" notification is sent
   /** One or more intake forms this clinician offers (must be non-empty). */
   forms: FormTemplateKey[];
@@ -73,6 +75,7 @@ export const CLINICIANS: Clinician[] = [
     billingBeta: true, // BETA billing access
     contact: "owner",
     name: "Dr. Shion O'Connor",
+    photo: "/clinicians/shion-oconnor.webp",
     credentials: "Clinical Psychologist & Family Therapist · Founder",
     email: "Therapy@caymanessentialcare.com",
     forms: [
@@ -123,6 +126,7 @@ export const CLINICIANS: Clinician[] = [
     id: "donnet-oconnor",
     billingBeta: true, // BETA billing access
     name: "Dr. Donnet O'Connor",
+    photo: "/clinicians/donnet-oconnor.webp",
     credentials: "Ph.D. · Counselling Psychologist & Therapist",
     email: "donnetoconnor@caymanessentialcare.com",
     forms: [
@@ -171,6 +175,7 @@ export const CLINICIANS: Clinician[] = [
     id: "joan-latty",
     billingBeta: true, // BETA billing access
     name: "Dr. Joan Latty",
+    photo: "/clinicians/joan-latty.webp",
     credentials: "Psy.D. · Clinical Psychologist, Marriage & Family Therapist",
     email: "joanlatty@caymanessentialcare.com",
     forms: [
@@ -219,6 +224,7 @@ export const CLINICIANS: Clinician[] = [
     id: "sofia-hamilton",
     billingBeta: true, // BETA billing access
     name: "Mrs. Sofia Hamilton",
+    photo: "/clinicians/sofia-hamilton.webp",
     credentials: "MSc · Educational Psychologist",
     email: "sofiahamilton@caymanessentialcare.com",
     forms: [
