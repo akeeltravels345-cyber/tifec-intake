@@ -40,6 +40,22 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [agreed, setAgreed] = useState(false);
   const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
+  const [category, setCategory] = useState<string | null>(null); // chosen category on the service step
+
+  // Services grouped by category, in first-seen order, so clients pick a
+  // category first (like Acuity) instead of scrolling one long list.
+  const categories = useMemo(() => {
+    const order: string[] = [];
+    const byCat = new Map<string, Type[]>();
+    for (const t of types) {
+      const cat = t.category.trim() || "Other";
+      if (!byCat.has(cat)) { byCat.set(cat, []); order.push(cat); }
+      byCat.get(cat)!.push(t);
+    }
+    return order.map((name) => ({ name, items: byCat.get(name)! }));
+  }, [types]);
+  const groupByCategory = categories.length > 1; // one category: keep the flat list
+  const shownTypes = category ? (categories.find((c) => c.name === category)?.items ?? []) : types;
 
   // Returning clients: remember their details in THEIR OWN browser only, so they
   // don't re-type name / email / insurance / policy. Never leaves the device.
@@ -155,21 +171,44 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         {/* 1. Service */}
         {step === "service" && (
           <section className="bk-sec">
-            <h2 className="bk-h2">What would you like to book?</h2>
             {types.length === 0 && <p className="bk-empty">No services are available to book right now.</p>}
-            <div className="bk-cards">
-              {types.map((t) => (
-                <button key={t.id} className="bk-card" onClick={() => { setType(t); setStep("clinician"); }}>
-                  <span className="bk-accent" style={{ background: t.color }} />
-                  <span className="bk-cardmain">
-                    <span className="bk-cardname">{t.name}</span>
-                    {t.description && <span className="bk-carddesc">{t.description}</span>}
-                    <span className="bk-cardmeta">{t.durationMin} min · {MODE_LABEL[t.mode]}{t.price > 0 ? ` · ${money(t.price)}` : ""}</span>
-                  </span>
-                  <span className="bk-chev">→</span>
-                </button>
-              ))}
-            </div>
+
+            {groupByCategory && category === null ? (
+              <>
+                <h2 className="bk-h2">What would you like to book?</h2>
+                <div className="bk-cards">
+                  {categories.map((c) => (
+                    <button key={c.name} className="bk-card" onClick={() => setCategory(c.name)}>
+                      <span className="bk-cardmain">
+                        <span className="bk-cardname">{c.name}</span>
+                        <span className="bk-cardmeta">{c.items.length} service{c.items.length === 1 ? "" : "s"}</span>
+                      </span>
+                      <span className="bk-chev">→</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {groupByCategory && (
+                  <button className="bk-back" onClick={() => setCategory(null)}>← All categories</button>
+                )}
+                <h2 className="bk-h2">{category || "What would you like to book?"}</h2>
+                <div className="bk-cards">
+                  {shownTypes.map((t) => (
+                    <button key={t.id} className="bk-card" onClick={() => { setType(t); setStep("clinician"); }}>
+                      <span className="bk-accent" style={{ background: t.color }} />
+                      <span className="bk-cardmain">
+                        <span className="bk-cardname">{t.name}</span>
+                        {t.description && <span className="bk-carddesc">{t.description}</span>}
+                        <span className="bk-cardmeta">{t.durationMin} min · {MODE_LABEL[t.mode]}{t.price > 0 ? ` · ${money(t.price)}` : ""}</span>
+                      </span>
+                      <span className="bk-chev">→</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
         )}
 
