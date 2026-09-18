@@ -318,8 +318,10 @@ export default function ClientDetail({
       address: (line1 || city || region || postal || country || line2)
         ? { line1: line1 || undefined, line2: line2 || undefined, city: city || undefined, region: region || undefined, postal: postal || undefined, country: country || undefined }
         : undefined,
-      insurance: (memberId || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
-        ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
+      insurance: (memberId || profile.insurance?.groupNo || profile.insurance?.planName || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
+        // groupNo / planName aren't on this form (they come from imports); carry
+        // them through so a details edit never drops them from the CMS-1500.
+        ? { memberId: memberId || undefined, groupNo: profile.insurance?.groupNo || undefined, planName: profile.insurance?.planName || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
       // Referral is edited inline on the banner via its own endpoint; this form
       // never touches it (the server preserves the existing referral).
