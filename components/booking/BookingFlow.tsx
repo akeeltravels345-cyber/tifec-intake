@@ -52,6 +52,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
       if (!byCat.has(cat)) { byCat.set(cat, []); order.push(cat); }
       byCat.get(cat)!.push(t);
     }
+    // Free Online Consultation leads, then the rest in their natural order.
+    order.sort((a, b) => (/free online/i.test(b) ? 1 : 0) - (/free online/i.test(a) ? 1 : 0));
     return order.map((name) => ({ name, items: byCat.get(name)! }));
   }, [types]);
   const groupByCategory = categories.length > 1; // one category: keep the flat list
