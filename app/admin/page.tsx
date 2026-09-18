@@ -166,6 +166,15 @@ export default async function AdminPage({
       </div>
 
       <div className="card">
+        <h2 className="section-title">Data backup</h2>
+        <p className="section-desc">Download a full, readable snapshot of the practice&apos;s data as an Excel workbook (one sheet per area: clients, charges, session notes, insurers, CPT codes, clinician settings, tickets, email log).</p>
+        <div style={{ background: "var(--neg-bg)", border: "1px solid var(--amber-line)", borderRadius: 10, padding: "12px 14px", margin: "6px 0 14px", fontSize: 13.5, color: "var(--neg)", fontWeight: 500 }}>
+          ⚠ This file contains clients&apos; personal and clinical details in <b>plain, readable text</b>. Save it to a secure place, never email it, and delete copies you don&apos;t need.
+        </div>
+        <a href="/api/admin/backup" className="primary" style={{ display: "inline-block", textDecoration: "none" }}>Download backup (.xlsx)</a>
+      </div>
+
+      <div className="card">
         <h2 className="section-title">By clinician</h2>
         <p className="section-desc">Submission counts per clinician.</p>
         <div className="clin-table-wrap">
