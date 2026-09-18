@@ -8,9 +8,13 @@ import { sendClientEmail } from "@/lib/email";
 export const dynamic = "force-dynamic";
 
 // Intake reminders. An external scheduler (Vercel Cron, cron-job.org, launchd)
-// hits this once a day with the shared secret. It emails clients whose intake is
-// still outstanding roughly a day before their appointment, and clears the
-// stored status for anyone who has since completed it. Requires CRON_SECRET.
+// hits this with the shared secret; a daily run is plenty. It emails clients
+// whose intake is still outstanding within a day of their appointment, and
+// clears the stored status for anyone who has since completed it. Requires
+// CRON_SECRET. Each appointment is reminded at most once (intake_reminder_at
+// stamp), so it is safe to run at any cadence and will never double-send.
+const REMIND_WITHIN_MS = 30 * 3600 * 1000; // remind up to ~30h before the visit
+
 function authorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -23,8 +27,6 @@ export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const now = Date.now();
-  const windowStart = now + 20 * 3600 * 1000; // ~24h before, with a wide-ish
-  const windowEnd = now + 28 * 3600 * 1000;   // band so a daily run catches each
   const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
 
   const from = new Date(now).toISOString().slice(0, 10);
@@ -34,8 +36,9 @@ export async function GET(req: Request) {
   let reminded = 0, cleared = 0, skipped = 0;
   for (const a of appts) {
     if (a.kind === "block" || a.status === "cancelled" || a.intakeStatus !== "pending") continue;
+    if (a.intakeReminderAt) continue; // already reminded — never send twice
     const start = Date.parse(a.startAt);
-    if (!(start >= windowStart && start <= windowEnd)) continue;
+    if (!(start > now && start <= now + REMIND_WITHIN_MS)) continue;
 
     const type = types.find((t) => t.id === a.typeId);
     if (!type) continue;
@@ -59,6 +62,7 @@ export async function GET(req: Request) {
       `It only takes a few minutes and is kept confidential.\n\n` +
       `Thank you,\nThe Institute for Essential Care`;
     await sendClientEmail(a.clientEmail, "Reminder: please complete your intake form", text);
+    await updateAppointment(a.id, { intakeReminderAt: new Date().toISOString() } as never);
     reminded++;
   }
 
