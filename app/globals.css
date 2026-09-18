@@ -2080,7 +2080,7 @@ body:has(.biz) { background: var(--panel); }
 .cp-invoice:hover { background: var(--brand-tint); }
 /* Add-a-client (biller on behalf of a clinician) */
 .cl-newbtn { background: var(--indigo); color: #fff; border: 0; border-radius: 10px; padding: 9px 18px; font: 600 13.5px "Open Sans"; cursor: pointer; white-space: nowrap; }
-.cl-newbtn:hover:not(:disabled) { background: #24276f; }
+.cl-newbtn:hover:not(:disabled) { filter: brightness(0.93); }
 .cl-newbtn:disabled { opacity: .55; cursor: default; }
 .cl-modalback { position: fixed; inset: 0; background: rgba(26,29,36,.42); display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px; z-index: 200; }
 .cl-modal { background: var(--surface); border-radius: 16px; width: 460px; max-width: 100%; padding: 20px 22px; box-shadow: 0 20px 60px rgba(20,25,40,.3); max-height: 84vh; overflow-y: auto; }
