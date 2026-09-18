@@ -2434,6 +2434,13 @@ body:has(.biz) { background: var(--panel); }
 .cd-refprompt.expiring { background: var(--amber-bg); border-color: #e6cf9a; color: #8a5e14; }
 .cd-refprompt.expired { background: var(--neg-bg); border-color: #e3b7ad; color: #9a3b2a; }
 .cd-refprompt-btn { margin-left: auto; border: 1px solid currentColor; background: var(--surface); color: inherit; border-radius: 8px; padding: 6px 14px; font: 600 12.5px "Open Sans"; cursor: pointer; white-space: nowrap; }
+/* Inline referral editor on the banner (no need to open Edit details). */
+.cd-refedit { padding: 16px; margin: -8px 0 16px; }
+.cd-refedit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+.cd-refedit-acts { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.cd-reflink-del { margin-left: auto; background: none; border: 0; color: var(--neg); font: 600 12.5px "Open Sans"; cursor: pointer; }
+.cd-reflink-del:hover { text-decoration: underline; }
+@media (max-width: 640px) { .cd-refedit-grid { grid-template-columns: 1fr; } }
 .cd-refprompt-btn:hover { background: rgba(0,0,0,.04); }
 .cd-refupload-hint { grid-column: 1 / -1; font-size: 12.5px; color: var(--faint, #8a93a3); background: var(--panel); border: 1px solid var(--hair, #eae6dc); border-radius: 8px; padding: 8px 12px; }
 /* Collapsible groups in the edit form (address, referral). */

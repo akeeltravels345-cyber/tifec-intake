@@ -293,7 +293,8 @@ export default function ClientDetail({
   // Address + referral are collapsed by default (most records don't need them
   // open), and start open only when there's already something to show.
   const [showAddr, setShowAddr] = useState(!!(profile.address?.line1 || profile.address?.line2 || profile.address?.city || profile.address?.region || profile.address?.postal || profile.address?.country));
-  const [wantRef, setWantRef] = useState(!!(profile.referral?.source || profile.referral?.startDate || profile.referral?.months || profile.referral?.sessions || profile.referral?.endDate));
+  // Referral is edited inline on the banner (no need to open Edit details).
+  const [refEdit, setRefEdit] = useState(false);
   // documents (edited live; add/remove sync back the returned list)
   const [docs, setDocs] = useState(profile.documents ?? []);
   const [ndName, setNdName] = useState("");
@@ -319,11 +320,9 @@ export default function ClientDetail({
       insurance: (memberId || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
         ? { memberId: memberId || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
-      // Whether a referral exists is decided by the fields the biller fills in,
-      // not the derived end date, so clearing the fields clears the referral.
-      referral: (wantRef && (refSource || refStart || refMonths || refSessions))
-        ? { source: refSource || undefined, startDate: refStart || undefined, months: refMonths ? Number(refMonths) : undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }
-        : undefined,
+      // Referral is edited inline on the banner via its own endpoint; this form
+      // never touches it (the server preserves the existing referral).
+      referral: profile.referral,
       documents,
     };
   }
@@ -340,6 +339,29 @@ export default function ClientDetail({
     finally { setBusy(false); }
   }
   const save = () => patchProfile(buildProfile(), () => { setMsg("Saved."); setEdit(false); });
+  async function saveReferral() {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}/referral`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: refSource || undefined, startDate: refStart || undefined, months: refMonths ? Number(refMonths) : undefined, endDate: refEnd || undefined, sessions: refSessions ? Number(refSessions) : undefined }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not save the referral.");
+      setRefEdit(false); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not save the referral."); }
+    finally { setBusy(false); }
+  }
+  async function clearReferral() {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch(`/api/billing/clients/${id}/referral`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clear: true }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not remove the referral.");
+      setRefSource(""); setRefStart(""); setRefMonths(""); setRefSessions(""); setRefEdit(false); router.refresh();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Could not remove the referral."); }
+    finally { setBusy(false); }
+  }
   function addDocument() {
     if (!ndName.trim()) { setMsg("Give the document a name."); return; }
     const next = [...docs, { id: randId(), name: ndName.trim(), kind: ndKind, url: ndUrl.trim() || undefined, addedAt: today || new Date().toISOString().slice(0, 10) }];
@@ -474,14 +496,36 @@ export default function ClientDetail({
           )}
           {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
         </div>
-        {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
+        {canEdit && !refEdit && <button className="su-del" onClick={() => setRefEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
       </div>
-      {(referral.state === "expiring" || referral.state === "expired") && (
+      {(referral.state === "expiring" || referral.state === "expired") && !refEdit && (
         <div className={`cd-refprompt ${referral.state}`}>
           ⚠ {referral.state === "expiring"
             ? <>This referral ends in <b>{refDays} day{refDays === 1 ? "" : "s"}</b> ({profile.referral?.endDate}). Apply for a new one now. Sessions after the end date can&apos;t be billed.</>
             : <>This referral has <b>expired</b>. Apply for a new referral before billing further sessions for {first}.</>}
-          {canEdit && !edit && <button className="cd-refprompt-btn" onClick={() => setEdit(true)}>Renew referral</button>}
+          {canEdit && <button className="cd-refprompt-btn" onClick={() => setRefEdit(true)}>Renew referral</button>}
+        </div>
+      )}
+      {refEdit && (
+        <div className="su-card cd-refedit">
+          <div className="cd-refedit-grid">
+            <label className="cd-f"><span className="cd-fl">Referring provider</span><input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} /></label>
+            <label className="cd-f"><span className="cd-fl">Valid from</span><input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} /></label>
+            <label className="cd-f"><span className="cd-fl">Valid for</span>
+              <select className="ls-in" value={refMonths} onChange={(e) => setRefMonths(e.target.value)}>
+                <option value="">Choose a length…</option>
+                {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
+              </select>
+            </label>
+            <label className="cd-f"><span className="cd-fl">Ends</span>{refStart && refMonths ? <span className="cd-v">{refEnd} <span className="su-hint">auto</span></span> : <span className="cd-v muted">set a start date and a length</span>}</label>
+            <label className="cd-f"><span className="cd-fl">Sessions authorised</span><input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} /></label>
+          </div>
+          <p className="su-hint" style={{ margin: "2px 2px 8px" }}>📎 Upload the referral letter in Documents below. The end date flags the clinician 30 days before it lapses.</p>
+          <div className="cd-refedit-acts">
+            <button className="ls-save sm" disabled={busy} onClick={saveReferral}>{busy ? "Saving…" : "Save referral"}</button>
+            <button className="su-del sm" disabled={busy} onClick={() => setRefEdit(false)}>Cancel</button>
+            {referral.state !== "none" && <button className="cd-reflink-del" disabled={busy} onClick={clearReferral}>Remove referral</button>}
+          </div>
         </div>
       )}
 
@@ -537,32 +581,8 @@ export default function ClientDetail({
               )}
             </div>
 
-            {/* Referral — behind a Yes/No; only a minority of clients have one. */}
             <div className="cd-collapse" style={{ gridColumn: "1 / -1" }}>
-              <div className="cd-collapse-h cd-collapse-yn">
-                <span className="cd-collapse-t">Does this client have a referral?</span>
-                <span className="ded-yn">
-                  <button type="button" className={`ded-ynbtn ${!wantRef ? "on" : ""}`} onClick={() => { setWantRef(false); setRefSource(""); setRefStart(""); setRefMonths(""); setRefSessions(""); }}>No</button>
-                  <button type="button" className={`ded-ynbtn ${wantRef ? "on" : ""}`} onClick={() => setWantRef(true)}>Yes</button>
-                </span>
-              </div>
-              {wantRef && (
-                <div className="cd-collapse-body cd-grid">
-                  {field("Referring provider", <input className="ls-in" value={refSource} onChange={(e) => setRefSource(e.target.value)} />)}
-                  {field("Valid from", <input type="date" className="ls-in" value={refStart} onChange={(e) => setRefStart(e.target.value)} />)}
-                  {field("Valid for", (
-                    <select className="ls-in" value={refMonths} onChange={(e) => setRefMonths(e.target.value)}>
-                      <option value="">Choose a length…</option>
-                      {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
-                    </select>
-                  ))}
-                  {field("Ends", refStart && refMonths
-                    ? <span className="cd-v">{refEnd} <span className="su-hint">calculated automatically</span></span>
-                    : <span className="cd-v muted">set a start date and a length</span>)}
-                  {field("Sessions authorised", <input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} />)}
-                  <div className="cd-refupload-hint" style={{ gridColumn: "1 / -1" }}>📎 Upload the referral letter in <b>Documents</b> below. The end date flags the clinician 30 days before it lapses.</div>
-                </div>
-              )}
+              <span className="su-hint">Referral is managed on the banner at the top of the record (Add / Update), so it&apos;s visible without opening this form.</span>
             </div>
 
             <div className="cd-save">

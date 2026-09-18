@@ -475,6 +475,13 @@ export async function setBenefit(id: string, amount: number, year: number): Prom
   return updateClient(id, client.insurerId, { ...client.profile, benefit });
 }
 
+/** Set (or clear) a client's referral, edited inline on the record. */
+export async function setReferral(id: string, referral: ClientReferral | null): Promise<Client | null> {
+  const client = await getClient(id);
+  if (!client) return null;
+  return updateClient(id, client.insurerId, { ...client.profile, referral: referral ?? undefined });
+}
+
 /** Add a shared "team note" to a client (benefits, reminders, admin notes the
  *  whole team sees). Returns the updated note list, newest last. */
 export async function addClientNote(id: string, note: { authorId: string; authorName: string; role: string; text: string }): Promise<ClientNote[] | null> {
