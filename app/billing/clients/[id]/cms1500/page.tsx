@@ -43,6 +43,10 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
     sessions.filter((s) => s.insurerId && insurers.find((i) => i.id === s.insurerId)?.billStyle === "invoice").map((s) => s.insurerId as string),
   )].map((pid) => ({ id: pid, name: insurers.find((i) => i.id === pid)?.name ?? "Payer" }));
 
+  // No standard CMS-1500 claims and exactly one invoice-style payer → go straight
+  // to that payer's invoice, so "Generate CMS-1500" never dead-ends on a link.
+  if (forms.length === 0 && invoicePayers.length === 1) redirect(`/billing/clients/${id}/invoice?type=payer&payer=${invoicePayers[0].id}`);
+
   return (
     <div className="hcfa-page">
       <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_CSS }} />

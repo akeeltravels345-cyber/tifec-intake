@@ -86,11 +86,20 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
     const payerIds = [...new Set(mine.filter((s) => isInvoicePayer(s.insurerId)).map((s) => s.insurerId as string))];
     for (const pid of payerIds) {
       const py = insurers.find((i) => i.id === pid);
-      invoiceLinks.push({ name: `${client.first} ${client.last} — ${py?.name ?? "Payer"}`, href: `/billing/clients/${cid}/invoice?type=payer&payer=${pid}` });
+      // Reached from a session selection: invoice exactly those sessions. Reached
+      // from a whole-client selection: invoice all of that payer's sessions.
+      const forPayer = mine.filter((s) => s.insurerId === pid).map((s) => s.id);
+      const sessQ = sessionIds.length > 0 ? `&sessions=${forPayer.join(",")}` : "";
+      invoiceLinks.push({ name: `${client.first} ${client.last} — ${py?.name ?? "Payer"}`, href: `/billing/clients/${cid}/invoice?type=payer&payer=${pid}${sessQ}` });
     }
   }
   blocks.sort((a, b) => a.name.localeCompare(b.name));
   invoiceLinks.sort((a, b) => a.name.localeCompare(b.name));
+
+  // A selection with no CMS-1500 claims and exactly one invoice-style payer goes
+  // straight to that invoice — so "generate" always produces the invoice directly,
+  // wherever the biller started (queue, roster, or client record).
+  if (blocks.length === 0 && invoiceLinks.length === 1) redirect(invoiceLinks[0].href);
 
   const totalForms = blocks.reduce((t, b) => t + b.forms.length, 0);
 

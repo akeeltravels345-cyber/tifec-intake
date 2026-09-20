@@ -46,7 +46,7 @@ export default function ClientDetail({
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
-  insurers: { id: string; name: string }[]; clinicians?: { id: string; name: string }[];
+  insurers: { id: string; name: string; billStyle?: "claim" | "invoice" }[]; clinicians?: { id: string; name: string }[];
   activity: Activity[]; benefit?: BenefitSummary | null; canEdit: boolean; canDelete?: boolean; today?: string;
   intakeForms?: LinkedIntake[]; currentUserId?: string; currentUserRole?: string;
   cptCodes?: { code: string; description: string; fee: number }[];
@@ -434,14 +434,36 @@ export default function ClientDetail({
   // generator matches what's ticked.
   const billable = activity.filter((a) => a.stage !== "self");
   const selfPayEntries = activity.filter((a) => a.stage === "self");
-  const hasInsured = billable.length > 0;
+  // Invoice-style payers (e.g. Poinciana Rehab) bill by invoice, not a CMS-1500,
+  // so their sessions must route to the payer invoice everywhere — never the claim
+  // flow. Split the insured sessions accordingly.
+  const isInvoicePayer = (insId: string | null) => !!insId && insurers.find((i) => i.id === insId)?.billStyle === "invoice";
+  const claimBillable = billable.filter((a) => !isInvoicePayer(a.insurerId));
+  const invoiceBillable = billable.filter((a) => isInvoicePayer(a.insurerId));
+  // The distinct invoice-style payers this client has sessions for.
+  const invoicePayers = [...new Set(invoiceBillable.map((a) => a.insurerId as string))]
+    .map((pid) => ({ id: pid, name: insurers.find((i) => i.id === pid)?.name ?? "Payer" }));
+  const hasInsured = claimBillable.length > 0;
   const hasSelfPay = selfPayEntries.length > 0;
   const toggleSel = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const allSelected = activity.length > 0 && activity.every((a) => sel.has(a.id));
   const toggleAll = () => setSel((s) => { if (allSelected) return new Set(); const n = new Set(s); activity.forEach((a) => n.add(a.id)); return n; });
   const selInsuredIds = billable.filter((a) => sel.has(a.id)).map((a) => a.id);
   const selSelfIds = selfPayEntries.filter((a) => sel.has(a.id)).map((a) => a.id);
-  const generateSelectedClaims = () => { if (selInsuredIds.length) router.push(`/billing/clients/batch?sessions=${selInsuredIds.join(",")}`); };
+  const generateSelectedClaims = () => {
+    if (!selInsuredIds.length) return;
+    const selInvoice = invoiceBillable.filter((a) => sel.has(a.id));
+    const selClaim = claimBillable.filter((a) => sel.has(a.id));
+    const payerIds = [...new Set(selInvoice.map((a) => a.insurerId as string))];
+    // A selection that's entirely ONE invoice-style payer goes straight to that
+    // payer's invoice. Anything mixed (or multiple payers) goes to the batch page,
+    // which renders CMS-1500s for standard insurers and invoice links for the rest.
+    if (selInvoice.length && !selClaim.length && payerIds.length === 1) {
+      router.push(`/billing/clients/${id}/invoice?type=payer&payer=${payerIds[0]}&sessions=${selInvoice.map((a) => a.id).join(",")}`);
+    } else {
+      router.push(`/billing/clients/batch?sessions=${selInsuredIds.join(",")}`);
+    }
+  };
   const generateSelectedInvoice = () => { if (selSelfIds.length) router.push(`/billing/clients/${id}/invoice?sessions=${selSelfIds.join(",")}`); };
   const field = (label: string, node: React.ReactNode) => (
     <div className="cd-f"><span className="cd-fl">{label}</span>{node}</div>
@@ -460,6 +482,9 @@ export default function ClientDetail({
         </div>
         <div className="cd-actions">
           {hasInsured && <a className="bl-cta" href={`/billing/clients/${id}/cms1500`}>Generate CMS-1500</a>}
+          {invoicePayers.map((py) => (
+            <a key={py.id} className="bl-cta" href={`/billing/clients/${id}/invoice?type=payer&payer=${py.id}`}>Generate {py.name} invoice</a>
+          ))}
           {hasSelfPay && <a className="bl-cta" href={`/billing/clients/${id}/invoice`}>Generate invoice</a>}
           {canEdit && !edit && <button className="su-del" onClick={() => setEdit(true)}>Edit details</button>}
           {canDelete && <button className="cd-danger" onClick={() => setConfirmDel(true)}>Delete client</button>}
@@ -864,7 +889,7 @@ export default function ClientDetail({
                     return (
                       <Fragment key={a.id}>
                       <tr className={sel.has(a.id) ? "cd-selrow" : ""}>
-                        <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
+                        <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={isInvoicePayer(a.insurerId) ? "Bills by invoice to the payer" : claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>
                         <td>{codeSummary(a.codes) || "-"}{a.codeLabel && <span className="su-hint"> · {a.codeLabel}</span>}</td>
@@ -879,6 +904,11 @@ export default function ClientDetail({
                             // for a self-pay visit, or just the outstanding co-pay for an
                             // insured one. When there's something owed, offer a one-visit
                             // invoice PDF (that page can also email it to the client).
+                            // Invoice-style payer (e.g. Poinciana): this visit bills by
+                            // invoice, so always offer a direct one-visit payer invoice.
+                            if (isInvoicePayer(a.insurerId)) {
+                              return <a className="cd-invlink" href={`/billing/clients/${id}/invoice?type=payer&payer=${a.insurerId}&sessions=${a.id}`} title="Invoice this visit to the payer">Invoice</a>;
+                            }
                             const owedCopay = Math.max(0, (a.copayDue || 0) - (a.copay || 0));
                             if (a.insurerId && owedCopay <= 0) return null;
                             const href = a.insurerId

@@ -85,7 +85,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         insurerId={client.insurerId}
         profile={client.profile}
         seenBy={seesAll ? client.clinicianIds.map(clinName) : []}
-        insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name }))}
+        insurers={insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, billStyle: i.billStyle }))}
         clinicians={client.clinicianIds.map((cid) => ({ id: cid, name: clinName(cid) }))}
         activity={activity}
         benefit={benefit}
