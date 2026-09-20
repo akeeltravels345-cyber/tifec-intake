@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 import { listAppointments, updateAppointment, listAppointmentTypes } from "@/lib/scheduling";
 import { getClinician } from "@/lib/clinicians";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
-import { sendClientEmail } from "@/lib/email";
+import { sendBrandedEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +52,13 @@ export async function GET(req: Request) {
     if (!a.clientEmail) { skipped++; continue; }
 
     const coupleId = assess.missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
-    const links = assess.missingForms
-      .map((f) => `${formShortLabel(f)}:\n${origin}${intakeLinkPath(a.clinicianId, f, coupleId)}`)
-      .join("\n\n");
-    const text =
-      `Hi ${a.clientName.split(/\s+/)[0] || "there"},\n\n` +
-      `This is a friendly reminder to complete your intake before your appointment with ${getClinician(a.clinicianId)?.name || "your clinician"}:\n\n` +
-      `${links}\n\n` +
-      `It only takes a few minutes and is kept confidential.\n\n` +
-      `Thank you,\nThe Institute for Essential Care`;
-    await sendClientEmail(a.clientEmail, "Reminder: please complete your intake form", text);
+    await sendBrandedEmail(a.clientEmail, "Reminder: please complete your intake form", {
+      heading: "A quick reminder",
+      greetingName: a.clientName.split(/\s+/)[0] || undefined,
+      intro: `This is a friendly reminder to complete your intake before your appointment with ${getClinician(a.clinicianId)?.name || "your clinician"}:`,
+      buttons: assess.missingForms.map((f) => ({ label: `Complete your ${formShortLabel(f)}`, url: `${origin}${intakeLinkPath(a.clinicianId, f, coupleId)}` })),
+      note: "It only takes a few minutes and is kept confidential.",
+    });
     await updateAppointment(a.id, { intakeReminderAt: new Date().toISOString() } as never);
     reminded++;
   }

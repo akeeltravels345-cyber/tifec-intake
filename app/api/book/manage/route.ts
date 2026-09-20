@@ -2,42 +2,47 @@ import { NextResponse } from "next/server";
 import { getClinician } from "@/lib/clinicians";
 import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes, utcFromCayMinutes, getSchedulingSettings } from "@/lib/scheduling";
 import { cancelVideoLink } from "@/lib/videoConnections";
-import { sendClientEmail } from "@/lib/email";
+import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
-const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
+const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || undefined;
 
 // Confirm a cancellation to the client. Best-effort; never blocks the change.
 async function sendCancelEmail(to: string, clientName: string, serviceName: string, whenText: string): Promise<void> {
   if (!to) return;
-  const text =
-    `Hi ${firstNameOf(clientName)},\n\n` +
-    `Your appointment has been cancelled:\n\n` +
-    `Service:  ${serviceName}\n` +
-    `Was:      ${whenText}\n\n` +
-    `If this was a mistake, or you'd like to rebook, just visit our booking page or reply to this email and we'll be glad to help.\n\n` +
-    `Warmly,\nThe Institute for Essential Care`;
-  try { await sendClientEmail(to, "Your appointment has been cancelled", text); }
-  catch { /* never block the change on email */ }
+  try {
+    await sendBrandedEmail(to, "Your appointment has been cancelled", {
+      heading: "Appointment cancelled",
+      greetingName: firstNameOf(clientName),
+      intro: "This appointment has been cancelled:",
+      rows: [
+        { label: "Service", value: serviceName },
+        { label: "Was", value: whenText },
+      ],
+      outro: "If this was a mistake, or you'd like to rebook, just visit our booking page or reply to this email and we'll be glad to help.",
+    });
+  } catch { /* never block the change on email */ }
 }
 
 // Confirm a reschedule to the client. Best-effort; never blocks the change.
 async function sendRescheduleEmail(to: string, clientName: string, serviceName: string, clinicianName: string, whenText: string): Promise<void> {
   if (!to) return;
-  const text =
-    `Hi ${firstNameOf(clientName)},\n\n` +
-    `Your appointment has been moved. Here are the new details:\n\n` +
-    `Service:     ${serviceName}\n` +
-    `Clinician:   ${clinicianName}\n` +
-    `New time:    ${whenText}\n\n` +
-    `Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email.\n\n` +
-    `We look forward to seeing you.\n\n` +
-    `Warmly,\nThe Institute for Essential Care`;
-  try { await sendClientEmail(to, "Your appointment has been rescheduled", text); }
-  catch { /* never block the change on email */ }
+  try {
+    await sendBrandedEmail(to, "Your appointment has been rescheduled", {
+      heading: "Your appointment has moved",
+      greetingName: firstNameOf(clientName),
+      intro: "Here are the new details:",
+      rows: [
+        { label: "Service", value: serviceName },
+        { label: "Clinician", value: clinicianName },
+        { label: "New time", value: whenText },
+      ],
+      outro: "Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email. We look forward to seeing you.",
+    });
+  } catch { /* never block the change on email */ }
 }
 
 async function summarize(id: string) {

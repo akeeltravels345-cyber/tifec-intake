@@ -4,7 +4,7 @@ import { CLINICIANS, getClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, type QuestionAnswer } from "@/lib/scheduling";
 import { createVideoLink } from "@/lib/videoConnections";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
-import { sendClientEmail } from "@/lib/email";
+import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +21,15 @@ async function sendIntakeInvite(args: {
   forms: { form: string; url: string }[];
 }): Promise<void> {
   if (args.forms.length === 0) return;
-  const lines = args.forms.map((f) => `${formShortLabel(f.form as never)}:\n${f.url}`).join("\n\n");
-  const text =
-    `Hi ${firstNameOf(args.clientName)},\n\n` +
-    `Thank you for booking with The Institute for Essential Care. Before your appointment with ${args.clinicianName}, please complete the following so we're ready for you:\n\n` +
-    `${lines}\n\n` +
-    `Each form takes a few minutes and is kept confidential. If you have any trouble, just reply to this email.\n\n` +
-    `Warmly,\nThe Institute for Essential Care`;
-  try { await sendClientEmail(args.to, "Your intake forms for The Institute for Essential Care", text); }
-  catch { /* never block a booking on email */ }
+  try {
+    await sendBrandedEmail(args.to, "Your intake forms for The Institute for Essential Care", {
+      heading: args.forms.length > 1 ? "A couple of quick forms" : "One quick form",
+      greetingName: firstNameOf(args.clientName),
+      intro: `Thank you for booking with The Institute for Essential Care. Before your appointment with ${args.clinicianName}, please complete the following so we're ready for you:`,
+      buttons: args.forms.map((f) => ({ label: `Complete your ${formShortLabel(f.form as never)}`, url: f.url })),
+      note: "Each form takes a few minutes and is kept confidential. If you have any trouble, just reply to this email.",
+    });
+  } catch { /* never block a booking on email */ }
 }
 
 // "You're booked" confirmation, sent to the client on a successful booking.
@@ -38,25 +38,28 @@ async function sendBookingConfirmation(args: {
   whenText: string; mode: string; locationOrLink: string; manageUrl: string; intakeForms: string[];
 }): Promise<void> {
   const isLink = /^https?:\/\//.test(args.locationOrLink);
-  const where = args.mode === "virtual"
-    ? (isLink ? `Video link:  ${args.locationOrLink}` : "Location:    Online (your video link will follow by email)")
-    : `Location:    ${args.locationOrLink || "The Institute for Essential Care"}`;
-  const intakeLine = args.intakeForms.length
-    ? `\nWe've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.\n`
-    : "";
-  const text =
-    `Hi ${firstNameOf(args.clientName)},\n\n` +
-    `You're booked. Here are the details:\n\n` +
-    `Service:     ${args.serviceName}\n` +
-    `Clinician:   ${args.clinicianName}\n` +
-    `When:        ${args.whenText}\n` +
-    `${where}\n` +
-    intakeLine +
-    `\nNeed to change or cancel? Manage your booking here:\n${args.manageUrl}\n\n` +
-    `We look forward to seeing you.\n\n` +
-    `Warmly,\nThe Institute for Essential Care`;
-  try { await sendClientEmail(args.to, "You're booked with The Institute for Essential Care", text); }
-  catch { /* never block a booking on email */ }
+  const location = args.mode === "virtual"
+    ? (isLink ? "Online (video)" : "Online (your video link will follow by email)")
+    : (args.locationOrLink || "The Institute for Essential Care");
+  const buttons: { label: string; url: string }[] = [];
+  if (args.mode === "virtual" && isLink) buttons.push({ label: "Join the video call", url: args.locationOrLink });
+  buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
+  try {
+    await sendBrandedEmail(args.to, "You're booked with The Institute for Essential Care", {
+      heading: "You're booked",
+      greetingName: firstNameOf(args.clientName),
+      intro: "Here are the details of your appointment:",
+      rows: [
+        { label: "Service", value: args.serviceName },
+        { label: "Clinician", value: args.clinicianName },
+        { label: "When", value: args.whenText },
+        { label: "Location", value: location },
+      ],
+      buttons,
+      note: args.intakeForms.length ? `We've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.` : undefined,
+      outro: "We look forward to seeing you.",
+    });
+  } catch { /* never block a booking on email */ }
 }
 
 export async function POST(req: Request) {
