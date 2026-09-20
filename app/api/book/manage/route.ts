@@ -4,44 +4,54 @@ import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes
 import { cancelVideoLink } from "@/lib/videoConnections";
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
+import { appointmentInvite } from "@/lib/ical";
 
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
 const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || undefined;
+const organizerEmail = () => process.env.SMTP_FROM || process.env.SMTP_USER || undefined;
 
-// Confirm a cancellation to the client. Best-effort; never blocks the change.
-async function sendCancelEmail(to: string, clientName: string, serviceName: string, whenText: string): Promise<void> {
-  if (!to) return;
+// Confirm a cancellation to the client + remove it from their calendar.
+async function sendCancelEmail(a: { to: string; clientName: string; serviceName: string; clinicianName: string; whenText: string; id: string; startAt: string; endAt: string }): Promise<void> {
+  if (!a.to) return;
+  const ics = appointmentInvite({
+    id: a.id, startAt: a.startAt, endAt: a.endAt, serviceName: a.serviceName, clinicianName: a.clinicianName,
+    clientName: a.clientName, clientEmail: a.to, organizerEmail: organizerEmail(), method: "CANCEL", cancelled: true,
+  });
   try {
-    await sendBrandedEmail(to, "Your appointment has been cancelled", {
+    await sendBrandedEmail(a.to, "Your appointment has been cancelled", {
       heading: "Appointment cancelled",
-      greetingName: firstNameOf(clientName),
+      greetingName: firstNameOf(a.clientName),
       intro: "This appointment has been cancelled:",
       rows: [
-        { label: "Service", value: serviceName },
-        { label: "Was", value: whenText },
+        { label: "Service", value: a.serviceName },
+        { label: "Was", value: a.whenText },
       ],
       outro: "If this was a mistake, or you'd like to rebook, just visit our booking page or reply to this email and we'll be glad to help.",
-    });
+    }, { content: ics, method: "CANCEL", filename: "appointment.ics" });
   } catch { /* never block the change on email */ }
 }
 
-// Confirm a reschedule to the client. Best-effort; never blocks the change.
-async function sendRescheduleEmail(to: string, clientName: string, serviceName: string, clinicianName: string, whenText: string): Promise<void> {
-  if (!to) return;
+// Confirm a reschedule to the client + update it in their calendar.
+async function sendRescheduleEmail(a: { to: string; clientName: string; serviceName: string; clinicianName: string; whenText: string; id: string; startAt: string; endAt: string; location?: string }): Promise<void> {
+  if (!a.to) return;
+  const ics = appointmentInvite({
+    id: a.id, startAt: a.startAt, endAt: a.endAt, serviceName: a.serviceName, clinicianName: a.clinicianName,
+    location: a.location, clientName: a.clientName, clientEmail: a.to, organizerEmail: organizerEmail(), method: "REQUEST",
+  });
   try {
-    await sendBrandedEmail(to, "Your appointment has been rescheduled", {
+    await sendBrandedEmail(a.to, "Your appointment has been rescheduled", {
       heading: "Your appointment has moved",
-      greetingName: firstNameOf(clientName),
+      greetingName: firstNameOf(a.clientName),
       intro: "Here are the new details:",
       rows: [
-        { label: "Service", value: serviceName },
-        { label: "Clinician", value: clinicianName },
-        { label: "New time", value: whenText },
+        { label: "Service", value: a.serviceName },
+        { label: "Clinician", value: a.clinicianName },
+        { label: "New time", value: a.whenText },
       ],
       outro: "Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email. We look forward to seeing you.",
-    });
+    }, { content: ics, method: "REQUEST", filename: "appointment.ics" });
   } catch { /* never block the change on email */ }
 }
 
@@ -90,7 +100,11 @@ export async function POST(req: Request) {
     // Free the Zoom meeting from the clinician's account too.
     if (a.mode === "virtual" && a.locationOrLink) await cancelVideoLink(a.clinicianId, a.locationOrLink, a.videoEventId || undefined);
     const type = (await listAppointmentTypes()).find((t) => t.id === a.typeId);
-    await sendCancelEmail(a.clientEmail, a.clientName, type?.name || "Appointment", caymanWhen(a.startAt));
+    await sendCancelEmail({
+      to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
+      clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(a.startAt),
+      id: a.id, startAt: a.startAt, endAt: a.endAt,
+    });
     return NextResponse.json({ ok: true, cancelled: true });
   }
 
@@ -109,7 +123,12 @@ export async function POST(req: Request) {
     const endAt = utcFromCayMinutes(date, minute + dur);
     await updateAppointment(id, { startAt, endAt } as never);
     if (startAt !== a.startAt) {
-      await sendRescheduleEmail(a.clientEmail, a.clientName, type?.name || "Appointment", getClinician(a.clinicianId)?.name || "your clinician", caymanWhen(startAt));
+      const loc = a.mode === "virtual" ? a.locationOrLink : (a.locationOrLink || "The Institute for Essential Care");
+      await sendRescheduleEmail({
+        to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
+        clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(startAt),
+        id: a.id, startAt, endAt, location: loc,
+      });
     }
     return NextResponse.json({ ok: true, appointment: await summarize(id) });
   }

@@ -6,6 +6,7 @@ import { createVideoLink } from "@/lib/videoConnections";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
+import { appointmentInvite } from "@/lib/ical";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ async function sendIntakeInvite(args: {
 
 // "You're booked" confirmation, sent to the client on a successful booking.
 async function sendBookingConfirmation(args: {
+  id: string; startAt: string; endAt: string;
   to: string; clientName: string; serviceName: string; clinicianName: string;
   whenText: string; mode: string; locationOrLink: string; manageUrl: string; intakeForms: string[];
 }): Promise<void> {
@@ -49,6 +51,13 @@ async function sendBookingConfirmation(args: {
   const buttons: { label: string; url: string }[] = [];
   if (args.mode === "virtual" && isLink) buttons.push({ label: "Join the video call", url: args.locationOrLink });
   buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
+  // A calendar invite so the client can add it to Apple / Google / Outlook.
+  const ics = appointmentInvite({
+    id: args.id, startAt: args.startAt, endAt: args.endAt, serviceName: args.serviceName,
+    clinicianName: args.clinicianName, location: isLink ? args.locationOrLink : location,
+    manageUrl: args.manageUrl, clientName: args.clientName, clientEmail: args.to,
+    organizerEmail: process.env.SMTP_FROM || process.env.SMTP_USER || undefined, method: "REQUEST",
+  });
   try {
     await sendBrandedEmail(args.to, "You're booked with The Institute for Essential Care", {
       heading: "You're booked in! 🎉",
@@ -63,7 +72,7 @@ async function sendBookingConfirmation(args: {
       buttons,
       note: args.intakeForms.length ? `We've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.` : undefined,
       outro: "We look forward to seeing you.",
-    });
+    }, { content: ics, method: "REQUEST", filename: "appointment.ics" });
   } catch { /* never block a booking on email */ }
 }
 
@@ -150,6 +159,7 @@ export async function POST(req: Request) {
 
   // "You're booked" confirmation (the piece the done screen has always promised).
   await sendBookingConfirmation({
+    id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
     to: email, clientName: name, serviceName: type.name, clinicianName,
     whenText: caymanWhen(appt.startAt), mode, locationOrLink: appt.locationOrLink,
     manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,

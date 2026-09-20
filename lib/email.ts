@@ -429,23 +429,35 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
   return { text, html };
 }
 
+/** An optional calendar invite to attach to a client email. `method` REQUEST
+ *  adds/updates the event; CANCEL removes it. */
+export interface EmailIcs { content: string; method: "REQUEST" | "CANCEL" | "PUBLISH"; filename?: string; }
+
 /** Send a branded client email. Dev-safe (logs when SMTP is unset); embeds the
- *  logo inline so it renders without the recipient allowing remote images. */
-export async function sendBrandedEmail(to: string, subject: string, args: ClientEmailArgs): Promise<{ sent: boolean; reason?: string }> {
+ *  logo inline so it renders without the recipient allowing remote images, and
+ *  can attach an .ics calendar invite. */
+export async function sendBrandedEmail(to: string, subject: string, args: ClientEmailArgs, ics?: EmailIcs): Promise<{ sent: boolean; reason?: string }> {
   try {
     const logo = invoiceEmailLogo();
     const logoCid = logo ? CLIENT_LOGO_CID : undefined;
     const { text, html } = buildClientEmail({ ...args, logoCid });
     if (!process.env.SMTP_HOST) {
-      console.log(`[email:dev] would email ${to} — "${subject}"`);
+      console.log(`[email:dev] would email ${to} — "${subject}"${ics ? ` (+${ics.method} invite)` : ""}`);
       return { sent: false, reason: "SMTP not configured (dev mode)" };
     }
-    const attachments = logo && logoCid
-      ? [{ filename: "logo.png", content: logo, cid: logoCid, contentType: "image/png", contentDisposition: "inline" as const }]
-      : undefined;
+    const attachments: NonNullable<Parameters<ReturnType<typeof transport>["sendMail"]>[0]["attachments"]> = [];
+    if (logo && logoCid) attachments.push({ filename: "logo.png", content: logo, cid: logoCid, contentType: "image/png", contentDisposition: "inline" });
+    if (ics) attachments.push({
+      filename: ics.filename || "invite.ics",
+      content: ics.content,
+      contentType: `text/calendar; charset=utf-8; method=${ics.method}`,
+      contentDisposition: "attachment",
+    });
     await transport().sendMail({
       from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
-      to, subject, text, html, attachments,
+      to, subject, text, html, attachments: attachments.length ? attachments : undefined,
+      // A text/calendar alternative helps Gmail / Apple show an "add to calendar" chip.
+      ...(ics ? { icalEvent: { method: ics.method, content: ics.content } } : {}),
     });
     return { sent: true };
   } catch (err) {
