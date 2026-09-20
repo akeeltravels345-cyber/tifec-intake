@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getBillingUser } from "@/lib/billingRole";
 import { listConnections, zoomOAuthConfigured, googleOAuthConfigured } from "@/lib/videoConnections";
 import VideoConnections from "@/components/scheduling/VideoConnections";
+import CalendarSubscribe from "@/components/scheduling/CalendarSubscribe";
+import { calendarFeedPath } from "@/lib/calendarFeed";
 import { seesAllSchedule, isTreatingClinician } from "../layout";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +17,10 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
   const me = user.clinician;
   if (!seesAllSchedule(me) && !isTreatingClinician(me)) redirect("/today");
 
-  const [conns, sp] = await Promise.all([listConnections(me.id), searchParams]);
+  const [conns, sp, h] = await Promise.all([listConnections(me.id), searchParams, headers()]);
   const initial = conns.map((c) => ({ provider: c.provider, accountEmail: c.accountEmail, preferred: c.preferred }));
+  const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
+  const feedUrl = `${origin}${calendarFeedPath(me.id)}`;
 
   return (
     <div className="sh-wrap">
@@ -25,6 +30,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         configured={{ zoom: zoomOAuthConfigured(), google: googleOAuthConfigured() }}
         notice={{ connected: sp.connected || "", error: sp.error || "" }}
       />
+      <CalendarSubscribe url={feedUrl} />
     </div>
   );
 }

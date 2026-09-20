@@ -4533,3 +4533,15 @@ body:has(.bk-page) .brandbar { display: none; }
     :root[data-theme="dark"] .tm-nb { color: var(--ink); }
     :root[data-theme="dark"] .bq-refflag { color: var(--neg); }
     :root[data-theme="dark"] .biz .bo-stripe-delta { background: #2f6b52; color: #bfe9d4; }
+
+/* Calendar subscribe (clinician connections page) */
+.calsub { margin-top: 22px; background: var(--panel, #fff); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+.calsub-h { font-family: "Newsreader", Georgia, serif; font-weight: 600; font-size: 18px; margin: 0 0 6px; color: var(--ink); }
+.calsub-p { font-size: 13.5px; color: var(--muted); margin: 0 0 14px; max-width: 62ch; line-height: 1.55; }
+.calsub-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px; flex-wrap: wrap; }
+.calsub-url { flex: 1 1 260px; min-width: 0; font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; }
+.calsub-copy { flex: none; font: 600 13px "Open Sans"; color: #fff; background: var(--teal, #2f8e93); border: 0; border-radius: 9px; padding: 10px 18px; cursor: pointer; }
+.calsub-copy:hover { filter: brightness(1.06); }
+.calsub-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.calsub-btn { font: 600 13px "Open Sans"; color: var(--ink); background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 9px; padding: 9px 15px; text-decoration: none; }
+.calsub-btn:hover { border-color: var(--teal, #2f8e93); }
