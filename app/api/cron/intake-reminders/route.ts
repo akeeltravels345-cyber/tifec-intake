@@ -4,6 +4,7 @@ import { listAppointments, updateAppointment, listAppointmentTypes } from "@/lib
 import { getClinician } from "@/lib/clinicians";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { sendBrandedEmail } from "@/lib/email";
+import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,12 @@ export async function GET(req: Request) {
     await sendBrandedEmail(a.clientEmail, "Reminder: please complete your intake form", {
       heading: "A quick reminder",
       greetingName: a.clientName.split(/\s+/)[0] || undefined,
-      intro: `This is a friendly reminder to complete your intake before your appointment with ${getClinician(a.clinicianId)?.name || "your clinician"}:`,
+      intro: `Please complete your intake before your upcoming ${type.name} appointment:`,
+      rows: [
+        { label: "Service", value: type.name },
+        { label: "Clinician", value: getClinician(a.clinicianId)?.name || "your clinician" },
+        { label: "When", value: caymanWhen(a.startAt) },
+      ],
       buttons: assess.missingForms.map((f) => ({ label: `Complete your ${formShortLabel(f)}`, url: `${origin}${intakeLinkPath(a.clinicianId, f, coupleId)}` })),
       note: "It only takes a few minutes and is kept confidential.",
     });

@@ -18,14 +18,19 @@ const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
 // instead of sending, and a send failure never blocks the booking.
 async function sendIntakeInvite(args: {
   origin: string; to: string; clientName: string; clinicianId: string; clinicianName: string;
-  forms: { form: string; url: string }[];
+  serviceName: string; whenText: string; forms: { form: string; url: string }[];
 }): Promise<void> {
   if (args.forms.length === 0) return;
   try {
     await sendBrandedEmail(args.to, "Your intake forms for The Institute for Essential Care", {
       heading: args.forms.length > 1 ? "A couple of quick forms" : "One quick form",
       greetingName: firstNameOf(args.clientName),
-      intro: `Thank you for booking with The Institute for Essential Care. Before your appointment with ${args.clinicianName}, please complete the following so we're ready for you:`,
+      intro: `Thank you for booking your ${args.serviceName} appointment. Before your visit, please complete the following so we're ready for you:`,
+      rows: [
+        { label: "Service", value: args.serviceName },
+        { label: "Clinician", value: args.clinicianName },
+        { label: "When", value: args.whenText },
+      ],
       buttons: args.forms.map((f) => ({ label: `Complete your ${formShortLabel(f.form as never)}`, url: f.url })),
       note: "Each form takes a few minutes and is kept confidential. If you have any trouble, just reply to this email.",
     });
@@ -130,7 +135,7 @@ export async function POST(req: Request) {
   if (needsIntake) {
     const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
     const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId)}` }));
-    await sendIntakeInvite({ origin, to: email, clientName: name, clinicianId, clinicianName, forms });
+    await sendIntakeInvite({ origin, to: email, clientName: name, clinicianId, clinicianName, serviceName: type.name, whenText: caymanWhen(appt.startAt), forms });
   }
 
   // Auto video link for a virtual booking, on the clinician's own connected
