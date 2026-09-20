@@ -47,6 +47,9 @@ export interface ClaimResolvers {
   renderingNpi: (clinicianId: string) => string;
   cptFee: (code: string) => number;      // catalogue fee, to charge per code
   carrierCode?: (insurerId: string) => string; // optional payer code for box 10d
+  /** How a payer is billed. When it returns "invoice", that payer's sessions are
+   *  billed by invoice, not a CMS-1500, so they're excluded from claim forms. */
+  billStyle?: (insurerId: string) => "claim" | "invoice";
 }
 
 /** Split a total charge across n lines so each line shows a per-unit amount and
@@ -91,7 +94,8 @@ export function buildClaimForms(
   r: ClaimResolvers,
 ): ClaimForm[] {
   const p = client.profile;
-  const billable = sessions.filter((s) => s.insurerId);
+  // Insured sessions only, and never invoice-style payers (they bill by invoice).
+  const billable = sessions.filter((s) => s.insurerId && r.billStyle?.(s.insurerId) !== "invoice");
   if (billable.length === 0) return [];
 
   const patientName = `${client.last}, ${client.first}`;

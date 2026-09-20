@@ -19,6 +19,10 @@ export interface Insurer {
   copayRate: number; // fixed KYD amount, or percent 0-100
   active: boolean;
   claimCode?: string; // payer code printed on CMS-1500 box 10d / header (e.g. "362")
+  /** How a claim is billed for this payer. "claim" (default) = CMS-1500 form.
+   *  "invoice" = a self-pay-style invoice billed to the payer, with its own
+   *  sequential invoice number (e.g. Ponciana Rehabilitation). */
+  billStyle?: "claim" | "invoice";
 }
 
 // A clinician OUTSIDE the practice whose billing the biller handles privately.
@@ -179,6 +183,9 @@ export interface BillingSession {
   /** A short biller note on the claim (e.g. why it isn't billed yet). Operational,
    *  not clinical — shows in the billing queue so the clinician sees the reason. */
   billNote?: string;
+  /** Sequential invoice number stamped once when this session is billed to an
+   *  invoice-style payer (e.g. Ponciana Rehabilitation). Undefined otherwise. */
+  invoiceNo?: number;
   createdBy: string;
   createdAt: string;
 }
@@ -216,19 +223,27 @@ export async function listInsurers(): Promise<Insurer[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_insurers ORDER BY name`) as Record<string, unknown>[];
-    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined }));
+    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined }));
   }
   return readJson<Insurer[]>(INS_FILE, []);
 }
 
 export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }): Promise<Insurer> {
-  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined };
+  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined };
   if (usePostgres) {
     const sql = await pg();
-    await sql`
-      INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
-      VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null})
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code`;
+    try {
+      await sql`
+        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style)
+        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null})
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style`;
+    } catch {
+      // bill_style column not migrated yet — write without it.
+      await sql`
+        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
+        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null})
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code`;
+    }
     return row;
   }
   const all = readJson<Insurer[]>(INS_FILE, []);
@@ -463,6 +478,7 @@ interface StoredSession {
   insuranceCollected?: number | null;
   notes: string;
   billNote?: string;
+  invoiceNo?: number;
   createdBy: string;
   createdAt: string;
 }
@@ -487,6 +503,7 @@ function decryptSession(s: StoredSession): BillingSession {
     insuranceCollected: s.insuranceCollected == null ? null : num(s.insuranceCollected),
     notes: s.notes || "",
     billNote: s.billNote || undefined,
+    invoiceNo: s.invoiceNo != null ? Number(s.invoiceNo) : undefined,
     createdBy: s.createdBy, createdAt: s.createdAt,
   };
 }
@@ -605,6 +622,12 @@ async function loadStored(): Promise<StoredSession[]> {
       const nrows = (await sql`SELECT id, bill_note FROM billing_sessions WHERE bill_note IS NOT NULL AND bill_note <> ''`) as Record<string, unknown>[];
       for (const n of nrows) billNotes[n.id as string] = String(n.bill_note);
     } catch { /* column not migrated yet */ }
+    // Sequential invoice number (invoice-style payers) lives in its own column.
+    const invoiceNos: Record<string, number> = {};
+    try {
+      const irows = (await sql`SELECT id, invoice_no FROM billing_sessions WHERE invoice_no IS NOT NULL`) as Record<string, unknown>[];
+      for (const iv of irows) invoiceNos[iv.id as string] = num(iv.invoice_no);
+    } catch { /* column not migrated yet */ }
     return rows.map((r) => ({
       id: r.id as string, clinicianId: r.clinician_id as string, clientEnc: r.client_enc as string, clientId: (r.client_id as string) ?? null, insurerId: (r.insurer_id as string) ?? null,
       dateOfService: String(r.date_of_service).slice(0, 10), cptCodes: byId[r.id as string] || [], durationHours: num(r.duration_hours),
@@ -617,6 +640,7 @@ async function loadStored(): Promise<StoredSession[]> {
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null,
       insuranceDisposition: adj[r.id as string]?.disposition ?? null, insuranceCollected: adj[r.id as string]?.collected ?? null,
       notes: (r.notes as string) || "", billNote: billNotes[r.id as string] || undefined,
+      invoiceNo: invoiceNos[r.id as string],
       createdBy: r.created_by as string, createdAt: String(r.created_at),
     }));
   }
@@ -700,6 +724,52 @@ export async function setBillNote(id: string, note: string): Promise<boolean> {
   s.billNote = clean || undefined;
   writeJson(SESS_FILE, all);
   return true;
+}
+
+/** The first invoice number in the invoice-style-payer series is 5003, so the
+ *  "next" starts one below. */
+const INVOICE_NO_BASE = 5002;
+
+/** Assign (or reuse) a single sequential invoice number for a set of sessions
+ *  billed together to an invoice-style payer. Idempotent: if any session in the
+ *  set already carries a number, that same number is reused and stamped on the
+ *  rest, so re-generating the same invoice never burns a new number. Otherwise
+ *  the next number after the global maximum (>= 5003) is assigned and stamped on
+ *  all of them. The invoice_no column is optionally-migrated, so a Postgres write
+ *  degrades quietly until the column exists (returning the computed number). */
+export async function assignInvoiceNumber(sessionIds: string[]): Promise<number> {
+  const ids = sessionIds.filter(Boolean);
+  if (ids.length === 0) return INVOICE_NO_BASE + 1;
+  if (usePostgres) {
+    const sql = await pg();
+    try {
+      // Reuse a number already on any of these sessions.
+      const existing = (await sql`SELECT invoice_no FROM billing_sessions WHERE id = ANY(${ids}) AND invoice_no IS NOT NULL ORDER BY invoice_no LIMIT 1`) as { invoice_no: number }[];
+      let no: number;
+      if (existing.length > 0) {
+        no = num(existing[0].invoice_no);
+      } else {
+        const maxRow = (await sql`SELECT MAX(invoice_no) AS m FROM billing_sessions`) as { m: number | null }[];
+        no = Math.max(INVOICE_NO_BASE, num(maxRow[0]?.m)) + 1;
+      }
+      await sql`UPDATE billing_sessions SET invoice_no = ${no} WHERE id = ANY(${ids})`;
+      return no;
+    } catch {
+      // Column not migrated yet — fall back to a deterministic-ish number so the
+      // invoice still renders. Real numbers begin once the migration is applied.
+      return INVOICE_NO_BASE + 1;
+    }
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  const set = all.filter((x) => ids.includes(x.id));
+  let no = set.map((x) => x.invoiceNo).find((v) => v != null) as number | undefined;
+  if (no == null) {
+    const max = all.reduce((m, x) => Math.max(m, x.invoiceNo ?? 0), INVOICE_NO_BASE);
+    no = max + 1;
+  }
+  for (const s of set) s.invoiceNo = no;
+  writeJson(SESS_FILE, all);
+  return no;
 }
 
 /** Mark a claim as PAID/collected (or undo). Marking paid implies it was billed,

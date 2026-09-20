@@ -34,7 +34,14 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
     renderingNpi: (cid) => prov.renderingNpi?.[cid] ?? "",
     cptFee: (code) => cptCodes.find((c) => c.code === code)?.fee ?? 0,
     carrierCode: (insurerId) => insurers.find((i) => i.id === insurerId)?.claimCode ?? "",
+    billStyle: (insurerId) => (insurers.find((i) => i.id === insurerId)?.billStyle === "invoice" ? "invoice" : "claim"),
   });
+
+  // Invoice-style payers (e.g. Ponciana Rehab) don't go on a CMS-1500 — they bill
+  // by invoice. Surface a link to generate each one's invoice.
+  const invoicePayers = [...new Set(
+    sessions.filter((s) => s.insurerId && insurers.find((i) => i.id === s.insurerId)?.billStyle === "invoice").map((s) => s.insurerId as string),
+  )].map((pid) => ({ id: pid, name: insurers.find((i) => i.id === pid)?.name ?? "Payer" }));
 
   return (
     <div className="hcfa-page">
@@ -52,8 +59,18 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
         </div>
       )}
 
+      {invoicePayers.length > 0 && (
+        <div className="hcfa-warn hcfa-noprint">
+          {invoicePayers.map((py) => (
+            <div key={py.id} style={{ marginBottom: 4 }}>
+              <b>{py.name}</b> bills by invoice, not a CMS-1500. <Link href={`/billing/clients/${id}/invoice?type=payer&payer=${py.id}`} style={{ marginLeft: 4 }}>Generate {py.name} invoice →</Link>
+            </div>
+          ))}
+        </div>
+      )}
+
       {forms.length === 0 ? (
-        <div className="hcfa-warn hcfa-noprint">This client has no insured sessions to claim. Self-pay visits don&apos;t go on a CMS-1500.</div>
+        <div className="hcfa-warn hcfa-noprint">{invoicePayers.length > 0 ? "No standard-claim insurers for this client — use the invoice link above." : "This client has no insured sessions to claim. Self-pay visits don't go on a CMS-1500."}</div>
       ) : (
         <Cms1500Toggle
           official={forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />)}

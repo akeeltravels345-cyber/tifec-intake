@@ -49,6 +49,7 @@ export async function POST(req: Request) {
         copayRate: n(body.copayRate),
         active: body.active !== false,
         claimCode: t(body.claimCode),
+        billStyle: body.billStyle === "invoice" ? "invoice" : undefined,
       });
       return NextResponse.json({ ok: true, id: saved.id });
     }

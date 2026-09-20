@@ -34,7 +34,9 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
     renderingNpi: (cid: string) => prov.renderingNpi?.[cid] ?? "",
     cptFee: (code: string) => cptCodes.find((c) => c.code === code)?.fee ?? 0,
     carrierCode: (insurerId: string) => insurers.find((i) => i.id === insurerId)?.claimCode ?? "",
+    billStyle: (insurerId: string) => (insurers.find((i) => i.id === insurerId)?.billStyle === "invoice" ? "invoice" : "claim") as "claim" | "invoice",
   };
+  const isInvoicePayer = (insurerId: string | null) => !!insurerId && insurers.find((i) => i.id === insurerId)?.billStyle === "invoice";
 
   // Two ways in:
   //   sessions=…  → claim only those specific sessions (from a queue selection)
@@ -70,14 +72,25 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
   }
 
   const blocks: { name: string; forms: ReturnType<typeof buildClaimForms> }[] = [];
+  // Invoice-style payers (e.g. Ponciana Rehab) don't go on a CMS-1500 — collect a
+  // "generate invoice" link per client × payer instead.
+  const invoiceLinks: { name: string; href: string }[] = [];
   for (const cid of order) {
     const client = await getClient(cid);
     if (!client) { skipped++; continue; }
-    const forms = buildClaimForms(client, sessionsByClient.get(cid) ?? [], resolvers);
-    if (forms.length === 0) { noClaims++; continue; }
-    blocks.push({ name: `${client.first} ${client.last}`, forms });
+    const mine = sessionsByClient.get(cid) ?? [];
+    const forms = buildClaimForms(client, mine, resolvers);
+    if (forms.length > 0) blocks.push({ name: `${client.first} ${client.last}`, forms });
+    else if (!mine.some((s) => isInvoicePayer(s.insurerId))) noClaims++;
+    // Invoice-style payers for this client, each as its own invoice link.
+    const payerIds = [...new Set(mine.filter((s) => isInvoicePayer(s.insurerId)).map((s) => s.insurerId as string))];
+    for (const pid of payerIds) {
+      const py = insurers.find((i) => i.id === pid);
+      invoiceLinks.push({ name: `${client.first} ${client.last} — ${py?.name ?? "Payer"}`, href: `/billing/clients/${cid}/invoice?type=payer&payer=${pid}` });
+    }
   }
   blocks.sort((a, b) => a.name.localeCompare(b.name));
+  invoiceLinks.sort((a, b) => a.name.localeCompare(b.name));
 
   const totalForms = blocks.reduce((t, b) => t + b.forms.length, 0);
 
@@ -103,8 +116,17 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
         </div>
       )}
 
+      {invoiceLinks.length > 0 && (
+        <div className="hcfa-warn hcfa-noprint">
+          <div style={{ marginBottom: 4 }}>These bill by invoice, not a CMS-1500 — generate each separately:</div>
+          {invoiceLinks.map((l) => (
+            <div key={l.href} style={{ marginBottom: 3 }}><Link href={l.href}>{l.name} invoice →</Link></div>
+          ))}
+        </div>
+      )}
+
       {blocks.length === 0 ? (
-        <div className="hcfa-warn hcfa-noprint">Nothing to claim for the selected clients.</div>
+        <div className="hcfa-warn hcfa-noprint">{invoiceLinks.length > 0 ? "No standard CMS-1500 claims — use the invoice links above." : "Nothing to claim for the selected clients."}</div>
       ) : (
         <Cms1500Toggle
           official={blocks.map((b) => b.forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />))}

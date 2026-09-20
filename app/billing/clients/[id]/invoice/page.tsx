@@ -12,20 +12,21 @@ export default async function InvoicePage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ sessions?: string; type?: string }>;
+  searchParams: Promise<{ sessions?: string; type?: string; payer?: string }>;
 }) {
   const { id } = await params;
-  const { sessions: sessionsParam, type } = await searchParams;
+  const { sessions: sessionsParam, type, payer } = await searchParams;
   const isCopay = type === "copay";
+  const payerId = type === "payer" ? payer : undefined;
   const user = await getBillingUser();
   if (!user) redirect(`/login?next=/billing/clients/${id}/invoice`);
 
-  const res = await resolveClientInvoice(id, user, sessionsParam, isCopay);
+  const res = await resolveClientInvoice(id, user, sessionsParam, isCopay, payerId);
   if (!res.ok) {
     if (res.status === 404) notFound();
     redirect("/billing/clients");
   }
-  const { client, inv, itemCount, hasPracticeName } = res.data;
+  const { client, inv, itemCount, hasPracticeName, isPayer } = res.data;
 
   const now = new Date();
   const printedAt = now.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -36,6 +37,7 @@ export default async function InvoicePage({
   const query = new URLSearchParams();
   if (sessionsParam) query.set("sessions", sessionsParam);
   if (isCopay) query.set("type", "copay");
+  if (payerId) { query.set("type", "payer"); query.set("payer", payerId); }
   const qs = query.toString();
 
   return (
@@ -46,14 +48,18 @@ export default async function InvoicePage({
         <div style={{ flex: 1 }} />
         {itemCount > 0 && (
           <>
-            <InvoiceEmail
-              clientId={id}
-              query={qs}
-              clientName={`${client.first} ${client.last}`}
-              clientEmail={clientEmail}
-              invoiceNo={inv.number}
-              amountDue={inv.amountDue}
-            />
+            {/* A payer invoice is billed to the facility, not the client, so the
+                "email to client" action doesn't apply — just print/save. */}
+            {!isPayer && (
+              <InvoiceEmail
+                clientId={id}
+                query={qs}
+                clientName={`${client.first} ${client.last}`}
+                clientEmail={clientEmail}
+                invoiceNo={inv.number}
+                amountDue={inv.amountDue}
+              />
+            )}
             <PrintButton label="Print / Save PDF" className="bl-cta inv-noprint" />
           </>
         )}
@@ -66,7 +72,7 @@ export default async function InvoicePage({
       )}
 
       {itemCount === 0 ? (
-        <div className="inv-bar inv-noprint">{isCopay ? "This client has no outstanding co-pays to invoice." : "This client has no self-pay sessions to invoice. Insured visits go on a CMS-1500 instead."}</div>
+        <div className="inv-bar inv-noprint">{isPayer ? "No sessions for this payer to invoice." : isCopay ? "This client has no outstanding co-pays to invoice." : "This client has no self-pay sessions to invoice. Insured visits go on a CMS-1500 instead."}</div>
       ) : (
         <Invoice inv={inv} printedAt={printedAt} />
       )}

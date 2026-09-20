@@ -64,8 +64,16 @@ export function buildInvoice(
   r: InvoiceResolvers,
   /** Self-pay (default) invoices the full fee. Pass a `portionOf` to invoice a
    *  different amount per session (e.g. the outstanding co-pay), and a
-   *  `descriptionPrefix` to label the lines. */
-  opts: { portionOf?: (s: BillingSession) => number; descriptionPrefix?: string } = {},
+   *  `descriptionPrefix` to label the lines. `number` overrides the auto number
+   *  (used for the sequential invoice-style-payer series). `billTo` overrides the
+   *  billed-to block (e.g. an invoice-style payer billed to the facility, not the
+   *  client). */
+  opts: {
+    portionOf?: (s: BillingSession) => number;
+    descriptionPrefix?: string;
+    number?: string;
+    billTo?: { name: string; lines: string[] };
+  } = {},
 ): InvoiceData {
   const portionOf = opts.portionOf ?? ((s: BillingSession) => s.totalCost);
   const ordered = [...sessions].sort((a, b) => a.dateOfService.localeCompare(b.dateOfService));
@@ -112,7 +120,7 @@ export function buildInvoice(
   const dueDate = isNaN(dueMs) ? "" : new Date(dueMs + 30 * 86400000).toISOString().slice(0, 10);
 
   return {
-    number: invoiceNumber(ordered.map((s) => s.id)),
+    number: opts.number ?? invoiceNumber(ordered.map((s) => s.id)),
     issueDate,
     dueDate,
     practice: {
@@ -122,7 +130,7 @@ export function buildInvoice(
       email: provider.email || undefined,
       website: provider.website || undefined,
     },
-    billTo: { name: `${client.last}, ${client.first}`, lines: billLines },
+    billTo: opts.billTo ?? { name: `${client.last}, ${client.first}`, lines: billLines },
     clientName: `${client.last}, ${client.first}`,
     lines,
     managingProvider,
