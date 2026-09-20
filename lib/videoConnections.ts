@@ -265,3 +265,63 @@ export async function cancelVideoLink(clinicianId: string, locationOrLink: strin
     console.error(`cancelVideoLink (${provider}) failed for ${clinicianId}`, e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// General Google Calendar sync (every appointment, not just virtual). Lets a
+// clinician who connected Google see their whole TIFEC schedule appear on their
+// Google Calendar instantly, updated/removed as bookings change.
+// ---------------------------------------------------------------------------
+export async function getGoogleConnection(clinicianId: string): Promise<VideoConnection | null> {
+  return (await listConnections(clinicianId)).find((c) => c.provider === "google") || null;
+}
+export const hasGoogleConnection = async (clinicianId: string): Promise<boolean> => !!(await getGoogleConnection(clinicianId));
+
+export interface GoogleEventArgs { eventId?: string; summary: string; description?: string; location?: string; startAtISO: string; endAtISO: string; }
+
+/** Create (no eventId) or update (eventId) a plain calendar event on the
+ *  clinician's Google Calendar. Returns the event id, or null if not connected
+ *  / on failure. Never throws. */
+export async function upsertGoogleEvent(clinicianId: string, args: GoogleEventArgs): Promise<string | null> {
+  const conn = await getGoogleConnection(clinicianId);
+  if (!conn) return null;
+  try {
+    const token = await validAccessToken(conn);
+    const body = {
+      summary: args.summary.slice(0, 250),
+      description: args.description || undefined,
+      location: args.location || undefined,
+      start: { dateTime: args.startAtISO, timeZone: "UTC" },
+      end: { dateTime: args.endAtISO, timeZone: "UTC" },
+    };
+    const url = args.eventId
+      ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(args.eventId)}`
+      : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+    const res = await fetch(url, {
+      method: args.eventId ? "PATCH" : "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Google event ${res.status}: ${await res.text()}`);
+    const j = await res.json() as { id?: string };
+    return j.id || args.eventId || null;
+  } catch (e) {
+    console.error(`upsertGoogleEvent failed for ${clinicianId}`, e);
+    return null;
+  }
+}
+
+/** Delete a calendar event on the clinician's Google Calendar. Never throws. */
+export async function deleteGoogleEvent(clinicianId: string, eventId: string): Promise<void> {
+  if (!eventId) return;
+  const conn = await getGoogleConnection(clinicianId);
+  if (!conn) return;
+  try {
+    const token = await validAccessToken(conn);
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 404 && res.status !== 410) throw new Error(`Google delete ${res.status}`);
+  } catch (e) {
+    console.error(`deleteGoogleEvent failed for ${clinicianId}`, e);
+  }
+}

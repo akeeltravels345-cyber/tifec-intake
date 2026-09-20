@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { CLINICIANS, getClinician, isBookableClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, type QuestionAnswer } from "@/lib/scheduling";
-import { createVideoLink } from "@/lib/videoConnections";
+import { createVideoLink, hasGoogleConnection, upsertGoogleEvent } from "@/lib/videoConnections";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
@@ -155,6 +155,18 @@ export async function POST(req: Request) {
   if (mode === "virtual" && !appt.locationOrLink) {
     const link = await createVideoLink(clinicianId, { topic: `TIFEC session - ${name}`, startAtISO: startAt, durationMin: type.durationMin });
     if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
+  }
+
+  // Mirror the appointment onto the clinician's Google Calendar, if connected —
+  // unless a Google Meet booking already created the event (videoEventId set).
+  if (!appt.videoEventId && await hasGoogleConnection(clinicianId)) {
+    const location = mode === "virtual" ? (appt.locationOrLink || "Online") : (appt.locationOrLink || "The Institute for Essential Care");
+    const eventId = await upsertGoogleEvent(clinicianId, {
+      summary: `${name} — ${type.name}`,
+      description: [phone ? `Phone: ${phone}` : "", email].filter(Boolean).join("\n"),
+      location, startAtISO: appt.startAt, endAtISO: appt.endAt,
+    });
+    if (eventId) appt = (await updateAppointment(appt.id, { videoEventId: eventId })) || appt;
   }
 
   // "You're booked" confirmation (the piece the done screen has always promised).

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getClinician } from "@/lib/clinicians";
 import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes, utcFromCayMinutes, getSchedulingSettings } from "@/lib/scheduling";
-import { cancelVideoLink } from "@/lib/videoConnections";
+import { cancelVideoLink, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
 import { appointmentInvite } from "@/lib/ical";
@@ -97,8 +97,10 @@ export async function POST(req: Request) {
 
   if (action === "cancel") {
     await updateAppointment(id, { status: "cancelled" } as never);
-    // Free the Zoom meeting from the clinician's account too.
+    // Free the Zoom / Meet meeting from the clinician's account too.
     if (a.mode === "virtual" && a.locationOrLink) await cancelVideoLink(a.clinicianId, a.locationOrLink, a.videoEventId || undefined);
+    // Remove the plain Google Calendar event (Meet events are handled above).
+    if (a.videoEventId && !/meet\.google\.com/i.test(a.locationOrLink || "")) await deleteGoogleEvent(a.clinicianId, a.videoEventId);
     const type = (await listAppointmentTypes()).find((t) => t.id === a.typeId);
     await sendCancelEmail({
       to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
@@ -124,6 +126,10 @@ export async function POST(req: Request) {
     await updateAppointment(id, { startAt, endAt } as never);
     if (startAt !== a.startAt) {
       const loc = a.mode === "virtual" ? a.locationOrLink : (a.locationOrLink || "The Institute for Essential Care");
+      // Move the event on the clinician's Google Calendar to the new time.
+      if (a.videoEventId) await upsertGoogleEvent(a.clinicianId, {
+        eventId: a.videoEventId, summary: `${a.clientName} — ${type?.name || "Appointment"}`, location: loc, startAtISO: startAt, endAtISO: endAt,
+      });
       await sendRescheduleEmail({
         to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
         clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(startAt),

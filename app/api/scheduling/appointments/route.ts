@@ -7,20 +7,33 @@ import {
   type Appointment,
 } from "@/lib/scheduling";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
-import { createVideoLink, cancelVideoLink } from "@/lib/videoConnections";
+import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 
 export const dynamic = "force-dynamic";
 
 // For a virtual individual appointment with no link yet, auto-create a meeting
 // on the clinician's OWN connected Zoom/Meet account. Best-effort: never blocks.
 async function attachVideo(appt: Appointment): Promise<Appointment> {
-  if (appt.kind === "block" || appt.mode !== "virtual" || appt.locationOrLink || appt.capacity > 1) return appt;
-  const link = await createVideoLink(appt.clinicianId, {
-    topic: `TIFEC session${appt.clientName ? ` - ${appt.clientName}` : ""}`,
-    startAtISO: appt.startAt, durationMin: Math.round((Date.parse(appt.endAt) - Date.parse(appt.startAt)) / 60000),
-  });
-  if (!link) return appt;
-  return (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
+  let a = appt;
+  // 1. Virtual individual appointment: auto-create a meeting on the clinician's
+  //    OWN connected Zoom/Meet account. Best-effort; never blocks.
+  if (a.kind !== "block" && a.mode === "virtual" && !a.locationOrLink && a.capacity <= 1) {
+    const link = await createVideoLink(a.clinicianId, {
+      topic: `TIFEC session${a.clientName ? ` - ${a.clientName}` : ""}`,
+      startAtISO: a.startAt, durationMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000),
+    });
+    if (link) a = (await updateAppointment(a.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || a;
+  }
+  // 2. Mirror onto the clinician's Google Calendar (any mode) if connected and
+  //    a Google Meet event didn't already create it.
+  if (a.kind !== "block" && !a.videoEventId && await hasGoogleConnection(a.clinicianId)) {
+    const location = a.mode === "virtual" ? (a.locationOrLink || "Online") : (a.locationOrLink || "The Institute for Essential Care");
+    const eventId = await upsertGoogleEvent(a.clinicianId, {
+      summary: a.clientName || "Appointment", location, startAtISO: a.startAt, endAtISO: a.endAt,
+    });
+    if (eventId) a = (await updateAppointment(a.id, { videoEventId: eventId })) || a;
+  }
+  return a;
 }
 
 // Reads and writes are scoped: a treating clinician sees and edits only their
@@ -98,8 +111,14 @@ export async function POST(req: Request) {
       const patch = all ? body : { ...body, clinicianId: me.id };
       const appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
-      // Cancelling frees the Zoom meeting from the clinician's account.
-      if (body.status === "cancelled" && appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink, appt.videoEventId || undefined);
+      // Cancelling frees the Zoom / Meet meeting and removes the Google event.
+      if (body.status === "cancelled") {
+        if (appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink, appt.videoEventId || undefined);
+        if (appt.videoEventId && !/meet\.google\.com/i.test(appt.locationOrLink || "")) await deleteGoogleEvent(appt.clinicianId, appt.videoEventId);
+      } else if ((body.startAt || body.endAt) && appt.kind !== "block" && appt.videoEventId) {
+        // A drag/edit that moved the time: keep the Google Calendar event in sync.
+        await upsertGoogleEvent(appt.clinicianId, { eventId: appt.videoEventId, summary: appt.clientName || "Appointment", startAtISO: appt.startAt, endAtISO: appt.endAt });
+      }
       // Seen -> billing session, only if the admin turned the bridge on.
       let billingSessionId: string | null = appt.billingSessionId;
       if (appt.status === "seen" && !appt.billingSessionId) {
@@ -110,9 +129,10 @@ export async function POST(req: Request) {
     if (action === "delete") {
       const id = String(body.id);
       if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
-      // Cancel the Zoom meeting too, so it isn't orphaned on the clinician's account.
+      // Cancel the meeting + remove the Google event, so nothing is orphaned.
       const existing = await getAppointment(id);
       if (existing?.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink, existing.videoEventId || undefined);
+      if (existing?.videoEventId && !/meet\.google\.com/i.test(existing.locationOrLink || "")) await deleteGoogleEvent(existing.clinicianId, existing.videoEventId);
       await deleteAppointment(id);
       return NextResponse.json({ ok: true });
     }
