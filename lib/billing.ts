@@ -218,6 +218,17 @@ const EXT_FILE = "billing-external.local.json";
 
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 
+/** True only for a Postgres "column/relation does not exist" error (SQLSTATE
+ *  42703 undefined_column, 42P01 undefined_table). Migration-tolerant writes fall
+ *  back ONLY for this — any other failure must surface, never be swallowed, so a
+ *  save can't report success while quietly dropping the field. */
+function isMissingColumn(e: unknown): boolean {
+  const code = (e as { code?: string })?.code;
+  if (code === "42703" || code === "42P01") return true;
+  const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  return /does not exist/.test(msg) && /(column|relation)/.test(msg);
+}
+
 // ============================ Insurers ======================================
 export async function listInsurers(): Promise<Insurer[]> {
   if (usePostgres) {
@@ -237,7 +248,8 @@ export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }):
         INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style)
         VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null})
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style`;
-    } catch {
+    } catch (e) {
+      if (!isMissingColumn(e)) throw e; // a real failure must surface, not silently drop bill_style
       // bill_style column not migrated yet — write without it.
       await sql`
         INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
@@ -346,7 +358,8 @@ export async function upsertCptCode(c: CptCode): Promise<CptCode> {
         INSERT INTO billing_cpt_codes (code, description, active, fee, hrs, variants)
         VALUES (${row.code}, ${row.description}, ${row.active}, ${fee ?? null}, ${hrs ?? null}, ${vjson}::jsonb)
         ON CONFLICT (code) DO UPDATE SET description = EXCLUDED.description, active = EXCLUDED.active, fee = EXCLUDED.fee, hrs = EXCLUDED.hrs, variants = EXCLUDED.variants`;
-    } catch {
+    } catch (e) {
+      if (!isMissingColumn(e)) throw e; // a real failure must surface, not silently drop variants
       // variants column not migrated yet — save the base code so nothing breaks.
       await sql`
         INSERT INTO billing_cpt_codes (code, description, active, fee, hrs)
@@ -398,7 +411,7 @@ export async function upsertClinicianSettings(s: ClinicianBillingSettings): Prom
       VALUES (${s.clinicianId}, ${s.retentionPct}, ${s.otherDeductionPct}, ${s.otherDeductionFixed}, ${s.pension ?? 0}, ${s.billerPct ?? null}, ${s.billerBasePct ?? 0}, ${s.billerCommissionApplies ?? false}, ${s.noPayout ?? false}, now())
       ON CONFLICT (clinician_id) DO UPDATE SET retention_pct = EXCLUDED.retention_pct, other_deduction_pct = EXCLUDED.other_deduction_pct, other_deduction_fixed = EXCLUDED.other_deduction_fixed, pension = EXCLUDED.pension, biller_pct = EXCLUDED.biller_pct, biller_base_pct = EXCLUDED.biller_base_pct, biller_commission_applies = EXCLUDED.biller_commission_applies, no_payout = EXCLUDED.no_payout, updated_at = now()`;
     // Guarded so it works before the pension_pct migration is run in Neon.
-    try { await sql`UPDATE billing_clinician_settings SET pension_pct = ${s.pensionPct ?? 10} WHERE clinician_id = ${s.clinicianId}`; } catch { /* column not migrated yet */ }
+    try { await sql`UPDATE billing_clinician_settings SET pension_pct = ${s.pensionPct ?? 10} WHERE clinician_id = ${s.clinicianId}`; } catch (e) { if (!isMissingColumn(e)) throw e; /* else: column not migrated yet */ }
     return s;
   }
   const all = readJson<ClinicianBillingSettings[]>(SET_FILE, []);
