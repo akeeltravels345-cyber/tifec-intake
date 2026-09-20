@@ -394,31 +394,32 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
   const text = t.join("\n").replace(/\n{3,}/g, "\n\n");
 
   const header = a.logoCid
-    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="44" style="height:44px;width:auto;display:block;margin:0 auto;" />`
+    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
     : `<div style="font-size:19px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(PRACTICE_NAME)}</div>`;
-  const introHtml = a.intro ? `<p style="font-size:15px;line-height:1.65;margin:0 0 16px;color:${BRAND_CHARCOAL};">${escapeHtml(a.intro)}</p>` : "";
+  const introHtml = a.intro ? `<p style="font-size:15px;line-height:1.65;margin:0 0 18px;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.intro)}</p>` : "";
   const rowsHtml = a.rows?.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BRAND_LINE};border-radius:10px;overflow:hidden;margin:2px 0 6px;">${a.rows.map((r, i) => `<tr style="background:${i % 2 ? "#faf8f3" : "#ffffff"};"><td style="padding:11px 16px;font-size:12.5px;letter-spacing:.02em;text-transform:uppercase;color:${BRAND_MUTED};width:34%;vertical-align:top;">${escapeHtml(r.label)}</td><td style="padding:11px 16px;font-size:14.5px;color:${BRAND_CHARCOAL};font-weight:600;">${escapeHtml(r.value)}</td></tr>`).join("")}</table>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BRAND_LINE};border-radius:12px;overflow:hidden;margin:0 0 4px;">${a.rows.map((r, i) => `<tr style="background:${i % 2 ? "#faf8f3" : "#ffffff"};"><td style="padding:12px 18px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:${BRAND_MUTED};width:42%;text-align:right;vertical-align:top;">${escapeHtml(r.label)}</td><td style="padding:12px 18px;font-size:14.5px;color:${BRAND_CHARCOAL};font-weight:600;">${escapeHtml(r.value)}</td></tr>`).join("")}</table>`
     : "";
   const buttonsHtml = a.buttons?.length
-    ? a.buttons.map((b) => `<div style="margin:12px 0;"><a href="${escapeHtml(b.url)}" style="display:inline-block;background:${INV_TEAL};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 24px;border-radius:9px;">${escapeHtml(b.label)}</a></div>`).join("")
+    ? `<div style="margin:18px 0 4px;">${a.buttons.map((b) => `<a href="${escapeHtml(b.url)}" style="display:block;background:${INV_TEAL};color:#ffffff;text-decoration:none;font-size:14.5px;font-weight:600;padding:14px 24px;border-radius:11px;text-align:center;margin:9px 0;">${escapeHtml(b.label)}</a>`).join("")}</div>`
     : "";
-  const noteHtml = a.note ? `<div style="margin:16px 0 4px;padding:12px 16px;background:#faf8f3;border-left:3px solid ${INV_TEAL};border-radius:0 8px 8px 0;font-size:13.5px;line-height:1.6;color:${BRAND_MUTED};">${escapeHtml(a.note)}</div>` : "";
-  const outroHtml = a.outro ? `<p style="font-size:14.5px;line-height:1.65;margin:16px 0 0;color:${BRAND_CHARCOAL};">${escapeHtml(a.outro)}</p>` : "";
+  const noteHtml = a.note ? `<div style="margin:18px 0 4px;padding:13px 18px;background:#faf8f3;border:1px solid ${BRAND_LINE};border-radius:11px;font-size:13px;line-height:1.6;color:${BRAND_MUTED};text-align:center;">${escapeHtml(a.note)}</div>` : "";
+  const outroHtml = a.outro ? `<p style="font-size:14.5px;line-height:1.65;margin:18px 0 0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.outro)}</p>` : "";
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:${BRAND_CREAM};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CREAM};padding:30px 12px;"><tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
       <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td align="center" style="padding:30px 40px 0;">${header}</td></tr>
-      <tr><td style="padding:22px 40px 0;"><h1 style="font-size:21px;font-weight:700;margin:0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.heading)}</h1></td></tr>
-      <tr><td style="padding:20px 40px 8px;">
-        <p style="font-size:15px;margin:0 0 14px;color:${BRAND_CHARCOAL};">${escapeHtml(greet)}</p>
+      <tr><td align="center" style="padding:34px 44px 0;">${header}</td></tr>
+      <tr><td style="padding:20px 44px 0;"><h1 style="font-size:22px;font-weight:700;margin:0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.heading)}</h1></td></tr>
+      <tr><td align="center" style="padding:0 44px;"><div style="width:40px;height:3px;border-radius:3px;background:${INV_GOLD};margin:14px auto 0;">&nbsp;</div></td></tr>
+      <tr><td style="padding:20px 44px 10px;">
+        <p style="font-size:15px;margin:0 0 16px;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(greet)}</p>
         ${introHtml}${rowsHtml}${buttonsHtml}${noteHtml}${outroHtml}
-        <p style="font-size:14.5px;line-height:1.65;margin:22px 0 0;color:${BRAND_CHARCOAL};">Warmly,<br>${escapeHtml(PRACTICE_NAME)}</p>
+        <p style="font-size:14.5px;line-height:1.6;margin:22px 0 0;color:${BRAND_CHARCOAL};text-align:center;">Warmly,<br><span style="font-weight:600;">${escapeHtml(PRACTICE_NAME)}</span></p>
       </td></tr>
-      <tr><td style="padding:20px 40px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};text-align:center;">
+      <tr><td style="padding:22px 44px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};text-align:center;">
         <div style="font-size:13px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:3px;">${escapeHtml(PRACTICE_NAME)}</div>
         <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;">This email is confidential and intended only for the named client.</div>
       </td></tr>

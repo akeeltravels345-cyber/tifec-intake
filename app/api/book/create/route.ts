@@ -46,9 +46,9 @@ async function sendBookingConfirmation(args: {
   buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
   try {
     await sendBrandedEmail(args.to, "You're booked with The Institute for Essential Care", {
-      heading: "You're booked",
+      heading: "You're booked in! 🎉",
       greetingName: firstNameOf(args.clientName),
-      intro: "Here are the details of your appointment:",
+      intro: "We can't wait to see you. Here are the details of your appointment:",
       rows: [
         { label: "Service", value: args.serviceName },
         { label: "Clinician", value: args.clinicianName },
