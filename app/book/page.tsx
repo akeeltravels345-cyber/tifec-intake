@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
-import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
+import { isSystemAdmin, CLINICIANS, publicBookableClinicians, isBookableClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, getSchedulingSettings } from "@/lib/scheduling";
 import { listInsurers, getPracticeConfig } from "@/lib/billing";
 import BookingFlow from "@/components/booking/BookingFlow";
@@ -8,13 +8,18 @@ import BookingFlow from "@/components/booking/BookingFlow";
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
-const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
 
 export default async function BookPage({ searchParams }: { searchParams: Promise<{ preview?: string; type?: string; clinician?: string }> }) {
   const sp = await searchParams;
   // Prototype: unlisted. Visible only with the preview token, or to the admin.
   const me = await getCurrentClinician();
   if (sp.preview !== PREVIEW && !(me && isSystemAdmin(me))) notFound();
+
+  // Public picker + "any available". A private clinician (Nick) is added only
+  // when reached by a direct ?clinician=<id> link, so he stays off the picker.
+  const publicList = publicBookableClinicians();
+  const requested = sp.clinician ? CLINICIANS.find((c) => c.id === sp.clinician && isBookableClinician(c)) : undefined;
+  const bookable = requested && !publicList.some((c) => c.id === requested.id) ? [...publicList, requested] : publicList;
 
   const [types, insurers, cfg, settings] = await Promise.all([listAppointmentTypes(), listInsurers(), getPracticeConfig(), getSchedulingSettings()]);
 

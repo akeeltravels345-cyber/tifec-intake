@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { CLINICIANS, getClinician } from "@/lib/clinicians";
+import { CLINICIANS, getClinician, isBookableClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, availableSlots, createAppointment, updateAppointment, utcFromCayMinutes, type QuestionAnswer } from "@/lib/scheduling";
 import { createVideoLink } from "@/lib/videoConnections";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
@@ -10,7 +10,7 @@ import { caymanWhen } from "@/lib/caymanTime";
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
-const bookable = () => CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
+const canBook = (id: string) => { const c = CLINICIANS.find((x) => x.id === id); return !!c && isBookableClinician(c); };
 const clean = (v: unknown, cap = 200) => String(v ?? "").trim().slice(0, cap);
 const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
   const type = (await listAppointmentTypes()).find((t) => t.id === typeId && t.active);
   if (!type) return NextResponse.json({ error: "That service is unavailable." }, { status: 404 });
-  if (!bookable().some((c) => c.id === clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
+  if (!canBook(clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
 
   // Re-check the slot is still free, so two people can't grab the same time.
   const free = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);

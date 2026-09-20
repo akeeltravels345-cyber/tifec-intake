@@ -58,6 +58,10 @@ export interface Clinician {
    *  of the paid/bookable clinician lists, but they CAN be assigned clients as a
    *  treating clinician (no-charge records) so they can keep session notes. */
   practicum?: boolean;
+  /** Bookable, but hidden from the public clinician picker and the "any
+   *  available" pool. Reachable only via a direct link (/book?clinician=<id>),
+   *  e.g. Nick for his practicum clients. */
+  privateBooking?: boolean;
   /** Reachable in the team area as this contact. Clinicians message and assign
    *  tickets to a ROLE, so this is what puts a real person behind it. */
   contact?: ContactRole;
@@ -278,6 +282,7 @@ export const CLINICIANS: Clinician[] = [
     billingBeta: true, // BETA billing access
     contact: "biller",
     practicum: true, // biller who also treats practicum (unpaid) clients — assignable as a treating clinician for session notes
+    privateBooking: true, // bookable for his practicum clients via a direct link, hidden from the public picker
     name: "Nick O'Connor",
     credentials: "Training Clinician (Practicum)",
     email: "tifec.billing@gmail.com",
@@ -398,6 +403,13 @@ export const CLINICIANS: Clinician[] = [
 export function getClinician(id: string): Clinician | undefined {
   return CLINICIANS.find((c) => c.id === id);
 }
+
+/** Shown in the public booking picker and included in the "any available" pool. */
+export const isPublicBookable = (c: Clinician): boolean => !c.intakeHidden && c.contact !== "biller";
+/** Can be booked at all — public clinicians plus private-link-only ones (Nick). */
+export const isBookableClinician = (c: Clinician): boolean => isPublicBookable(c) || !!c.privateBooking;
+/** The public list for the booking picker. */
+export const publicBookableClinicians = (): Clinician[] => CLINICIANS.filter(isPublicBookable);
 
 /** The system/builder administrator (contact === "admin", e.g. Akeel) — the
  *  only admin who gets the developer/system tools (data cleanup, email log,

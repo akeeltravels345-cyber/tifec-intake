@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CLINICIANS } from "@/lib/clinicians";
+import { CLINICIANS, isPublicBookable, isBookableClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, availableSlots, availableSlotsAny } from "@/lib/scheduling";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 // Prototype gate: the public booking flow is unlisted and requires a preview
 // token, so no real client can reach it until it's ready.
 const PREVIEW = "peek";
-const bookable = () => CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
 
 export async function GET(req: Request) {
   const p = new URL(req.url).searchParams;
@@ -21,11 +20,14 @@ export async function GET(req: Request) {
   const type = (await listAppointmentTypes()).find((t) => t.id === typeId && t.active);
   if (!type) return NextResponse.json({ error: "Unknown service." }, { status: 404 });
 
-  const ids = bookable().map((c) => c.id);
   if (clinicianId !== "any") {
-    if (!ids.includes(clinicianId)) return NextResponse.json({ error: "Unknown clinician." }, { status: 404 });
+    // A specific clinician may be private (Nick, reached by direct link).
+    const c = CLINICIANS.find((x) => x.id === clinicianId);
+    if (!c || !isBookableClinician(c)) return NextResponse.json({ error: "Unknown clinician." }, { status: 404 });
     const mins = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
     return NextResponse.json({ slots: mins.map((minute) => ({ minute, clinicianId })) });
   }
+  // "Any available" only ever draws from the public pool (never a private one).
+  const ids = CLINICIANS.filter(isPublicBookable).map((c) => c.id);
   return NextResponse.json({ slots: await availableSlotsAny(ids, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin) });
 }
