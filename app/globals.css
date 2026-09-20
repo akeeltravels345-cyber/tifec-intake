@@ -3239,6 +3239,13 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .rt-editor i, .rt-editor em { font-style: italic; }
 .rt-editor u { text-decoration: underline; }
 .rt-editor s, .rt-editor strike, .rt-editor del { text-decoration: line-through; opacity: .85; }
+/* Emoji picker in the compose toolbar. */
+.rt-sep { width: 1px; align-self: stretch; background: var(--line, #d9e1e5); margin: 2px 3px; }
+.rt-emojiwrap { position: relative; display: inline-flex; }
+.rt-emojibtn { font-size: 15px; }
+.rt-emojipop { position: absolute; top: calc(100% + 5px); left: 0; z-index: 30; display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; padding: 7px; width: 296px; max-width: 78vw; background: var(--surface); border: 1px solid var(--line, #d9e1e5); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.16); }
+.rt-emoji { border: 0; background: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 4px; border-radius: 6px; }
+.rt-emoji:hover { background: var(--brand-tint); }
 /* Formatted ticket text keeps its emphasis but no jarring colours. */
 .tm-nb strong { font-weight: 700; }
 .tm-nb em { font-style: italic; }
