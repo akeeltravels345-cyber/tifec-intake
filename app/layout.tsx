@@ -6,10 +6,15 @@ export const metadata: Metadata = {
   description: "The Institute for Essential Care: secure scheduling, client intake, and billing.",
 };
 
+// Set the theme (Auto/Light/Dark) on <html> before first paint so there's no
+// flash. "Auto" resolves to the device's prefers-color-scheme. See ThemeToggle.
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('tifec-theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

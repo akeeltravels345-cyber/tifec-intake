@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --surface: #ffffff; --surface-rgb: 255 255 255;
   --surface-2: #f4f7f6; --red-bg: #f6e4e2; --line-soft: #eef1f2;
   --indigo: #2E3192; --indigo-soft: #4B4FA6;
@@ -3138,6 +3138,13 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 
 .bo-acctlink { display: block; margin-top: 8px; padding-left: 2px; font-size: 12px; color: var(--muted); text-decoration: none; }
 .bo-acctlink:hover { color: var(--indigo); }
+/* Theme (Auto / Light / Dark) switcher in the sidebar footer. */
+.th-toggle { margin-top: 12px; }
+.th-lab { display: block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 0 0 5px 2px; }
+.th-seg { display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--edge); border-radius: 9px; padding: 3px; }
+.th-opt { flex: 1; border: 0; background: none; border-radius: 6px; padding: 5px 4px; font: 600 11.5px "Open Sans", sans-serif; color: var(--muted); cursor: pointer; }
+.th-opt:hover { color: var(--ink); }
+.th-opt.on { background: var(--surface); color: var(--indigo); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 .dm-iconbtn { background: none; border: 1px solid var(--edge, #ECE6DA); border-radius: 10px; padding: 8px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; }
 .dm-iconbtn:hover { color: var(--indigo); border-color: var(--indigo); }
 /* Messages shortcut in the top bar, with an unread badge. */
@@ -4468,58 +4475,55 @@ body:has(.bk-page) .brandbar { display: none; }
    Tokens flip; hardcoded surfaces already point at --surface, and the
    accent/ink/muted/edge tokens carry the rest.
    ===================================================================== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #1e232b; --surface-rgb: 30 35 43; --surface-2: #252b34; --red-bg: #2c211e; --line-soft: #262c34; --card: #1e232b; --cream: #1e232b;
-    --bg: #16191f; --paper: #16191f; --panel: #252b34;
-    --ink: #d7dce4; --charcoal: #d7dce4; --muted: #8f99a6; --faint: #69727e;
-    --line: #2f353f; --edge: #2f353f; --hair: #262c34;
-    --brand: #9297dd; --brand-dark: #a7abe6; --brand-tint: #23283a; --brand-glow: rgba(146,151,221,.20);
-    --indigo: #9297dd; --indigo-soft: #a7abe6;
-    --teal: #57ada8; --teal-deep: #6cc2bd; --teal-dark: #6cc2bd;
-    --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
-    --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --danger: #df8b7e; --ok: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
-  }
-  .biz {
-    --surface: #1e232b; --paper: #16191f; --panel: #252b34;
-    --ink: #d7dce4; --muted: #8f99a6; --faint: #69727e;
-    --edge: #2f353f; --hair: #262c34;
-    --indigo: #9297dd; --indigo-soft: #a7abe6; --teal: #57ada8; --teal-deep: #6cc2bd;
-    --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
-    --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
-    background: var(--paper);
-  }
-  html, body { background: var(--bg); }
-  body:has(.biz) { background: var(--paper); }
-}
+  :root[data-theme="dark"] {
+      color-scheme: dark;
+      --surface: #1e232b; --surface-rgb: 30 35 43; --surface-2: #252b34; --red-bg: #2c211e; --line-soft: #262c34; --card: #1e232b; --cream: #1e232b;
+      --bg: #16191f; --paper: #16191f; --panel: #252b34;
+      --ink: #d7dce4; --charcoal: #d7dce4; --muted: #8f99a6; --faint: #69727e;
+      --line: #2f353f; --edge: #2f353f; --hair: #262c34;
+      --brand: #9297dd; --brand-dark: #a7abe6; --brand-tint: #23283a; --brand-glow: rgba(146,151,221,.20);
+      --indigo: #9297dd; --indigo-soft: #a7abe6;
+      --teal: #57ada8; --teal-deep: #6cc2bd; --teal-dark: #6cc2bd;
+      --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
+      --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --danger: #df8b7e; --ok: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
+    }
+    :root[data-theme="dark"] .biz {
+      --surface: #1e232b; --paper: #16191f; --panel: #252b34;
+      --ink: #d7dce4; --muted: #8f99a6; --faint: #69727e;
+      --edge: #2f353f; --hair: #262c34;
+      --indigo: #9297dd; --indigo-soft: #a7abe6; --teal: #57ada8; --teal-deep: #6cc2bd;
+      --amber: #d6a45f; --amber-bg: #2a2413; --amber-line: #43381c;
+      --neg: #df8b7e; --pos: #6fbb8d; --green: #6fbb8d; --neg-bg: #2c211e; --pos-bg: #1b2620;
+      background: var(--paper);
+    }
+    :root[data-theme="dark"], :root[data-theme="dark"] body { background: var(--bg); }
+    :root[data-theme="dark"] body:has(.biz) { background: var(--paper); }
 
 /* Night mode — colored chips, pills and banners: dark-tint grounds paired with
    light, legible text (the light-mode versions used a pale tint + dark text). */
-@media (prefers-color-scheme: dark) {
-  .cd-stage.self { color: var(--muted); }
-  .cd-stage.logged, .cd-stage.paid { color: var(--pos); }
-  .cd-stage.billed { color: var(--amber); }
-  .cd-ref.none { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber); }
-  .cd-ref.valid { background: var(--pos-bg); border-color: #2b4638; color: var(--pos); }
-  .cd-ref.expiring, .cd-refprompt.expiring { background: var(--amber-bg); border-color: #473a20; color: var(--amber); }
-  .cd-ref.expired, .cd-refprompt.expired { background: var(--neg-bg); border-color: #4a342d; color: var(--neg); }
-  .cd-dockind { color: var(--muted); }
-  .cd-dockind.referral { background: var(--pos-bg); color: var(--pos); }
-  .cd-dockind.intake { background: var(--brand-tint); color: var(--indigo); }
-  .su-tag { background: var(--brand-tint); color: var(--teal-deep); }
-  .biz .icd-chip-code { background: var(--brand-tint); color: var(--indigo); }
-  .cd-danger { color: var(--neg); border-color: #4a342d; }
-  .cd-refprompt-btn:hover { background: rgba(255,255,255,.06); }
-  /* Worklist keeps its own tint palette — flip its backgrounds and text for dark. */
-  .wl { --wl-amber-bg: #2e2712; --wl-amber-tx: var(--amber); --wl-amber: var(--amber);
-        --wl-green-bg: #17281f; --wl-green: var(--pos);
-        --wl-indigo-bg: #23283a; --wl-grey: var(--muted); }
-  .wl-coach { color: var(--muted); border-color: var(--edge); }
-  .bo-illus { color: var(--indigo); }
-  /* Hovers that lightened to near-white in light mode: keep them subtle on dark. */
-  .tm-tab:hover { background: var(--panel); }
-  /* Text that was dark on a (now-dark) surface: lift it to a legible token. */
-  .tm-nb { color: var(--ink); }
-  .bq-refflag { color: var(--neg); }
-  .biz .bo-stripe-delta { background: #2f6b52; color: #bfe9d4; }
-}
+  :root[data-theme="dark"] .cd-stage.self { color: var(--muted); }
+    :root[data-theme="dark"] .cd-stage.logged, :root[data-theme="dark"] .cd-stage.paid { color: var(--pos); }
+    :root[data-theme="dark"] .cd-stage.billed { color: var(--amber); }
+    :root[data-theme="dark"] .cd-ref.none { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber); }
+    :root[data-theme="dark"] .cd-ref.valid { background: var(--pos-bg); border-color: #2b4638; color: var(--pos); }
+    :root[data-theme="dark"] .cd-ref.expiring, :root[data-theme="dark"] .cd-refprompt.expiring { background: var(--amber-bg); border-color: #473a20; color: var(--amber); }
+    :root[data-theme="dark"] .cd-ref.expired, :root[data-theme="dark"] .cd-refprompt.expired { background: var(--neg-bg); border-color: #4a342d; color: var(--neg); }
+    :root[data-theme="dark"] .cd-dockind { color: var(--muted); }
+    :root[data-theme="dark"] .cd-dockind.referral { background: var(--pos-bg); color: var(--pos); }
+    :root[data-theme="dark"] .cd-dockind.intake { background: var(--brand-tint); color: var(--indigo); }
+    :root[data-theme="dark"] .su-tag { background: var(--brand-tint); color: var(--teal-deep); }
+    :root[data-theme="dark"] .biz .icd-chip-code { background: var(--brand-tint); color: var(--indigo); }
+    :root[data-theme="dark"] .cd-danger { color: var(--neg); border-color: #4a342d; }
+    :root[data-theme="dark"] .cd-refprompt-btn:hover { background: rgba(255,255,255,.06); }
+    /* Worklist keeps its own tint palette — flip its backgrounds and text for dark. */
+    :root[data-theme="dark"] .wl { --wl-amber-bg: #2e2712; --wl-amber-tx: var(--amber); --wl-amber: var(--amber);
+          --wl-green-bg: #17281f; --wl-green: var(--pos);
+          --wl-indigo-bg: #23283a; --wl-grey: var(--muted); }
+    :root[data-theme="dark"] .wl-coach { color: var(--muted); border-color: var(--edge); }
+    :root[data-theme="dark"] .bo-illus { color: var(--indigo); }
+    /* Hovers that lightened to near-white in light mode: keep them subtle on dark. */
+    :root[data-theme="dark"] .tm-tab:hover { background: var(--panel); }
+    /* Text that was dark on a (now-dark) surface: lift it to a legible token. */
+    :root[data-theme="dark"] .tm-nb { color: var(--ink); }
+    :root[data-theme="dark"] .bq-refflag { color: var(--neg); }
+    :root[data-theme="dark"] .biz .bo-stripe-delta { background: #2f6b52; color: #bfe9d4; }
