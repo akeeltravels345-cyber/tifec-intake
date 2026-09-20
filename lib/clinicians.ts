@@ -395,8 +395,9 @@ export const CLINICIANS: Clinician[] = [
     email: "test-clinician@caymanessentialcare.com",
     forms: ["individual"],
     extraSections: [],
-    intakeHidden: true, // keeps it out of booking, intake, client lists and billing rosters
-    test: true,         // opens the schedule + video-connection gates for it
+    intakeHidden: true,   // keeps it out of the public picker, intake, client lists and billing rosters
+    test: true,           // opens the schedule + video-connection gates for it
+    privateBooking: true, // allow booking it by direct link (for end-to-end calendar testing)
   },
 ];
 
