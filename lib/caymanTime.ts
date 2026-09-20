@@ -26,3 +26,12 @@ export function caymanYearMonth(d: Date = new Date()): { year: number; month: nu
   const { year, month } = caymanParts(d);
   return { year, month };
 }
+
+/** A friendly Cayman-local date + time for a UTC instant, for client emails —
+ *  e.g. "Friday, 18 September 2026 at 10:30 AM (Cayman time)". */
+export function caymanWhen(iso: string): string {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("en-GB", { timeZone: CAYMAN_TZ, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
+  const time = new Intl.DateTimeFormat("en-US", { timeZone: CAYMAN_TZ, hour: "numeric", minute: "2-digit" }).format(d);
+  return `${date} at ${time} (Cayman time)`;
+}

@@ -2,10 +2,43 @@ import { NextResponse } from "next/server";
 import { getClinician } from "@/lib/clinicians";
 import { getAppointment, updateAppointment, availableSlots, listAppointmentTypes, utcFromCayMinutes, getSchedulingSettings } from "@/lib/scheduling";
 import { cancelVideoLink } from "@/lib/videoConnections";
+import { sendClientEmail } from "@/lib/email";
+import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
 
 const PREVIEW = "peek";
+const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
+
+// Confirm a cancellation to the client. Best-effort; never blocks the change.
+async function sendCancelEmail(to: string, clientName: string, serviceName: string, whenText: string): Promise<void> {
+  if (!to) return;
+  const text =
+    `Hi ${firstNameOf(clientName)},\n\n` +
+    `Your appointment has been cancelled:\n\n` +
+    `Service:  ${serviceName}\n` +
+    `Was:      ${whenText}\n\n` +
+    `If this was a mistake, or you'd like to rebook, just visit our booking page or reply to this email and we'll be glad to help.\n\n` +
+    `Warmly,\nThe Institute for Essential Care`;
+  try { await sendClientEmail(to, "Your appointment has been cancelled", text); }
+  catch { /* never block the change on email */ }
+}
+
+// Confirm a reschedule to the client. Best-effort; never blocks the change.
+async function sendRescheduleEmail(to: string, clientName: string, serviceName: string, clinicianName: string, whenText: string): Promise<void> {
+  if (!to) return;
+  const text =
+    `Hi ${firstNameOf(clientName)},\n\n` +
+    `Your appointment has been moved. Here are the new details:\n\n` +
+    `Service:     ${serviceName}\n` +
+    `Clinician:   ${clinicianName}\n` +
+    `New time:    ${whenText}\n\n` +
+    `Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email.\n\n` +
+    `We look forward to seeing you.\n\n` +
+    `Warmly,\nThe Institute for Essential Care`;
+  try { await sendClientEmail(to, "Your appointment has been rescheduled", text); }
+  catch { /* never block the change on email */ }
+}
 
 async function summarize(id: string) {
   const a = await getAppointment(id);
@@ -51,6 +84,8 @@ export async function POST(req: Request) {
     await updateAppointment(id, { status: "cancelled" } as never);
     // Free the Zoom meeting from the clinician's account too.
     if (a.mode === "virtual" && a.locationOrLink) await cancelVideoLink(a.clinicianId, a.locationOrLink, a.videoEventId || undefined);
+    const type = (await listAppointmentTypes()).find((t) => t.id === a.typeId);
+    await sendCancelEmail(a.clientEmail, a.clientName, type?.name || "Appointment", caymanWhen(a.startAt));
     return NextResponse.json({ ok: true, cancelled: true });
   }
 
@@ -68,6 +103,9 @@ export async function POST(req: Request) {
     }
     const endAt = utcFromCayMinutes(date, minute + dur);
     await updateAppointment(id, { startAt, endAt } as never);
+    if (startAt !== a.startAt) {
+      await sendRescheduleEmail(a.clientEmail, a.clientName, type?.name || "Appointment", getClinician(a.clinicianId)?.name || "your clinician", caymanWhen(startAt));
+    }
     return NextResponse.json({ ok: true, appointment: await summarize(id) });
   }
 

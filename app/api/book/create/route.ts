@@ -5,6 +5,7 @@ import { listAppointmentTypes, availableSlots, createAppointment, updateAppointm
 import { createVideoLink } from "@/lib/videoConnections";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { sendClientEmail } from "@/lib/email";
+import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +30,6 @@ async function sendIntakeInvite(args: {
     `Warmly,\nThe Institute for Essential Care`;
   try { await sendClientEmail(args.to, "Your intake forms for The Institute for Essential Care", text); }
   catch { /* never block a booking on email */ }
-}
-
-// Cayman is a fixed UTC-5 (no DST), so shift the instant and read it as UTC.
-const CAY_OFFSET_MS = 5 * 3600 * 1000;
-function caymanWhen(iso: string): string {
-  const d = new Date(Date.parse(iso) - CAY_OFFSET_MS);
-  const date = d.toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const time = d.toLocaleTimeString("en-US", { timeZone: "UTC", hour: "numeric", minute: "2-digit" });
-  return `${date} at ${time} (Cayman time)`;
 }
 
 // "You're booked" confirmation, sent to the client on a successful booking.
