@@ -31,6 +31,42 @@ async function sendIntakeInvite(args: {
   catch { /* never block a booking on email */ }
 }
 
+// Cayman is a fixed UTC-5 (no DST), so shift the instant and read it as UTC.
+const CAY_OFFSET_MS = 5 * 3600 * 1000;
+function caymanWhen(iso: string): string {
+  const d = new Date(Date.parse(iso) - CAY_OFFSET_MS);
+  const date = d.toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { timeZone: "UTC", hour: "numeric", minute: "2-digit" });
+  return `${date} at ${time} (Cayman time)`;
+}
+
+// "You're booked" confirmation, sent to the client on a successful booking.
+async function sendBookingConfirmation(args: {
+  to: string; clientName: string; serviceName: string; clinicianName: string;
+  whenText: string; mode: string; locationOrLink: string; manageUrl: string; intakeForms: string[];
+}): Promise<void> {
+  const isLink = /^https?:\/\//.test(args.locationOrLink);
+  const where = args.mode === "virtual"
+    ? (isLink ? `Video link:  ${args.locationOrLink}` : "Location:    Online (your video link will follow by email)")
+    : `Location:    ${args.locationOrLink || "The Institute for Essential Care"}`;
+  const intakeLine = args.intakeForms.length
+    ? `\nWe've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.\n`
+    : "";
+  const text =
+    `Hi ${firstNameOf(args.clientName)},\n\n` +
+    `You're booked. Here are the details:\n\n` +
+    `Service:     ${args.serviceName}\n` +
+    `Clinician:   ${args.clinicianName}\n` +
+    `When:        ${args.whenText}\n` +
+    `${where}\n` +
+    intakeLine +
+    `\nNeed to change or cancel? Manage your booking here:\n${args.manageUrl}\n\n` +
+    `We look forward to seeing you.\n\n` +
+    `Warmly,\nThe Institute for Essential Care`;
+  try { await sendClientEmail(args.to, "You're booked with The Institute for Essential Care", text); }
+  catch { /* never block a booking on email */ }
+}
+
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
@@ -91,24 +127,32 @@ export async function POST(req: Request) {
     notes: [phone ? `Phone: ${phone}` : "", clean(body.notes, 500)].filter(Boolean).join(" · "),
   } as never);
 
+  const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+  const clinicianName = getClinician(clinicianId)?.name || "your clinician";
+
   // Auto-email the outstanding intake link(s) to a new (or not-yet-completed)
   // client. One couple id ties both partners' couples submissions together.
   if (needsIntake) {
-    const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
     const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
     const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId)}` }));
-    await sendIntakeInvite({
-      origin, to: email, clientName: name, clinicianId,
-      clinicianName: getClinician(clinicianId)?.name || "your clinician", forms,
-    });
+    await sendIntakeInvite({ origin, to: email, clientName: name, clinicianId, clinicianName, forms });
   }
 
   // Auto video link for a virtual booking, on the clinician's own connected
-  // account (best-effort; never blocks).
+  // account (best-effort; never blocks). Done before the confirmation so the
+  // join link can be included in it.
   if (mode === "virtual" && !appt.locationOrLink) {
     const link = await createVideoLink(clinicianId, { topic: `TIFEC session - ${name}`, startAtISO: startAt, durationMin: type.durationMin });
     if (link) appt = (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
   }
+
+  // "You're booked" confirmation (the piece the done screen has always promised).
+  await sendBookingConfirmation({
+    to: email, clientName: name, serviceName: type.name, clinicianName,
+    whenText: caymanWhen(appt.startAt), mode, locationOrLink: appt.locationOrLink,
+    manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,
+    intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
+  });
 
   return NextResponse.json({
     ok: true,
