@@ -26,11 +26,12 @@ const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase().replace(/\s
  *  A match is an exact normalized name, or (when both carry a DOB) the same DOB
  *  plus a shared first/last name — so "Ada Rivers" and "Ada Sample-Rivers" still
  *  connect when the birth date agrees. */
-export async function findIntakeForClient(first: string, last: string, dob?: string): Promise<LinkedIntake[]> {
+export async function findIntakeForClient(first: string, last: string, dob?: string, email?: string): Promise<LinkedIntake[]> {
   let rows;
   try { rows = await listSubmissions(); } catch { return []; }
   const target = norm(`${first} ${last}`);
   const firstN = norm(first), lastN = norm(last);
+  const emailN = email ? norm(email) : "";
   const out: LinkedIntake[] = [];
 
   for (const r of rows) {
@@ -40,13 +41,16 @@ export async function findIntakeForClient(first: string, last: string, dob?: str
     if (names.length === 0) continue;
     const subDob = a.dob ? String(a.dob) : undefined;
 
-    const hit = names.some((n) => {
+    const nameHit = names.some((n) => {
       const nn = norm(n);
       if (nn === target) return true;
       if (dob && subDob && dob === subDob && (nn.includes(lastN) || nn.includes(firstN))) return true;
       return false;
     });
-    if (!hit) continue;
+    // Email is a strong identity signal: a returning client whose name changed
+    // (typo, maiden -> married) still matches when the email agrees.
+    const emailHit = !!emailN && [a.email, a.his_email, a.hers_email].some((e) => e && norm(String(e)) === emailN);
+    if (!nameHit && !emailHit) continue;
 
     out.push({
       token: r.token,

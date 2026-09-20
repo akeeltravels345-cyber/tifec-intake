@@ -17,6 +17,7 @@ ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS attendees  jsonb   
 ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS answers    jsonb   NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS video_event_id text;
 ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS intake_reminder_at text;
+ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS couple_id text;
 
 -- Waitlist
 CREATE TABLE IF NOT EXISTS scheduling_waitlist (

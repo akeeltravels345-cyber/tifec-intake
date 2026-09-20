@@ -60,9 +60,11 @@ export interface IntakeAssessment {
   needsIntake: boolean;
 }
 
-/** Assess a client's intake for a service by name: which forms are required,
- *  which are already on file, and whether anything is still outstanding. */
-export async function assessClientIntake(clientName: string, typeName: string): Promise<IntakeAssessment> {
+/** Assess a client's intake for a service by name (and email, when given):
+ *  which forms are required, which are already on file, and whether anything is
+ *  still outstanding. Matching on email as well as name means a returning client
+ *  whose name changed slightly is still recognised. */
+export async function assessClientIntake(clientName: string, typeName: string, email?: string): Promise<IntakeAssessment> {
   const requiredForms = requiredIntakeForms(typeName);
   if (requiredForms.length === 0) {
     return { requiredForms, submittedForms: [], missingForms: [], status: "not_required", needsIntake: false };
@@ -70,7 +72,7 @@ export async function assessClientIntake(clientName: string, typeName: string): 
   const { first, last } = splitName(clientName);
   let submittedForms: FormTemplateKey[] = [];
   try {
-    const hits = await findIntakeForClient(first, last);
+    const hits = await findIntakeForClient(first, last, undefined, email);
     submittedForms = [...new Set(hits.map((h) => h.formKey))];
   } catch { /* nothing on file if the store is unreachable */ }
   const missingForms = requiredForms.filter((f) => !submittedForms.includes(f));

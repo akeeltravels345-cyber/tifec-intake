@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
     const type = types.find((t) => t.id === a.typeId);
     if (!type) continue;
-    const assess = await assessClientIntake(a.clientName, type.name);
+    const assess = await assessClientIntake(a.clientName, type.name, a.clientEmail);
     if (!assess.needsIntake) {
       // They completed it since booking — keep the record honest.
       await updateAppointment(a.id, { intakeStatus: "received" } as never);
@@ -52,7 +52,11 @@ export async function GET(req: Request) {
     }
     if (!a.clientEmail) { skipped++; continue; }
 
-    const coupleId = assess.missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
+    // Reuse the couple id stored at booking so the reminder link matches the
+    // original invite; fall back to a fresh one only if it wasn't stored.
+    const coupleId = assess.missingForms.includes("couples")
+      ? (a.coupleId || randomBytes(6).toString("hex"))
+      : undefined;
     await sendBrandedEmail(a.clientEmail, "Reminder: please complete your intake form", {
       heading: "A quick reminder",
       greetingName: a.clientName.split(/\s+/)[0] || undefined,

@@ -413,7 +413,7 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
       <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td align="center" style="padding:34px 44px 0;">${header}</td></tr>
       <tr><td style="padding:20px 44px 0;"><h1 style="font-size:22px;font-weight:700;margin:0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.heading)}</h1></td></tr>
-      <tr><td align="center" style="padding:0 44px;"><div style="width:40px;height:3px;border-radius:3px;background:${INV_GOLD};margin:14px auto 0;">&nbsp;</div></td></tr>
+      <tr><td align="center" style="padding:14px 44px 0;"><table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td width="44" height="3" style="width:44px;height:3px;background:${INV_GOLD};border-radius:3px;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td></tr></table></td></tr>
       <tr><td style="padding:20px 44px 10px;">
         <p style="font-size:15px;margin:0 0 16px;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(greet)}</p>
         ${introHtml}${rowsHtml}${buttonsHtml}${noteHtml}${outroHtml}

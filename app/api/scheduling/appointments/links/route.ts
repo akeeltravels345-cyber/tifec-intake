@@ -47,7 +47,7 @@ export async function GET(req: Request) {
   let intakeCount = 0;
   let submitted: string[] = [];
   try {
-    let hits = await findIntakeForClient(first, last);
+    let hits = await findIntakeForClient(first, last, undefined, appt.clientEmail);
     if (!intakeSeesAll) hits = hits.filter((h) => h.clinicianId === me.id);
     intakeCount = hits.length;
     submitted = [...new Set(hits.map((h) => h.formKey))];

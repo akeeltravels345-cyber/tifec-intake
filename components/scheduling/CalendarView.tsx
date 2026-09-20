@@ -322,6 +322,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                           </>
                         ) : (
                           <>
+                            {a.intakeStatus === "pending" && <span className="cal-intake" title="Intake outstanding" />}
                             <div className="cal-appt-n"><b>{a.clientName || service || "Appointment"}</b>{title ? `: ${title}` : ""}</div>
                             <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{timeRange}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>
                           </>

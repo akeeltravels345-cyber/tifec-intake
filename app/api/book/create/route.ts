@@ -111,18 +111,21 @@ export async function POST(req: Request) {
   // get the couples intake; other services get General + DSM-5; the free
   // consultation needs none. If the client tells us they're new, treat every
   // required form as outstanding even if a same-name match exists.
-  const assessment = await assessClientIntake(name, type.name);
+  const assessment = await assessClientIntake(name, type.name, email);
   const firstVisit = body.firstVisit === true;
   const missingForms = firstVisit && assessment.requiredForms.length > 0 ? assessment.requiredForms : assessment.missingForms;
   const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
   const intakeStatus = assessment.requiredForms.length === 0 ? "not_required" : (needsIntake ? "pending" : "received");
+  // One couple id, stored on the appointment, so the invite and any later
+  // reminder share the same link and both partners' submissions group together.
+  const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;
 
   let appt = await createAppointment({
     kind: "appointment", clientName: name, clientEmail: email, clinicianId, typeId: type.id,
     startAt, endAt, mode, status: "booked", source: "client",
     insurancePath: path, insurerId: path === "insurance" ? clean(body.insurerId, 64) || null : null,
     policyNo: path === "insurance" ? clean(body.policyNo, 60) : "",
-    intakeStatus,
+    intakeStatus, coupleId,
     answers,
     notes: [phone ? `Phone: ${phone}` : "", clean(body.notes, 500)].filter(Boolean).join(" · "),
   } as never);
@@ -133,8 +136,7 @@ export async function POST(req: Request) {
   // Auto-email the outstanding intake link(s) to a new (or not-yet-completed)
   // client. One couple id ties both partners' couples submissions together.
   if (needsIntake) {
-    const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : undefined;
-    const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId)}` }));
+    const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId || undefined)}` }));
     await sendIntakeInvite({ origin, to: email, clientName: name, clinicianId, clinicianName, serviceName: type.name, whenText: caymanWhen(appt.startAt), forms });
   }
 
