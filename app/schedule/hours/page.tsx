@@ -21,7 +21,7 @@ export default async function MyHoursPage() {
   const visible = all ? bookable : (self ? [self] : []);
   const selectedId = visible.find((c) => c.id === me.id)?.id ?? visible[0]?.id ?? "";
   const initial = selectedId ? await getAvailability(selectedId)
-    : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, updatedAt: "" };
+    : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, busyFeeds: [], updatedAt: "" };
 
   return (
     <div className="sh-wrap">

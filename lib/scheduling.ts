@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 import { randomId } from "./crypto";
+import { externalBusyIntervals } from "./externalBusy";
 
 export type AppointmentMode = "in_person" | "virtual" | "either";
 
@@ -267,8 +268,15 @@ export interface ClinicianAvailability {
   bookAheadDays: number;    // how far ahead clients can book
   maxPerDay: number;        // 0 = no limit
   slotIntervalMin: number;  // granularity of offered start times
+  busyFeeds: string[];      // external iCal URLs whose events block bookings
   updatedAt: string;
 }
+
+const cleanFeeds = (v: unknown): string[] => {
+  const raw = typeof v === "string" ? (() => { try { return JSON.parse(v); } catch { return []; } })() : v;
+  if (!Array.isArray(raw)) return [];
+  return raw.map(str).map((s) => s.trim()).filter((s) => /^https?:\/\//i.test(s) || /^webcal:\/\//i.test(s)).map((s) => s.replace(/^webcal:/i, "https:")).slice(0, 10);
+};
 
 const AVAIL_FILE = "scheduling-availability.local.json";
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -297,7 +305,7 @@ const cleanOverrides = (v: unknown): DateOverride[] => {
 };
 
 function defaultAvailability(clinicianId: string): ClinicianAvailability {
-  return { clinicianId, weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, updatedAt: now() };
+  return { clinicianId, weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, busyFeeds: [], updatedAt: now() };
 }
 
 function rowToAvail(r: Record<string, unknown>): ClinicianAvailability {
@@ -306,6 +314,7 @@ function rowToAvail(r: Record<string, unknown>): ClinicianAvailability {
     weekly: cleanWeekly(r.weekly), overrides: cleanOverrides(r.overrides),
     minNoticeHours: num(r.min_notice_hours), bookAheadDays: num(r.book_ahead_days),
     maxPerDay: num(r.max_per_day), slotIntervalMin: num(r.slot_interval_min) || 30,
+    busyFeeds: cleanFeeds(r.busy_feeds),
     updatedAt: iso(r.updated_at),
   };
 }
@@ -334,6 +343,7 @@ export async function saveAvailability(clinicianId: string, input: Partial<Clini
     bookAheadDays: input.bookAheadDays != null ? Math.max(1, num(input.bookAheadDays)) : base.bookAheadDays,
     maxPerDay: input.maxPerDay != null ? Math.max(0, num(input.maxPerDay)) : base.maxPerDay,
     slotIntervalMin: input.slotIntervalMin != null ? Math.max(5, num(input.slotIntervalMin)) : base.slotIntervalMin,
+    busyFeeds: input.busyFeeds != null ? cleanFeeds(input.busyFeeds) : base.busyFeeds,
     updatedAt: now(),
   };
   if (usePostgres) {
@@ -346,6 +356,8 @@ export async function saveAvailability(clinicianId: string, input: Partial<Clini
         weekly=EXCLUDED.weekly, overrides=EXCLUDED.overrides, min_notice_hours=EXCLUDED.min_notice_hours,
         book_ahead_days=EXCLUDED.book_ahead_days, max_per_day=EXCLUDED.max_per_day,
         slot_interval_min=EXCLUDED.slot_interval_min, updated_at=EXCLUDED.updated_at`;
+    // Guarded: busy_feeds added later; a pre-migration table still saves fine.
+    try { await sql`UPDATE scheduling_availability SET busy_feeds=${JSON.stringify(row.busyFeeds)}::jsonb WHERE clinician_id=${clinicianId}`; } catch { /* column not migrated */ }
   } else {
     const all = readJson<ClinicianAvailability[]>(AVAIL_FILE, []);
     const i = all.findIndex((a) => a.clinicianId === clinicianId);
@@ -644,6 +656,18 @@ export async function availableSlots(clinicianId: string, dateStr: string, durat
     const ty = types.find((t) => t.id === a.typeId);
     return { s: cayMinutesOf(a.startAt) - (ty?.bufferBeforeMin || 0), e: cayMinutesOf(a.endAt) + (ty?.bufferAfterMin || 0) };
   });
+  // Block over the clinician's OTHER calendars (their connected Google + any
+  // saved iCal feeds), so clients can't book when they're busy elsewhere.
+  // Best-effort: returns [] when nothing is connected, and never throws.
+  try {
+    const dayStartMs = Date.parse(utcAtCayMidnightStr(dateStr));
+    const ext = await externalBusyIntervals(clinicianId, av.busyFeeds, utcAtCayMidnightStr(dateStr), utcAtCayMidnightStr(addDaysStr(dateStr, 1)));
+    for (const iv of ext) {
+      const s = Math.max(0, (Date.parse(iv.start) - dayStartMs) / 60000);
+      const e = Math.min(1440, (Date.parse(iv.end) - dayStartMs) / 60000);
+      if (e > s) busy.push({ s, e });
+    }
+  } catch { /* an external-calendar hiccup must not break booking */ }
   const step = av.slotIntervalMin || 30;
   const cutoff = nowMs + av.minNoticeHours * 3600e3;
   const out: number[] = [];

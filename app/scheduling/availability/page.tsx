@@ -17,7 +17,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
 
   const sp = await searchParams;
   const selectedId = bookable.find((c) => c.id === sp.c)?.id ?? bookable[0]?.id ?? "";
-  const initial = selectedId ? await getAvailability(selectedId) : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, updatedAt: "" };
+  const initial = selectedId ? await getAvailability(selectedId) : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, busyFeeds: [], updatedAt: "" };
 
   return (
     <div>

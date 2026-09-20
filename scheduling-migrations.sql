@@ -19,6 +19,9 @@ ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS video_event_id text
 ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS intake_reminder_at text;
 ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS couple_id text;
 
+-- Availability: external iCal feeds whose events block bookings
+ALTER TABLE scheduling_availability ADD COLUMN IF NOT EXISTS busy_feeds jsonb NOT NULL DEFAULT '[]'::jsonb;
+
 -- Waitlist
 CREATE TABLE IF NOT EXISTS scheduling_waitlist (
   id           text PRIMARY KEY,

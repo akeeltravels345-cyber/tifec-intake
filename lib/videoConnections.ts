@@ -310,6 +310,30 @@ export async function upsertGoogleEvent(clinicianId: string, args: GoogleEventAr
   }
 }
 
+export interface BusyInterval { start: string; end: string } // ISO UTC
+
+/** The clinician's own Google Calendar busy blocks in a window, so the scheduler
+ *  can avoid booking over their personal events. Uses events.list (covered by
+ *  the calendar.events scope), skips all-day and free/transparent events, and
+ *  never throws. */
+export async function googleBusy(clinicianId: string, fromISO: string, toISO: string): Promise<BusyInterval[]> {
+  const conn = await getGoogleConnection(clinicianId);
+  if (!conn) return [];
+  try {
+    const token = await validAccessToken(conn);
+    const q = new URLSearchParams({ timeMin: fromISO, timeMax: toISO, singleEvents: "true", orderBy: "startTime", maxResults: "100" });
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(`Google events.list ${res.status}`);
+    const j = await res.json() as { items?: { status?: string; transparency?: string; start?: { dateTime?: string }; end?: { dateTime?: string } }[] };
+    return (j.items || [])
+      .filter((e) => e.status !== "cancelled" && e.transparency !== "transparent" && e.start?.dateTime && e.end?.dateTime)
+      .map((e) => ({ start: e.start!.dateTime as string, end: e.end!.dateTime as string }));
+  } catch (e) {
+    console.error(`googleBusy failed for ${clinicianId}`, e);
+    return [];
+  }
+}
+
 /** Delete a calendar event on the clinician's Google Calendar. Never throws. */
 export async function deleteGoogleEvent(clinicianId: string, eventId: string): Promise<void> {
   if (!eventId) return;
