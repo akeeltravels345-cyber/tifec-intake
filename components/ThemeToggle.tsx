@@ -36,13 +36,10 @@ export default function ThemeToggle() {
   }
 
   return (
-    <div className="th-toggle" role="group" aria-label="Appearance">
-      <span className="th-lab">Theme</span>
-      <div className="th-seg">
-        {OPTIONS.map(([p, label]) => (
-          <button key={p} type="button" className={`th-opt ${pref === p ? "on" : ""}`} aria-pressed={pref === p} onClick={() => choose(p)}>{label}</button>
-        ))}
-      </div>
+    <div className="th-seg" role="group" aria-label="Theme">
+      {OPTIONS.map(([p, label]) => (
+        <button key={p} type="button" className={`th-opt ${pref === p ? "on" : ""}`} aria-pressed={pref === p} onClick={() => choose(p)}>{label}</button>
+      ))}
     </div>
   );
 }

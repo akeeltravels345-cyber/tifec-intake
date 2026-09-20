@@ -7,6 +7,7 @@ import AccountClient from "./AccountClient";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import IdleTimeoutSetting from "@/components/IdleTimeoutSetting";
 import AvatarUpload from "@/components/AvatarUpload";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getIdleMinutes, getAvatar, IDLE_MINUTES_CHOICES } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,12 @@ export default async function AccountPage() {
 
           <div className="card" style={{ marginTop: 18 }}>
             <AccountClient />
+          </div>
+
+          <div className="card" style={{ marginTop: 18 }}>
+            <h2 className="section-title">Appearance</h2>
+            <p className="section-desc" style={{ marginBottom: 14 }}>How the app looks. <b>Auto</b> follows your device&apos;s light/dark setting; <b>Light</b> or <b>Dark</b> forces one. Saved on this browser.</p>
+            <div style={{ maxWidth: 340 }}><ThemeToggle /></div>
           </div>
 
           <div className="card" style={{ marginTop: 18 }}>
