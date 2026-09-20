@@ -20,7 +20,7 @@ function blobToBase64(blob: Blob): Promise<string> {
 interface T {
   id: string; ref: number; subject: string; area: string; status: string;
   createdAt: string; updatedAt: string; raisedBy: string; assignees: string[]; mine: boolean; needsYou: boolean;
-  waitingOn: string[]; enteredByName?: string | null;
+  unread?: boolean; waitingOn: string[]; enteredByName?: string | null;
 }
 interface Contact { id: string; name: string; label: string }
 
@@ -106,10 +106,15 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
   function stopRec() { recRef.current?.stop(); setRecording(false); }
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
+  // The "open" list also keeps any RESOLVED ticket that still has a comment you
+  // haven't read, so a ticket closed right after a reply doesn't vanish before
+  // you've seen it. It drops back to Done once you open and read it.
+  const rank = (t: T) => (t.needsYou ? 0 : t.unread ? 1 : 2);
   const shown = tickets
-    .filter((t) => (filter === "done" ? t.status === "resolved" : t.status !== "resolved"))
-    // Tickets waiting on you rise to the top.
-    .sort((a, b) => (a.needsYou === b.needsYou ? 0 : a.needsYou ? -1 : 1));
+    .filter((t) => (filter === "done" ? t.status === "resolved" : (t.status !== "resolved" || t.unread)))
+    .sort((a, b) => rank(a) - rank(b));
+  const openCount = tickets.filter((t) => t.status !== "resolved" || t.unread).length;
+  const doneCount = tickets.filter((t) => t.status === "resolved").length;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -211,8 +216,8 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
       )}
 
       <div className="tm-tabs2">
-        <button className={`tm-tab2 ${filter === "open" ? "on" : ""}`} onClick={() => setFilter("open")}>Still open ({tickets.filter((t) => t.status !== "resolved").length})</button>
-        <button className={`tm-tab2 ${filter === "done" ? "on" : ""}`} onClick={() => setFilter("done")}>Done ({tickets.filter((t) => t.status === "resolved").length})</button>
+        <button className={`tm-tab2 ${filter === "open" ? "on" : ""}`} onClick={() => setFilter("open")}>Still open ({openCount})</button>
+        <button className={`tm-tab2 ${filter === "done" ? "on" : ""}`} onClick={() => setFilter("done")}>Done ({doneCount})</button>
       </div>
 
       {shown.length === 0 ? (
@@ -223,9 +228,9 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
       ) : (
         <div className="tm-tickets">
           {shown.map((t) => (
-            <Link key={t.id} href={`/team/tickets/${t.id}`} className={`tm-card tm-ticket${t.needsYou ? " needsyou" : ""}`}>
+            <Link key={t.id} href={`/team/tickets/${t.id}`} className={`tm-card tm-ticket${t.needsYou ? " needsyou" : ""}${t.unread ? " unread" : ""}`}>
               <div className="tm-tleft">
-                <div className="tm-tsub"><span className="tm-ref">#{t.ref}</span>{t.subject}</div>
+                <div className="tm-tsub">{t.unread && <span className="tm-unreaddot" title="Unread reply" aria-label="Unread reply" />}<span className="tm-ref">#{t.ref}</span>{t.subject}</div>
                 <div className="tm-tmeta">
                   <span className="tm-area">{t.area}</span>
                   {t.mine ? <>for <b>{nameList(t.assignees)}</b></> : <>from <b>{t.raisedBy}</b></>}
@@ -234,6 +239,7 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
                 </div>
               </div>
               <div className="tm-tright">
+                {t.unread && <span className="tm-ball new">New reply</span>}
                 {t.status !== "resolved" && (
                   t.needsYou
                     ? <span className="tm-ball you">Your turn</span>

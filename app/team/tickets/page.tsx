@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
-import { listTickets, lastTicketCommenters, ticketWaitingOn, TICKET_AREAS } from "@/lib/comms";
+import { listTickets, lastTicketCommenters, ticketWaitingOn, unreadTicketIds, TICKET_AREAS } from "@/lib/comms";
 import TicketList from "@/components/team/TicketList";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export default async function TicketsPage() {
   if (!me) redirect("/login?next=/team/tickets");
 
   const [all, lastBy] = await Promise.all([listTickets(), lastTicketCommenters()]);
+  const unseen = await unreadTicketIds(me.id, all);
   // You see what you raised and what's assigned to you. The admin and owner
   // see everything, since they run the place.
   const seesAll = me.contact === "admin" || me.contact === "owner";
@@ -34,6 +35,8 @@ export default async function TicketsPage() {
           assignees: t.assignees.map(nm),
           mine: t.createdBy === me.id,
           needsYou: waiting.includes(me.id),
+          // A comment you haven't read yet (keeps a just-resolved ticket visible).
+          unread: unseen.has(t.id),
           // Who currently has the ball, for the "Waiting on …" label.
           waitingOn: waiting.map(nm),
         };

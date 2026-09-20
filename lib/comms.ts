@@ -466,25 +466,36 @@ async function ticketCommentTimes(threadIds: string[]): Promise<{ threadId: stri
   return readJson<StoredMessage[]>(MSG_FILE, []).filter((m) => set.has(m.threadId)).map((m) => ({ threadId: m.threadId, senderId: m.senderId, createdAt: m.createdAt }));
 }
 
-/** How many OPEN tickets need this person's attention: it's their turn (the ball
- *  is with them) OR there are comments on it they haven't read yet. Drives the
- *  Tickets menu badge. */
-export async function ticketAttentionCount(me: string): Promise<number> {
-  const [tickets, lastCommenters, reads] = await Promise.all([listTickets(), lastTicketCommenters(), getReads(me)]);
-  const mine = tickets.filter((t) => t.status !== "resolved" && (t.createdBy === me || t.assignees.includes(me)));
-  if (mine.length === 0) return 0;
-
-  const unseen = new Set<string>(); // ticket ids with a comment I haven't read
+/** Ticket ids that have a comment this person hasn't read yet, among the tickets
+ *  they're on (raiser or assignee). Includes RESOLVED tickets, so a ticket closed
+ *  right after a reply still surfaces until they've seen the last comment. */
+export async function unreadTicketIds(me: string, tickets?: Ticket[]): Promise<Set<string>> {
+  const ts = tickets ?? await listTickets();
+  const mine = ts.filter((t) => t.createdBy === me || t.assignees.includes(me));
+  const unseen = new Set<string>();
+  if (mine.length === 0) return unseen;
+  const reads = await getReads(me);
   const rows = await ticketCommentTimes(mine.map((t) => `ticket:${t.id}`));
   for (const r of rows) {
     const since = reads[r.threadId] ?? "";
     if (r.senderId !== me && r.createdAt > since) unseen.add(r.threadId.slice("ticket:".length));
   }
+  return unseen;
+}
 
+/** Tickets that need this person's attention: an OPEN ticket where it's their turn
+ *  OR has an unread comment, PLUS a RESOLVED ticket that still has an unread comment
+ *  (so a ticket closed right after a reply doesn't vanish before they see it).
+ *  Drives the Tickets menu badge. */
+export async function ticketAttentionCount(me: string): Promise<number> {
+  const [tickets, lastCommenters] = await Promise.all([listTickets(), lastTicketCommenters()]);
+  const unseen = await unreadTicketIds(me, tickets);
+  const mine = tickets.filter((t) => t.createdBy === me || t.assignees.includes(me));
   let count = 0;
   for (const t of mine) {
-    const waiting = ticketWaitingOn(t, lastCommenters[t.id] ?? null).includes(me);
-    if (waiting || unseen.has(t.id)) count++;
+    const unread = unseen.has(t.id);
+    if (t.status === "resolved") { if (unread) count++; }
+    else if (unread || ticketWaitingOn(t, lastCommenters[t.id] ?? null).includes(me)) count++;
   }
   return count;
 }

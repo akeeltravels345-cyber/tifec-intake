@@ -3114,6 +3114,10 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-ticket { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; text-decoration: none; }
 .tm-ticket:hover { border-color: #c9d2d6; }
 .tm-ticket.needsyou { border-left: 3px solid var(--indigo); }
+/* A ticket with a reply you haven't read — kept visible even once resolved. */
+.tm-ticket.unread { border-left: 3px solid var(--teal); background: var(--surface-2); }
+.tm-unreaddot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); margin-right: 8px; vertical-align: middle; }
+.tm-ball.new { background: var(--pos-bg); color: var(--teal-deep); }
 .tm-tright { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .tm-needsyou { font: 700 10.5px "Open Sans"; letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; background: var(--brand-tint); color: var(--indigo); }
 /* Ball-in-court chip in the ticket list: "Your turn" (amber, needs you) vs
