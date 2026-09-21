@@ -7,7 +7,9 @@ import CalendarSubscribe from "@/components/scheduling/CalendarSubscribe";
 import BusyFeeds from "@/components/scheduling/BusyFeeds";
 import { calendarFeedPath } from "@/lib/calendarFeed";
 import { getAvailability } from "@/lib/scheduling";
+import { getClinicianPrefs } from "@/lib/clinicianPrefs";
 import { hasGoogleConnection } from "@/lib/videoConnections";
+import AgendaPref from "@/components/scheduling/AgendaPref";
 import { seesAllSchedule, isTreatingClinician } from "../layout";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +22,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
   const me = user.clinician;
   if (!seesAllSchedule(me) && !isTreatingClinician(me)) redirect("/today");
 
-  const [conns, sp, h, av, googleConnected] = await Promise.all([listConnections(me.id), searchParams, headers(), getAvailability(me.id), hasGoogleConnection(me.id)]);
+  const [conns, sp, h, av, googleConnected, prefs] = await Promise.all([listConnections(me.id), searchParams, headers(), getAvailability(me.id), hasGoogleConnection(me.id), getClinicianPrefs(me.id)]);
   const initial = conns.map((c) => ({ provider: c.provider, accountEmail: c.accountEmail, preferred: c.preferred }));
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
   const feedUrl = `${origin}${calendarFeedPath(me.id)}`;
@@ -35,6 +37,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
       />
       <CalendarSubscribe url={feedUrl} />
       <BusyFeeds initialFeeds={av.busyFeeds} googleConnected={googleConnected} />
+      <AgendaPref initial={prefs.dailyAgenda} />
     </div>
   );
 }

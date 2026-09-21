@@ -77,3 +77,10 @@ CREATE TABLE IF NOT EXISTS scheduling_offers (
   expires_at         timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS scheduling_offers_status_idx ON scheduling_offers (status);
+
+-- Per-clinician preferences (daily agenda email opt-out; defaults ON)
+CREATE TABLE IF NOT EXISTS scheduling_clinician_prefs (
+  clinician_id text PRIMARY KEY,
+  daily_agenda boolean NOT NULL DEFAULT true,
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);

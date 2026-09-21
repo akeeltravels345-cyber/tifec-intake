@@ -706,6 +706,51 @@ export async function availableSlotsAny(clinicianIds: string[], dateStr: string,
 }
 
 // =============================================================================
+// Group sessions (e.g. PEERS): staff schedule a session with N seats; clients
+// book a seat from the public page (they join the roster rather than reserving
+// the whole slot). Seats used = attendees.length; a session is joinable while it
+// has seats left and hasn't started.
+// =============================================================================
+
+export interface GroupSlot { minute: number; clinicianId: string; apptId: string; seatsLeft: number; }
+
+/** Future, non-full group sessions of one type for one clinician on a Cayman day. */
+export async function groupSessionSlots(clinicianId: string, typeId: string, dateStr: string, nowMs = Date.now()): Promise<GroupSlot[]> {
+  const appts = await listAppointments({ clinicianId, from: utcAtCayMidnightStr(dateStr), to: utcAtCayMidnightStr(addDaysStr(dateStr, 1)) });
+  return appts
+    .filter((a) => a.kind === "appointment" && a.status !== "cancelled" && a.typeId === typeId && a.capacity > 1)
+    .map((a) => ({ minute: cayMinutesOf(a.startAt), clinicianId, apptId: a.id, seatsLeft: a.capacity - a.attendees.length, startAt: a.startAt }))
+    .filter((g) => g.seatsLeft > 0 && Date.parse(g.startAt) > nowMs)
+    .map(({ minute, clinicianId, apptId, seatsLeft }) => ({ minute, clinicianId, apptId, seatsLeft }))
+    .sort((a, b) => a.minute - b.minute);
+}
+
+/** Group sessions across a set of clinicians (for the "any available" pool). */
+export async function groupSessionSlotsAny(clinicianIds: string[], typeId: string, dateStr: string, nowMs = Date.now()): Promise<GroupSlot[]> {
+  const per = await Promise.all(clinicianIds.map((id) => groupSessionSlots(id, typeId, dateStr, nowMs)));
+  return per.flat().sort((a, b) => a.minute - b.minute);
+}
+
+/** The joinable group session of a type at an exact start time (or null). */
+export async function findGroupSession(clinicianId: string, typeId: string, startAt: string): Promise<Appointment | null> {
+  const appts = await listAppointments({ clinicianId, from: startAt, to: new Date(Date.parse(startAt) + 60000).toISOString() });
+  return appts.find((a) => a.kind === "appointment" && a.status !== "cancelled" && a.typeId === typeId && a.capacity > 1 && a.startAt === startAt) ?? null;
+}
+
+/** Add one attendee to a group session if a seat is free. Read-modify-write;
+ *  returns the reason it couldn't join, or ok with the updated appointment. */
+export async function joinGroupSession(apptId: string, attendee: { name: string; email: string; phone?: string }): Promise<{ ok: true; appt: Appointment } | { ok: false; reason: "not_found" | "full" | "duplicate" }> {
+  const a = await getAppointment(apptId);
+  if (!a || a.kind !== "appointment" || a.capacity <= 1 || a.status === "cancelled") return { ok: false, reason: "not_found" };
+  if (a.attendees.length >= a.capacity) return { ok: false, reason: "full" };
+  const email = attendee.email.trim().toLowerCase();
+  if (email && a.attendees.some((x) => x.email.trim().toLowerCase() === email)) return { ok: false, reason: "duplicate" };
+  const next = [...a.attendees, { name: attendee.name.trim(), email: attendee.email.trim(), phone: (attendee.phone || "").trim() }];
+  const appt = await updateAppointment(apptId, { attendees: next } as never);
+  return appt ? { ok: true, appt } : { ok: false, reason: "not_found" };
+}
+
+// =============================================================================
 // Scheduling insights — read-only stats over appointments for a Cayman month.
 // =============================================================================
 

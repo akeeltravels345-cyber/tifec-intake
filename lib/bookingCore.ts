@@ -70,6 +70,7 @@ export async function sendBookingConfirmation(args: {
   seriesDates?: string[];   // pretty "when" strings for each booked occurrence (>1 = a series)
   skippedDates?: string[];  // pretty strings for weeks that couldn't be booked
   recurrence?: { everyDays: number; count: number };
+  extraNotes?: string[];    // any extra sentences to add to the note block
 }): Promise<void> {
   const isLink = /^https?:\/\//.test(args.locationOrLink);
   const location = args.mode === "virtual"
@@ -78,7 +79,7 @@ export async function sendBookingConfirmation(args: {
   const isSeries = !!args.seriesDates && args.seriesDates.length > 1;
   const buttons: { label: string; url: string }[] = [];
   if (args.mode === "virtual" && isLink) buttons.push({ label: "Join the video call", url: args.locationOrLink });
-  buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
+  if (args.manageUrl) buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
 
   const rows = isSeries
     ? [
@@ -99,6 +100,7 @@ export async function sendBookingConfirmation(args: {
   if (isSeries) notes.push(`Your standing appointments: ${args.seriesDates!.join("; ")}.`);
   if (args.skippedDates && args.skippedDates.length) notes.push(`We couldn't reserve ${args.skippedDates.join("; ")} (already taken), so please rebook those or reply and we'll help.`);
   if (args.intakeForms.length) notes.push(`We've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.`);
+  if (args.extraNotes) for (const n of args.extraNotes) if (n) notes.push(n);
 
   const ics = appointmentInvite({
     id: args.id, startAt: args.startAt, endAt: args.endAt, serviceName: args.serviceName,

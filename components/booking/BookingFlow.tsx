@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 type Mode = "in_person" | "virtual" | "either";
 type QKind = "text" | "textarea" | "select" | "checkbox";
 interface BookingQuestion { id: string; label: string; kind: QKind; required: boolean; options: string[]; }
-interface Type { id: string; name: string; category: string; description: string; durationMin: number; price: number; mode: Mode; color: string; hasIntake: boolean; newClientIntakeOnly: boolean; questions: BookingQuestion[]; }
+interface Type { id: string; name: string; category: string; description: string; durationMin: number; price: number; mode: Mode; color: string; capacity: number; hasIntake: boolean; newClientIntakeOnly: boolean; questions: BookingQuestion[]; }
 interface Clin { id: string; name: string; credentials: string; photo?: string; }
 interface Insurer { id: string; name: string; }
-interface Slot { minute: number; clinicianId: string; }
+interface Slot { minute: number; clinicianId: string; seatsLeft?: number; }
 type Step = "service" | "clinician" | "time" | "details" | "confirm" | "done" | "waitlist" | "waitlisted";
 
 const CAY = 5;
@@ -148,6 +148,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     }
     return g.filter((x) => x.items.length);
   }, [slots, date]);
+  const isGroupType = !!type && (type.capacity || 1) > 1; // PEERS-style group session
 
   async function joinWaitlist() {
     if (!type) return;
@@ -316,16 +317,17 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </button>
               ))}
             </div>
-            {!date && <p className="bk-hint">Choose a day to see open times.</p>}
-            {date && loading && <p className="bk-hint">Finding open times…</p>}
-            {date && !loading && slots.length === 0 && <p className="bk-empty">No open times on this day. Try another.</p>}
+            {isGroupType && <p className="bk-grouphint">This is a group session. Pick a scheduled time below and reserve your seat.</p>}
+            {!date && <p className="bk-hint">Choose a day to see {isGroupType ? "scheduled sessions" : "open times"}.</p>}
+            {date && loading && <p className="bk-hint">Finding {isGroupType ? "sessions" : "open times"}…</p>}
+            {date && !loading && slots.length === 0 && <p className="bk-empty">{isGroupType ? "No group sessions scheduled on this day. Try another." : "No open times on this day. Try another."}</p>}
             {date && !loading && grouped.map((g) => (
               <div key={g.label} className="bk-slotgroup">
                 <div className="bk-slotlabel">{g.label}</div>
                 <div className="bk-slots">
                   {g.items.map((s, i) => {
                     const iso = utcFromCay(date, s.minute);
-                    return <button key={i} className={`bk-slot ${slot === s ? "on" : ""}`} onClick={() => { setSlot(s); setStep("details"); }}>{fmtTime(iso)}</button>;
+                    return <button key={i} className={`bk-slot ${slot === s ? "on" : ""}`} onClick={() => { setSlot(s); setStep("details"); }}>{fmtTime(iso)}{typeof s.seatsLeft === "number" && <span className="bk-seats">{s.seatsLeft} seat{s.seatsLeft === 1 ? "" : "s"} left</span>}</button>;
                   })}
                 </div>
               </div>
@@ -417,7 +419,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </div>
               )}
             </div>
-            {!/free\s+online\s+consultation/i.test(type.name) && (
+            {!/free\s+online\s+consultation/i.test(type.name) && !isGroupType && (
               <div className="bk-recur">
                 <label className="bk-recur-top">
                   <input type="checkbox" checked={recurEvery !== 0} onChange={(e) => setRecurEvery(e.target.checked ? 7 : 0)} />

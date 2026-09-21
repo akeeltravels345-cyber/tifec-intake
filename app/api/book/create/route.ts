@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { CLINICIANS, getClinician, isBookableClinician } from "@/lib/clinicians";
-import { listAppointmentTypes, availableSlots, createAppointment, utcFromCayMinutes, type Appointment, type QuestionAnswer } from "@/lib/scheduling";
+import { listAppointmentTypes, availableSlots, createAppointment, utcFromCayMinutes, findGroupSession, joinGroupSession, type Appointment, type QuestionAnswer } from "@/lib/scheduling";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
@@ -33,6 +33,47 @@ export async function POST(req: Request) {
   const type = (await listAppointmentTypes()).find((t) => t.id === typeId && t.active);
   if (!type) return NextResponse.json({ error: "That service is unavailable." }, { status: 404 });
   if (!canBook(clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
+
+  // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
+  // session rather than booking the whole slot. They join the roster; a full or
+  // vanished session is refused so nobody over-fills it.
+  if ((type.capacity || 1) > 1) {
+    const startAt = utcFromCayMinutes(date, minute);
+    const session = await findGroupSession(clinicianId, type.id, startAt);
+    if (!session || session.attendees.length >= session.capacity) {
+      return NextResponse.json({ error: "Sorry, that session is full or no longer available. Please pick another." }, { status: 409 });
+    }
+    const joined = await joinGroupSession(session.id, { name, email, phone });
+    if (!joined.ok) {
+      if (joined.reason === "duplicate") return NextResponse.json({ error: "You're already booked into this session." }, { status: 409 });
+      return NextResponse.json({ error: "Sorry, that session just filled. Please pick another." }, { status: 409 });
+    }
+    const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+    const clinicianName = getClinician(clinicianId)?.name || "your clinician";
+
+    const assessment = await assessClientIntake(name, type.name, email);
+    const firstVisit = body.firstVisit === true;
+    const missingForms = firstVisit && assessment.requiredForms.length > 0 ? assessment.requiredForms : assessment.missingForms;
+    const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
+    const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;
+    if (needsIntake) {
+      const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId || undefined)}` }));
+      await sendIntakeInvite({ to: email, clientName: name, clinicianName, serviceName: type.name, whenText: caymanWhen(session.startAt), forms });
+    }
+    await sendBookingConfirmation({
+      id: session.id, startAt: session.startAt, endAt: session.endAt,
+      to: email, clientName: name, serviceName: type.name, clinicianName,
+      whenText: caymanWhen(session.startAt), mode: session.mode, locationOrLink: session.locationOrLink,
+      manageUrl: "", // a group attendee must not get the session's cancel link
+      intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
+      extraNotes: ["To change or cancel your seat, just reply to this email and we'll help."],
+    });
+    return NextResponse.json({
+      ok: true,
+      appointment: { id: session.id, startAt: session.startAt, endAt: session.endAt },
+      intakeSent: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
+    });
+  }
 
   // Re-check the slot is still free, so two people can't grab the same time.
   const free = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);

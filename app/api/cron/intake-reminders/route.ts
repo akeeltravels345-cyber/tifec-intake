@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
-import { listAppointments, updateAppointment, listAppointmentTypes } from "@/lib/scheduling";
-import { getClinician } from "@/lib/clinicians";
-import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
-import { sendBrandedEmail } from "@/lib/email";
-import { caymanWhen } from "@/lib/caymanTime";
+import { listAppointments } from "@/lib/scheduling";
+import { sendIntakeReminderFor } from "@/lib/intakeReminders";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +28,7 @@ export async function GET(req: Request) {
 
   const from = new Date(now).toISOString().slice(0, 10);
   const to = new Date(now + 3 * 86400000).toISOString().slice(0, 10);
-  const [appts, types] = await Promise.all([listAppointments({ from, to }), listAppointmentTypes()]);
+  const appts = await listAppointments({ from, to });
 
   let reminded = 0, cleared = 0, skipped = 0;
   for (const a of appts) {
@@ -41,36 +37,11 @@ export async function GET(req: Request) {
     const start = Date.parse(a.startAt);
     if (!(start > now && start <= now + REMIND_WITHIN_MS)) continue;
 
-    const type = types.find((t) => t.id === a.typeId);
-    if (!type) continue;
-    const assess = await assessClientIntake(a.clientName, type.name, a.clientEmail);
-    if (!assess.needsIntake) {
-      // They completed it since booking — keep the record honest.
-      await updateAppointment(a.id, { intakeStatus: "received" } as never);
-      cleared++;
-      continue;
-    }
-    if (!a.clientEmail) { skipped++; continue; }
-
-    // Reuse the couple id stored at booking so the reminder link matches the
-    // original invite; fall back to a fresh one only if it wasn't stored.
-    const coupleId = assess.missingForms.includes("couples")
-      ? (a.coupleId || randomBytes(6).toString("hex"))
-      : undefined;
-    await sendBrandedEmail(a.clientEmail, "Reminder: please complete your intake form", {
-      heading: "A quick reminder",
-      greetingName: a.clientName.split(/\s+/)[0] || undefined,
-      intro: `Please complete your intake before your upcoming ${type.name} appointment:`,
-      rows: [
-        { label: "Service", value: type.name },
-        { label: "Clinician", value: getClinician(a.clinicianId)?.name || "your clinician" },
-        { label: "When", value: caymanWhen(a.startAt) },
-      ],
-      buttons: assess.missingForms.map((f) => ({ label: `Complete your ${formShortLabel(f)}`, url: `${origin}${intakeLinkPath(a.clinicianId, f, coupleId)}` })),
-      note: "It only takes a few minutes and is kept confidential.",
-    });
-    await updateAppointment(a.id, { intakeReminderAt: new Date().toISOString() } as never);
-    reminded++;
+    // Auto mode: respect the once-only stamp (not forced).
+    const r = await sendIntakeReminderFor(a.id, { origin });
+    if (r === "sent") reminded++;
+    else if (r === "received") cleared++;
+    else if (r === "no_email") skipped++;
   }
 
   return NextResponse.json({ ok: true, reminded, cleared, skipped });

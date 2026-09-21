@@ -50,6 +50,7 @@ export default async function SchedulePage() {
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
       statsHref="/schedule/stats"
+      intakeHref="/schedule/intake"
     />
   );
 }
