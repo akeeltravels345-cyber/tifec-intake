@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import { schedulingStats, monthlyCapacityMinutes } from "@/lib/scheduling";
@@ -16,7 +17,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   if (!user) redirect("/login?next=/schedule/stats");
   const me = user.clinician;
   const all = seesAllSchedule(me);
-  if (!all && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   const sp = await searchParams;
   const nowYM = caymanYearMonth();

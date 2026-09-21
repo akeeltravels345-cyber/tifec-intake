@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingUser, devMode } from "@/lib/billingRole";
-import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
+import { isSystemAdmin, inScheduleBeta, type Clinician } from "@/lib/clinicians";
 import { getSidebarData } from "@/lib/sidebarData";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
@@ -15,7 +15,8 @@ export const isTreatingClinician = (c: Clinician) => !!c.test || (!c.intakeHidde
 export default async function ScheduleLayout({ children }: { children: React.ReactNode }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/schedule");
-  if (!seesAllSchedule(user.clinician) && !isTreatingClinician(user.clinician)) redirect("/today");
+  // Beta: only Shion + Nick (and admin / test) can reach the scheduling area yet.
+  if (!inScheduleBeta(user.clinician)) redirect("/today");
 
   const data = await getSidebarData(user.clinician);
   return (

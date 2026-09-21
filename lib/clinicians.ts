@@ -418,6 +418,13 @@ export const publicBookableClinicians = (): Clinician[] => CLINICIANS.filter(isP
  *  admin: true for business oversight, but is NOT a system admin. */
 export const isSystemAdmin = (c: Clinician | null | undefined): boolean => c?.contact === "admin";
 
+// BETA ROLLOUT: the new scheduling system is live only for these clinicians
+// (Shion + Nick), plus the admin and the test account (for Zoom review). Everyone
+// else is kept out of /schedule for now. Widen this to open it to the whole team.
+const SCHEDULE_BETA_IDS = new Set<string>(["shion-oconnor", "nick-oconnor"]);
+export const inScheduleBeta = (c: Clinician | null | undefined): boolean =>
+  !!c && (isSystemAdmin(c) || !!c.test || SCHEDULE_BETA_IDS.has(c.id));
+
 /** Can this internal person be assigned clients as their treating clinician?
  *  Regular clinicians can; the biller normally can't — except a practicum biller
  *  (Nick), whose unpaid practicum clients live as no-charge records so he can

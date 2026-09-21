@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { headers } from "next/headers";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes } from "@/lib/scheduling";
@@ -11,7 +12,7 @@ export default async function LinksPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/schedule/links");
   const me = user.clinician;
-  if (!seesAllSchedule(me) && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   const [types, h] = await Promise.all([listAppointmentTypes(), headers()]);
   const active = types.filter((t) => t.active);

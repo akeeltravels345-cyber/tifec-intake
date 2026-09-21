@@ -6,7 +6,7 @@ import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, unreadNotifications, ticketAttentionCount } from "@/lib/comms";
 import { listSessions } from "@/lib/billing";
 import { billingRoleOf, hasBillingBeta } from "@/lib/billingRole";
-import { CLINICIANS, isSystemAdmin, type Clinician } from "@/lib/clinicians";
+import { CLINICIANS, isSystemAdmin, inScheduleBeta, type Clinician } from "@/lib/clinicians";
 import { getViewAsState } from "@/lib/auth";
 import { touchPresence } from "@/lib/comms";
 import { listStaged } from "@/lib/importStaging";
@@ -73,7 +73,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     // owner's own menu — never the builder view.
     isAdmin: me.contact === "admin",
     // Treating clinicians see their own agenda; the owner and Donnet see all.
-    canSchedule: isSystemAdmin(me) || !!me.test || (!me.intakeHidden && me.contact !== "biller"),
+    canSchedule: inScheduleBeta(me), // beta: Shion + Nick (+ admin/test) only
     meId: me.id,
     name: me.name,
     avatar,

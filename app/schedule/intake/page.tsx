@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { getClinician } from "@/lib/clinicians";
 import { listIntakeGaps } from "@/lib/intakeReminders";
@@ -15,7 +16,7 @@ export default async function IntakePage() {
   if (!user) redirect("/login?next=/schedule/intake");
   const me = user.clinician;
   const all = seesAllSchedule(me);
-  if (!all && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   const scopeId = all ? undefined : me.id;
   const gaps = await listIntakeGaps(scopeId);

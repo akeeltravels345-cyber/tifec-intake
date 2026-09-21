@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
@@ -20,7 +21,7 @@ export default async function SchedulePage() {
   if (!user) redirect("/login?next=/schedule");
   const me = user.clinician;
   const all = seesAllSchedule(me);
-  if (!all && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   // Who the viewer can see: everyone (owner/Donnet/admin) or just themselves.
   // A treating clinician sees themselves even if they're not in the bookable

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { getAvailability } from "@/lib/scheduling";
@@ -15,7 +16,7 @@ export default async function MyHoursPage() {
   if (!user) redirect("/login?next=/schedule/hours");
   const me = user.clinician;
   const all = seesAllSchedule(me);
-  if (!all && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   const self = CLINICIANS.find((c) => c.id === me.id);
   const visible = all ? bookable : (self ? [self] : []);

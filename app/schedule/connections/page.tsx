@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { inScheduleBeta } from "@/lib/clinicians";
 import { headers } from "next/headers";
 import { getBillingUser } from "@/lib/billingRole";
 import { listConnections, zoomOAuthConfigured, googleOAuthConfigured } from "@/lib/videoConnections";
@@ -20,7 +21,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/schedule/connections");
   const me = user.clinician;
-  if (!seesAllSchedule(me) && !isTreatingClinician(me)) redirect("/today");
+  if (!inScheduleBeta(me)) redirect("/today");
 
   const [conns, sp, h, av, googleConnected, prefs] = await Promise.all([listConnections(me.id), searchParams, headers(), getAvailability(me.id), hasGoogleConnection(me.id), getClinicianPrefs(me.id)]);
   const initial = conns.map((c) => ({ provider: c.provider, accountEmail: c.accountEmail, preferred: c.preferred }));
