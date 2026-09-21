@@ -71,6 +71,7 @@ export async function sendBookingConfirmation(args: {
   skippedDates?: string[];  // pretty strings for weeks that couldn't be booked
   recurrence?: { everyDays: number; count: number };
   extraNotes?: string[];    // any extra sentences to add to the note block
+  portalUrl?: string;       // one-tap link to the client's self-service portal
 }): Promise<void> {
   const isLink = /^https?:\/\//.test(args.locationOrLink);
   const location = args.mode === "virtual"
@@ -80,6 +81,7 @@ export async function sendBookingConfirmation(args: {
   const buttons: { label: string; url: string }[] = [];
   if (args.mode === "virtual" && isLink) buttons.push({ label: "Join the video call", url: args.locationOrLink });
   if (args.manageUrl) buttons.push({ label: "Manage or cancel your booking", url: args.manageUrl });
+  if (args.portalUrl) buttons.push({ label: "See all your appointments", url: args.portalUrl });
 
   const rows = isSeries
     ? [

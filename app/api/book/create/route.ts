@@ -5,6 +5,7 @@ import { listAppointmentTypes, availableSlots, createAppointment, utcFromCayMinu
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
+import { portalToken } from "@/lib/portalAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
       to: email, clientName: name, serviceName: type.name, clinicianName,
       whenText: caymanWhen(session.startAt), mode: session.mode, locationOrLink: session.locationOrLink,
       manageUrl: "", // a group attendee must not get the session's cancel link
+      portalUrl: `${origin}/portal/${portalToken(email)}`,
       intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
       extraNotes: ["To change or cancel your seat, just reply to this email and we'll help."],
     });
@@ -158,6 +160,7 @@ export async function POST(req: Request) {
     to: email, clientName: name, serviceName: type.name, clinicianName,
     whenText: caymanWhen(appt.startAt), mode, locationOrLink: appt.locationOrLink,
     manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,
+    portalUrl: `${origin}/portal/${portalToken(email)}`,
     intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
     seriesDates: isSeries ? booked.map((b) => caymanWhen(b.startAt)) : undefined,
     skippedDates: skippedWhen.length ? skippedWhen : undefined,

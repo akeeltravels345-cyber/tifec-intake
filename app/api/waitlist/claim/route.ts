@@ -7,6 +7,7 @@ import {
 } from "@/lib/scheduling";
 import { getOffer, winOffer, setOfferAppt, readClaimToken } from "@/lib/waitlistOffers";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
+import { portalToken } from "@/lib/portalAuth";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { caymanWhen } from "@/lib/caymanTime";
 
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
     to: entry.email, clientName: entry.name, serviceName, clinicianName,
     whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
     manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,
+    portalUrl: `${origin}/portal/${portalToken(entry.email)}`,
     intakeForms: needsIntake ? assessment.missingForms.map((f) => formShortLabel(f)) : [],
   });
 
