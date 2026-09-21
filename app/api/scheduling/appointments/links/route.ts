@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Phase 0 (read-only): for the appointment's client, report whether they already
 // exist as a billing client and/or have intake on file. No writes; metadata only
 // (never intake answers). Keyed by appointment id so no name is put in the URL.
-const seesAllSchedule = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
+const seesAllSchedule = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor" || c.id === "nick-oconnor";
 const isTreating = (c: Clinician) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
 const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
 const splitName = (full: string) => { const p = full.trim().split(/\s+/); return { first: p[0] || "", last: p.slice(1).join(" ") || "" }; };
