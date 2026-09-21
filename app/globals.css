@@ -4387,6 +4387,11 @@ body:has(.bk-page) .brandbar { display: none; }
 /* Settings: share links */
 .ss-link { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft, var(--bg)); }
 .ss-link:last-child { border-bottom: 0; }
+@media (max-width: 560px) {
+  .ss-link { flex-wrap: wrap; }
+  .ss-link .ss-linkname { width: auto; flex: 1 1 auto; }
+  .ss-link code { order: 3; flex-basis: 100%; }
+}
 .ss-linkname { font-size: 13px; font-weight: 600; flex: none; width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-link code { flex: 1; min-width: 0; font: 400 12px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); background: var(--surface-2, #f4f7f6); border-radius: 7px; padding: 6px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-link button { font: 600 12px "Open Sans"; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 6px 11px; cursor: pointer; flex: none; }

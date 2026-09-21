@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-import { getCurrentClinician } from "@/lib/auth";
-import { isSystemAdmin, CLINICIANS, publicBookableClinicians, isBookableClinician } from "@/lib/clinicians";
+import { CLINICIANS, publicBookableClinicians, isBookableClinician } from "@/lib/clinicians";
 import { listAppointmentTypes, getSchedulingSettings } from "@/lib/scheduling";
 import { listInsurers, getPracticeConfig } from "@/lib/billing";
 import BookingFlow from "@/components/booking/BookingFlow";
@@ -11,9 +9,8 @@ const PREVIEW = "peek";
 
 export default async function BookPage({ searchParams }: { searchParams: Promise<{ preview?: string; type?: string; clinician?: string }> }) {
   const sp = await searchParams;
-  // Prototype: unlisted. Visible only with the preview token, or to the admin.
-  const me = await getCurrentClinician();
-  if (sp.preview !== PREVIEW && !(me && isSystemAdmin(me))) notFound();
+  // Public booking. The page keeps passing the internal token to its own /api/book
+  // routes (below), so a clean link like /book?clinician=shion just works.
 
   // Public picker + "any available". A private clinician (Nick) is added only
   // when reached by a direct ?clinician=<id> link, so he stays off the picker.

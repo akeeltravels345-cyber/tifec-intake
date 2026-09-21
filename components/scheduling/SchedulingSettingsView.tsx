@@ -56,7 +56,7 @@ export default function SchedulingSettingsView({ initial, types = [] }: {
 
       <div className="ss-card">
         <h2>Share your booking page</h2>
-        <p className="ss-hint">Send clients straight to the right service. While the prototype is admin-only these open for you; they go public when you lift the gate.</p>
+        <p className="ss-hint">Send clients straight to the right service. Each clinician also has their own personal links under My schedule → My link.</p>
         <div className="ss-link"><span className="ss-linkname">Everything</span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button><button onClick={() => showQr("Everything", baseLink)}>QR</button></div>
         {types.map((t) => { const l = `${baseLink}?type=${t.id}`; return (
           <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button><button onClick={() => showQr(t.name, l)}>QR</button></div>
