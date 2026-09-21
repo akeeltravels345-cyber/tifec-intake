@@ -405,7 +405,7 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
   const text = t.join("\n").replace(/\n{3,}/g, "\n\n");
 
   const logo = a.logoCid
-    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="44" style="height:44px;width:auto;display:block;margin:0 0 14px;" />`
+    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="72" style="height:72px;width:auto;display:block;margin:0 0 16px;" />`
     : "";
   const introHtml = a.intro ? `<p style="font-size:15.5px;line-height:1.6;margin:0 0 18px;color:${PC.body};">${escapeHtml(a.intro)}</p>` : "";
   const rowsHtml = a.rows?.length
