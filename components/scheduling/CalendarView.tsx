@@ -59,8 +59,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null, connectionsHref = null, statsHref = null, intakeHref = null, linksHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null; connectionsHref?: string | null; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -324,7 +324,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           </select>
         )}
         {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
-        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name="gear" /><span>Settings</span></a>}
+        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
         {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
         {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
         {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}

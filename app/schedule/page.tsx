@@ -49,6 +49,8 @@ export default async function SchedulePage() {
       lockedClinicianId={all ? null : me.id}
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
+      connectionsLabel={me.test ? "Video" : "Settings"}
+      connectionsIcon={me.test ? "video" : "gear"}
       statsHref="/schedule/stats"
       intakeHref="/schedule/intake"
       linksHref="/schedule/links"
