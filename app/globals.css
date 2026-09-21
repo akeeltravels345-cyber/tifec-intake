@@ -4561,3 +4561,24 @@ body:has(.bk-page) .brandbar { display: none; }
 .bf-x { flex: none; font: 600 12px "Open Sans"; color: #c0392b; background: none; border: 0; cursor: pointer; }
 .bf-x:hover { text-decoration: underline; }
 .bf-err { font-size: 12.5px; color: #c0392b; margin: 8px 0 0; }
+
+/* Calendar view toggle (Day / Week / Month) */
+.cal-viewseg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.cal-viewseg button { font: 600 12.5px "Open Sans"; border: 0; border-left: 1px solid var(--line); background: var(--panel, #fff); color: var(--muted); padding: 7px 13px; cursor: pointer; }
+.cal-viewseg button:first-child { border-left: 0; }
+.cal-viewseg button.on { background: var(--teal, #2f8e93); color: #fff; }
+
+/* Calendar month view */
+.cal-month { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.cal-mdow { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--surface-2, #f4f7f6); border-bottom: 1px solid var(--line); }
+.cal-mdow > div { padding: 8px 10px; font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); text-align: left; }
+.cal-mgrid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(96px, 1fr); }
+.cal-mcell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 5px 6px; min-width: 0; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+.cal-mcell:nth-child(7n) { border-right: 0; }
+.cal-mcell:hover { background: var(--surface-2, #f6f8f8); }
+.cal-mcell.other { background: rgba(120,130,140,.045); }
+.cal-mcell.other .cal-mnum { color: var(--faint, #a4a9b6); }
+.cal-mnum { font-size: 12.5px; font-weight: 600; color: var(--ink); align-self: flex-start; }
+.cal-mcell.today .cal-mnum { background: var(--teal, #2f8e93); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: grid; place-items: center; }
+.cal-mchip { font-size: 11px; line-height: 1.3; padding: 2px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.cal-mmore { font-size: 10.5px; color: var(--muted); padding-left: 2px; }

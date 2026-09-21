@@ -27,6 +27,8 @@ const STATUS: { key: AppointmentStatus; label: string }[] = [
 const pad = (n: number) => String(n).padStart(2, "0");
 const partsOf = (dateStr: string) => dateStr.split("-").map((x) => parseInt(x, 10));
 const addDays = (dateStr: string, n: number) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+const addMonths = (dateStr: string, n: number) => { const [y, m, d] = partsOf(dateStr); const dt = new Date(Date.UTC(y, m - 1 + n, 1)); const dim = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate(); return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(Math.min(d, dim))}`; };
+const longDate = (dateStr: string, opts: Intl.DateTimeFormatOptions) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", ...opts }); };
 const weekdayMon = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; }; // 0=Mon
 const mondayOf = (dateStr: string) => addDays(dateStr, -weekdayMon(dateStr));
 const cayFromUtc = (iso: string) => new Date(Date.parse(iso) - CAY * 3600e3); // read UTC parts = Cayman wall
@@ -69,7 +71,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (cur < hi) regions.push({ s: cur, e: hi });
     return regions;
   }
-  const [monday, setMonday] = useState(() => mondayOf(todayCayman));
+  const [view, setView] = useState<"day" | "week" | "month">("week");
+  const [anchor, setAnchor] = useState(todayCayman); // the focused date
+  const monday = mondayOf(anchor);
   const [appts, setAppts] = useState<Appointment[]>(initial);
   const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string; title?: string; source?: string }[]>([]);
   const [busyInfo, setBusyInfo] = useState<{ name: string; source: string; when: string; clinicianId: string } | null>(null);
@@ -88,7 +92,14 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [err, setErr] = useState("");
   const [attName, setAttName] = useState("");
   const [attEmail, setAttEmail] = useState("");
-  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const days = view === "day" ? [anchor] : Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  // Month grid: six Mon-start weeks covering the month of `anchor`.
+  const monthGrid = (() => {
+    const [y, m] = partsOf(anchor);
+    const gridStart = mondayOf(`${y}-${String(m).padStart(2, "0")}-01`);
+    return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  })();
+  const anchorMonth = partsOf(anchor)[1];
 
   // ---- drag-to-block: press on empty time and drag to select a range ----
   const dragRef = useRef<{ day: string; anchor: number } | null>(null);
@@ -127,15 +138,16 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     return () => window.removeEventListener("mouseup", cancel);
   }, []);
 
-  async function load(mon: string, clin: string) {
-    const from = utcFromCay(mon, 0), to = utcFromCay(addDays(mon, 7), 0);
+  async function load() {
+    const from = view === "day" ? utcFromCay(anchor, 0) : view === "month" ? utcFromCay(monthGrid[0], 0) : utcFromCay(monday, 0);
+    const to = view === "day" ? utcFromCay(addDays(anchor, 1), 0) : view === "month" ? utcFromCay(addDays(monthGrid[41], 1), 0) : utcFromCay(addDays(monday, 7), 0);
     const q = new URLSearchParams({ from, to });
-    if (clin !== "all") q.set("clinicianId", clin);
+    if (who !== "all") q.set("clinicianId", who);
     const res = await fetch(`/api/scheduling/appointments?${q}`);
     const data = await res.json().catch(() => ({}));
     if (res.ok) { setAppts(data.appointments || []); setExtBusy(data.externalBusy || []); }
   }
-  useEffect(() => { load(monday, who); /* eslint-disable-next-line */ }, [monday, who]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [view, anchor, who]);
 
   const typeById = (id: string | null) => types.find((t) => t.id === id) || null;
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || id;
@@ -193,24 +205,24 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not save."); return; }
-    setDraft(null); load(monday, who);
+    setDraft(null); load();
   }
   async function setStatus(a: Appointment, status: AppointmentStatus) {
     const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", id: a.id, status }) });
     const data = await res.json().catch(() => ({}));
-    load(monday, who);
+    load();
     setDraft((d) => (d && d.id === a.id ? { ...d, status, billingSessionId: data.appointment?.billingSessionId ?? d.billingSessionId } : d));
   }
   async function remove(a: Appointment) {
     if (!confirm(`Delete this ${a.kind === "block" ? "block" : "appointment"}? This can't be undone.`)) return;
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: a.id }) });
-    setDraft(null); setViewAppt(null); load(monday, who);
+    setDraft(null); setViewAppt(null); load();
   }
   async function removeSeries(a: Appointment) {
     if (!a.seriesId) return;
     if (!confirm("Remove this and all later appointments in the series?")) return;
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "series:removeFrom", seriesId: a.seriesId, fromStartAt: a.startAt }) });
-    setDraft(null); load(monday, who);
+    setDraft(null); load();
   }
   // Drag to reschedule: keep the length, move to the dropped day + start time.
   async function reschedule(id: string, day: string, startMin: number) {
@@ -221,7 +233,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const startAt = utcFromCay(day, clamped), endAt = utcFromCay(day, clamped + dur);
     setAppts((list) => list.map((x) => (x.id === id ? { ...x, startAt, endAt } : x))); // optimistic
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update", id, startAt, endAt }) });
-    load(monday, who);
+    load();
   }
   function onDrop(e: React.DragEvent, day: string) {
     e.preventDefault();
@@ -245,17 +257,27 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     return placed.map((p) => ({ ...p, laneCount }));
   }
 
-  const weekLabel = `${prettyDate(monday)} to ${prettyDate(addDays(monday, 6))}`;
+  const step = (dir: -1 | 1) => setAnchor(view === "day" ? addDays(anchor, dir) : view === "month" ? addMonths(anchor, dir) : addDays(anchor, dir * 7));
+  const rangeLabel = view === "day"
+    ? longDate(anchor, { weekday: "long", day: "numeric", month: "long" })
+    : view === "month"
+      ? longDate(anchor, { month: "long", year: "numeric" })
+      : `${prettyDate(monday)} to ${prettyDate(addDays(monday, 6))}`;
 
   return (
     <div className="cal">
       <div className="cal-bar">
         <div className="cal-nav">
-          <button onClick={() => setMonday(addDays(monday, -7))} aria-label="Previous week">‹</button>
-          <button className="today" onClick={() => setMonday(mondayOf(todayCayman))}>Today</button>
-          <button onClick={() => setMonday(addDays(monday, 7))} aria-label="Next week">›</button>
+          <button onClick={() => step(-1)} aria-label="Previous">‹</button>
+          <button className="today" onClick={() => setAnchor(todayCayman)}>Today</button>
+          <button onClick={() => step(1)} aria-label="Next">›</button>
         </div>
-        <div className="cal-week">{weekLabel}</div>
+        <div className="cal-week">{rangeLabel}</div>
+        <div className="cal-viewseg">
+          {(["day", "week", "month"] as const).map((v) => (
+            <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
+          ))}
+        </div>
         <span className="cal-sp" />
         {lockedClinicianId ? (
           <span className="cal-mine">{clinName(lockedClinicianId)}</span>
@@ -270,6 +292,36 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
         {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
       </div>
 
+      {view === "month" ? (
+        <div className="cal-month">
+          <div className="cal-mdow">{DOW.map((d) => <div key={d}>{d}</div>)}</div>
+          <div className="cal-mgrid">
+            {monthGrid.map((day) => {
+              const dayAppts = appts.filter((a) => a.kind !== "block" && cayDay(a.startAt) === day)
+                .sort((x, y) => cayMinutes(x.startAt) - cayMinutes(y.startAt));
+              const other = partsOf(day)[1] !== anchorMonth;
+              const isToday = day === todayCayman;
+              const shown = dayAppts.slice(0, 3);
+              return (
+                <div key={day} className={`cal-mcell${other ? " other" : ""}${isToday ? " today" : ""}`}
+                  onClick={() => { setAnchor(day); setView("day"); }}>
+                  <div className="cal-mnum">{partsOf(day)[2]}</div>
+                  {shown.map((a) => {
+                    const tint = MODE_TINT[a.mode] || MODE_TINT.either;
+                    return (
+                      <div key={a.id} className="cal-mchip" style={{ background: tint.bg, color: tint.fg }}
+                        onClick={(ev) => { ev.stopPropagation(); openView(a); }}>
+                        {label12(cayMinutes(a.startAt))} {a.clientName || typeById(a.typeId)?.name || "Appt"}
+                      </div>
+                    );
+                  })}
+                  {dayAppts.length > shown.length && <div className="cal-mmore">+{dayAppts.length - shown.length} more</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
       <div className="cal-gridwrap">
         <div className="cal-grid" style={{ height: (DAY_END - DAY_START) * HOUR + 30 }}>
           <div className="cal-gutter">
@@ -355,6 +407,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           })}
         </div>
       </div>
+      )}
 
       {draft && (
         <div className="cal-modal" onClick={() => setDraft(null)}>
