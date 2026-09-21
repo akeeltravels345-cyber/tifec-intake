@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { randomUUID } from "crypto";
 import { caymanToday } from "@/lib/caymanTime";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
+import { logAccess } from "@/lib/db";
 import { listInsurers, listCptCodes, listSessions, codeSummary } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
@@ -25,6 +27,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   const seesAll = isBiller(user.role) || isOwner(user.role);
   // Isolation: a clinician may only open a client linked to them.
   if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id))) redirect("/billing/clients");
+
+  // HIPAA audit: record that this user opened this client's record. The page is
+  // force-dynamic (not prefetched), so this fires on a real open, not on hover.
+  // Only the opaque client id is stored (no name), keeping the log PHI-free.
+  await logAccess({ id: randomUUID(), clinician_id: user.clinician.id, submission_token: `client:${id}`, action: "view", detail: `viewed client record (client:${id})`, at: new Date().toISOString() });
 
   const [insurers, cptCodes, sessions, external, intakeForms] = await Promise.all([
     listInsurers(),
