@@ -72,6 +72,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [monday, setMonday] = useState(() => mondayOf(todayCayman));
   const [appts, setAppts] = useState<Appointment[]>(initial);
   const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string; title?: string; source?: string }[]>([]);
+  const [busyInfo, setBusyInfo] = useState<{ name: string; source: string; when: string; clinicianId: string } | null>(null);
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
@@ -340,7 +341,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const srcLabel = b.source === "google" ? "Google Calendar" : b.source === "ical" ? "iCal" : "External calendar";
                     const name = b.title || "Blocked";
                     return (
-                      <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title={`${name} — ${srcLabel}`}>
+                      <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title={`${name} — ${srcLabel}`}
+                        onMouseDown={(ev) => ev.stopPropagation()}
+                        onClick={(ev) => { ev.stopPropagation(); setBusyInfo({ name, source: srcLabel, when: `${prettyDate(day)} · ${label12(bs)}-${label12(be)}`, clinicianId: b.clinicianId }); }}>
                         <div className="cal-appt-n">{name}{who === "all" ? ` · ${clinName(b.clinicianId).split(" ").slice(-1)}` : ""}</div>
                         <div className="cal-appt-m">{label12(bs)}-{label12(be)} · {srcLabel}</div>
                       </div>
@@ -630,6 +633,26 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           </div>
         );
       })()}
+
+      {busyInfo && (
+        <div className="cal-modal" onClick={() => setBusyInfo(null)}>
+          <div className="cal-sheet cvr" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <div className="cvr-head">
+              <button className="cvr-hbtn" onClick={() => setBusyInfo(null)}>Close</button>
+            </div>
+            <div className="cvr-title">
+              <strong>{busyInfo.name}</strong>
+              <span>{busyInfo.when}</span>
+            </div>
+            <div className="cvr-sec">
+              <div className="cvr-sec-h">Blocked time</div>
+              <div className="cvr-line">From your {busyInfo.source}</div>
+              <div className="cvr-sub">This time is taken by an event on your other calendar, so it can&apos;t be booked or scheduled over. To free it up, change or remove the event on {busyInfo.source}.</div>
+              {who === "all" && <div className="cvr-sub">Clinician: {clinName(busyInfo.clinicianId)}</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

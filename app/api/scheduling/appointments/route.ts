@@ -71,6 +71,14 @@ export async function GET(req: Request) {
         return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end, title: ownCalendar ? b.title : undefined, source: b.source }));
       }));
       externalBusy = per.flat();
+      // Drop external events that are really our own appointments mirrored onto
+      // the clinician's Google Calendar (same clinician, overlapping time), so a
+      // booking never also shows as a grey "Blocked" block.
+      const ranges = appointments.filter((a) => a.status !== "cancelled").map((a) => ({ c: a.clinicianId, s: Date.parse(a.startAt), e: Date.parse(a.endAt) }));
+      externalBusy = externalBusy.filter((b) => {
+        const bs = Date.parse(b.start), be = Date.parse(b.end);
+        return !ranges.some((r) => r.c === b.clinicianId && bs < r.e && be > r.s);
+      });
     } catch { /* best-effort */ }
   }
   return NextResponse.json({ appointments, externalBusy, viewer: { seesAll: all, meId: me.id } });

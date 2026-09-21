@@ -3881,7 +3881,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-appt-block .cal-appt-n { font-weight: 700; }
 /* External busy (from a connected Google / iCal calendar): read-only, same grey
    as unavailable time — never green. */
-.cal-busy { position: absolute; left: 0; width: calc(100% - 3px); border-radius: 6px; border-left: 3px solid #a8b0bb; background: repeating-linear-gradient(45deg, #eceef1, #eceef1 7px, #dfe2e8 7px, #dfe2e8 14px); color: #5b6270; padding: 3px 5px; overflow: hidden; font-size: 11px; font-style: italic; pointer-events: none; }
+.cal-busy { position: absolute; left: 0; width: calc(100% - 3px); border-radius: 6px; border-left: 3px solid #a8b0bb; background: repeating-linear-gradient(45deg, #eceef1, #eceef1 7px, #dfe2e8 7px, #dfe2e8 14px); color: #5b6270; padding: 3px 5px; overflow: hidden; font-size: 11px; font-style: italic; cursor: pointer; }
 .cal-busy .cal-appt-n { font-weight: 700; }
 
 /* booking modal */
