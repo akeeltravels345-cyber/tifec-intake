@@ -3,6 +3,7 @@ import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACTS, CONTACT_LABEL, getClinician, isContact, isSystemAdmin } from "@/lib/clinicians";
 import { listThreadsFor, listMessages, dmThreadId, dmPartner, markThreadRead, GROUP_THREAD_ID, groupSummaryFor, listGroupsForMember, getPresence } from "@/lib/comms";
 import { listDocMetaByPrefix } from "@/lib/clientDocs";
+import { getAvatars } from "@/lib/users";
 import Messages from "@/components/team/Messages";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,16 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   const messages = activeThread ? await listMessages(activeThread) : [];
   if (activeThread) await markThreadRead(activeThread, me.id);
 
+  // Profile photos for everyone shown in this view — the people list, DM threads,
+  // open group members, and message senders — so avatars use real photos.
+  const avatars = await getAvatars([
+    me.id,
+    ...people.map((p) => p.id),
+    ...threads.map((t) => dmPartner(t.threadId, me.id) ?? ""),
+    ...(openGroup?.memberIds ?? []),
+    ...messages.map((m) => m.senderId),
+  ]);
+
   // Attachments on the open thread's messages (images / voice notes / files).
   const kindOf = (mime: string): "image" | "audio" | "file" => (mime.startsWith("image/") ? "image" : mime.startsWith("audio/") ? "audio" : "file");
   const attByMsg = new Map<string, { docId: string; kind: "image" | "audio" | "file"; name: string | null }[]>();
@@ -54,6 +65,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     <Messages
       meId={me.id}
       people={people}
+      avatars={avatars}
       presence={presence}
       everyone={{ unread: group.unread, lastBody: group.lastBody, lastAt: group.lastAt }}
       groups={myGroups.map((g) => ({ threadId: g.threadId, name: g.name, lastBody: g.lastBody, lastAt: g.lastAt, unread: g.unread, memberCount: g.memberIds.length }))}
@@ -74,7 +86,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       }).filter((t) => t.name)}
       messages={messages.map((m) => ({
         id: m.id, body: m.body, at: m.createdAt,
-        mine: m.senderId === me.id, who: getClinician(m.senderId)?.name ?? m.senderId,
+        mine: m.senderId === me.id, who: getClinician(m.senderId)?.name ?? m.senderId, whoId: m.senderId,
         attachments: attByMsg.get(m.id) ?? [],
       }))}
       threadId={activeThread}

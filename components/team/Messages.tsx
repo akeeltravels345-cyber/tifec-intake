@@ -9,7 +9,7 @@ import { IcoImage, IcoFile, IcoMic, IcoStop, IcoSend } from "./attachIcons";
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
 interface Person { id: string; name: string; role: string }
 interface Thread { id: string; name: string; lastBody: string; lastAt: string; unread: number; fromMe: boolean }
-interface Msg { id: string; body: string; at: string; mine: boolean; who: string; attachments?: Att[] }
+interface Msg { id: string; body: string; at: string; mine: boolean; who: string; whoId?: string; attachments?: Att[] }
 
 // A pending attachment on the message being typed (not yet sent).
 interface Draft { id: string; kind: "image" | "audio" | "file"; mime: string; base64: string; url: string; name?: string }
@@ -75,12 +75,13 @@ const lastSeen = (iso?: string) => {
   return `last seen ${new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 };
 
-export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone, groups = [], activeGroup = null, presence = {} }: {
+export default function Messages({ meId, people, threads, messages, activeWith, threadId, everyone, groups = [], activeGroup = null, presence = {}, avatars = {} }: {
   meId: string; people: Person[]; threads: Thread[]; messages: Msg[]; activeWith: string; threadId: string;
   everyone?: { unread: number; lastBody: string; lastAt: string };
   groups?: GroupThread[];
   activeGroup?: ActiveGroup | null;
   presence?: Record<string, string>;
+  avatars?: Record<string, string>;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -180,6 +181,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
         setLive(j.messages.map((m: { id: string; body: string; createdAt: string; senderId: string; attachments?: Att[] }) => ({
           id: m.id, body: m.body, at: m.createdAt, mine: m.senderId === meId,
           who: m.senderId === meId ? "You" : (people.find((p) => p.id === m.senderId)?.name ?? threads.find((t) => t.id === activeWith)?.name ?? ""),
+          whoId: m.senderId,
           attachments: m.attachments ?? [],
         })));
       } catch { /* offline: the next tick will catch up */ }
@@ -187,6 +189,15 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
     const h = setInterval(tick, 8000);
     return () => clearInterval(h);
   }, [threadId, meId, activeWith, threads]);
+
+  // A round avatar: the person's profile photo when we have one, else initials.
+  // `base` is the avatar class (tm-av or tm-bav); `cls` adds a size modifier.
+  const Av = ({ id, name, base = "tm-av", cls = "" }: { id?: string; name: string; base?: string; cls?: string }) => {
+    const src = id ? avatars[id] : undefined;
+    const className = `${base}${cls ? " " + cls : ""}`;
+    // eslint-disable-next-line @next/next/no-img-element
+    return src ? <img className={`${className} tm-avimg`} src={src} alt="" /> : <span className={className}>{initials(name)}</span>;
+  };
 
   function onSubmit(e: React.FormEvent) { e.preventDefault(); send(); }
   async function send() {
@@ -304,7 +315,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           {threads.length > 0 && <div className="tm-plabel">Conversations</div>}
           {threads.map((t) => (
             <Link key={t.id} href={`/team/messages?to=${t.id}`} className={`tm-person ${activeWith === t.id ? "on" : ""}`}>
-              <span className="tm-avwrap"><span className="tm-av">{initials(t.name)}</span>{isOnline(presence[t.id]) && <span className="tm-dot" title="Online" />}</span>
+              <span className="tm-avwrap"><Av id={t.id} name={t.name} />{isOnline(presence[t.id]) && <span className="tm-dot" title="Online" />}</span>
               <span className="tm-pmid">
                 <span className="tm-pname">{t.name}</span>
                 <span className="tm-plast">{t.fromMe && "You: "}{t.lastBody}</span>
@@ -319,7 +330,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           {notStarted.length > 0 && <div className="tm-plabel">Start a conversation</div>}
           {notStarted.map((p) => (
             <Link key={p.id} href={`/team/messages?to=${p.id}`} className={`tm-person ${activeWith === p.id ? "on" : ""}`}>
-              <span className="tm-avwrap"><span className="tm-av">{initials(p.name)}</span>{isOnline(presence[p.id]) && <span className="tm-dot" title="Online" />}</span>
+              <span className="tm-avwrap"><Av id={p.id} name={p.name} />{isOnline(presence[p.id]) && <span className="tm-dot" title="Online" />}</span>
               <span className="tm-pmid">
                 <span className="tm-pname">{p.name}</span>
                 <span className="tm-plast">{isOnline(presence[p.id]) ? "online" : p.role}</span>
@@ -342,7 +353,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                 {people.map((p) => (
                   <label key={p.id} className={`tm-ng-person ${gMembers.includes(p.id) ? "on" : ""}`}>
                     <input type="checkbox" checked={gMembers.includes(p.id)} onChange={() => toggleMember(p.id)} />
-                    <span className="tm-av sm">{initials(p.name)}</span>
+                    <Av id={p.id} name={p.name} cls="sm" />
                     <span className="tm-ng-pn"><span className="tm-pname">{p.name}</span><span className="tm-plast">{p.role}</span></span>
                   </label>
                 ))}
@@ -361,7 +372,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
           ) : (
             <>
               <div className="tm-thead">
-                <span className="tm-avwrap"><span className={`tm-av ${isGroupLike ? "grp" : ""}`}>{isTeam ? "★" : isCustomGroup ? "◇" : initials(active?.name ?? "")}</span>{!isGroupLike && isOnline(presence[activeWith]) && <span className="tm-dot" title="Online" />}</span>
+                <span className="tm-avwrap">{isGroupLike ? <span className="tm-av grp">{isTeam ? "★" : "◇"}</span> : <Av id={activeWith} name={active?.name ?? ""} />}{!isGroupLike && isOnline(presence[activeWith]) && <span className="tm-dot" title="Online" />}</span>
                 <div>
                   <div className="tm-pname">{active?.name}</div>
                   <div className="tm-prole">{isGroupLike ? (active as Person).role : (isOnline(presence[activeWith]) ? "Online now" : lastSeen(presence[activeWith]))}</div>
@@ -383,7 +394,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   <div className="tm-mp-label">Members</div>
                   {activeGroup.members.map((m) => (
                     <div key={m.id} className="tm-mp-member">
-                      <span className="tm-av sm">{initials(m.isMe ? "You" : m.name)}</span>
+                      <Av id={m.id} name={m.isMe ? "You" : m.name} cls="sm" />
                       <span className="tm-mp-name">{m.name}{m.isCreator && <span className="tm-mp-tag">creator</span>}</span>
                       {!m.isMe && activeGroup.canModerate && <button type="button" className="tm-mp-x" onClick={() => removeFromGroup(m.id)} disabled={mBusy} aria-label={`Remove ${m.name}`}>Remove</button>}
                     </div>
@@ -392,7 +403,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   {nonMembers.length > 0 && <div className="tm-mp-label">Add people</div>}
                   {nonMembers.map((p) => (
                     <div key={p.id} className="tm-mp-member">
-                      <span className="tm-av sm">{initials(p.name)}</span>
+                      <Av id={p.id} name={p.name} cls="sm" />
                       <span className="tm-mp-name">{p.name}<span className="tm-mp-role">{p.role}</span></span>
                       <button type="button" className="tm-mp-add" onClick={() => addToGroup(p.id)} disabled={mBusy}>Add</button>
                     </div>
@@ -418,7 +429,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                     <div key={m.id}>
                       {showDay && <div className="tm-day"><span>{dayLabel(m.at)}</span></div>}
                       <div className={`tm-row ${m.mine ? "me" : ""} ${firstOfRun ? "runtop" : ""}`}>
-                        {avatar && (firstOfRun ? <span className="tm-bav">{initials(m.who)}</span> : <span className="tm-bav ph" />)}
+                        {avatar && (firstOfRun ? <Av id={m.whoId} name={m.who} base="tm-bav" /> : <span className="tm-bav ph" />)}
                         <div className={`tm-bubble ${m.mine ? "me" : ""}`}>
                           {isGroupLike && !m.mine && firstOfRun && m.who && <div className="tm-bwho">{m.who}</div>}
                           {m.body && <div className="tm-btext">{m.body}</div>}

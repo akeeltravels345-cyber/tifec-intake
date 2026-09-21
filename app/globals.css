@@ -1530,9 +1530,6 @@ body:has(.biz) { background: var(--panel); }
 .bo-nav { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .bo-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 10px; color: #6a6f66; font-size: 14px; font-weight: 600; text-decoration: none; }
 .bo-nav a:hover { background: var(--panel); }
-/* Profile-photo glyph on a nav item (Messages). Sized to sit where the icon would. */
-.bo-navav { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; display: block; }
-.bo-mobtabs .bo-navav { width: 22px; height: 22px; }
 .bo-nav a.on { background: var(--panel); color: var(--teal-deep); font-weight: 700; }
 .bo-nav .bdg { margin-left: auto; background: var(--amber); color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
 /* Nav glow: highlight the entry that leads to a new feature, for first logins. */
@@ -2968,6 +2965,9 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-person:hover { background: var(--panel); }
 .tm-person.on { background: var(--panel); }
 .tm-av { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font: 700 11.5px "Open Sans"; flex-shrink: 0; }
+/* Photo avatar: keep the size/shape of whichever avatar class it carries, but
+   show the image edge-to-edge instead of the initials background. */
+.tm-avimg { object-fit: cover; background: none !important; padding: 0; }
 .tm-av.grp { background: linear-gradient(135deg, #2E8E93, var(--indigo)); font-size: 15px; }
 .tm-av.sm { width: 26px; height: 26px; font-size: 10px; }
 /* New group button + creation panel */

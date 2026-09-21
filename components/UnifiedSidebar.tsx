@@ -23,7 +23,7 @@ const IcWork = () => S(<><rect x="4" y="4" width="16" height="16" rx="2" /><path
 const IcKey = () => S(<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2" /></>);
 const IcSetup = () => S(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
-interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; avatarSrc?: string; }
+interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; }
 interface Group { label: string; items: Item[]; }
 
 function initialsOf(name: string): string {
@@ -77,9 +77,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const uDash: Item = { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" };
   const uForms: Item = { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" };
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };
-  // Messages carries the signed-in user's own profile photo (falls back to the
-  // chat glyph when they haven't set one).
-  const uMessages: Item = { href: "/team/messages", label: "Messages", icon: IcChat, badge: teamUnread, match: (p) => p.startsWith("/team/messages"), avatarSrc: avatar || undefined };
+  const uMessages: Item = { href: "/team/messages", label: "Messages", icon: IcChat, badge: teamUnread, match: (p) => p.startsWith("/team/messages") };
   const uTickets: Item = { href: "/team/tickets", label: "Tickets", icon: IcTicket, badge: openTickets, match: (p) => p.startsWith("/team/tickets") };
   // The reference handbook. One route, but /billing/guide renders the guide that
   // matches the signed-in role, so every menu can link to the same place.
@@ -229,7 +227,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
                 const glowing = !!n.highlight || (!!n.glow && navGlow);
                 return (
                   <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`}>
-                    {n.avatarSrc ? <img className="bo-navav" src={n.avatarSrc} alt="" /> : <Icon />}{n.label}
+                    <Icon />{n.label}
                     {n.badge ? <span className="bdg">{n.badge}</span> : glowing ? <span className="bo-newchip">New</span> : null}
                   </Link>
                 );
@@ -265,7 +263,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
           const Icon = n.icon;
           return (
             <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}`}>
-              {n.avatarSrc ? <img className="bo-navav" src={n.avatarSrc} alt="" /> : <Icon />}{n.label.startsWith("My ") ? n.label.slice(3).replace(/^./, (c) => c.toUpperCase()) : n.label.split(" ")[0]}
+              <Icon />{n.label.startsWith("My ") ? n.label.slice(3).replace(/^./, (c) => c.toUpperCase()) : n.label.split(" ")[0]}
               {n.badge ? <span className="bdg">{n.badge}</span> : null}
             </Link>
           );

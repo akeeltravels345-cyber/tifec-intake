@@ -163,6 +163,24 @@ export async function getAvatar(clinicianId: string): Promise<string | null> {
   return readLocal().find((u) => u.clinician_id === clinicianId)?.avatar ?? null;
 }
 
+/** Profile photos for several clinicians at once, as a { id: dataUrl } map that
+ *  only includes those who have one. One query; guarded like getAvatar. */
+export async function getAvatars(clinicianIds: string[]): Promise<Record<string, string>> {
+  const ids = [...new Set(clinicianIds.filter(Boolean))];
+  const out: Record<string, string> = {};
+  if (ids.length === 0) return out;
+  if (usePostgres) {
+    const sql = await pgClient();
+    try {
+      const rows = (await sql`SELECT clinician_id, avatar FROM clinician_users WHERE clinician_id = ANY(${ids}) AND avatar IS NOT NULL`) as { clinician_id: string; avatar: string | null }[];
+      for (const r of rows) if (r.avatar) out[r.clinician_id] = r.avatar;
+    } catch { /* avatar column not migrated yet */ }
+    return out;
+  }
+  for (const u of readLocal()) if (ids.includes(u.clinician_id) && u.avatar) out[u.clinician_id] = u.avatar;
+  return out;
+}
+
 /** Set (data URL) or clear (null) this clinician's profile photo. */
 export async function setAvatar(clinicianId: string, avatar: string | null): Promise<void> {
   if (usePostgres) {
