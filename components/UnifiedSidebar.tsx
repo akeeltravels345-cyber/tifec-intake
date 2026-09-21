@@ -23,7 +23,7 @@ const IcWork = () => S(<><rect x="4" y="4" width="16" height="16" rx="2" /><path
 const IcKey = () => S(<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2" /></>);
 const IcSetup = () => S(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
-interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; }
+interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; beta?: boolean; }
 interface Group { label: string; items: Item[]; }
 
 function initialsOf(name: string): string {
@@ -73,7 +73,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.
   const uToday: Item = { href: "/today", label: "Today", icon: IcToday, match: (p) => p === "/today" };
-  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p === "/schedule" };
+  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p === "/schedule", beta: true };
   const uDash: Item = { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" };
   const uForms: Item = { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" };
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };
@@ -228,6 +228,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
                 return (
                   <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`}>
                     <Icon />{n.label}
+                    {n.beta && <span className="bo-betachip">Beta</span>}
                     {n.badge ? <span className="bdg">{n.badge}</span> : glowing ? <span className="bo-newchip">New</span> : null}
                   </Link>
                 );

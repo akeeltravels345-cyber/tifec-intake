@@ -38,11 +38,13 @@ export default function VideoConnections({ initial, configured, notice, comingSo
   const Card = ({ p }: { p: Provider }) => {
     const conn = byProvider(p);
     const ok = configured[p];
+    // Only Zoom is held back for review; Google Meet stays open to everyone.
+    const soon = comingSoon && p === "zoom";
     return (
       <div className={`vc-card ${conn ? "on" : ""}`}>
         <div className="vc-cardhead">
           <div className="vc-name">{LABEL[p]}</div>
-          {conn ? <span className="vc-badge">Connected</span> : comingSoon && <span className="vc-badge soon">Coming soon</span>}
+          {conn ? <span className="vc-badge">Connected</span> : soon && <span className="vc-badge soon">Coming soon</span>}
         </div>
         <p className="vc-blurb">{BLURB[p]}</p>
         {conn ? (
@@ -56,7 +58,7 @@ export default function VideoConnections({ initial, configured, notice, comingSo
               <button className="vc-btn" disabled={busy === p + "disconnect"} onClick={() => act("disconnect", p)}>{busy === p + "disconnect" ? "…" : "Disconnect"}</button>
             </div>
           </>
-        ) : comingSoon ? (
+        ) : soon ? (
           <div className="vc-unavail">Automatic {LABEL[p]} links are coming soon. You will be able to connect your account here once it is ready.</div>
         ) : ok ? (
           <a className="vc-connect" href={`/api/scheduling/video/connect?provider=${p}`}>Connect {LABEL[p]}</a>
