@@ -785,46 +785,6 @@ export async function assignInvoiceNumber(sessionIds: string[]): Promise<number>
   return no;
 }
 
-/** One-time, idempotent migration for invoice-style payers, run against the app's
- *  OWN database (so it always targets the real production DB regardless of which
- *  connection string a local checkout has). Adds the two additive columns and,
- *  for convenience, flags any Poinciana insurer as invoice-style. Admin-gated by
- *  the calling route. Reports the resulting insurer list so we can confirm which
- *  database is live and its state. */
-export async function runInvoiceStyleMigration(): Promise<{
-  postgres: boolean;
-  billStyleColumnAdded: boolean;
-  invoiceNoColumnAdded: boolean;
-  poincianaFlagged: number;
-  insurers: { id: string; name: string; billStyle: string | null }[];
-}> {
-  if (!usePostgres) {
-    const list = await listInsurers();
-    return { postgres: false, billStyleColumnAdded: false, invoiceNoColumnAdded: false, poincianaFlagged: 0, insurers: list.map((i) => ({ id: i.id, name: i.name, billStyle: i.billStyle ?? null })) };
-  }
-  const sql = await pg();
-  // Did the columns already exist? (So the report shows whether this DB was behind.)
-  const before = (await sql`
-    SELECT
-      bool_or(table_name='billing_insurers' AND column_name='bill_style') AS has_bill_style,
-      bool_or(table_name='billing_sessions' AND column_name='invoice_no') AS has_invoice_no
-    FROM information_schema.columns
-    WHERE (table_name='billing_insurers' AND column_name='bill_style')
-       OR (table_name='billing_sessions' AND column_name='invoice_no')`) as { has_bill_style: boolean | null; has_invoice_no: boolean | null }[];
-  await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS bill_style TEXT`;
-  await sql`ALTER TABLE billing_sessions ADD COLUMN IF NOT EXISTS invoice_no INTEGER`;
-  // Flag any Poinciana payer as invoice-style (idempotent).
-  const flagged = (await sql`UPDATE billing_insurers SET bill_style='invoice' WHERE name ILIKE '%poinciana%' AND bill_style IS DISTINCT FROM 'invoice' RETURNING id`) as { id: string }[];
-  const rows = (await sql`SELECT id, name, bill_style FROM billing_insurers ORDER BY name`) as { id: string; name: string; bill_style: string | null }[];
-  return {
-    postgres: true,
-    billStyleColumnAdded: !(before[0]?.has_bill_style),
-    invoiceNoColumnAdded: !(before[0]?.has_invoice_no),
-    poincianaFlagged: flagged.length,
-    insurers: rows.map((r) => ({ id: r.id, name: r.name, billStyle: r.bill_style ?? null })),
-  };
-}
-
 /** Mark a claim as PAID/collected (or undo). Marking paid implies it was billed,
  *  so backfill billed_date if it wasn't set. This is what feeds a payout. */
 export async function markSessionPaid(id: string, paid: boolean, paidDate: string | null): Promise<boolean> {
