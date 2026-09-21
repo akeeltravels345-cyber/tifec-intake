@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin, CLINICIANS, type Clinician } from "@/lib/clinicians";
+import { isSystemAdmin, CLINICIANS, getClinician, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom, getAppointment, getAvailability,
+  createRecurring, deleteSeriesFrom, getAppointment, getAvailability, listAppointmentTypes,
   type Appointment,
 } from "@/lib/scheduling";
 import { externalBusyIntervals } from "@/lib/externalBusy";
+import { notifyClientReschedule } from "@/lib/schedulingEmails";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 
@@ -133,10 +134,21 @@ export async function POST(req: Request) {
     if (action === "update" || action === "status") {
       const id = String(body.id);
       if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      const before = await getAppointment(id);
       // A clinician can't reassign their appointment to someone else.
       const patch = all ? body : { ...body, clinicianId: me.id };
       const appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      // A drag/edit that moved the time can email the client (staff chose to).
+      if (body.notifyClient && appt.kind !== "block" && appt.clientEmail && before && before.startAt !== appt.startAt) {
+        const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+        const loc = appt.mode === "virtual" ? appt.locationOrLink : (appt.locationOrLink || "The Institute for Essential Care");
+        await notifyClientReschedule({
+          to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "Appointment",
+          clinicianName: getClinician(appt.clinicianId)?.name || "your clinician",
+          id: appt.id, startAt: appt.startAt, endAt: appt.endAt, location: loc,
+        });
+      }
       // Cancelling frees the Zoom / Meet meeting and removes the Google event.
       if (body.status === "cancelled") {
         if (appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink, appt.videoEventId || undefined);

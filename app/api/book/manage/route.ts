@@ -5,6 +5,7 @@ import { cancelVideoLink, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/vid
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
 import { appointmentInvite } from "@/lib/ical";
+import { notifyClientReschedule } from "@/lib/schedulingEmails";
 
 export const dynamic = "force-dynamic";
 
@@ -33,27 +34,6 @@ async function sendCancelEmail(a: { to: string; clientName: string; serviceName:
   } catch { /* never block the change on email */ }
 }
 
-// Confirm a reschedule to the client + update it in their calendar.
-async function sendRescheduleEmail(a: { to: string; clientName: string; serviceName: string; clinicianName: string; whenText: string; id: string; startAt: string; endAt: string; location?: string }): Promise<void> {
-  if (!a.to) return;
-  const ics = appointmentInvite({
-    id: a.id, startAt: a.startAt, endAt: a.endAt, serviceName: a.serviceName, clinicianName: a.clinicianName,
-    location: a.location, clientName: a.clientName, clientEmail: a.to, organizerEmail: organizerEmail(), method: "REQUEST",
-  });
-  try {
-    await sendBrandedEmail(a.to, "Your appointment has been rescheduled", {
-      heading: "Your appointment has moved",
-      greetingName: firstNameOf(a.clientName),
-      intro: "Here are the new details:",
-      rows: [
-        { label: "Service", value: a.serviceName },
-        { label: "Clinician", value: a.clinicianName },
-        { label: "New time", value: a.whenText },
-      ],
-      outro: "Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email. We look forward to seeing you.",
-    }, { content: ics, method: "REQUEST", filename: "appointment.ics" });
-  } catch { /* never block the change on email */ }
-}
 
 async function summarize(id: string) {
   const a = await getAppointment(id);
@@ -130,9 +110,9 @@ export async function POST(req: Request) {
       if (a.videoEventId) await upsertGoogleEvent(a.clinicianId, {
         eventId: a.videoEventId, summary: `${a.clientName} — ${type?.name || "Appointment"}`, location: loc, startAtISO: startAt, endAtISO: endAt,
       });
-      await sendRescheduleEmail({
+      await notifyClientReschedule({
         to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
-        clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(startAt),
+        clinicianName: getClinician(a.clinicianId)?.name || "your clinician",
         id: a.id, startAt, endAt, location: loc,
       });
     }
