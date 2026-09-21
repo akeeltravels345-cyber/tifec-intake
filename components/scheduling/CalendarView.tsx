@@ -25,6 +25,19 @@ const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "seen", label: "Seen" }, { key: "no_show", label: "No-show" }, { key: "cancelled", label: "Cancelled" },
 ];
 
+// Small toolbar icons, matching the admin scheduling menu.
+const TOOL_ICONS: Record<string, React.ReactNode> = {
+  clock: <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>,
+  video: <><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></>,
+  link: <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>,
+  clipboard: <><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14l2 2 4-4" /></>,
+  chart: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
+  plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+};
+function ToolIcon({ name }: { name: string }) {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{TOOL_ICONS[name]}</svg>;
+}
+
 // ---- date helpers (Cayman = fixed UTC-5) ----
 const pad = (n: number) => String(n).padStart(2, "0");
 const partsOf = (dateStr: string) => dateStr.split("-").map((x) => parseInt(x, 10));
@@ -309,12 +322,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
-        {hoursHref && <a className="cal-hours" href={hoursHref}>My hours</a>}
-        {connectionsHref && <a className="cal-hours" href={connectionsHref}>Video</a>}
-        {linksHref && <a className="cal-hours" href={linksHref}>My link</a>}
-        {intakeHref && <a className="cal-hours" href={intakeHref}>Intake</a>}
-        {statsHref && <a className="cal-hours" href={statsHref}>Stats</a>}
-        {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
+        {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
+        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name="video" /><span>Video</span></a>}
+        {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
+        {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
+        {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
+        {canCreate && <button className="cal-new" onClick={() => openNew()}><ToolIcon name="plus" /><span>New</span></button>}
       </div>
 
       {notice && (

@@ -3860,7 +3860,8 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-week { font: 400 20px "Newsreader", serif; }
 .cal-sp { flex: 1; }
 .cal-who { font: 400 13.5px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; }
-.cal-new { font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
+.cal-new { display: inline-flex; align-items: center; gap: 6px; font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
+.cal-new svg { flex: none; }
 
 .cal-gridwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .cal-grid { display: grid; grid-template-columns: 52px repeat(7, minmax(112px, 1fr)); position: relative; min-width: 780px; }
@@ -4573,8 +4574,9 @@ body:has(.pt) .sitefoot { display: none; }
 .ss-warn.ok { color: #226e72; }
 
 /* ===== Calendar toolbar: my-hours link ===== */
-.cal-hours { text-decoration: none; font-size: 13px; font-weight: 600; color: var(--teal-deep); border: 1px solid #cfe0e0; border-radius: 8px; padding: 6px 11px; margin-right: 8px; }
-.cal-hours:hover { background: var(--panel); }
+.cal-hours { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 13px; font-weight: 600; color: var(--teal-deep); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; margin-right: 8px; }
+.cal-hours svg { opacity: .85; flex: none; }
+.cal-hours:hover { background: var(--panel); border-color: var(--teal); }
 
 /* ===== My-hours page ===== */
 .sh-wrap { padding: 0; }
