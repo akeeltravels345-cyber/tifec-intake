@@ -4588,3 +4588,7 @@ body:has(.bk-page) .brandbar { display: none; }
 .cvr-hbtn.go:hover { filter: brightness(1.06); border-color: transparent; }
 .cal-check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--ink); cursor: pointer; }
 .cal-check input { width: 16px; height: 16px; accent-color: var(--teal, #2f8e93); }
+
+/* Stats: highlight the busiest weekday */
+.sr-daycol.busiest .sr-daybar i { background: linear-gradient(180deg, var(--gold, #BE8127), #9a6516); }
+.sr-daycol.busiest .sr-dayname { color: var(--gold, #BE8127); font-weight: 700; }

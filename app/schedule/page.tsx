@@ -49,6 +49,7 @@ export default async function SchedulePage() {
       lockedClinicianId={all ? null : me.id}
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
+      statsHref="/schedule/stats"
     />
   );
 }

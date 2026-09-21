@@ -708,12 +708,13 @@ export interface SchedulingStats {
   byWeekday: number[]; // Mon..Sun
 }
 
-export async function schedulingStats(year: number, month: number): Promise<SchedulingStats> {
+export async function schedulingStats(year: number, month: number, clinicianId?: string): Promise<SchedulingStats> {
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;
   let all: Appointment[]; let types: AppointmentType[];
   try { [all, types] = await Promise.all([listAppointments({}), listAppointmentTypes()]); }
   catch { all = []; types = []; }
-  const appts = all.filter((a) => a.kind === "appointment");
+  let appts = all.filter((a) => a.kind === "appointment");
+  if (clinicianId) appts = appts.filter((a) => a.clinicianId === clinicianId); // scope to one clinician
   const inMonth = appts.filter((a) => cayMonthOf(a.startAt) === monthKey);
 
   const total = inMonth.length;
