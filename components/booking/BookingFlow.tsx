@@ -487,6 +487,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
             {seriesResult && <p className="bk-intake">You&apos;re set with {seriesResult.booked} standing appointment{seriesResult.booked === 1 ? "" : "s"}.{seriesResult.skipped > 0 ? ` ${seriesResult.skipped} week${seriesResult.skipped === 1 ? " was" : "s were"} already taken, so we left ${seriesResult.skipped === 1 ? "it" : "them"} out. Reply to your confirmation and we&apos;ll help you find another time.` : " They&apos;re all in your confirmation email and calendar invite."}</p>}
             {intakeSent.length > 0 && <p className="bk-intake">We&apos;ve emailed your {intakeSent.join(" and ")} to <b>{details.email}</b>. Completing {intakeSent.length > 1 ? "them" : "it"} before your visit helps us give you the best care.</p>}
             <a className="bk-managelink" href={`/book/manage?preview=${preview}&id=${confirmed.id}`}>Need to change it? Manage this booking →</a>
+            <a className="bk-managelink" href="/portal">See all your appointments →</a>
             <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setSeriesResult(null); setRecurEvery(0); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
           </section>
         )}
