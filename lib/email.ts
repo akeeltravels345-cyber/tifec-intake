@@ -453,7 +453,7 @@ export interface EmailIcs { content: string; method: "REQUEST" | "CANCEL" | "PUB
  *  can attach an .ics calendar invite. */
 export async function sendBrandedEmail(to: string, subject: string, args: ClientEmailArgs, ics?: EmailIcs): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const logo = invoiceEmailLogo();
+    const logo = clientEmailLogo();
     const logoCid = logo ? CLIENT_LOGO_CID : undefined;
     const { text, html } = buildClientEmail({ ...args, logoCid });
     if (!process.env.SMTP_HOST) {
@@ -516,6 +516,14 @@ export function invoiceEmailLogo(): Buffer | null {
   try { cachedInvoiceLogo = fs.readFileSync(path.join(process.cwd(), "public", "tifec-logo.png")); }
   catch { cachedInvoiceLogo = null; }
   return cachedInvoiceLogo;
+}
+// Branded client emails use the ICON (mark), matching the portal + booking pages.
+let cachedClientLogo: Buffer | null | undefined;
+function clientEmailLogo(): Buffer | null {
+  if (cachedClientLogo !== undefined) return cachedClientLogo;
+  try { cachedClientLogo = fs.readFileSync(path.join(process.cwd(), "public", "tifec-mark.png")); }
+  catch { cachedClientLogo = null; }
+  return cachedClientLogo;
 }
 export const INVOICE_LOGO_CID = "tifec-invoice-logo";
 
