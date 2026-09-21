@@ -13,10 +13,12 @@ const DAY_START = 7, DAY_END = 20, HOUR = 92; // 7am-8pm, 92px/hour (roomy so a 
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
 // How a mode reads on the calendar block (Acuity-style) and its colour.
 const CAL_MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In Person", virtual: "Online", either: "In Person / Online" };
+// Tints reference CSS variables (defined in globals.css) so in-person (blue),
+// online (green) and either (teal) stay on-brand but adapt to the dark theme.
 const MODE_TINT: Record<AppointmentMode, { bg: string; bar: string; fg: string }> = {
-  in_person: { bg: "#dbe8f6", bar: "#4a86c7", fg: "#1d3f63" }, // blue
-  virtual: { bg: "#dcecdf", bar: "#3f8f5f", fg: "#1f5a3a" },   // green
-  either: { bg: "#d9ecea", bar: "#2f8e93", fg: "#1b5254" },    // teal
+  in_person: { bg: "var(--appt-ip-bg)", bar: "var(--appt-ip-bar)", fg: "var(--appt-ip-fg)" }, // blue
+  virtual: { bg: "var(--appt-on-bg)", bar: "var(--appt-on-bar)", fg: "var(--appt-on-fg)" },   // green
+  either: { bg: "var(--appt-ei-bg)", bar: "var(--appt-ei-bar)", fg: "var(--appt-ei-fg)" },    // teal
 };
 const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "booked", label: "Booked" }, { key: "confirmed", label: "Confirmed" },
