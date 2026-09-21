@@ -4,12 +4,11 @@ import { useState } from "react";
 import QRCode from "qrcode";
 import Foldable from "@/components/billing/Foldable";
 
-export default function BookingLinks({ clinicianId, clinicianName, types }: {
-  clinicianId: string; clinicianName: string; types: { id: string; name: string }[];
+export default function BookingLinks({ clinicianId, clinicianName, types, origin }: {
+  clinicianId: string; clinicianName: string; types: { id: string; name: string }[]; origin: string;
 }) {
   const [copied, setCopied] = useState("");
   const [qr, setQr] = useState<{ label: string; url: string; img: string } | null>(null);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const personal = `${origin}/book?clinician=${clinicianId}`;
   const firstName = (clinicianName || "").replace(/^(Dr|Mrs|Mr|Ms|Miss)\.?\s+/i, "").split(/\s+/)[0] || "you";
 
