@@ -9,7 +9,9 @@ export const metadata: Metadata = {
 
 // Set the theme (Auto/Light/Dark) on <html> before first paint so there's no
 // flash. "Auto" resolves to the device's prefers-color-scheme. See ThemeToggle.
-const THEME_INIT = `(function(){try{var t=localStorage.getItem('tifec-theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();`;
+// Intake forms (/intake) are client-facing and must ALWAYS render light, never
+// following the device's dark setting — so force light there before paint.
+const THEME_INIT = `(function(){try{var p=location.pathname;var forceLight=p==='/intake'||p.indexOf('/intake/')===0;var t=localStorage.getItem('tifec-theme')||'system';var d=!forceLight&&(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches));document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

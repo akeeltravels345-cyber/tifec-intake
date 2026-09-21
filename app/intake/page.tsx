@@ -1,5 +1,6 @@
 import Link from "next/link";
 import IntakeForm, { type ClinicianLite } from "@/components/IntakeForm";
+import ForceLightTheme from "@/components/ForceLightTheme";
 import { CLINICIANS } from "@/lib/clinicians";
 import { buildSections, clientLabel } from "@/lib/forms";
 
@@ -28,6 +29,7 @@ export default async function IntakePage({
 
   return (
     <div className="container container-form">
+      <ForceLightTheme />
       {params.preview && (
         <div className="preview-bar no-print">
           <span>👁 Preview — this is how the form looks to clients.</span>
