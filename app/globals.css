@@ -3991,8 +3991,18 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-seg button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid #dfe6e4; background: var(--surface); color: #6b7679; padding: 10px 20px; cursor: pointer; }
 .bk-seg button:first-child { border-left: 0; }
 .bk-seg button.on { background: var(--teal); color: #fff; }
-.bk-modepick { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.bk-modelbl { font-size: 13px; font-weight: 600; color: #6b7679; }
+.bk-modepick { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.bk-modelbl { font-size: 13px; font-weight: 600; color: #6b7679; line-height: 1.4; }
+.bk-modecards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bk-modecard { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 14px 16px 13px; border: 1.5px solid #dfe6e4; border-radius: 13px; background: var(--surface); cursor: pointer; position: relative; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.bk-modecard:hover { border-color: var(--teal); }
+.bk-modecard.on { border-color: var(--teal); background: #f2fafa; box-shadow: 0 0 0 1px var(--teal) inset; }
+.bk-modeic { font-size: 20px; line-height: 1; margin-bottom: 4px; }
+.bk-modename { font: 700 15px "Open Sans"; color: var(--ink); }
+.bk-modesub { font-size: 12.5px; color: #6b7679; line-height: 1.35; }
+.bk-modeavail { margin-top: 6px; font: 700 11px "Open Sans"; letter-spacing: .03em; text-transform: uppercase; color: #2a8488; display: inline-flex; align-items: center; gap: 5px; }
+.bk-modeavail::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #35a06b; display: inline-block; }
+@media (max-width: 460px) { .bk-modecards { grid-template-columns: 1fr; } }
 .bk-intake { font-size: 13.5px; color: #226e72; background: var(--panel); border: 1px solid #dcebe9; border-radius: 12px; padding: 12px 14px; margin-top: 16px; line-height: 1.55; }
 .bk-err { color: #b3261e; font-size: 13.5px; margin-top: 14px; }
 

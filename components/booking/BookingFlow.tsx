@@ -288,10 +288,20 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
             <h2 className="bk-h2">Pick a time</h2>
             {group && group.variants.in_person && group.variants.virtual && (
               <div className="bk-modepick">
-                <span className="bk-modelbl">How would you like to meet?</span>
-                <div className="bk-seg">
-                  <button type="button" className={chosenMode === "in_person" ? "on" : ""} onClick={() => selectMode("in_person")}>In person</button>
-                  <button type="button" className={chosenMode === "virtual" ? "on" : ""} onClick={() => selectMode("virtual")}>Online</button>
+                <span className="bk-modelbl">This service is offered both in person and online, with the same available times. Choose how you&apos;d like to meet:</span>
+                <div className="bk-modecards">
+                  <button type="button" className={`bk-modecard ${chosenMode === "in_person" ? "on" : ""}`} aria-pressed={chosenMode === "in_person"} onClick={() => selectMode("in_person")}>
+                    <span className="bk-modeic" aria-hidden>🏢</span>
+                    <span className="bk-modename">In person</span>
+                    <span className="bk-modesub">Visit us at the clinic</span>
+                    <span className="bk-modeavail">Available</span>
+                  </button>
+                  <button type="button" className={`bk-modecard ${chosenMode === "virtual" ? "on" : ""}`} aria-pressed={chosenMode === "virtual"} onClick={() => selectMode("virtual")}>
+                    <span className="bk-modeic" aria-hidden>💻</span>
+                    <span className="bk-modename">Online</span>
+                    <span className="bk-modesub">Secure video from anywhere</span>
+                    <span className="bk-modeavail">Available</span>
+                  </button>
                 </div>
               </div>
             )}
