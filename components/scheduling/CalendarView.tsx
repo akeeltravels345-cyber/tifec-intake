@@ -333,7 +333,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
         </div>
       ) : (
       <div className="cal-gridwrap">
-        <div className="cal-grid" style={{ height: (DAY_END - DAY_START) * HOUR + 30 }}>
+        <div className="cal-grid" style={{ height: (DAY_END - DAY_START) * HOUR + 30, gridTemplateColumns: `52px repeat(${days.length}, minmax(112px, 1fr))`, minWidth: days.length === 1 ? 0 : undefined }}>
           <div className="cal-gutter">
             <div className="cal-colhead" />
             {Array.from({ length: DAY_END - DAY_START }, (_, i) => (
