@@ -63,7 +63,11 @@ export default function ManageBooking({ initial, preview, practiceName }: { init
   return (
     <div className="bk-page">
       <div className="bk-shell">
-        <header className="bk-head"><div className="bk-brand">{practiceName}</div><div className="bk-title">Manage your booking</div></header>
+        <header className="bk-head">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="bk-logo" src="/tifec-mark.png" alt="" />
+          <div className="bk-brand">{practiceName}</div><div className="bk-title">Manage your booking</div>
+        </header>
 
         {mode === "cancelled" && (
           <section className="bk-sec bk-done">

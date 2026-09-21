@@ -21,25 +21,23 @@ export default function PortalRequest() {
 
   if (sent) {
     return (
-      <div className="bk-done">
-        <div className="bk-check">✓</div>
-        <h2 className="bk-h2">Check your inbox</h2>
-        <p className="bk-donesub">If we have appointments for <b>{email.trim()}</b>, we&apos;ve emailed you a secure link to view and manage them. It can take a minute to arrive.</p>
+      <div>
+        <div className="pt-check">✓</div>
+        <p className="pt-hi" style={{ marginTop: 0 }}>If we have appointments for <b>{email.trim()}</b>, we&apos;ve emailed you a secure link to view and manage them. It can take a minute to arrive.</p>
       </div>
     );
   }
 
   return (
-    <>
-      <h2 className="bk-h2">Your appointments</h2>
-      <p className="bk-donesub">Enter the email you booked with and we&apos;ll send you a secure link to see your appointments, complete any intake, and reschedule or cancel.</p>
-      <div className="bk-form" style={{ marginTop: 14 }}>
-        <label className="bk-f"><span>Email</span>
-          <input type="email" value={email} autoFocus onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="you@example.com" />
-        </label>
+    <div>
+      <p className="pt-lead">Enter the email you booked with and we&apos;ll send you a secure link to see your appointments, complete any intake, and reschedule or cancel.</p>
+      <div className="pt-field">
+        <label className="pt-flabel" htmlFor="pt-email">Email</label>
+        <input id="pt-email" className="pt-input" type="email" value={email} autoFocus placeholder="you@example.com"
+          onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
       </div>
-      {err && <p className="bk-err">{err}</p>}
-      <button className="bk-cta" onClick={submit} disabled={busy}>{busy ? "Sending…" : "Email me my link"}</button>
-    </>
+      {err && <p className="pt-err">{err}</p>}
+      <button className="pt-cta" onClick={submit} disabled={busy}>{busy ? "Sending…" : "Email me my link"}</button>
+    </div>
   );
 }

@@ -4,35 +4,49 @@ import { portalData, type PortalAppt } from "@/lib/portalData";
 export const dynamic = "force-dynamic";
 
 const BRAND = "The Institute for Essential Care";
+const CAY = "America/Cayman";
+const fmtDate = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: CAY, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
+const fmtTime = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
-function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bk-page pt-page">
-      <div className="bk-shell">
-        <header className="bk-head"><div className="bk-brand">{BRAND}</div><div className="bk-title">{title}</div></header>
-        <section className="bk-sec">{children}</section>
+    <div className="pt">
+      <div className="pt-inner">
+        <header className="pt-head">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="pt-logo" src="/tifec-mark.png" alt="" />
+          <div className="pt-brand">{BRAND}</div>
+          <h1 className="pt-title">My appointments</h1>
+        </header>
+        {children}
       </div>
     </div>
   );
 }
 
-function ApptCard({ a, upcoming }: { a: PortalAppt; upcoming: boolean }) {
+function Appt({ a, upcoming }: { a: PortalAppt; upcoming: boolean }) {
   return (
-    <div className={`pt-card${a.intakeForms.length ? " needs" : ""}`}>
-      <div className="pt-when">{a.whenText}</div>
-      <div className="pt-svc">{a.serviceName}{a.isGroup ? " · Group session" : ""}</div>
-      <div className="pt-meta">{a.clinicianName} · {a.mode === "virtual" ? "Online" : "In person"}</div>
+    <div className={`pt-item${upcoming ? "" : " past"}`}>
+      <div className="pt-when">
+        <span className="pt-date">{fmtDate(a.startAt)}</span>
+        <span className="pt-time">{fmtTime(a.startAt)}</span>
+        <span className="pt-mode">{a.mode === "virtual" ? "Online" : "In person"}{a.isGroup ? " · Group" : ""}</span>
+      </div>
+      <div className="pt-svc">{a.serviceName}</div>
+      <div className="pt-clin">{a.clinicianName}</div>
+
       {upcoming && a.intakeForms.length > 0 && (
         <div className="pt-intake">
-          <span className="pt-intake-lbl">Please complete before your visit:</span>
-          <div className="pt-btns">
-            {a.intakeForms.map((f) => <a key={f.url} className="pt-btn primary" href={f.url}>Complete your {f.label}</a>)}
+          <div className="pt-intake-lbl">Please complete before your visit</div>
+          <div className="pt-links">
+            {a.intakeForms.map((f) => <a key={f.url} className="pt-link" href={f.url}>{f.label}</a>)}
           </div>
         </div>
       )}
+
       {upcoming && (
-        <div className="pt-btns">
-          {a.joinLink && <a className="pt-btn" href={a.joinLink} target="_blank" rel="noopener noreferrer">Join the video call</a>}
+        <div className="pt-actions">
+          {a.joinLink && <a className="pt-btn accent" href={a.joinLink} target="_blank" rel="noopener noreferrer">Join video call</a>}
           {a.manageUrl
             ? <a className="pt-btn" href={a.manageUrl}>Reschedule or cancel</a>
             : <span className="pt-note">To change a group seat, reply to your confirmation email.</span>}
@@ -47,10 +61,9 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const parsed = readPortalToken(token);
   if (!parsed) {
     return (
-      <Shell title="My appointments">
-        <h2 className="bk-h2">This link has expired</h2>
-        <p className="bk-donesub">For your security, portal links expire. Request a fresh one and we&apos;ll email it to you.</p>
-        <a className="bk-cta" href="/portal" style={{ display: "inline-block", textDecoration: "none" }}>Get a new link</a>
+      <Shell>
+        <p className="pt-hi">This link has expired. For your security, portal links don&apos;t last forever.</p>
+        <a className="pt-btn accent" href="/portal" style={{ marginTop: 4 }}>Get a new link</a>
       </Shell>
     );
   }
@@ -59,25 +72,24 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const firstName = (data.clientName || "").trim().split(/\s+/)[0];
 
   return (
-    <Shell title="My appointments">
-      <h2 className="bk-h2">Hello{firstName ? `, ${firstName}` : ""}</h2>
-      <p className="bk-donesub">Here are your appointments with {BRAND}.</p>
+    <Shell>
+      <p className="pt-hi">{firstName ? `Hello, ${firstName}.` : "Hello."} Here&apos;s everything on your calendar with us.</p>
 
-      <div className="pt-sec">
-        <h3 className="pt-h3">Upcoming</h3>
+      <div className="pt-group">
+        <div className="pt-label">Upcoming</div>
         {data.upcoming.length === 0
-          ? <p className="bk-empty">You have no upcoming appointments. <a href="/book">Book one →</a></p>
-          : data.upcoming.map((a) => <ApptCard key={a.id} a={a} upcoming />)}
+          ? <p className="pt-empty">Nothing coming up. <a className="pt-a" href="/book">Book an appointment</a>.</p>
+          : data.upcoming.map((a) => <Appt key={a.id} a={a} upcoming />)}
       </div>
 
       {data.past.length > 0 && (
-        <div className="pt-sec">
-          <h3 className="pt-h3">Past</h3>
-          {data.past.map((a) => <ApptCard key={a.id} a={a} upcoming={false} />)}
+        <div className="pt-group">
+          <div className="pt-label">Past</div>
+          {data.past.map((a) => <Appt key={a.id} a={a} upcoming={false} />)}
         </div>
       )}
 
-      <p className="pt-foot">Need a new time? Use <a href="/book">our booking page</a>. Questions about payment or an invoice? Just reply to any email from us and we&apos;ll help.</p>
+      <p className="pt-foot">Need a new time? Visit <a className="pt-a" href="/book">our booking page</a>. Questions about payment or an invoice? Just reply to any email from us.</p>
     </Shell>
   );
 }

@@ -198,6 +198,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     <div className="bk-page" style={accent ? ({ "--bk-accent": accent } as CSSProperties) : undefined}>
       <div className="bk-shell">
         <header className="bk-head">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="bk-logo" src="/tifec-mark.png" alt="" />
           <div className="bk-brand">{practiceName}</div>
           <div className="bk-title">Book an appointment</div>
           {welcome && <p className="bk-welcome-msg">{welcome}</p>}

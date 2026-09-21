@@ -6,12 +6,15 @@ const BRAND = "The Institute for Essential Care";
 
 export default function PortalLanding() {
   return (
-    <div className="bk-page pt-page">
-      <div className="bk-shell">
-        <header className="bk-head"><div className="bk-brand">{BRAND}</div><div className="bk-title">My appointments</div></header>
-        <section className="bk-sec">
-          <PortalRequest />
-        </section>
+    <div className="pt">
+      <div className="pt-inner">
+        <header className="pt-head">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="pt-logo" src="/tifec-mark.png" alt="" />
+          <div className="pt-brand">{BRAND}</div>
+          <h1 className="pt-title">My appointments</h1>
+        </header>
+        <PortalRequest />
       </div>
     </div>
   );
