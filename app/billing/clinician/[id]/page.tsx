@@ -39,9 +39,12 @@ export default async function ClinicianDetail({ params, searchParams }: { params
 
   const [all, insurers, settings, cfg, myClients, cptCodes] = await Promise.all([listSessions({ clinicianId: id }), listInsurers(), getClinicianSettings(id), getPracticeConfig(), listClients(id), listCptCodes()]);
   const c = computeClinicianMonth(all, settings, year, month, cfg.billerCommissionPct);
-  // Referrals that need attention: expired, or expiring within 30 days.
+  // Referrals that need attention: expired, or expiring within 30 days. Only
+  // insurance clients actually need a referral, so self-pay clients that happen
+  // to carry a stray referral date are not flagged.
   const todayISO = caymanToday();
   const referralAlerts = myClients
+    .filter((cl) => cl.insurerId)
     .map((cl) => ({ cl, st: referralStatus(cl.profile.referral?.endDate, todayISO) }))
     .filter((x) => x.st.state === "expired" || x.st.state === "expiring")
     .sort((a, b) => (a.cl.profile.referral?.endDate ?? "").localeCompare(b.cl.profile.referral?.endDate ?? ""));

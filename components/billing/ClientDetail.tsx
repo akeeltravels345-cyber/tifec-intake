@@ -428,6 +428,10 @@ export default function ClientDetail({
   }
   const referral = referralStatus(profile.referral?.endDate, today);
   const refDays = referral.daysLeft;
+  // Only insurance clients need a referral. Show the referral panel when the
+  // client bills insurance, or already has a referral on file; a self-pay client
+  // with no referral isn't nudged to add one (that was over-flagging).
+  const showReferral = !!ins || referral.state !== "none";
 
   // Insured entries → CMS-1500 claim; self-pay entries (paid in full by the
   // client) → invoice. Both are selectable; the action bar offers whichever
@@ -509,24 +513,26 @@ export default function ClientDetail({
         </div>
       )}
 
-      {/* ---- Referral status (payment-critical) ---- */}
-      <div className={`cd-ref ${referral.state}`}>
-        <div className="cd-refrow">
-          <span className="cd-reflab">Referral</span>
-          {referral.state === "none" ? (
-            <span className="cd-refval">No referral on file. Add one so claims stay payable.</span>
-          ) : referral.state === "expired" ? (
-            <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b>. Sessions after this date can&apos;t be billed.</span>
-          ) : (
-            <span className="cd-refval">
-              Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
-            </span>
-          )}
-          {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
+      {/* ---- Referral status (payment-critical; insurance clients only) ---- */}
+      {showReferral && (
+        <div className={`cd-ref ${referral.state}`}>
+          <div className="cd-refrow">
+            <span className="cd-reflab">Referral</span>
+            {referral.state === "none" ? (
+              <span className="cd-refval">No referral on file. Add one so claims stay payable.</span>
+            ) : referral.state === "expired" ? (
+              <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b>. Sessions after this date can&apos;t be billed.</span>
+            ) : (
+              <span className="cd-refval">
+                Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
+              </span>
+            )}
+            {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
+          </div>
+          {canEdit && !refEdit && <button className="su-del" onClick={() => setRefEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
         </div>
-        {canEdit && !refEdit && <button className="su-del" onClick={() => setRefEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
-      </div>
-      {(referral.state === "expiring" || referral.state === "expired") && !refEdit && (
+      )}
+      {showReferral && (referral.state === "expiring" || referral.state === "expired") && !refEdit && (
         <div className={`cd-refprompt ${referral.state}`}>
           ⚠ {referral.state === "expiring"
             ? <>This referral ends in <b>{refDays} day{refDays === 1 ? "" : "s"}</b> ({profile.referral?.endDate}). Apply for a new one now. Sessions after the end date can&apos;t be billed.</>
@@ -846,7 +852,7 @@ export default function ClientDetail({
                 {benefit && benefit.remaining <= 0 && (
                   <p className="cd-refwarn">⚠ {first}&apos;s insurance funds for {benefit.year} are used up ({money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left). This charge will exceed their available funds.</p>
                 )}
-                {chargeAfterReferral(acDate, profile.referral?.endDate) && (
+                {acInsurer && chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}). It won&apos;t be paid.</p>
                 )}
                 {acDateWarn && (
@@ -897,7 +903,7 @@ export default function ClientDetail({
                         <td className="num">{money(a.total)}</td>
                         <td>
                           <span className={`cd-stage ${STAGE[a.stage].cls}`}>{STAGE[a.stage].label}{a.stage === "paid" && a.paidDate ? ` ${a.paidDate}` : ""}</span>
-                          {chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date. It won't be paid.">⚠ after referral</span>}
+                          {a.insurerId && chargeAfterReferral(a.date, profile.referral?.endDate) && <span className="cd-afterref" title="Date of service is after the referral end date. It won't be paid.">⚠ after referral</span>}
                           {a.billNote && <BillNoteFlag note={a.billNote} />}
                           {(() => {
                             // What the client owes on this specific visit: the full fee

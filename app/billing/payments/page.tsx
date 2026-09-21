@@ -48,7 +48,7 @@ export default async function BillingQueuePage() {
     insurerId: s.insurerId as string, insurerName: insName(s.insurerId),
     amount: insurancePortion(s), billedDate: s.billedDate, paid: s.insurancePaid, paidDate: s.paidDate,
     commission: r2(commissionOn(s.clinicianId, insurancePortion(s))),
-    afterReferral: s.clientId ? chargeAfterReferral(s.dateOfService, referralEndOf.get(s.clientId)) : false,
+    afterReferral: s.clientId && s.insurerId ? chargeAfterReferral(s.dateOfService, referralEndOf.get(s.clientId)) : false,
     note: s.billNote,
   });
 

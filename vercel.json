@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/intake-reminders",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/daily-agenda",
+      "schedule": "0 12 * * *"
     }
   ]
 }
