@@ -7,7 +7,7 @@ const BRAND = "The Institute for Essential Care";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bk-page">
+    <div className="bk-page pt-page">
       <div className="bk-shell">
         <header className="bk-head"><div className="bk-brand">{BRAND}</div><div className="bk-title">{title}</div></header>
         <section className="bk-sec">{children}</section>

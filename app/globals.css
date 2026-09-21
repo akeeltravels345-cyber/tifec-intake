@@ -3925,7 +3925,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
    Client booking flow (/book) — warm, calm, editorial. Its own world.
    ============================================================================ */
 body:has(.bk-page) .brandbar { display: none; }
-.bk-page { min-height: 100vh; background:
+.bk-page { min-height: 100vh; color-scheme: light; background:
     radial-gradient(1200px 600px at 50% -10%, #e4f0ef 0%, rgba(228,240,239,0) 60%),
     linear-gradient(180deg, #f5f8f7 0%, #eef2f1 100%);
   padding: 40px 18px 60px; font-family: "Open Sans", system-ui, sans-serif; color: #26303a; -webkit-font-smoothing: antialiased; }
@@ -3996,24 +3996,33 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-seg button.on { background: var(--teal); color: #fff; }
 .bk-modepick { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .bk-modelbl { font-size: 13px; font-weight: 600; color: #6b7679; line-height: 1.4; }
-/* Client self-service portal */
+/* Client self-service portal — always light (client-facing, never dark mode).
+   Pin the surface/text/line tokens to their light values so shared bk-* classes
+   (e.g. .bk-sec: var(--surface)) never flip dark for a dark-theme viewer. */
+.pt-page {
+  color-scheme: light;
+  --surface: #ffffff; --surface-2: #f4f7f6; --card: #ffffff; --panel: #f3f6f7;
+  --bg: #eef2f4; --paper: #f8f9f8;
+  --ink: #232a3d; --charcoal: #232a3d; --muted: #6b7679; --faint: #6b7580;
+  --line: #e3e9ed; --line-soft: #eef1f2;
+}
 .pt-sec { margin-top: 22px; }
 .pt-h3 { font: 700 13px "Open Sans"; text-transform: uppercase; letter-spacing: .05em; color: #8a969a; margin: 0 0 10px; }
-.pt-card { border: 1px solid #e6ecea; border-radius: 13px; padding: 15px 16px; margin-bottom: 12px; background: var(--surface); }
+.pt-card { border: 1px solid #e6ecea; border-radius: 13px; padding: 15px 16px; margin-bottom: 12px; background: #ffffff; }
 .pt-card.needs { border-color: #e8c9a6; background: #fdf7ef; }
-.pt-when { font: 700 15px "Open Sans"; color: var(--ink); }
+.pt-when { font: 700 15px "Open Sans"; color: #223038; }
 .pt-svc { font-size: 14px; color: #223038; margin-top: 3px; font-weight: 600; }
 .pt-meta { font-size: 13px; color: #6b7679; margin-top: 2px; }
 .pt-intake { margin-top: 11px; padding-top: 11px; border-top: 1px solid #f0e6d4; }
 .pt-intake-lbl { display: block; font-size: 12.5px; font-weight: 600; color: #a8641e; margin-bottom: 8px; }
 .pt-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
-.pt-btn { display: inline-block; font: 600 13px "Open Sans"; text-decoration: none; padding: 9px 14px; border-radius: 9px; border: 1px solid #dfe6e4; color: var(--teal-deep); background: var(--surface); cursor: pointer; }
-.pt-btn:hover { border-color: var(--teal); }
-.pt-btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
-.pt-btn.primary:hover { background: var(--teal-dark); }
+.pt-btn { display: inline-block; font: 600 13px "Open Sans"; text-decoration: none; padding: 9px 14px; border-radius: 9px; border: 1px solid #dfe6e4; color: #256e72; background: #ffffff; cursor: pointer; }
+.pt-btn:hover { border-color: #319a9f; }
+.pt-btn.primary { background: #319a9f; border-color: #319a9f; color: #fff; }
+.pt-btn.primary:hover { background: #2a8488; }
 .pt-note { font-size: 12.5px; color: #8a969a; align-self: center; }
 .pt-foot { margin-top: 24px; font-size: 13px; color: #6b7679; line-height: 1.5; }
-.pt-foot a, .bk-empty a { color: var(--teal-deep); font-weight: 600; }
+.pt-foot a, .bk-empty a { color: #256e72; font-weight: 600; }
 
 .bk-grouphint { font-size: 13px; color: var(--teal-deep); background: #eafaf9; border: 1px solid #cfe9e7; border-radius: 10px; padding: 10px 13px; margin: 0 0 12px; line-height: 1.4; }
 .bk-slot .bk-seats { display: block; font-size: 11px; font-weight: 600; color: #2a8488; margin-top: 2px; }
