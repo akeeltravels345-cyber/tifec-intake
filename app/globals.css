@@ -3860,6 +3860,11 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-week { font: 400 20px "Newsreader", serif; }
 .cal-sp { flex: 1; }
 .cal-who { font: 400 13.5px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; }
+/* Clinician filter as click-to-switch toggles (replaces the dropdown). */
+.cal-whoseg { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cal-whoseg button { font: 600 12.5px "Open Sans"; border: 1px solid var(--line); background: var(--panel, #fff); color: var(--muted); padding: 7px 13px; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: background .12s, color .12s, border-color .12s; }
+.cal-whoseg button:hover { border-color: var(--teal, #2f8e93); color: var(--ink); }
+.cal-whoseg button.on { background: var(--teal, #2f8e93); border-color: var(--teal, #2f8e93); color: #fff; }
 .cal-new { display: inline-flex; align-items: center; gap: 6px; font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
 .cal-new svg { flex: none; }
 
@@ -4599,6 +4604,7 @@ body:has(.pt) .sitefoot { display: none; }
 .vc-cardhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .vc-name { font-weight: 700; font-size: 15.5px; }
 .vc-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #226e72; background: var(--panel); border-radius: 20px; padding: 2px 9px; }
+.vc-badge.soon { color: var(--amber-ink, #8a6d2f); background: var(--amber-bg); border: 1px solid var(--amber-line); }
 .vc-blurb { font-size: 12.5px; color: var(--muted, #6b7280); line-height: 1.5; margin: 0 0 12px; flex: 1; }
 .vc-acct { font-size: 13px; font-weight: 600; margin-bottom: 10px; word-break: break-all; }
 .vc-row { display: flex; align-items: center; gap: 10px; }

@@ -10,8 +10,12 @@ const BLURB: Record<Provider, string> = {
   google: "Your virtual sessions get a Google Meet link created on your own Google Calendar.",
 };
 
-export default function VideoConnections({ initial, configured, notice }: {
+export default function VideoConnections({ initial, configured, notice, comingSoon = false }: {
   initial: Conn[]; configured: { zoom: boolean; google: boolean }; notice: { connected: string; error: string };
+  // When true, the connect action is hidden and the card shows "Coming soon".
+  // Used to keep video connections open only for the Zoom-review test account
+  // while the feature is still being reviewed for everyone else.
+  comingSoon?: boolean;
 }) {
   const [conns, setConns] = useState<Conn[]>(initial);
   const [busy, setBusy] = useState("");
@@ -38,7 +42,7 @@ export default function VideoConnections({ initial, configured, notice }: {
       <div className={`vc-card ${conn ? "on" : ""}`}>
         <div className="vc-cardhead">
           <div className="vc-name">{LABEL[p]}</div>
-          {conn && <span className="vc-badge">Connected</span>}
+          {conn ? <span className="vc-badge">Connected</span> : comingSoon && <span className="vc-badge soon">Coming soon</span>}
         </div>
         <p className="vc-blurb">{BLURB[p]}</p>
         {conn ? (
@@ -52,6 +56,8 @@ export default function VideoConnections({ initial, configured, notice }: {
               <button className="vc-btn" disabled={busy === p + "disconnect"} onClick={() => act("disconnect", p)}>{busy === p + "disconnect" ? "…" : "Disconnect"}</button>
             </div>
           </>
+        ) : comingSoon ? (
+          <div className="vc-unavail">Automatic {LABEL[p]} links are coming soon. You will be able to connect your account here once it is ready.</div>
         ) : ok ? (
           <a className="vc-connect" href={`/api/scheduling/video/connect?provider=${p}`}>Connect {LABEL[p]}</a>
         ) : (

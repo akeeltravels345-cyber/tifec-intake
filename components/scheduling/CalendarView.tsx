@@ -168,6 +168,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
   const typeById = (id: string | null) => types.find((t) => t.id === id) || null;
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || id;
+  // Compact label for the calendar filter toggles: drop the title prefix
+  // (Dr./Mrs./…) and keep the first name, which reads cleanly on a chip.
+  const shortName = (full: string) => full.replace(/^(Dr|Dr\.|Mrs|Mrs\.|Mr|Mr\.|Ms|Ms\.)\s+/i, "").split(/\s+/)[0] || full;
 
   // ---- new / edit ----
   function openNew(date?: string, startMin?: number) {
@@ -318,10 +321,30 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
         {lockedClinicianId ? (
           <span className="cal-mine">{clinName(lockedClinicianId)}</span>
         ) : (
-          <select className="cal-who" value={who} onChange={(e) => setWho(e.target.value)}>
-            <option value="all">All clinicians</option>
-            {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="cal-whoseg" role="tablist" aria-label="Filter calendar by clinician">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={who === "all"}
+              className={who === "all" ? "on" : ""}
+              onClick={() => setWho("all")}
+            >
+              All
+            </button>
+            {clinicians.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={who === c.id}
+                className={who === c.id ? "on" : ""}
+                onClick={() => setWho(c.id)}
+                title={c.name}
+              >
+                {shortName(c.name)}
+              </button>
+            ))}
+          </div>
         )}
         {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
         {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
