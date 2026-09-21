@@ -4090,13 +4090,24 @@ body:has(.pt) .sitefoot { display: none; }
 .bk-grouphint { font-size: 13px; color: var(--teal-deep); background: #eafaf9; border: 1px solid #cfe9e7; border-radius: 10px; padding: 10px 13px; margin: 0 0 12px; line-height: 1.4; }
 .bk-slot .bk-seats { display: block; font-size: 11px; font-weight: 600; color: #2a8488; margin-top: 2px; }
 .bk-slot.on .bk-seats { color: rgba(255,255,255,.85); }
-.bk-recur { border: 1.5px solid #e4ebe9; border-radius: 13px; padding: 13px 15px; margin-top: 4px; background: var(--surface); }
-.bk-recur-top { display: flex; gap: 11px; align-items: flex-start; cursor: pointer; }
-.bk-recur-top input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--teal); flex: none; }
-.bk-recur-top span { display: flex; flex-direction: column; gap: 3px; }
-.bk-recur-top b { font: 700 14.5px "Open Sans"; color: var(--ink); }
-.bk-recur-top em { font-style: normal; font-size: 12.5px; color: #6b7679; line-height: 1.4; }
-.bk-recur-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef1f2; }
+/* Book several this month */
+.bk-monthpick { margin-bottom: 14px; }
+.bk-monthseg { display: flex; width: 100%; }
+.bk-monthseg button { flex: 1; }
+.bk-monthhint { font-size: 12.5px; color: #6b7679; line-height: 1.45; margin: 10px 0 0; }
+.bk-daydot { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--teal); color: #fff; font: 700 11px "Open Sans"; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.bk-day { position: relative; }
+.bk-picks { margin-top: 16px; border: 1px solid #dde7e5; border-radius: 14px; padding: 15px 16px; background: #f7fbfa; }
+.bk-picks-hd { font: 700 11px "Open Sans"; text-transform: uppercase; letter-spacing: .06em; color: #5f8a8c; margin-bottom: 10px; }
+.bk-picks-list { display: flex; flex-direction: column; gap: 7px; }
+.bk-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; color: #223038; font-weight: 600; background: #fff; border: 1px solid #e6ecea; border-radius: 9px; padding: 9px 12px; }
+.bk-pick button { border: 0; background: none; color: #9aa4a3; font-size: 15px; cursor: pointer; line-height: 1; padding: 0 2px; }
+.bk-pick button:hover { color: #b0492f; }
+.bk-picks .bk-cta { margin-top: 13px; }
+.bk-picks-confirm { margin: 0 0 6px; }
+.bk-picks-confirm .bk-pick { font-weight: 500; }
+.bk-monthnote { font-size: 13.5px; color: #4a565b; line-height: 1.5; background: #f3f9f9; border: 1px solid #cfe3e3; border-radius: 11px; padding: 12px 14px; margin: 2px 0 4px; }
+.bk-monthnote b { color: #223038; }
 .bk-modecards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .bk-modecard { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 14px 16px 13px; border: 1.5px solid #dfe6e4; border-radius: 13px; background: var(--surface); cursor: pointer; position: relative; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
 .bk-modecard:hover { border-color: var(--teal); }

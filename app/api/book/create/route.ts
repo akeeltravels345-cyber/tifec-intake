@@ -27,18 +27,29 @@ export async function POST(req: Request) {
   const email = clean(body.email, 160);
   const phone = clean(body.phone, 40);
 
+  // "Book several this month": a list of chosen open times, each booked only if
+  // it's still free. Capped so the public page can't create an unbounded batch.
+  const sessions = Array.isArray(body.sessions)
+    ? (body.sessions as unknown[])
+        .map((x) => ({ date: clean((x as Record<string, unknown>)?.date, 10), minute: Number((x as Record<string, unknown>)?.minute) }))
+        .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s.date) && Number.isFinite(s.minute))
+        .slice(0, 8)
+    : [];
+  const isMonth = sessions.length > 0;
+
   if (!name) return NextResponse.json({ error: "Please give your name." }, { status: 400 });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: "Please give a valid email." }, { status: 400 });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(minute)) return NextResponse.json({ error: "Pick a time." }, { status: 400 });
+  if (!isMonth && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(minute))) return NextResponse.json({ error: "Pick a time." }, { status: 400 });
 
   const type = (await listAppointmentTypes()).find((t) => t.id === typeId && t.active);
   if (!type) return NextResponse.json({ error: "That service is unavailable." }, { status: 404 });
   if (!canBook(clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
 
   // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
+  // session (single booking only; month bookings are for 1:1 services).
   // session rather than booking the whole slot. They join the roster; a full or
   // vanished session is refused so nobody over-fills it.
-  if ((type.capacity || 1) > 1) {
+  if (!isMonth && (type.capacity || 1) > 1) {
     const startAt = utcFromCayMinutes(date, minute);
     const session = await findGroupSession(clinicianId, type.id, startAt);
     if (!session || session.attendees.length >= session.capacity) {
@@ -78,8 +89,10 @@ export async function POST(req: Request) {
   }
 
   // Re-check the slot is still free, so two people can't grab the same time.
-  const free = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
-  if (!free.includes(minute)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
+  if (!isMonth) {
+    const free = await availableSlots(clinicianId, date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
+    if (!free.includes(minute)) return NextResponse.json({ error: "Sorry, that time was just taken. Please pick another." }, { status: 409 });
+  }
 
   // Custom booking questions: validate the required ones and record answers.
   const ansMap = (body.answers && typeof body.answers === "object") ? (body.answers as Record<string, unknown>) : {};
@@ -107,15 +120,12 @@ export async function POST(req: Request) {
   // reminder share the same link and both partners' submissions group together.
   const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;
 
-  // Standing series: a client can book this as a weekly (7) or biweekly (14)
-  // appointment for a handful of sessions. Only whole-week cadences and up to 12
-  // sessions are accepted from the public page. The first slot is already known
-  // to be free; later weeks are availability-checked and any taken week is
-  // skipped and reported rather than double-booked.
-  const everyDays = [7, 14].includes(Number(body.repeatEveryDays)) ? Number(body.repeatEveryDays) : 0;
-  const wanted = everyDays ? Math.max(2, Math.min(12, Math.floor(Number(body.repeatCount) || 0))) : 1;
-  const isSeries = everyDays > 0 && wanted > 1;
-  const seriesId = isSeries ? randomBytes(8).toString("hex") : null;
+  // The times to book: a single slot, or the month's chosen sessions. Each is
+  // availability-checked at booking time, so a slot taken since selection is
+  // skipped and reported rather than double-booked (never silently dropped).
+  const toBook = isMonth ? sessions : [{ date, minute }];
+  const isMulti = toBook.length > 1;
+  const seriesId = isMulti ? randomBytes(8).toString("hex") : null;
 
   const apptFields = {
     kind: "appointment" as const, clientName: name, clientEmail: email, clinicianId, typeId: type.id,
@@ -130,19 +140,18 @@ export async function POST(req: Request) {
   const booked: Appointment[] = [];
   const skippedWhen: string[] = [];
 
-  for (let i = 0; i < wanted; i++) {
-    const dateI = i === 0 ? date : addDaysStr(date, i * everyDays);
-    if (i > 0) {
-      const freeI = await availableSlots(clinicianId, dateI, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
-      if (!freeI.includes(minute)) { skippedWhen.push(caymanWhen(utcFromCayMinutes(dateI, minute))); continue; }
-    }
-    const sAt = utcFromCayMinutes(dateI, minute);
-    const eAt = utcFromCayMinutes(dateI, minute + type.durationMin);
+  // Book earliest-first so the confirmation's "first session" is the soonest.
+  for (const s of [...toBook].sort((a, b) => (a.date === b.date ? a.minute - b.minute : a.date.localeCompare(b.date)))) {
+    const freeS = await availableSlots(clinicianId, s.date, type.durationMin, Date.now(), type.bufferBeforeMin, type.bufferAfterMin);
+    if (!freeS.includes(s.minute)) { skippedWhen.push(caymanWhen(utcFromCayMinutes(s.date, s.minute))); continue; }
+    const sAt = utcFromCayMinutes(s.date, s.minute);
+    const eAt = utcFromCayMinutes(s.date, s.minute + type.durationMin);
     let a = await createAppointment({ ...apptFields, seriesId, startAt: sAt, endAt: eAt } as never);
     a = await attachVideoAndCalendar(a, vidCtx);
     booked.push(a);
   }
 
+  if (booked.length === 0) return NextResponse.json({ error: "Sorry, those times were just taken. Please pick again." }, { status: 409 });
   const appt = booked[0];
   const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
   const clinicianName = getClinician(clinicianId)?.name || "your clinician";
@@ -153,8 +162,8 @@ export async function POST(req: Request) {
     await sendIntakeInvite({ to: email, clientName: name, clinicianName, serviceName: type.name, whenText: caymanWhen(appt.startAt), forms });
   }
 
-  // One "you're booked" confirmation. For a series it lists every booked date,
-  // notes any weeks that couldn't be reserved, and the .ics carries the recurrence.
+  // One "you're booked" confirmation. For a month booking it lists every booked
+  // session, notes any that couldn't be reserved, and the .ics carries them all.
   await sendBookingConfirmation({
     id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
     to: email, clientName: name, serviceName: type.name, clinicianName,
@@ -162,15 +171,15 @@ export async function POST(req: Request) {
     manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,
     portalUrl: `${origin}/portal/${portalToken(email)}`,
     intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
-    seriesDates: isSeries ? booked.map((b) => caymanWhen(b.startAt)) : undefined,
+    seriesDates: isMulti ? booked.map((b) => caymanWhen(b.startAt)) : undefined,
     skippedDates: skippedWhen.length ? skippedWhen : undefined,
-    recurrence: isSeries ? { everyDays, count: booked.length } : undefined,
+    events: isMulti ? booked.map((b) => ({ id: b.id, startAt: b.startAt, endAt: b.endAt })) : undefined,
   });
 
   return NextResponse.json({
     ok: true,
     appointment: { id: appt.id, startAt: appt.startAt, endAt: appt.endAt },
     intakeSent: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
-    series: isSeries ? { booked: booked.length, skipped: skippedWhen.length } : undefined,
+    series: isMulti ? { booked: booked.length, skipped: skippedWhen.length } : undefined,
   });
 }

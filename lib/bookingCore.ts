@@ -11,7 +11,7 @@ import { type Appointment, updateAppointment } from "@/lib/scheduling";
 import { createVideoLink, hasGoogleConnection, upsertGoogleEvent } from "@/lib/videoConnections";
 import { formShortLabel } from "@/lib/intakeRouting";
 import { sendBrandedEmail } from "@/lib/email";
-import { appointmentInvite } from "@/lib/ical";
+import { appointmentInvite, buildIcs } from "@/lib/ical";
 
 const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || "there";
 const organizerEmail = () => process.env.SMTP_FROM || process.env.SMTP_USER || undefined;
@@ -70,6 +70,7 @@ export async function sendBookingConfirmation(args: {
   seriesDates?: string[];   // pretty "when" strings for each booked occurrence (>1 = a series)
   skippedDates?: string[];  // pretty strings for weeks that couldn't be booked
   recurrence?: { everyDays: number; count: number };
+  events?: { id: string; startAt: string; endAt: string }[]; // month booking: one .ics event per session
   extraNotes?: string[];    // any extra sentences to add to the note block
   portalUrl?: string;       // one-tap link to the client's self-service portal
 }): Promise<void> {
@@ -99,23 +100,34 @@ export async function sendBookingConfirmation(args: {
       ];
 
   const notes: string[] = [];
-  if (isSeries) notes.push(`Your standing appointments: ${args.seriesDates!.join("; ")}.`);
-  if (args.skippedDates && args.skippedDates.length) notes.push(`We couldn't reserve ${args.skippedDates.join("; ")} (already taken), so please rebook those or reply and we'll help.`);
+  if (isSeries) notes.push(`Your sessions this month: ${args.seriesDates!.join("; ")}.`);
+  if (args.skippedDates && args.skippedDates.length) notes.push(`We couldn't reserve ${args.skippedDates.join("; ")} (just taken), so please rebook those or reply and we'll help.`);
   if (args.intakeForms.length) notes.push(`We've also emailed your ${args.intakeForms.join(" and ")} to complete before your visit, so we're ready for you.`);
   if (args.extraNotes) for (const n of args.extraNotes) if (n) notes.push(n);
 
-  const ics = appointmentInvite({
-    id: args.id, startAt: args.startAt, endAt: args.endAt, serviceName: args.serviceName,
-    clinicianName: args.clinicianName, location: isLink ? args.locationOrLink : location,
-    manageUrl: args.manageUrl, clientName: args.clientName, clientEmail: args.to,
-    organizerEmail: organizerEmail(), method: "REQUEST",
-    recurrence: isSeries ? args.recurrence : undefined,
-  });
+  // A month booking attaches one calendar event per session; a single booking
+  // attaches the usual one-event invite (with recurrence when a cadence applies).
+  const ics = (args.events && args.events.length > 1)
+    ? buildIcs(args.events.map((e) => ({
+        uid: `${e.id}@caymanessentialcare.com`, start: e.startAt, end: e.endAt,
+        summary: `${args.serviceName} with The Institute for Essential Care`,
+        location: isLink ? args.locationOrLink : location,
+        organizerName: "The Institute for Essential Care", organizerEmail: organizerEmail(),
+        attendeeName: args.clientName, attendeeEmail: args.to,
+        status: "CONFIRMED" as const, sequence: Math.floor(Date.now() / 1000),
+      })), { method: "REQUEST" })
+    : appointmentInvite({
+        id: args.id, startAt: args.startAt, endAt: args.endAt, serviceName: args.serviceName,
+        clinicianName: args.clinicianName, location: isLink ? args.locationOrLink : location,
+        manageUrl: args.manageUrl, clientName: args.clientName, clientEmail: args.to,
+        organizerEmail: organizerEmail(), method: "REQUEST",
+        recurrence: isSeries ? args.recurrence : undefined,
+      });
   try {
     await sendBrandedEmail(args.to, "You're booked with The Institute for Essential Care", {
       heading: "You're booked in! 🎉",
       greetingName: firstNameOf(args.clientName),
-      intro: isSeries ? "We can't wait to see you. Here are the details of your standing appointment:" : "We can't wait to see you. Here are the details of your appointment:",
+      intro: isSeries ? "We can't wait to see you. Here are the details of your sessions this month:" : "We can't wait to see you. Here are the details of your appointment:",
       rows,
       buttons,
       note: notes.length ? notes.join(" ") : undefined,

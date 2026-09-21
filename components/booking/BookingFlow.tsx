@@ -46,9 +46,10 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [details, setDetails] = useState({ name: "", email: "", phone: "", path: "self_pay" as "self_pay" | "insurance", insurerId: "", policyNo: "", notes: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({}); // questionId -> value
   const [chosenMode, setChosenMode] = useState<"in_person" | "virtual">("in_person"); // for "either" services
-  const [recurEvery, setRecurEvery] = useState<0 | 7 | 14>(0); // standing series cadence (0 = single)
-  const [recurCount, setRecurCount] = useState(6);              // number of sessions in the series
+  const [monthMode, setMonthMode] = useState(false); // "book several this month" (pick a time per session)
+  const [picks, setPicks] = useState<{ date: string; minute: number; clinicianId: string }[]>([]); // chosen sessions
   const [seriesResult, setSeriesResult] = useState<{ booked: number; skipped: number } | null>(null);
+  const MONTH_CAP = 8; // most sessions a client can book in one go
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -140,6 +141,10 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     fetch(`/api/book/slots?${q}`).then((r) => r.json()).then((d) => setSlots(d.slots || [])).catch(() => setSlots([])).finally(() => setLoading(false));
   }, [step, type, date, clin, preview]);
 
+  // Month picks belong to one clinician + service; clear them if either changes,
+  // or if the client switches to "any available" (month booking needs a specific clinician).
+  useEffect(() => { setMonthMode(false); setPicks([]); }, [clin, type?.id]);
+
   const grouped = useMemo(() => {
     const g: { label: string; items: Slot[] }[] = [{ label: "Morning", items: [] }, { label: "Afternoon", items: [] }, { label: "Evening", items: [] }];
     for (const s of slots) {
@@ -166,16 +171,33 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     setStep("waitlisted");
   }
 
+  // "Book several this month": pick an open time per session (each confirmed
+  // available, so nothing is ever skipped). Only offered with a specific clinician.
+  const isPicked = (d: string, m: number) => picks.some((p) => p.date === d && p.minute === m);
+  function togglePick(d: string, m: number, clinicianId: string) {
+    setErr("");
+    setPicks((prev) => {
+      if (prev.some((p) => p.date === d && p.minute === m)) return prev.filter((p) => !(p.date === d && p.minute === m));
+      if (prev.length >= MONTH_CAP) { setErr(`You can book up to ${MONTH_CAP} sessions at once.`); return prev; }
+      return [...prev, { date: d, minute: m, clinicianId }].sort((a, b) => (a.date === b.date ? a.minute - b.minute : a.date.localeCompare(b.date)));
+    });
+  }
+  const usingMonth = () => monthMode && picks.length > 0;
+
   async function book() {
-    if (!type || !slot) return;
+    if (!type) return;
+    const month = usingMonth();
+    if (!month && !slot) return;
     if (!details.name.trim()) { setErr("Please enter your name."); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(details.email)) { setErr("Please enter a valid email."); return; }
     const missing = type.questions.find((q) => q.required && !String(answers[q.id] || "").trim());
     if (missing) { setErr(`Please answer: ${missing.label}`); return; }
     setBusy(true); setErr("");
+    const clinicianId = month ? picks[0].clinicianId : slot!.clinicianId;
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers, ...(recurEvery ? { repeatEveryDays: recurEvery, repeatCount: recurCount } : {}) }),
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers,
+        ...(month ? { sessions: picks.map((p) => ({ date: p.date, minute: p.minute })) } : { date, minute: slot!.minute }) }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
@@ -312,12 +334,25 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </div>
               </div>
             )}
+            {!isGroupType && clin !== "any" && (
+              <div className="bk-monthpick">
+                <div className="bk-seg bk-monthseg">
+                  <button type="button" className={!monthMode ? "on" : ""} onClick={() => { setMonthMode(false); setPicks([]); }}>One session</button>
+                  <button type="button" className={monthMode ? "on" : ""} onClick={() => { setMonthMode(true); setSlot(null); }}>Several this month</button>
+                </div>
+                {monthMode && <p className="bk-monthhint">Tap the times you&apos;d like across the month, up to {MONTH_CAP}. Every time you pick is open, so none get skipped.</p>}
+              </div>
+            )}
             <div className="bk-daystrip">
-              {dayChips.map((c) => (
-                <button key={c.date} className={`bk-day ${date === c.date ? "on" : ""}`} onClick={() => setDate(c.date)}>
-                  <span className="bk-dow">{c.dow}</span><span className="bk-dnum">{c.d}</span><span className="bk-dmon">{c.mon}</span>
-                </button>
-              ))}
+              {dayChips.map((c) => {
+                const picksOn = monthMode ? picks.filter((p) => p.date === c.date).length : 0;
+                return (
+                  <button key={c.date} className={`bk-day ${date === c.date ? "on" : ""}`} onClick={() => setDate(c.date)}>
+                    <span className="bk-dow">{c.dow}</span><span className="bk-dnum">{c.d}</span><span className="bk-dmon">{c.mon}</span>
+                    {picksOn > 0 && <span className="bk-daydot">{picksOn}</span>}
+                  </button>
+                );
+              })}
             </div>
             {isGroupType && <p className="bk-grouphint">This is a group session. Pick a scheduled time below and reserve your seat.</p>}
             {!date && <p className="bk-hint">Choose a day to see {isGroupType ? "scheduled sessions" : "open times"}.</p>}
@@ -329,12 +364,28 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 <div className="bk-slots">
                   {g.items.map((s, i) => {
                     const iso = utcFromCay(date, s.minute);
-                    return <button key={i} className={`bk-slot ${slot === s ? "on" : ""}`} onClick={() => { setSlot(s); setStep("details"); }}>{fmtTime(iso)}{typeof s.seatsLeft === "number" && <span className="bk-seats">{s.seatsLeft} seat{s.seatsLeft === 1 ? "" : "s"} left</span>}</button>;
+                    const on = monthMode ? isPicked(date, s.minute) : slot === s;
+                    return <button key={i} className={`bk-slot ${on ? "on" : ""}`} onClick={() => { if (monthMode) togglePick(date, s.minute, s.clinicianId); else { setSlot(s); setStep("details"); } }}>{fmtTime(iso)}{typeof s.seatsLeft === "number" && <span className="bk-seats">{s.seatsLeft} seat{s.seatsLeft === 1 ? "" : "s"} left</span>}</button>;
                   })}
                 </div>
               </div>
             ))}
             {slots.length > 0 && <p className="bk-tznote">Times shown in <b>{tz}</b>. The clinic runs on Cayman time (EST).</p>}
+            {monthMode && picks.length > 0 && (
+              <div className="bk-picks">
+                <div className="bk-picks-hd">Your sessions ({picks.length})</div>
+                <div className="bk-picks-list">
+                  {picks.map((p) => (
+                    <div key={`${p.date}:${p.minute}`} className="bk-pick">
+                      <span>{fmtDay(utcFromCay(p.date, p.minute))} · {fmtTime(utcFromCay(p.date, p.minute))}</span>
+                      <button type="button" aria-label="Remove" onClick={() => togglePick(p.date, p.minute, p.clinicianId)}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                {err && <p className="bk-err">{err}</p>}
+                <button className="bk-cta" onClick={() => { setErr(""); setStep("details"); }}>Continue with {picks.length} session{picks.length === 1 ? "" : "s"} →</button>
+              </div>
+            )}
             <button className="bk-textbtn" onClick={() => { setErr(""); setStep("waitlist"); }}>Don&apos;t see a time that works? Join the waitlist →</button>
           </section>
         )}
@@ -365,7 +416,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         )}
 
         {/* 4. Details */}
-        {step === "details" && type && slot && (
+        {step === "details" && type && (slot || (monthMode && picks.length > 0)) && (
           <section className="bk-sec">
             <h2 className="bk-h2">Your details</h2>
             {remembered && <p className="bk-welcome">Welcome back{details.name ? `, ${details.name.split(" ")[0]}` : ""}, we&apos;ve filled in your details. <button type="button" onClick={forgetMe}>Not you?</button></p>}
@@ -421,28 +472,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </div>
               )}
             </div>
-            {!/free\s+online\s+consultation/i.test(type.name) && !isGroupType && (
-              <div className="bk-recur">
-                <label className="bk-recur-top">
-                  <input type="checkbox" checked={recurEvery !== 0} onChange={(e) => setRecurEvery(e.target.checked ? 7 : 0)} />
-                  <span><b>Make this a standing appointment</b><em>Hold the same time each week (or every two weeks) with {clin === "any" ? "your clinician" : clinName(slot.clinicianId)}. We&apos;ll book what&apos;s open and tell you if any week is taken.</em></span>
-                </label>
-                {recurEvery !== 0 && (
-                  <div className="bk-recur-opts">
-                    <label className="bk-f"><span>Repeats</span>
-                      <select value={recurEvery} onChange={(e) => setRecurEvery(Number(e.target.value) === 14 ? 14 : 7)}>
-                        <option value={7}>Every week</option>
-                        <option value={14}>Every 2 weeks</option>
-                      </select>
-                    </label>
-                    <label className="bk-f"><span>Sessions</span>
-                      <select value={recurCount} onChange={(e) => setRecurCount(Number(e.target.value))}>
-                        {[4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n} sessions</option>)}
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
+            {monthMode && picks.length > 0 && (
+              <p className="bk-monthnote">You&apos;re booking <b>{picks.length} session{picks.length === 1 ? "" : "s"}</b> this month with {clinName(picks[0].clinicianId)}. Go back to add or remove times.</p>
             )}
             {!/free\s+online\s+consultation/i.test(type.name) && (firstVisit !== "no") && (
               <p className="bk-intake">We&apos;ll email you your intake form{/couples?|marriage|pre[\s-]?marital/i.test(type.name) ? "" : " and a short wellbeing screening"} to complete before your visit. It helps your clinician prepare.</p>
@@ -454,19 +485,25 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
         )}
 
         {/* 5. Confirm */}
-        {step === "confirm" && type && slot && (
+        {step === "confirm" && type && (slot || (monthMode && picks.length > 0)) && (
           <section className="bk-sec">
             <h2 className="bk-h2">Confirm your booking</h2>
             <div className="bk-summary">
               <Row k="Service" v={type.name} />
-              <Row k="Clinician" v={clin === "any" ? clinName(slot.clinicianId) : clinName(clin)} />
-              <Row k="When" v={`${fmtDay(utcFromCay(date, slot.minute))} · ${fmtTime(utcFromCay(date, slot.minute))}`} />
+              <Row k="Clinician" v={clin === "any" ? clinName((slot || picks[0]).clinicianId) : clinName(clin)} />
+              {monthMode && picks.length > 0
+                ? <Row k="Sessions" v={`${picks.length} this month`} />
+                : <Row k="When" v={`${fmtDay(utcFromCay(date, slot!.minute))} · ${fmtTime(utcFromCay(date, slot!.minute))}`} />}
               <Row k="Length" v={`${type.durationMin} min · ${MODE_LABEL[type.mode]}`} />
-              {recurEvery !== 0 && <Row k="Repeats" v={`${recurEvery === 14 ? "Every 2 weeks" : "Weekly"} · ${recurCount} sessions`} />}
               <Row k="You" v={`${details.name}${details.email ? " · " + details.email : ""}`} />
               <Row k="Payment" v={details.path === "insurance" ? `Insurance${details.insurerId ? " · " + (insurers.find((i) => i.id === details.insurerId)?.name || "") : ""}` : "Self-pay"} />
-              {type.price > 0 && <Row k="Fee" v={money(type.price)} strong />}
+              {type.price > 0 && <Row k="Fee" v={monthMode && picks.length > 0 ? `${money(type.price)} × ${picks.length} = ${money(type.price * picks.length)}` : money(type.price)} strong />}
             </div>
+            {monthMode && picks.length > 0 && (
+              <div className="bk-picks-list bk-picks-confirm">
+                {picks.map((p) => <div key={`${p.date}:${p.minute}`} className="bk-pick"><span>{fmtDay(utcFromCay(p.date, p.minute))} · {fmtTime(utcFromCay(p.date, p.minute))}</span></div>)}
+              </div>
+            )}
             <p className="bk-tznote">Time shown in {tz}. Clinic time is Cayman (EST).</p>
             {err && <p className="bk-err">{err}</p>}
             <button className="bk-cta" onClick={book} disabled={busy}>{busy ? "Booking…" : "Confirm booking"}</button>
@@ -482,15 +519,15 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
             <p className="bk-donesub">A confirmation is on its way to <b>{details.email}</b>.</p>
             <div className="bk-summary">
               <Row k="Service" v={type.name} />
-              <Row k="Clinician" v={clinName(slot!.clinicianId)} />
+              <Row k="Clinician" v={clinName((slot || picks[0]).clinicianId)} />
               <Row k={seriesResult ? "First session" : "When"} v={`${fmtDay(confirmed.startAt)} · ${fmtTime(confirmed.startAt)}`} />
               {seriesResult && <Row k="Sessions" v={`${seriesResult.booked} booked`} />}
             </div>
-            {seriesResult && <p className="bk-intake">You&apos;re set with {seriesResult.booked} standing appointment{seriesResult.booked === 1 ? "" : "s"}.{seriesResult.skipped > 0 ? ` ${seriesResult.skipped} week${seriesResult.skipped === 1 ? " was" : "s were"} already taken, so we left ${seriesResult.skipped === 1 ? "it" : "them"} out. Reply to your confirmation and we&apos;ll help you find another time.` : " They&apos;re all in your confirmation email and calendar invite."}</p>}
+            {seriesResult && <p className="bk-intake">You&apos;re booked for {seriesResult.booked} session{seriesResult.booked === 1 ? "" : "s"} this month.{seriesResult.skipped > 0 ? ` ${seriesResult.skipped} time${seriesResult.skipped === 1 ? " was" : "s were"} just taken, so we left ${seriesResult.skipped === 1 ? "it" : "them"} out. Reply to your confirmation and we&apos;ll help you find another.` : " They&apos;re all in your confirmation email and calendar invite."}</p>}
             {intakeSent.length > 0 && <p className="bk-intake">We&apos;ve emailed your {intakeSent.join(" and ")} to <b>{details.email}</b>. Completing {intakeSent.length > 1 ? "them" : "it"} before your visit helps us give you the best care.</p>}
             <a className="bk-managelink" href={`/book/manage?preview=${preview}&id=${confirmed.id}`}>Need to change it? Manage this booking →</a>
             <a className="bk-managelink" href="/portal">See all your appointments →</a>
-            <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setSeriesResult(null); setRecurEvery(0); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
+            <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setSeriesResult(null); setMonthMode(false); setPicks([]); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
           </section>
         )}
 
