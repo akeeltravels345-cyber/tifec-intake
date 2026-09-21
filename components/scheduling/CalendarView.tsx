@@ -33,6 +33,7 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   clipboard: <><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14l2 2 4-4" /></>,
   chart: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
   plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+  gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
 };
 function ToolIcon({ name }: { name: string }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{TOOL_ICONS[name]}</svg>;
@@ -323,7 +324,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           </select>
         )}
         {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
-        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name="video" /><span>Video</span></a>}
+        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name="gear" /><span>Settings</span></a>}
         {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
         {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
         {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}

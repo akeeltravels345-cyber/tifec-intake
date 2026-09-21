@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DOW_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default async function StatsPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
@@ -40,7 +39,6 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   const maxClin = Math.max(1, ...s.byClinician.map((c) => c.count));
   const maxDow = Math.max(1, ...s.byWeekday);
   const busiestIdx = s.byWeekday.reduce((best, n, i) => (n > s.byWeekday[best] ? i : best), 0);
-  const top = s.popularTypes[0];
   const scopeLabel = all ? "the whole practice" : "you";
 
   const Tile = ({ k, v, sub, tone }: { k: string; v: string | number; sub?: string; tone?: string }) => (
@@ -65,14 +63,12 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
           <>
             <div className="sr-tiles">
               <Tile k="Booked this month" v={s.total} sub={`${s.upcoming} upcoming · ${s.seen} seen`} />
-              <Tile k="New clients" v={s.newClients} sub={`${s.returningClients} returning · ${s.totalClients} total`} tone="good" />
-              <Tile k="Most popular" v={top ? top.name : "—"} sub={top ? `${top.count} booking${top.count === 1 ? "" : "s"}` : undefined} />
-              <Tile k="Busiest day" v={DOW_FULL[busiestIdx]} sub={`${s.byWeekday[busiestIdx]} appointment${s.byWeekday[busiestIdx] === 1 ? "" : "s"}`} />
-              <Tile k="Utilization" v={`${utilization}%`} sub={capacityMin > 0 ? `${hrs(s.bookedMinutes)} booked of ${hrs(capacityMin)}` : "Set your hours to track this"} tone={utilization >= 70 ? "good" : ""} />
+              <Tile k="Utilization" v={`${utilization}%`} sub={capacityMin > 0 ? `${hrs(s.bookedMinutes)} of ${hrs(capacityMin)} booked` : "Set your hours to track this"} tone={utilization >= 70 ? "good" : ""} />
               <Tile k="Booked value" v={money(s.bookedValue)} sub={`${money(s.seenValue)} from sessions seen`} />
+              <Tile k="New clients" v={s.newClients} sub={`${s.returningClients} returning · ${s.totalClients} total`} tone="good" />
+              <Tile k="Booked online" v={s.clientBookings} sub={`${s.staffBookings} added by staff`} />
               <Tile k="No-shows" v={s.noShow} sub={`${s.noShowRate}% of kept`} tone={s.noShow ? "warn" : ""} />
               <Tile k="Cancelled" v={s.cancelled} sub={`${s.cancelRate}% of booked`} tone={s.cancelled ? "warn" : ""} />
-              <Tile k="Booked online" v={s.clientBookings} sub={`${s.staffBookings} added by staff`} />
             </div>
 
             <div className="sr-cols">
