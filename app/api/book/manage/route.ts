@@ -5,7 +5,7 @@ import { cancelVideoLink, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/vid
 import { sendBrandedEmail } from "@/lib/email";
 import { caymanWhen } from "@/lib/caymanTime";
 import { appointmentInvite } from "@/lib/ical";
-import { notifyClientReschedule } from "@/lib/schedulingEmails";
+import { notifyClientReschedule, offerFreedSlotToWaitlist } from "@/lib/schedulingEmails";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +87,9 @@ export async function POST(req: Request) {
       clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(a.startAt),
       id: a.id, startAt: a.startAt, endAt: a.endAt,
     });
+    // Offer the freed slot to any matching waitlisted clients (first to claim wins).
+    const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+    await offerFreedSlotToWaitlist(a, origin);
     return NextResponse.json({ ok: true, cancelled: true });
   }
 

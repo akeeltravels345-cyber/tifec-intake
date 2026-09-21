@@ -23,6 +23,7 @@ export interface IcsEvent {
   attendeeEmail?: string;
   status?: "CONFIRMED" | "CANCELLED";
   sequence?: number;           // bump on each change so clients accept the update
+  rrule?: string;              // e.g. "FREQ=WEEKLY;COUNT=6" for a standing series
 }
 
 const PRODID = "-//The Institute for Essential Care//Scheduling//EN";
@@ -58,6 +59,7 @@ function veventLines(e: IcsEvent): string[] {
     `STATUS:${e.status ?? "CONFIRMED"}`,
     `SUMMARY:${esc(e.summary)}`,
   ];
+  if (e.rrule) lines.push(`RRULE:${e.rrule}`);
   if (e.description) lines.push(`DESCRIPTION:${esc(e.description)}`);
   if (e.location) lines.push(`LOCATION:${esc(e.location)}`);
   if (e.url) lines.push(`URL:${esc(e.url)}`);
@@ -88,16 +90,29 @@ export function appointmentInvite(a: {
   id: string; startAt: string; endAt: string; serviceName: string; clinicianName: string;
   location?: string; manageUrl?: string; clientName?: string; clientEmail?: string;
   organizerEmail?: string; method: IcsMethod; cancelled?: boolean;
+  recurrence?: { everyDays: number; count: number };
 }): string {
   const description = [`${a.serviceName} with ${a.clinicianName}.`, a.manageUrl ? `Manage your booking: ${a.manageUrl}` : ""].filter(Boolean).join("\n");
   return buildIcs([{
     uid: `${a.id}@caymanessentialcare.com`,
     start: a.startAt, end: a.endAt,
-    summary: `${a.serviceName} — The Institute for Essential Care`,
+    summary: `${a.serviceName} with The Institute for Essential Care`,
     description, location: a.location,
     organizerName: "The Institute for Essential Care", organizerEmail: a.organizerEmail,
     attendeeName: a.clientName, attendeeEmail: a.clientEmail,
     status: a.cancelled ? "CANCELLED" : "CONFIRMED",
     sequence: Math.floor(Date.now() / 1000), // monotonic, so each change supersedes
+    rrule: a.recurrence ? rruleFor(a.recurrence.everyDays, a.recurrence.count) : undefined,
   }], { method: a.method });
+}
+
+// Turn a "every N days, C times" cadence into an RRULE. Whole-week cadences use
+// WEEKLY (what a standing therapy slot is); anything else falls back to DAILY.
+function rruleFor(everyDays: number, count: number): string {
+  const c = Math.max(1, Math.floor(count));
+  if (everyDays % 7 === 0) {
+    const weeks = everyDays / 7;
+    return `FREQ=WEEKLY;INTERVAL=${weeks};COUNT=${c}`;
+  }
+  return `FREQ=DAILY;INTERVAL=${Math.max(1, Math.floor(everyDays))};COUNT=${c}`;
 }

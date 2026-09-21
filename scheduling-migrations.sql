@@ -55,3 +55,25 @@ CREATE TABLE IF NOT EXISTS scheduling_video_connections (
   connected_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (clinician_id, provider)
 );
+
+-- Series link for recurring appointments (created earlier; ensure present)
+ALTER TABLE scheduling_appointments ADD COLUMN IF NOT EXISTS series_id text;
+
+-- Waitlist auto-fill: one row per freed slot that was offered to the waitlist.
+-- First matching client to claim it wins (status flips open -> claimed atomically).
+CREATE TABLE IF NOT EXISTS scheduling_offers (
+  id                 text PRIMARY KEY,
+  clinician_id       text NOT NULL,
+  type_id            text,
+  start_at           timestamptz NOT NULL,
+  end_at             timestamptz NOT NULL,
+  mode               text NOT NULL DEFAULT 'in_person',
+  location_hint      text NOT NULL DEFAULT '',
+  status             text NOT NULL DEFAULT 'open',   -- 'open' | 'claimed' | 'expired'
+  claimed_entry_id   text,
+  claimed_appt_id    text,
+  notified_entry_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  expires_at         timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS scheduling_offers_status_idx ON scheduling_offers (status);

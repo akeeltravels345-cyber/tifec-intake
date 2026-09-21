@@ -46,6 +46,9 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [details, setDetails] = useState({ name: "", email: "", phone: "", path: "self_pay" as "self_pay" | "insurance", insurerId: "", policyNo: "", notes: "" });
   const [answers, setAnswers] = useState<Record<string, string>>({}); // questionId -> value
   const [chosenMode, setChosenMode] = useState<"in_person" | "virtual">("in_person"); // for "either" services
+  const [recurEvery, setRecurEvery] = useState<0 | 7 | 14>(0); // standing series cadence (0 = single)
+  const [recurCount, setRecurCount] = useState(6);              // number of sessions in the series
+  const [seriesResult, setSeriesResult] = useState<{ booked: number; skipped: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -171,12 +174,13 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     setBusy(true); setErr("");
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers }),
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId: slot.clinicianId, date, minute: slot.minute, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers, ...(recurEvery ? { repeatEveryDays: recurEvery, repeatCount: recurCount } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not book. Please try again."); if (res.status === 409) { setStep("time"); } return; }
     setIntakeSent(Array.isArray(data.intakeSent) ? data.intakeSent : []);
+    setSeriesResult(data.series && data.series.booked > 1 ? { booked: data.series.booked, skipped: data.series.skipped || 0 } : null);
     try {
       localStorage.setItem(REMEMBER_KEY, JSON.stringify({
         name: details.name, email: details.email, phone: details.phone,
@@ -413,6 +417,29 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </div>
               )}
             </div>
+            {!/free\s+online\s+consultation/i.test(type.name) && (
+              <div className="bk-recur">
+                <label className="bk-recur-top">
+                  <input type="checkbox" checked={recurEvery !== 0} onChange={(e) => setRecurEvery(e.target.checked ? 7 : 0)} />
+                  <span><b>Make this a standing appointment</b><em>Hold the same time each week (or every two weeks) with {clin === "any" ? "your clinician" : clinName(slot.clinicianId)}. We&apos;ll book what&apos;s open and tell you if any week is taken.</em></span>
+                </label>
+                {recurEvery !== 0 && (
+                  <div className="bk-recur-opts">
+                    <label className="bk-f"><span>Repeats</span>
+                      <select value={recurEvery} onChange={(e) => setRecurEvery(Number(e.target.value) === 14 ? 14 : 7)}>
+                        <option value={7}>Every week</option>
+                        <option value={14}>Every 2 weeks</option>
+                      </select>
+                    </label>
+                    <label className="bk-f"><span>Sessions</span>
+                      <select value={recurCount} onChange={(e) => setRecurCount(Number(e.target.value))}>
+                        {[4, 6, 8, 10, 12].map((n) => <option key={n} value={n}>{n} sessions</option>)}
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
             {!/free\s+online\s+consultation/i.test(type.name) && (firstVisit !== "no") && (
               <p className="bk-intake">We&apos;ll email you your intake form{/couples?|marriage|pre[\s-]?marital/i.test(type.name) ? "" : " and a short wellbeing screening"} to complete before your visit. It helps your clinician prepare.</p>
             )}
@@ -431,6 +458,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <Row k="Clinician" v={clin === "any" ? clinName(slot.clinicianId) : clinName(clin)} />
               <Row k="When" v={`${fmtDay(utcFromCay(date, slot.minute))} · ${fmtTime(utcFromCay(date, slot.minute))}`} />
               <Row k="Length" v={`${type.durationMin} min · ${MODE_LABEL[type.mode]}`} />
+              {recurEvery !== 0 && <Row k="Repeats" v={`${recurEvery === 14 ? "Every 2 weeks" : "Weekly"} · ${recurCount} sessions`} />}
               <Row k="You" v={`${details.name}${details.email ? " · " + details.email : ""}`} />
               <Row k="Payment" v={details.path === "insurance" ? `Insurance${details.insurerId ? " · " + (insurers.find((i) => i.id === details.insurerId)?.name || "") : ""}` : "Self-pay"} />
               {type.price > 0 && <Row k="Fee" v={money(type.price)} strong />}
@@ -451,11 +479,13 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
             <div className="bk-summary">
               <Row k="Service" v={type.name} />
               <Row k="Clinician" v={clinName(slot!.clinicianId)} />
-              <Row k="When" v={`${fmtDay(confirmed.startAt)} · ${fmtTime(confirmed.startAt)}`} />
+              <Row k={seriesResult ? "First session" : "When"} v={`${fmtDay(confirmed.startAt)} · ${fmtTime(confirmed.startAt)}`} />
+              {seriesResult && <Row k="Sessions" v={`${seriesResult.booked} booked`} />}
             </div>
+            {seriesResult && <p className="bk-intake">You&apos;re set with {seriesResult.booked} standing appointment{seriesResult.booked === 1 ? "" : "s"}.{seriesResult.skipped > 0 ? ` ${seriesResult.skipped} week${seriesResult.skipped === 1 ? " was" : "s were"} already taken, so we left ${seriesResult.skipped === 1 ? "it" : "them"} out. Reply to your confirmation and we&apos;ll help you find another time.` : " They&apos;re all in your confirmation email and calendar invite."}</p>}
             {intakeSent.length > 0 && <p className="bk-intake">We&apos;ve emailed your {intakeSent.join(" and ")} to <b>{details.email}</b>. Completing {intakeSent.length > 1 ? "them" : "it"} before your visit helps us give you the best care.</p>}
             <a className="bk-managelink" href={`/book/manage?preview=${preview}&id=${confirmed.id}`}>Need to change it? Manage this booking →</a>
-            <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
+            <button className="bk-textbtn" onClick={() => { setStep("service"); setType(null); setClin("any"); setDate(""); setSlot(null); setConfirmed(null); setSeriesResult(null); setRecurEvery(0); setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" }); }}>Book another</button>
           </section>
         )}
 

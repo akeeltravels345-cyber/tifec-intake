@@ -7,7 +7,7 @@ import {
   type Appointment,
 } from "@/lib/scheduling";
 import { externalBusyIntervals } from "@/lib/externalBusy";
-import { notifyClientReschedule } from "@/lib/schedulingEmails";
+import { notifyClientReschedule, offerFreedSlotToWaitlist } from "@/lib/schedulingEmails";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 
@@ -113,13 +113,22 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Who is it for?" }, { status: 400 });
       }
       const base = { ...body, clinicianId, createdBy: me.id, source: "staff" } as Record<string, unknown>;
-      delete base.repeatEveryDays; delete base.repeatCount;
+      delete base.repeatEveryDays; delete base.repeatCount; delete base.repeatUntil;
       const everyDays = Number(body.repeatEveryDays) || 0;
-      const count = Number(body.repeatCount) || 1;
+      // Series can end after a fixed number of occurrences, or on a date.
+      let count = Number(body.repeatCount) || 1;
+      const until = String(body.repeatUntil || "");
+      if (everyDays > 0 && /^\d{4}-\d{2}-\d{2}$/.test(until) && body.startAt) {
+        const startMs = Date.parse(String(body.startAt));
+        const untilMs = Date.parse(`${until}T23:59:59`);
+        if (Number.isFinite(startMs) && Number.isFinite(untilMs) && untilMs > startMs) {
+          count = Math.min(52, Math.floor((untilMs - startMs) / (everyDays * 86400e3)) + 1);
+        }
+      }
       if (everyDays > 0 && count > 1) {
-        const made = await createRecurring(base as never, everyDays, count);
-        const withVideo = await Promise.all(made.map((a) => attachVideo(a)));
-        return NextResponse.json({ ok: true, appointment: withVideo[0], count: withVideo.length });
+        const { created, skipped } = await createRecurring(base as never, everyDays, count);
+        const withVideo = await Promise.all(created.map((a) => attachVideo(a)));
+        return NextResponse.json({ ok: true, appointment: withVideo[0], count: withVideo.length, skipped: skipped.length });
       }
       const appt = await attachVideo(await createAppointment(base as never));
       return NextResponse.json({ ok: true, appointment: appt });
@@ -153,6 +162,9 @@ export async function POST(req: Request) {
       if (body.status === "cancelled") {
         if (appt.mode === "virtual" && appt.locationOrLink) await cancelVideoLink(appt.clinicianId, appt.locationOrLink, appt.videoEventId || undefined);
         if (appt.videoEventId && !/meet\.google\.com/i.test(appt.locationOrLink || "")) await deleteGoogleEvent(appt.clinicianId, appt.videoEventId);
+        // Offer the freed slot to matching waitlisted clients (first to claim wins).
+        const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+        await offerFreedSlotToWaitlist(appt, origin);
       } else if ((body.startAt || body.endAt) && appt.kind !== "block" && appt.videoEventId) {
         // A drag/edit that moved the time: keep the Google Calendar event in sync.
         await upsertGoogleEvent(appt.clinicianId, { eventId: appt.videoEventId, summary: appt.clientName || "Appointment", startAtISO: appt.startAt, endAtISO: appt.endAt });
@@ -172,6 +184,8 @@ export async function POST(req: Request) {
       if (existing?.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink, existing.videoEventId || undefined);
       if (existing?.videoEventId && !/meet\.google\.com/i.test(existing.locationOrLink || "")) await deleteGoogleEvent(existing.clinicianId, existing.videoEventId);
       await deleteAppointment(id);
+      // Offer the freed slot to matching waitlisted clients (first to claim wins).
+      if (existing) { const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, ""); await offerFreedSlotToWaitlist(existing, origin); }
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown action." }, { status: 400 });

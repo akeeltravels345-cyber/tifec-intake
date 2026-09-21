@@ -583,21 +583,35 @@ export async function deleteAppointment(id: string): Promise<void> {
   }
 }
 
-/** Create a recurring series: `count` copies spaced `everyDays` apart, sharing a
- *  seriesId. Returns the appointments made. */
-export async function createRecurring(input: ApptInput, everyDays: number, count: number): Promise<Appointment[]> {
+/** True if this clinician already has a non-cancelled appointment or block
+ *  overlapping [startAt, endAt). Used to keep a recurring series from
+ *  double-booking a slot a later week already occupies. */
+export async function hasConflict(clinicianId: string, startAt: string, endAt: string, excludeId?: string): Promise<boolean> {
+  const overlapping = await listAppointments({ from: startAt, to: endAt, clinicianId });
+  return overlapping.some((a) => a.id !== excludeId && a.status !== "cancelled" && a.startAt < endAt && a.endAt > startAt);
+}
+
+/** Create a recurring series: up to `count` copies spaced `everyDays` apart,
+ *  sharing a seriesId. The first occurrence is always created (staff chose it);
+ *  any later occurrence whose slot is already taken is skipped so the series
+ *  never double-books. Returns the appointments made plus the skipped dates. */
+export async function createRecurring(input: ApptInput, everyDays: number, count: number): Promise<{ created: Appointment[]; skipped: string[] }> {
   const seriesId = randomId();
   const n = Math.max(1, Math.min(52, Math.floor(count)));
   const step = Math.max(1, Math.floor(everyDays)) * 86400e3;
   const baseStart = iso(input.startAt ?? now());
   const baseEnd = iso(input.endAt ?? baseStart);
-  const out: Appointment[] = [];
+  const created: Appointment[] = [];
+  const skipped: string[] = [];
+  const clinicianId = str(input.clinicianId);
   for (let i = 0; i < n; i++) {
     const startAt = new Date(Date.parse(baseStart) + i * step).toISOString();
     const endAt = new Date(Date.parse(baseEnd) + i * step).toISOString();
-    out.push(await createAppointment({ ...input, seriesId, startAt, endAt }));
+    // The first is kept as chosen; later weeks yield to whatever's already booked.
+    if (i > 0 && clinicianId && await hasConflict(clinicianId, startAt, endAt)) { skipped.push(startAt); continue; }
+    created.push(await createAppointment({ ...input, seriesId, startAt, endAt }));
   }
-  return out;
+  return { created, skipped };
 }
 
 /** Delete this occurrence and every later one in the same series. Guarded so a
@@ -808,6 +822,14 @@ export async function addWaitlist(input: Partial<WaitlistEntry>): Promise<Waitli
       VALUES (${row.id}, ${row.typeId}, ${row.clinicianId}, ${row.name}, ${row.email}, ${row.phone}, ${row.note}, ${row.status}, ${row.createdAt})`;
   } else { const all = readJson<WaitlistEntry[]>(WAIT_FILE, []); all.push(row); writeJson(WAIT_FILE, all); }
   return row;
+}
+
+export async function getWaitlistEntry(id: string): Promise<WaitlistEntry | null> {
+  if (!id) return null;
+  try {
+    if (usePostgres) { const sql = await pg(); const r = (await sql`SELECT * FROM scheduling_waitlist WHERE id=${id}`) as Record<string, unknown>[]; return r[0] ? rowToWait(r[0]) : null; }
+    return readJson<WaitlistEntry[]>(WAIT_FILE, []).find((w) => w.id === id) ?? null;
+  } catch { return null; }
 }
 
 export async function setWaitlistStatus(id: string, status: WaitStatus): Promise<void> {

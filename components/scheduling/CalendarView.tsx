@@ -39,7 +39,7 @@ const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minute
 const label12 = (minutes: number) => { let h = Math.floor(minutes / 60); const m = minutes % 60; const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}${m ? ":" + pad(m) : ""}${ap}`; };
 const prettyDate = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }); };
 
-type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number };
+type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number; _repeatEnds?: "count" | "date"; _repeatUntil?: string };
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
@@ -90,6 +90,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState(""); // transient confirmation banner (e.g. series created)
   const [attName, setAttName] = useState("");
   const [attEmail, setAttEmail] = useState("");
   const days = view === "day" ? [anchor] : Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -198,13 +199,22 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const endAt = utcFromCay(draft._date!, draft._startMin! + (draft._durMin || 50));
     setBusy(true);
     const payload: Record<string, unknown> = { ...draft, startAt, endAt };
-    if (!draft.id && draft._repeatEvery) { payload.repeatEveryDays = draft._repeatEvery; payload.repeatCount = draft._repeatCount || 1; }
-    delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount;
+    if (!draft.id && draft._repeatEvery) {
+      payload.repeatEveryDays = draft._repeatEvery;
+      if (draft._repeatEnds === "date" && draft._repeatUntil) payload.repeatUntil = draft._repeatUntil;
+      else payload.repeatCount = draft._repeatCount || 1;
+    }
+    delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount; delete payload._repeatEnds; delete payload._repeatUntil;
     const action = draft.id ? "update" : "create";
     const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload }) });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not save."); return; }
+    // Recurring: tell staff how many landed and whether any weeks were already taken.
+    if (data.count > 1) {
+      const skipped = Number(data.skipped) || 0;
+      setNotice(`Created ${data.count} appointment${data.count === 1 ? "" : "s"} in the series${skipped ? `. ${skipped} week${skipped === 1 ? " was" : "s were"} skipped because that slot was already booked.` : "."}`);
+    }
     setDraft(null); load();
   }
   async function setStatus(a: Appointment, status: AppointmentStatus) {
@@ -302,6 +312,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
         {statsHref && <a className="cal-hours" href={statsHref}>Stats</a>}
         {canCreate && <button className="cal-new" onClick={() => openNew()}>+ New</button>}
       </div>
+
+      {notice && (
+        <div className="cal-notice" role="status">
+          <span>{notice}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setNotice("")}>✕</button>
+        </div>
+      )}
 
       {view === "month" ? (
         <div className="cal-month">
@@ -496,7 +513,16 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       <option value={28}>Every 4 weeks</option>
                     </select>
                   </label>
-                  {!!draft._repeatEvery && <label className="cal-f"><span>Occurrences</span><input type="number" min={2} max={52} value={draft._repeatCount || 4} onChange={(e) => setDraft({ ...draft, _repeatCount: Number(e.target.value) })} /></label>}
+                  {!!draft._repeatEvery && (
+                    <label className="cal-f"><span>Ends</span>
+                      <select value={draft._repeatEnds || "count"} onChange={(e) => setDraft({ ...draft, _repeatEnds: e.target.value as "count" | "date" })}>
+                        <option value="count">After a number of sessions</option>
+                        <option value="date">On a date</option>
+                      </select>
+                    </label>
+                  )}
+                  {!!draft._repeatEvery && (draft._repeatEnds || "count") === "count" && <label className="cal-f"><span>Occurrences</span><input type="number" min={2} max={52} value={draft._repeatCount || 4} onChange={(e) => setDraft({ ...draft, _repeatCount: Number(e.target.value) })} /></label>}
+                  {!!draft._repeatEvery && draft._repeatEnds === "date" && <label className="cal-f"><span>Until</span><input type="date" value={draft._repeatUntil || ""} min={draft._date} onChange={(e) => setDraft({ ...draft, _repeatUntil: e.target.value })} /></label>}
                 </>
               )}
 
