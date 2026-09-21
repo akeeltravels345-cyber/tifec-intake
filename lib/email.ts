@@ -24,6 +24,17 @@ const BRAND_CHARCOAL = "#2d2d2a";
 const BRAND_MUTED = "#6b6b66";
 const BRAND_LINE = "#e4ded2";
 
+// Client-facing email palette — matches the self-service portal (cool teal-mint,
+// minimal). Used only by buildClientEmail; the staff/internal emails keep the
+// warm brand tones above.
+const PC = {
+  bg: "#eef2f1", card: "#ffffff", border: "#dde7e5", line: "#e6ecea",
+  ink: "#1c2a31", body: "#3f4b50", muted: "#7f8d90",
+  teal: "#256e72", eyebrow: "#2a8488",
+  accentBg: "#eef8f7", accentBorder: "#bfe0df", accentText: "#1f6165",
+  footBg: "#f4f7f6",
+};
+
 export interface NotifyArgs {
   to: string; // clinician email
   clinicianName: string;
@@ -393,35 +404,39 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
   t.push("Warmly,", PRACTICE_NAME);
   const text = t.join("\n").replace(/\n{3,}/g, "\n\n");
 
-  const header = a.logoCid
-    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
-    : `<div style="font-size:19px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(PRACTICE_NAME)}</div>`;
-  const introHtml = a.intro ? `<p style="font-size:15px;line-height:1.65;margin:0 0 18px;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.intro)}</p>` : "";
+  const logo = a.logoCid
+    ? `<img src="cid:${a.logoCid}" alt="${escapeHtml(PRACTICE_NAME)}" height="44" style="height:44px;width:auto;display:block;margin:0 0 14px;" />`
+    : "";
+  const introHtml = a.intro ? `<p style="font-size:15.5px;line-height:1.6;margin:0 0 18px;color:${PC.body};">${escapeHtml(a.intro)}</p>` : "";
   const rowsHtml = a.rows?.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BRAND_LINE};border-radius:12px;overflow:hidden;margin:0 0 4px;">${a.rows.map((r, i) => `<tr style="background:${i % 2 ? "#faf8f3" : "#ffffff"};"><td style="padding:12px 18px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:${BRAND_MUTED};width:42%;text-align:right;vertical-align:top;">${escapeHtml(r.label)}</td><td style="padding:12px 18px;font-size:14.5px;color:${BRAND_CHARCOAL};font-weight:600;">${escapeHtml(r.value)}</td></tr>`).join("")}</table>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${PC.line};border-radius:13px;overflow:hidden;margin:2px 0 6px;background:#ffffff;">${a.rows.map((r, i) => `<tr><td style="padding:13px 18px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:${PC.muted};font-weight:700;width:38%;vertical-align:top;${i ? `border-top:1px solid ${PC.line};` : ""}">${escapeHtml(r.label)}</td><td style="padding:13px 18px 13px 0;font-size:14.5px;color:${PC.ink};font-weight:600;${i ? `border-top:1px solid ${PC.line};` : ""}">${escapeHtml(r.value)}</td></tr>`).join("")}</table>`
     : "";
   const buttonsHtml = a.buttons?.length
-    ? `<div style="margin:18px 0 4px;">${a.buttons.map((b) => `<a href="${escapeHtml(b.url)}" style="display:block;background:${INV_TEAL};color:#ffffff;text-decoration:none;font-size:14.5px;font-weight:600;padding:14px 24px;border-radius:11px;text-align:center;margin:9px 0;">${escapeHtml(b.label)}</a>`).join("")}</div>`
+    ? `<div style="margin:20px 0 4px;">${a.buttons.map((b, i) => i === 0
+        ? `<a href="${escapeHtml(b.url)}" style="display:block;background:${PC.teal};color:#ffffff;text-decoration:none;font-size:14.5px;font-weight:700;padding:14px 22px;border-radius:11px;text-align:center;margin:9px 0;">${escapeHtml(b.label)}</a>`
+        : `<a href="${escapeHtml(b.url)}" style="display:block;background:${PC.accentBg};color:${PC.accentText};border:1px solid ${PC.accentBorder};text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:11px;text-align:center;margin:9px 0;">${escapeHtml(b.label)}</a>`).join("")}</div>`
     : "";
-  const noteHtml = a.note ? `<div style="margin:18px 0 4px;padding:13px 18px;background:#faf8f3;border:1px solid ${BRAND_LINE};border-radius:11px;font-size:13px;line-height:1.6;color:${BRAND_MUTED};text-align:center;">${escapeHtml(a.note)}</div>` : "";
-  const outroHtml = a.outro ? `<p style="font-size:14.5px;line-height:1.65;margin:18px 0 0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.outro)}</p>` : "";
+  const noteHtml = a.note ? `<div style="margin:18px 0 4px;padding:13px 16px;background:${PC.footBg};border:1px solid ${PC.line};border-radius:11px;font-size:13px;line-height:1.6;color:#55636a;">${escapeHtml(a.note)}</div>` : "";
+  const outroHtml = a.outro ? `<p style="font-size:14.5px;line-height:1.6;margin:18px 0 0;color:${PC.body};">${escapeHtml(a.outro)}</p>` : "";
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:${BRAND_CREAM};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CREAM};padding:30px 12px;"><tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-      <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
-      <tr><td align="center" style="padding:34px 44px 0;">${header}</td></tr>
-      <tr><td style="padding:20px 44px 0;"><h1 style="font-size:22px;font-weight:700;margin:0;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(a.heading)}</h1></td></tr>
-      <tr><td align="center" style="padding:14px 44px 0;"><table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td width="44" height="3" style="width:44px;height:3px;background:${INV_GOLD};border-radius:3px;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td></tr></table></td></tr>
-      <tr><td style="padding:20px 44px 10px;">
-        <p style="font-size:15px;margin:0 0 16px;color:${BRAND_CHARCOAL};text-align:center;">${escapeHtml(greet)}</p>
-        ${introHtml}${rowsHtml}${buttonsHtml}${noteHtml}${outroHtml}
-        <p style="font-size:14.5px;line-height:1.6;margin:22px 0 0;color:${BRAND_CHARCOAL};text-align:center;">Warmly,<br><span style="font-weight:600;">${escapeHtml(PRACTICE_NAME)}</span></p>
+<body style="margin:0;padding:0;background:${PC.bg};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PC.bg};padding:34px 14px;"><tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:500px;background:${PC.card};border:1px solid ${PC.border};border-radius:18px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <tr><td style="height:5px;background:${INV_TEAL};background:linear-gradient(90deg,${INV_TEAL},${INV_INDIGO},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:32px 38px 0;">
+        ${logo}
+        <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:${PC.eyebrow};">${escapeHtml(PRACTICE_NAME)}</div>
+        <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:27px;line-height:1.12;letter-spacing:-.01em;margin:11px 0 0;color:${PC.ink};">${escapeHtml(a.heading)}</h1>
       </td></tr>
-      <tr><td style="padding:22px 44px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};text-align:center;">
-        <div style="font-size:13px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:3px;">${escapeHtml(PRACTICE_NAME)}</div>
-        <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;">This email is confidential and intended only for the named client.</div>
+      <tr><td style="padding:20px 38px 34px;">
+        <p style="font-size:15.5px;margin:0 0 15px;color:${PC.ink};font-weight:600;">${escapeHtml(greet)}</p>
+        ${introHtml}${rowsHtml}${buttonsHtml}${noteHtml}${outroHtml}
+        <p style="font-size:14.5px;line-height:1.6;margin:24px 0 0;color:${PC.body};">Warmly,<br><span style="font-weight:700;color:${PC.ink};">${escapeHtml(PRACTICE_NAME)}</span></p>
+      </td></tr>
+      <tr><td style="padding:20px 38px;background:${PC.footBg};border-top:1px solid ${PC.border};">
+        <div style="font-size:12.5px;font-weight:700;color:${PC.ink};">${escapeHtml(PRACTICE_NAME)}</div>
+        <div style="font-size:10.5px;color:#9aa7a8;line-height:1.5;margin-top:3px;">This email is confidential and intended only for the named client.</div>
       </td></tr>
     </table>
   </td></tr></table>
