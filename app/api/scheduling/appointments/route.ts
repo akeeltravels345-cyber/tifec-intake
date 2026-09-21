@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin, type Clinician } from "@/lib/clinicians";
+import { isSystemAdmin, CLINICIANS, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom, getAppointment,
+  createRecurring, deleteSeriesFrom, getAppointment, getAvailability,
   type Appointment,
 } from "@/lib/scheduling";
+import { externalBusyIntervals } from "@/lib/externalBusy";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 
@@ -50,12 +51,25 @@ export async function GET(req: Request) {
   const p = new URL(req.url).searchParams;
   // Clinicians are locked to their own id no matter what they ask for.
   const clinicianId = all ? (p.get("clinicianId") || undefined) : me.id;
-  const appointments = await listAppointments({
-    from: p.get("from") || undefined,
-    to: p.get("to") || undefined,
-    clinicianId,
-  });
-  return NextResponse.json({ appointments, viewer: { seesAll: all, meId: me.id } });
+  const from = p.get("from") || undefined;
+  const to = p.get("to") || undefined;
+  const appointments = await listAppointments({ from, to, clinicianId });
+
+  // External busy blocks (their connected Google + iCal feeds) for the clinician(s)
+  // in view, so a clinician sees when they're busy elsewhere. Best-effort.
+  let externalBusy: { clinicianId: string; start: string; end: string }[] = [];
+  if (from && to) {
+    const ids = clinicianId ? [clinicianId] : CLINICIANS.filter(isTreating).map((c) => c.id);
+    try {
+      const per = await Promise.all(ids.map(async (id) => {
+        const av = await getAvailability(id);
+        const iv = await externalBusyIntervals(id, av.busyFeeds, from, to);
+        return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end }));
+      }));
+      externalBusy = per.flat();
+    } catch { /* best-effort */ }
+  }
+  return NextResponse.json({ appointments, externalBusy, viewer: { seesAll: all, meId: me.id } });
 }
 
 export async function POST(req: Request) {

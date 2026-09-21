@@ -71,6 +71,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   }
   const [monday, setMonday] = useState(() => mondayOf(todayCayman));
   const [appts, setAppts] = useState<Appointment[]>(initial);
+  const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string }[]>([]);
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
@@ -131,7 +132,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (clin !== "all") q.set("clinicianId", clin);
     const res = await fetch(`/api/scheduling/appointments?${q}`);
     const data = await res.json().catch(() => ({}));
-    if (res.ok) setAppts(data.appointments || []);
+    if (res.ok) { setAppts(data.appointments || []); setExtBusy(data.externalBusy || []); }
   }
   useEffect(() => { load(monday, who); /* eslint-disable-next-line */ }, [monday, who]);
 
@@ -200,9 +201,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     setDraft((d) => (d && d.id === a.id ? { ...d, status, billingSessionId: data.appointment?.billingSessionId ?? d.billingSessionId } : d));
   }
   async function remove(a: Appointment) {
-    if (!confirm("Delete this from the calendar?")) return;
+    if (!confirm(`Delete this ${a.kind === "block" ? "block" : "appointment"}? This can't be undone.`)) return;
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: a.id }) });
-    setDraft(null); load(monday, who);
+    setDraft(null); setViewAppt(null); load(monday, who);
   }
   async function removeSeries(a: Appointment) {
     if (!a.seriesId) return;
@@ -327,6 +328,19 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                             <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{timeRange}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>
                           </>
                         )}
+                      </div>
+                    );
+                  })}
+                  {extBusy.filter((b) => cayDay(b.start) === day && (who === "all" || b.clinicianId === who)).map((b, i) => {
+                    const bs = Math.max(DAY_START * 60, cayMinutes(b.start));
+                    const be = Math.min(DAY_END * 60, cayMinutes(b.end) || DAY_END * 60);
+                    if (be <= bs) return null;
+                    const top = ((bs - DAY_START * 60) / 60) * HOUR;
+                    const height = Math.max(14, ((be - bs) / 60) * HOUR - 2);
+                    return (
+                      <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title="Busy on another calendar">
+                        <div className="cal-appt-n">Busy{who === "all" ? ` · ${clinName(b.clinicianId).split(" ").slice(-1)}` : ""}</div>
+                        <div className="cal-appt-m">{label12(bs)}-{label12(be)}</div>
                       </div>
                     );
                   })}
@@ -520,7 +534,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 <button className="cvr-hbtn" onClick={() => setViewAppt(null)}>Close</button>
                 <div className="cvr-hactions">
                   {editable && <button className="cvr-hbtn" onClick={() => { openEdit(a); setViewAppt(null); }}>Edit</button>}
-                  {editable && a.status !== "cancelled" && <button className="cvr-hbtn danger" onClick={() => { if (confirm(`Cancel this ${isBlock ? "block" : "appointment"}?`)) { setStatus(a, "cancelled"); setViewAppt(null); } }}>Cancel</button>}
+                  {editable && <button className="cvr-hbtn danger" onClick={() => remove(a)}>Delete</button>}
                 </div>
               </div>
 
