@@ -765,6 +765,9 @@ export interface SchedulingStats {
   popularTypes: { typeId: string | null; name: string; color: string; count: number }[];
   byClinician: { clinicianId: string; count: number }[];
   byWeekday: number[]; // Mon..Sun
+  bookedMinutes: number; // clinician time held by non-cancelled appointments this month
+  bookedValue: number;   // sum of fees for non-cancelled appointments this month (scheduled, not collected)
+  seenValue: number;     // sum of fees for appointments marked seen this month
 }
 
 export async function schedulingStats(year: number, month: number, clinicianId?: string): Promise<SchedulingStats> {
@@ -815,12 +818,40 @@ export async function schedulingStats(year: number, month: number, clinicianId?:
   const byWeekday = [0, 0, 0, 0, 0, 0, 0];
   for (const a of inMonth) byWeekday[cayWeekdayMon(a.startAt)]++;
 
+  // Booked time and scheduled value. Time held = the appointment's own duration
+  // (a group session counts once, not per attendee). Value = the type's fee; it
+  // is scheduled value, NOT cash collected (billing tracks collection).
+  const priceOf = (a: Appointment) => types.find((t) => t.id === a.typeId)?.price || 0;
+  const durMin = (a: Appointment) => Math.max(0, Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000));
+  const kept = inMonth.filter((a) => a.status !== "cancelled");
+  const bookedMinutes = kept.reduce((s, a) => s + durMin(a), 0);
+  const bookedValue = kept.reduce((s, a) => s + priceOf(a), 0);
+  const seenValue = inMonth.filter((a) => a.status === "seen").reduce((s, a) => s + priceOf(a), 0);
+
   return {
     total, upcoming, seen, noShow, cancelled,
     noShowRate: pct(noShow, nonCancelled), cancelRate: pct(cancelled, total),
     newClients, returningClients: totalClients - newClients, totalClients,
     clientBookings, staffBookings, popularTypes, byClinician, byWeekday,
+    bookedMinutes, bookedValue, seenValue,
   };
+}
+
+/** Total working minutes for a set of clinicians across a Cayman calendar month
+ *  (their weekly hours + date overrides), used as the denominator for
+ *  utilization. */
+export async function monthlyCapacityMinutes(clinicianIds: string[], year: number, month: number): Promise<number> {
+  if (clinicianIds.length === 0) return 0;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const avs = await Promise.all(clinicianIds.map((id) => getAvailability(id)));
+  let total = 0;
+  for (const av of avs) {
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      for (const b of workingBlocksForAvail(av, dateStr)) total += Math.max(0, b.e - b.s);
+    }
+  }
+  return total;
 }
 
 // =============================================================================

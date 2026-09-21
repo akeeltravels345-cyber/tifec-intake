@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
-import { getClinician } from "@/lib/clinicians";
-import { schedulingStats } from "@/lib/scheduling";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
+import { schedulingStats, monthlyCapacityMinutes } from "@/lib/scheduling";
 import { caymanYearMonth } from "@/lib/caymanTime";
 import MonthNav from "@/components/billing/MonthNav";
 import { seesAllSchedule, isTreatingClinician } from "../layout";
@@ -25,7 +25,16 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   const month = Number(sp.m) || nowYM.month;
   // Owner / Donnet / admin see the whole practice; a clinician sees just their own.
   const scopeId = all ? undefined : me.id;
-  const s = await schedulingStats(year, month, scopeId);
+  // Clinicians whose hours make up the capacity denominator for utilization.
+  const treats = (c: typeof CLINICIANS[number]) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
+  const capacityIds = all ? CLINICIANS.filter(treats).map((c) => c.id) : [me.id];
+  const [s, capacityMin] = await Promise.all([
+    schedulingStats(year, month, scopeId),
+    monthlyCapacityMinutes(capacityIds, year, month),
+  ]);
+  const utilization = capacityMin > 0 ? Math.round((s.bookedMinutes / capacityMin) * 1000) / 10 : 0;
+  const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+  const hrs = (min: number) => `${Math.round(min / 6) / 10}h`;
 
   const maxType = Math.max(1, ...s.popularTypes.map((t) => t.count));
   const maxClin = Math.max(1, ...s.byClinician.map((c) => c.count));
@@ -59,6 +68,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
               <Tile k="New clients" v={s.newClients} sub={`${s.returningClients} returning · ${s.totalClients} total`} tone="good" />
               <Tile k="Most popular" v={top ? top.name : "—"} sub={top ? `${top.count} booking${top.count === 1 ? "" : "s"}` : undefined} />
               <Tile k="Busiest day" v={DOW_FULL[busiestIdx]} sub={`${s.byWeekday[busiestIdx]} appointment${s.byWeekday[busiestIdx] === 1 ? "" : "s"}`} />
+              <Tile k="Utilization" v={`${utilization}%`} sub={capacityMin > 0 ? `${hrs(s.bookedMinutes)} booked of ${hrs(capacityMin)}` : "Set your hours to track this"} tone={utilization >= 70 ? "good" : ""} />
+              <Tile k="Booked value" v={money(s.bookedValue)} sub={`${money(s.seenValue)} from sessions seen`} />
               <Tile k="No-shows" v={s.noShow} sub={`${s.noShowRate}% of kept`} tone={s.noShow ? "warn" : ""} />
               <Tile k="Cancelled" v={s.cancelled} sub={`${s.cancelRate}% of booked`} tone={s.cancelled ? "warn" : ""} />
               <Tile k="Booked online" v={s.clientBookings} sub={`${s.staffBookings} added by staff`} />
@@ -81,7 +92,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                   <h2>By clinician</h2>
                   {s.byClinician.map((c) => (
                     <div key={c.clinicianId} className="sr-bar">
-                      <span className="sr-barlabel">{getClinician(c.clinicianId)?.name || c.clinicianId}</span>
+                      <span className="sr-barlabel">{getClinician(c.clinicianId)?.name || "Other / former"}</span>
                       <span className="sr-bartrack"><i style={{ width: `${(c.count / maxClin) * 100}%` }} /></span>
                       <span className="sr-barval">{c.count}</span>
                     </div>
