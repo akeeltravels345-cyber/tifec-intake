@@ -1530,6 +1530,9 @@ body:has(.biz) { background: var(--panel); }
 .bo-nav { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .bo-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 10px; color: #6a6f66; font-size: 14px; font-weight: 600; text-decoration: none; }
 .bo-nav a:hover { background: var(--panel); }
+/* Profile-photo glyph on a nav item (Messages). Sized to sit where the icon would. */
+.bo-navav { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; display: block; }
+.bo-mobtabs .bo-navav { width: 22px; height: 22px; }
 .bo-nav a.on { background: var(--panel); color: var(--teal-deep); font-weight: 700; }
 .bo-nav .bdg { margin-left: auto; background: var(--amber); color: #fff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
 /* Nav glow: highlight the entry that leads to a new feature, for first logins. */
@@ -3993,6 +3996,13 @@ body:has(.bk-page) .brandbar { display: none; }
 .bk-seg button.on { background: var(--teal); color: #fff; }
 .bk-modepick { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .bk-modelbl { font-size: 13px; font-weight: 600; color: #6b7679; line-height: 1.4; }
+.bk-recur { border: 1.5px solid #e4ebe9; border-radius: 13px; padding: 13px 15px; margin-top: 4px; background: var(--surface); }
+.bk-recur-top { display: flex; gap: 11px; align-items: flex-start; cursor: pointer; }
+.bk-recur-top input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--teal); flex: none; }
+.bk-recur-top span { display: flex; flex-direction: column; gap: 3px; }
+.bk-recur-top b { font: 700 14.5px "Open Sans"; color: var(--ink); }
+.bk-recur-top em { font-style: normal; font-size: 12.5px; color: #6b7679; line-height: 1.4; }
+.bk-recur-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef1f2; }
 .bk-modecards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .bk-modecard { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 14px 16px 13px; border: 1.5px solid #dfe6e4; border-radius: 13px; background: var(--surface); cursor: pointer; position: relative; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
 .bk-modecard:hover { border-color: var(--teal); }
@@ -4069,6 +4079,11 @@ body:has(.bk-page) .brandbar { display: none; }
 .sr-daynum { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sr-dayname { font-size: 11px; color: var(--muted); }
 @media (max-width: 720px) { .sr-tiles { grid-template-columns: repeat(2, 1fr); } .sr-cols { grid-template-columns: 1fr; } }
+
+/* Calendar: transient confirmation banner (e.g. recurring series created) */
+.cal-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--teal-deep); background: #eafaf9; border: 1px solid #bfe6e4; margin: 0 16px 12px; padding: 10px 14px; border-radius: 10px; }
+.cal-notice button { border: 0; background: none; color: var(--teal-deep); font-size: 14px; cursor: pointer; padding: 0 2px; line-height: 1; opacity: .6; }
+.cal-notice button:hover { opacity: 1; }
 
 /* Calendar: recurring-series note */
 .cal-series-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--teal-deep); background: var(--teal-bg, var(--panel)); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }
