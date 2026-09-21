@@ -338,7 +338,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const top = ((bs - DAY_START * 60) / 60) * HOUR;
                     const height = Math.max(14, ((be - bs) / 60) * HOUR - 2);
                     const srcLabel = b.source === "google" ? "Google Calendar" : b.source === "ical" ? "iCal" : "External calendar";
-                    const name = b.title || "Busy";
+                    const name = b.title || "Blocked";
                     return (
                       <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title={`${name} — ${srcLabel}`}>
                         <div className="cal-appt-n">{name}{who === "all" ? ` · ${clinName(b.clinicianId).split(" ").slice(-1)}` : ""}</div>

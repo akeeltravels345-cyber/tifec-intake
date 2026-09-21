@@ -60,11 +60,15 @@ export async function GET(req: Request) {
   let externalBusy: { clinicianId: string; start: string; end: string; title?: string; source?: string }[] = [];
   if (from && to) {
     const ids = clinicianId ? [clinicianId] : CLINICIANS.filter(isTreating).map((c) => c.id);
+    // Show the real event title only on the viewer's OWN calendar; elsewhere
+    // (all-clinicians view, or an admin looking at someone else) it stays "Blocked"
+    // and the title never leaves the server.
+    const ownCalendar = clinicianId === me.id;
     try {
       const per = await Promise.all(ids.map(async (id) => {
         const av = await getAvailability(id);
         const iv = await externalBusyIntervals(id, av.busyFeeds, from, to);
-        return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end, title: b.title, source: b.source }));
+        return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end, title: ownCalendar ? b.title : undefined, source: b.source }));
       }));
       externalBusy = per.flat();
     } catch { /* best-effort */ }
