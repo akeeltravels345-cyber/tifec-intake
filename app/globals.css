@@ -3877,7 +3877,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-appt.st-no_show { opacity: .62; }
 .cal-appt.st-confirmed .cal-appt-n::after { content: " ✓"; color: currentColor; opacity: .8; }
 /* "Unavailable" / blocked time: green diagonal stripes, Acuity-style. */
-.cal-appt-block { background: repeating-linear-gradient(45deg, #eceef1, #eceef1 7px, #dfe2e8 7px, #dfe2e8 14px); border-left-color: #a8b0bb; color: #5b6270; font-style: italic; }
+.cal-appt-block { background: repeating-linear-gradient(45deg, #e7f0e9, #e7f0e9 7px, #d5e6d8 7px, #d5e6d8 14px); border-left-color: #86ab90; color: #3a634a; font-style: italic; }
 .cal-appt-block .cal-appt-n { font-weight: 700; }
 /* External busy (from a connected Google / iCal calendar): read-only, same grey
    as unavailable time — never green. */
