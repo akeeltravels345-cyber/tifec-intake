@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import EmojiPicker from "@/components/EmojiPicker";
 import Link from "next/link";
 
 interface Ack { name: string; response: string }
@@ -46,6 +47,7 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [eventAt, setEventAt] = useState("");
   const [pinned, setPinned] = useState(false);
   const [askAck, setAskAck] = useState(false);
@@ -118,7 +120,10 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
           <input id="nt" className="tm-in" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Staff meeting on Thursday" />
 
           <label className="tm-l" htmlFor="nb">Notice</label>
-          <textarea id="nb" className="tm-in" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What does everyone need to know?" />
+          <div className="tm-fieldwrap">
+            <textarea ref={bodyRef} id="nb" className="tm-in" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What does everyone need to know?" />
+            <div className="tm-fieldemj"><EmojiPicker targetRef={bodyRef} onInsert={setBody} /></div>
+          </div>
 
           <div className="tm-row">
             <div style={{ flex: 1 }}>

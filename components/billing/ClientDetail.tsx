@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import EmojiPicker from "@/components/EmojiPicker";
 import type { ClientProfile } from "@/lib/clients";
 import { deductibleSummary } from "@/lib/deductible";
 import Icd10Section from "./Icd10Section";
@@ -305,6 +306,7 @@ export default function ClientDetail({
   // shared cross-role notes
   const [notes, setNotes] = useState(profile.notes ?? []);
   const [noteText, setNoteText] = useState("");
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const canModerate = currentUserRole === "owner" || currentUserRole === "admin";
 
   // Assemble the WHOLE profile from state; every PATCH must send it complete,
@@ -761,7 +763,8 @@ export default function ClientDetail({
             </div>
           )}
           <div className="cd-noteadd">
-            <textarea className="ls-in" rows={2} placeholder="Add a team note (admin/billing, not clinical)…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+            <textarea ref={noteRef} className="ls-in" rows={2} placeholder="Add a team note (admin/billing, not clinical)…" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+            <EmojiPicker targetRef={noteRef} onInsert={setNoteText} />
             <button className="su-add" disabled={busy || !noteText.trim()} onClick={addNote}>{busy ? "Saving…" : "Add note"}</button>
           </div>
         </div>

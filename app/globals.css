@@ -3253,6 +3253,16 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .rt-emojipop { position: absolute; top: calc(100% + 5px); left: 0; z-index: 30; display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; padding: 7px; width: 296px; max-width: 78vw; background: var(--surface); border: 1px solid var(--line, #d9e1e5); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.16); }
 .rt-emoji { border: 0; background: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 4px; border-radius: 6px; }
 .rt-emoji:hover { background: var(--brand-tint); }
+/* Reusable emoji picker (chat composer + any notes field). */
+.emj-wrap { position: relative; display: inline-flex; }
+.emj-btn { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line, #d9e1e5); background: var(--surface); border-radius: 9px; cursor: pointer; font-size: 16px; line-height: 1; color: var(--ink); flex: 0 0 auto; }
+.emj-btn:hover { border-color: var(--brand); background: var(--brand-tint); }
+.emj-pop { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 40; display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; padding: 7px; width: 296px; max-width: 78vw; background: var(--surface); border: 1px solid var(--line, #d9e1e5); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.16); }
+.emj-opt { border: 0; background: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 4px; border-radius: 6px; }
+.emj-opt:hover { background: var(--brand-tint); }
+/* Emoji button tucked under the right of a note field. */
+.tm-fieldwrap { display: flex; flex-direction: column; }
+.tm-fieldemj { display: flex; justify-content: flex-end; margin-top: 4px; }
 /* Formatted ticket text keeps its emphasis but no jarring colours. */
 .tm-nb strong { font-weight: 700; }
 .tm-nb em { font-style: italic; }

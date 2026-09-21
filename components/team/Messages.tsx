@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { prepareUpload } from "@/lib/imageUpload";
+import EmojiPicker from "@/components/EmojiPicker";
 import { IcoImage, IcoFile, IcoMic, IcoStop, IcoSend } from "./attachIcons";
 
 interface Att { docId: string; kind: "image" | "audio" | "file"; name?: string | null }
@@ -481,6 +482,7 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   placeholder={`Message ${active?.name?.split(" ")[0] ?? ""}...`} aria-label="Message"
                 />
+                <EmojiPicker targetRef={taRef} onInsert={setText} className="tm-icobtn" />
                 <button className="tm-send" type="submit" disabled={busy || recording || (!text.trim() && drafts.length === 0)} aria-label="Send">
                   {IcoSend}
                 </button>
