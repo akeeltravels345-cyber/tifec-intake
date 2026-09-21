@@ -71,7 +71,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   }
   const [monday, setMonday] = useState(() => mondayOf(todayCayman));
   const [appts, setAppts] = useState<Appointment[]>(initial);
-  const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string }[]>([]);
+  const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string; title?: string; source?: string }[]>([]);
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
@@ -337,10 +337,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     if (be <= bs) return null;
                     const top = ((bs - DAY_START * 60) / 60) * HOUR;
                     const height = Math.max(14, ((be - bs) / 60) * HOUR - 2);
+                    const srcLabel = b.source === "google" ? "Google Calendar" : b.source === "ical" ? "iCal" : "External calendar";
+                    const name = b.title || "Busy";
                     return (
-                      <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title="Busy on another calendar">
-                        <div className="cal-appt-n">Busy{who === "all" ? ` · ${clinName(b.clinicianId).split(" ").slice(-1)}` : ""}</div>
-                        <div className="cal-appt-m">{label12(bs)}-{label12(be)}</div>
+                      <div key={`eb-${day}-${i}`} className="cal-busy" style={{ top, height }} title={`${name} — ${srcLabel}`}>
+                        <div className="cal-appt-n">{name}{who === "all" ? ` · ${clinName(b.clinicianId).split(" ").slice(-1)}` : ""}</div>
+                        <div className="cal-appt-m">{label12(bs)}-{label12(be)} · {srcLabel}</div>
                       </div>
                     );
                   })}

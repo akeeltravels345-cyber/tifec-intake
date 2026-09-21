@@ -46,14 +46,14 @@ function parseIcs(text: string, fromISO: string, toISO: string): BusyInterval[] 
   const lines = text.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "").split(/\r?\n/);
   const from = Date.parse(fromISO), to = Date.parse(toISO);
   const out: BusyInterval[] = [];
-  let inEvent = false, cancelled = false, transparent = false, start: string | null = null, end: string | null = null;
+  let inEvent = false, cancelled = false, transparent = false, start: string | null = null, end: string | null = null, title = "";
   for (const line of lines) {
     const u = line.toUpperCase();
-    if (u === "BEGIN:VEVENT") { inEvent = true; cancelled = transparent = false; start = end = null; continue; }
+    if (u === "BEGIN:VEVENT") { inEvent = true; cancelled = transparent = false; start = end = null; title = ""; continue; }
     if (u === "END:VEVENT") {
       if (inEvent && start && end && !cancelled && !transparent) {
         const s = Date.parse(start), e = Date.parse(end);
-        if (e > from && s < to) out.push({ start, end }); // overlaps the window
+        if (e > from && s < to) out.push({ start, end, title: title || undefined, source: "ical" }); // overlaps the window
       }
       inEvent = false; continue;
     }
@@ -64,6 +64,7 @@ function parseIcs(text: string, fromISO: string, toISO: string): BusyInterval[] 
     const key = name.split(";")[0].toUpperCase();
     if (key === "DTSTART") start = parseDt(name, val);
     else if (key === "DTEND") end = parseDt(name, val);
+    else if (key === "SUMMARY") title = val.replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\n/gi, " ").replace(/\\\\/g, "\\").trim().slice(0, 80);
     else if (key === "STATUS" && /CANCELLED/i.test(val)) cancelled = true;
     else if (key === "TRANSP" && /TRANSPARENT/i.test(val)) transparent = true;
   }

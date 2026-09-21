@@ -310,7 +310,7 @@ export async function upsertGoogleEvent(clinicianId: string, args: GoogleEventAr
   }
 }
 
-export interface BusyInterval { start: string; end: string } // ISO UTC
+export interface BusyInterval { start: string; end: string; title?: string; source?: "google" | "ical" } // ISO UTC
 
 /** The clinician's own Google Calendar busy blocks in a window, so the scheduler
  *  can avoid booking over their personal events. Uses events.list (covered by
@@ -324,10 +324,10 @@ export async function googleBusy(clinicianId: string, fromISO: string, toISO: st
     const q = new URLSearchParams({ timeMin: fromISO, timeMax: toISO, singleEvents: "true", orderBy: "startTime", maxResults: "100" });
     const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error(`Google events.list ${res.status}`);
-    const j = await res.json() as { items?: { status?: string; transparency?: string; start?: { dateTime?: string }; end?: { dateTime?: string } }[] };
+    const j = await res.json() as { items?: { summary?: string; status?: string; transparency?: string; start?: { dateTime?: string }; end?: { dateTime?: string } }[] };
     return (j.items || [])
       .filter((e) => e.status !== "cancelled" && e.transparency !== "transparent" && e.start?.dateTime && e.end?.dateTime)
-      .map((e) => ({ start: e.start!.dateTime as string, end: e.end!.dateTime as string }));
+      .map((e) => ({ start: e.start!.dateTime as string, end: e.end!.dateTime as string, title: e.summary || undefined, source: "google" as const }));
   } catch (e) {
     console.error(`googleBusy failed for ${clinicianId}`, e);
     return [];

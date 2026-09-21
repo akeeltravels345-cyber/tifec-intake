@@ -57,14 +57,14 @@ export async function GET(req: Request) {
 
   // External busy blocks (their connected Google + iCal feeds) for the clinician(s)
   // in view, so a clinician sees when they're busy elsewhere. Best-effort.
-  let externalBusy: { clinicianId: string; start: string; end: string }[] = [];
+  let externalBusy: { clinicianId: string; start: string; end: string; title?: string; source?: string }[] = [];
   if (from && to) {
     const ids = clinicianId ? [clinicianId] : CLINICIANS.filter(isTreating).map((c) => c.id);
     try {
       const per = await Promise.all(ids.map(async (id) => {
         const av = await getAvailability(id);
         const iv = await externalBusyIntervals(id, av.busyFeeds, from, to);
-        return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end }));
+        return iv.map((b) => ({ clinicianId: id, start: b.start, end: b.end, title: b.title, source: b.source }));
       }));
       externalBusy = per.flat();
     } catch { /* best-effort */ }
