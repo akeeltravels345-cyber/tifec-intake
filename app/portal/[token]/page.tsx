@@ -5,8 +5,10 @@ export const dynamic = "force-dynamic";
 
 const BRAND = "The Institute for Essential Care";
 const CAY = "America/Cayman";
-const fmtDate = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: CAY, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
 const fmtTime = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+const fmtDayNum = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, day: "numeric" }).format(new Date(iso));
+const fmtMon = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, month: "short" }).format(new Date(iso));
+const fmtWkTime = (iso: string) => `${new Intl.DateTimeFormat("en-US", { timeZone: CAY, weekday: "long" }).format(new Date(iso))} · ${fmtTime(iso)}`;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -27,19 +29,26 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Appt({ a, upcoming }: { a: PortalAppt; upcoming: boolean }) {
   return (
     <div className={`pt-item${upcoming ? "" : " past"}`}>
-      <div className="pt-when">
-        <span className="pt-date">{fmtDate(a.startAt)}</span>
-        <span className="pt-time">{fmtTime(a.startAt)}</span>
-        <span className="pt-mode">{a.mode === "virtual" ? "Online" : "In person"}{a.isGroup ? " · Group" : ""}</span>
+      <div className="pt-row">
+        <div className="pt-badge">
+          <span className="pt-badge-d">{fmtDayNum(a.startAt)}</span>
+          <span className="pt-badge-m">{fmtMon(a.startAt)}</span>
+        </div>
+        <div className="pt-body">
+          <div className="pt-l1">
+            <span className="pt-svc">{a.serviceName}</span>
+            <span className={`pt-mode ${a.mode === "virtual" ? "online" : "inperson"}`}>{a.mode === "virtual" ? "Online" : "In person"}{a.isGroup ? " · Group" : ""}</span>
+          </div>
+          <div className="pt-l2">{fmtWkTime(a.startAt)}</div>
+          <div className="pt-clin">{a.clinicianName}</div>
+        </div>
       </div>
-      <div className="pt-svc">{a.serviceName}</div>
-      <div className="pt-clin">{a.clinicianName}</div>
 
       {upcoming && a.intakeForms.length > 0 && (
         <div className="pt-intake">
-          <div className="pt-intake-lbl">Please complete before your visit</div>
-          <div className="pt-links">
-            {a.intakeForms.map((f) => <a key={f.url} className="pt-link" href={f.url}>{f.label}</a>)}
+          <div className="pt-intake-hd">Please complete before your visit</div>
+          <div className="pt-fbtns">
+            {a.intakeForms.map((f) => <a key={f.url} className="pt-fbtn" href={f.url}>{f.label}</a>)}
           </div>
         </div>
       )}
