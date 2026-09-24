@@ -62,6 +62,9 @@ export default async function ClientsPage() {
       paid: Math.round((paidByClient.get(c.id) ?? 0) * 100) / 100,
       lastVisit: lastVisitByClient.get(c.id) ?? "",
       clinicianIds: c.clinicianIds,
+      // Highlight recently added clients (the intake / booking auto-creates land
+      // here) as "New" for their first two weeks, so the biller notices them.
+      isNew: !!c.createdAt && Date.now() - Date.parse(c.createdAt) < 14 * 24 * 3600 * 1000,
     }));
 
   // For the biller/owner/admin: the distinct clinicians who actually have

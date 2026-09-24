@@ -9,6 +9,7 @@ export interface ClientRow {
   id: string; first: string; last: string; dob: string | null; age: number | null;
   insurer: string; seenBy: string; billable: number; paid: number; lastVisit: string;
   clinicianIds: string[];
+  isNew?: boolean;
 }
 
 const money0 = (n: number) => (n ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—");
@@ -161,9 +162,9 @@ export default function ClientsList({ rows, seesAll, clinicians = [], assignable
               </thead>
               <tbody>
                 {sorted.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className={c.isNew ? "cl-new" : ""}>
                     <td><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} disabled={c.billable === 0} title={c.billable === 0 ? "No insured sessions to claim" : undefined} aria-label={`Select ${c.first} ${c.last}`} /></td>
-                    <td className="nm"><Link href={`/billing/clients/${c.id}`} className="bq-clientlink">{c.last}, {c.first}</Link></td>
+                    <td className="nm"><Link href={`/billing/clients/${c.id}`} className="bq-clientlink">{c.last}, {c.first}</Link>{c.isNew && <span className="cl-newtag" title="Recently added from intake or booking">New</span>}</td>
                     <td>{c.dob ? <>{c.dob}{c.age != null && <span className="su-hint"> · {c.age}y</span>}</> : <span className="su-hint">—</span>}</td>
                     <td className={sortKey === "insurer" ? "cl-oncol" : undefined}>{c.insurer}</td>
                     {seesAll && <td className={`su-hint${sortKey === "clinician" ? " cl-oncol" : ""}`}>{c.seenBy || "—"}</td>}
