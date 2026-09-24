@@ -600,7 +600,7 @@ export async function editMessage(id: string, senderId: string, body: string): P
 }
 
 /** How long after posting a comment its author may delete it. */
-export const COMMENT_DELETE_MS = 15 * 60 * 1000;
+export const COMMENT_DELETE_MS = 30 * 60 * 1000;
 export type DeleteResult = { ok: boolean; reason?: "not_found" | "not_yours" | "too_old"; threadId?: string };
 
 /** Delete your OWN ticket comment, but only within 15 minutes of posting it.

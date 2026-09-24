@@ -202,7 +202,7 @@ export async function POST(req: Request) {
       const res = await deleteMessage(id, me.id);
       if (!res.ok) {
         const msg = res.reason === "not_yours" ? "You can only delete your own comments."
-          : res.reason === "too_old" ? "Comments can only be deleted within 15 minutes of posting."
+          : res.reason === "too_old" ? "Comments can only be deleted within 30 minutes of posting."
           : "That comment no longer exists.";
         const status = res.reason === "not_yours" ? 403 : res.reason === "too_old" ? 409 : 404;
         return NextResponse.json({ error: msg }, { status });

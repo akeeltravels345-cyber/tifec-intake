@@ -86,8 +86,8 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const ageMin = (iso: string) => (Date.now() - Date.parse(iso)) / 60000;
   const bodyEditable = !!ticket.mine && (replies.length === 0 || ageMin(ticket.createdAt) < 10);
   const replyEditable = (r: Reply, idx: number) => r.mine && (idx === replies.length - 1 || ageMin(r.at) < 10);
-  // Your own comment can be deleted within 15 minutes of posting it.
-  const replyDeletable = (r: Reply) => r.mine && ageMin(r.at) < 15;
+  // Your own comment can be deleted within 30 minutes of posting it.
+  const replyDeletable = (r: Reply) => r.mine && ageMin(r.at) < 30;
   const [delBusy, setDelBusy] = useState<string | null>(null);
   async function deleteReply(id: string) {
     if (!window.confirm("Delete this comment? This removes it and any attachment on it for everyone. This can't be undone.")) return;
