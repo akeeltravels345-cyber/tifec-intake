@@ -232,9 +232,27 @@ function isMissingColumn(e: unknown): boolean {
 }
 
 // ============================ Insurers ======================================
+
+// The billing_insurers table gained columns over time (claim_code, bill_style,
+// email). Prod isn't reachable for a manual migration, so — like billing_client_seen
+// in lib/clients.ts — the app self-migrates: an idempotent ALTER, run once per
+// process, guarantees the columns exist before we read or write them. Best-effort;
+// a failure here must not break the insurers screen.
+let insurerColsEnsured = false;
+async function ensureInsurerColumns(sql: Awaited<ReturnType<typeof pg>>): Promise<void> {
+  if (insurerColsEnsured) return;
+  try {
+    await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS claim_code TEXT`;
+    await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS bill_style TEXT`;
+    await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS email TEXT`;
+    insurerColsEnsured = true;
+  } catch (e) { console.error("ensureInsurerColumns failed:", e); }
+}
+
 export async function listInsurers(): Promise<Insurer[]> {
   if (usePostgres) {
     const sql = await pg();
+    await ensureInsurerColumns(sql);
     const rows = (await sql`SELECT * FROM billing_insurers ORDER BY name`) as Record<string, unknown>[];
     return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined, email: r.email ? String(r.email) : undefined }));
   }
@@ -245,6 +263,7 @@ export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }):
   const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined, email: ins.email?.trim() || undefined };
   if (usePostgres) {
     const sql = await pg();
+    await ensureInsurerColumns(sql); // make sure claim_code/bill_style/email exist before we write them
     try {
       await sql`
         INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style, email)
