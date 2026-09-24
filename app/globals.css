@@ -4651,7 +4651,8 @@ body:has(.pt) .sitefoot { display: none; }
 .wiz-list, .wiz-summary { list-style: none; padding: 0; margin: 0 0 22px; display: flex; flex-direction: column; gap: 12px; }
 .wiz-list li, .wiz-summary li { font-size: 16px; line-height: 1.5; color: var(--ink); padding-left: 26px; position: relative; }
 .wiz-list li::before { content: "•"; position: absolute; left: 6px; color: var(--teal, #2f8e93); font-weight: 900; }
-.wiz-summary li::before { content: "✓"; position: absolute; left: 4px; color: var(--pos, #2f8e5b); font-weight: 900; }
+.wiz-summary li::before { content: "○"; position: absolute; left: 4px; color: var(--muted); font-weight: 900; }
+.wiz-summary li.done::before { content: "✓"; color: var(--pos, #2f8e5b); }
 .wiz-tip { font-size: 14.5px; color: var(--muted); margin: 14px 0 0; }
 .wiz-provs { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 2px; }
 .wiz-prov { border: 1px solid var(--line); border-radius: 13px; padding: 18px; background: var(--panel, var(--surface)); }
@@ -4669,6 +4670,9 @@ body:has(.pt) .sitefoot { display: none; }
 .wiz-btn.big { font-size: 17px; padding: 15px 26px; width: 100%; box-sizing: border-box; }
 .wiz-btn.ghost { color: var(--ink); background: transparent; border-color: var(--line); }
 .wiz-btn.ghost:hover { border-color: var(--teal, #2f8e93); filter: none; }
+/* Anchor buttons must stay white: beat the dark-mode `a { color: --brand }` rule. */
+.wiz a.wiz-btn { color: #fff; }
+.wiz a.wiz-btn.ghost { color: var(--ink); }
 .wiz-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; }
 .wiz-nav.center { justify-content: center; }
 .wiz-embed { border: 1px solid var(--line); border-radius: 13px; padding: 8px 16px 16px; background: var(--panel, var(--surface)); }

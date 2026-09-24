@@ -132,8 +132,8 @@ export default function SetupWizard({
           <div className="wiz-tick">✓</div>
           <h1 className="wiz-h1">You’re all set</h1>
           <ul className="wiz-summary">
-            <li>{conns.length ? `Video: ${conns.map((c) => (c.provider === "zoom" ? "Zoom" : "Google Meet")).join(" + ")} connected` : "Video: not connected yet — you can do this any time"}</li>
-            <li>Calendar: if you tapped an add button, your appointments are syncing</li>
+            <li className={conns.length ? "done" : ""}>{conns.length ? `Video: ${conns.map((c) => (c.provider === "zoom" ? "Zoom" : "Google Meet")).join(" + ")} connected` : "Video: not connected yet — you can do this any time"}</li>
+            <li>Calendar: if you tapped an add button above, your appointments are syncing</li>
           </ul>
           <p className="wiz-lead">You can change any of this later from <b>Settings</b> on your calendar.</p>
           <div className="wiz-nav center">
