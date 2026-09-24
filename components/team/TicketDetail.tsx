@@ -58,9 +58,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 const rid = () => Math.random().toString(36).slice(2);
 
-export default function TicketDetail({ ticket, replies, threadId, canManage, canDelete = false, contacts, firstAttachments = [], waitingOn = [], yourTurn = false }: {
+export default function TicketDetail({ ticket, replies, threadId, canManage, canDelete = false, contacts, firstAttachments = [], waitingOn = [], yourTurn = false, areas = [] }: {
   ticket: Ticket; replies: Reply[]; threadId: string; canManage: boolean; canDelete?: boolean; contacts: Contact[];
-  firstAttachments?: Att[]; waitingOn?: string[]; yourTurn?: boolean;
+  firstAttachments?: Att[]; waitingOn?: string[]; yourTurn?: boolean; areas?: string[];
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -96,6 +96,9 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editBusy, setEditBusy] = useState(false);
+  // The first-post edit can also change the subject + area.
+  const [editSubject, setEditSubject] = useState("");
+  const [editArea, setEditArea] = useState("");
   const ageMin = (iso: string) => (Date.now() - Date.parse(iso)) / 60000;
   const bodyEditable = !!ticket.mine && (replies.length === 0 || ageMin(ticket.createdAt) < 10);
   const replyEditable = (r: Reply, idx: number) => r.mine && (idx === replies.length - 1 || ageMin(r.at) < 10);
@@ -113,13 +116,20 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
     } catch { setError("Could not reach the server."); }
     finally { setDelBusy(null); }
   }
-  function startEdit(which: string, body: string) { setError(""); setEditingId(which); setEditText(body); }
+  function startEdit(which: string, body: string) {
+    setError(""); setEditingId(which); setEditText(body);
+    if (which === "body") { setEditSubject(ticket.subject); setEditArea(ticket.area); }
+  }
   async function saveEdit(action: "message:edit" | "ticket:editbody", id: string) {
     const t = editText.trim();
     if (!t) { setError("Write something."); return; }
+    if (action === "ticket:editbody" && !editSubject.trim()) { setError("A subject is required."); return; }
     setEditBusy(true); setError("");
     try {
-      const res = await fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id, body: t }) });
+      const payload = action === "ticket:editbody"
+        ? { action, id, body: t, subject: editSubject.trim(), area: editArea }
+        : { action, id, body: t };
+      const res = await fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Could not save the edit."); return; }
       setEditingId(null);
@@ -303,6 +313,15 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
         </div>
         {editingId === "body" ? (
           <div className="tm-editbox">
+            <label className="tm-editlbl">Subject<input className="tm-in" value={editSubject} onChange={(e) => setEditSubject(e.target.value)} maxLength={200} placeholder="Short summary of the issue" /></label>
+            {areas.length > 0 && (
+              <label className="tm-editlbl">Subject area
+                <select className="tm-in" value={editArea} onChange={(e) => setEditArea(e.target.value)}>
+                  {areas.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="tm-editlbl">Details</label>
             <RichTextArea id="edit-body" rows={4} value={editText} onChange={setEditText} placeholder="Edit the ticket…" />
             <div className="tm-editactions">
               <button type="button" className="tm-editsave" disabled={editBusy} onClick={() => saveEdit("ticket:editbody", ticket.id)}>{editBusy ? "Saving…" : "Save"}</button>

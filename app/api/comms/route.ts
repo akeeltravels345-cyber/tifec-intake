@@ -181,9 +181,13 @@ export async function POST(req: Request) {
       if (!text) return NextResponse.json({ error: "Write something." }, { status: 400 });
       if (text.length > MAX_BODY) return NextResponse.json({ error: "That's too long." }, { status: 400 });
       const id = String(body.id ?? "");
+      // A ticket first-post edit may also change the subject and area.
+      const subject = typeof body.subject === "string" ? body.subject.trim().slice(0, 200) : undefined;
+      if (action === "ticket:editbody" && subject !== undefined && !subject) return NextResponse.json({ error: "A subject is required." }, { status: 400 });
+      const area = TICKET_AREAS.includes(String(body.area) as TicketArea) ? (String(body.area) as TicketArea) : undefined;
       const res: EditResult = action === "message:edit"
         ? await editMessage(id, me.id, text)
-        : await editTicketBody(id, me.id, text);
+        : await editTicketBody(id, me.id, { body: text, subject, area });
       if (!res.ok) {
         const msg = res.reason === "not_yours" ? "You can only edit your own posts."
           : res.reason === "locked" ? "This can no longer be edited — someone has replied, or the edit window has passed."

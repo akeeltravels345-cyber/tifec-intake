@@ -3228,6 +3228,8 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-dellink { color: var(--danger, #c0392b); }
 .tm-dellink:disabled { opacity: .6; cursor: default; text-decoration: none; }
 .tm-editbox { margin-top: 10px; }
+.tm-editlbl { display: block; font: 600 12px "Open Sans"; color: var(--muted); margin: 0 0 8px; }
+.tm-editlbl .tm-in { margin-top: 4px; }
 .tm-editactions { display: flex; gap: 8px; margin-top: 8px; }
 .tm-editsave { font: 600 13px "Open Sans"; color: #fff; background: var(--brand); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; }
 .tm-editsave:disabled { opacity: .6; cursor: default; }

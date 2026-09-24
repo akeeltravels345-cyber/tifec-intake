@@ -628,11 +628,15 @@ export async function deleteMessage(id: string, senderId: string, windowMs = COM
   return { ok: true, threadId: m.threadId };
 }
 
-/** Edit your own ticket's description (the first post). Only the raiser, and only
- *  while no one has replied yet OR inside the grace window. */
-export async function editTicketBody(id: string, userId: string, body: string): Promise<EditResult> {
-  const clean = body.trim();
-  if (!clean) return { ok: false, reason: "empty" };
+/** Edit your own ticket's opening post — its description, and optionally its
+ *  subject and area. Only the raiser, and only while no one has replied yet OR
+ *  inside the grace window. Subject/area are updated only when supplied. */
+export async function editTicketBody(id: string, userId: string, fields: { body: string; subject?: string; area?: TicketArea }): Promise<EditResult> {
+  const cleanBody = fields.body.trim();
+  if (!cleanBody) return { ok: false, reason: "empty" };
+  const cleanSubject = fields.subject != null ? fields.subject.trim() : undefined;
+  if (cleanSubject !== undefined && !cleanSubject) return { ok: false, reason: "empty" };
+  const area = fields.area && TICKET_AREAS.includes(fields.area) ? fields.area : undefined;
   const t = await getTicket(id);
   if (!t) return { ok: false, reason: "not_found" };
   if (t.createdBy !== userId) return { ok: false, reason: "not_yours" };
@@ -641,13 +645,21 @@ export async function editTicketBody(id: string, userId: string, body: string): 
   const now = new Date().toISOString();
   if (usePostgres) {
     const sql = await pg();
-    await sql`UPDATE comms_tickets SET body_enc = ${encrypt(clean)}, updated_at = ${now} WHERE id = ${id}`;
+    // Body always; subject/area only when provided (COALESCE keeps the existing).
+    await sql`UPDATE comms_tickets SET
+        body_enc = ${encrypt(cleanBody)},
+        subject_enc = COALESCE(${cleanSubject !== undefined ? encrypt(cleanSubject) : null}, subject_enc),
+        area = COALESCE(${area ?? null}, area),
+        updated_at = ${now}
+      WHERE id = ${id}`;
     return { ok: true };
   }
   const all = readJson<StoredTicket[]>(TIC_FILE, []);
   const st = all.find((x) => x.id === id);
   if (!st) return { ok: false, reason: "not_found" };
-  st.bodyEnc = encrypt(clean);
+  st.bodyEnc = encrypt(cleanBody);
+  if (cleanSubject !== undefined) st.subjectEnc = encrypt(cleanSubject);
+  if (area) st.area = area;
   st.updatedAt = now;
   writeJson(TIC_FILE, all);
   return { ok: true };

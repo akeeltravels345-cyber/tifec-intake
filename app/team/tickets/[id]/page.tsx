@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { CLINICIANS, CONTACT_LABEL, getClinician, isContact } from "@/lib/clinicians";
-import { getTicket, listMessages, ticketThreadId, markThreadRead, ticketWaitingOn } from "@/lib/comms";
+import { getTicket, listMessages, ticketThreadId, markThreadRead, ticketWaitingOn, TICKET_AREAS } from "@/lib/comms";
 import { listDocMetaByPrefix } from "@/lib/clientDocs";
 import TicketDetail from "@/components/team/TicketDetail";
 
@@ -51,6 +51,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
       canDelete={seesAll || t.createdBy === me.id}
       waitingOn={waiting.map(nm)}
       yourTurn={waiting.includes(me.id)}
+      areas={[...TICKET_AREAS]}
       contacts={CLINICIANS.filter((c) => !c.intakeHidden || isContact(c.id)).map((c) => ({ id: c.id, name: c.name, label: c.contact ? CONTACT_LABEL[c.contact] : c.credentials.split("·")[0].trim() }))}
       ticket={{
         id: t.id, ref: t.ref, subject: t.subject, area: t.area, body: t.body, status: t.status,
