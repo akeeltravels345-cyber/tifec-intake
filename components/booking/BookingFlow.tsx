@@ -18,6 +18,19 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 const initials = (name: string) => name.replace(/\(.*?\)/g, "").split(/\s+/).filter((w) => w && !/^(dr|mrs|mr|ms|miss)\.?$/i.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 const MODE_LABEL: Record<Mode, string> = { in_person: "In person", virtual: "Virtual", either: "In person or virtual" };
 
+// A distinct icon + soft tint for each booking category, keyed off its name, so
+// the first screen reads at a glance instead of as a plain list. Falls back to a
+// neutral teal mark for anything unrecognised.
+const catIcon = (d: React.ReactNode) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
+function catStyle(name: string): { icon: React.ReactNode; bg: string; fg: string } {
+  const n = name.toLowerCase();
+  if (/free|consult|online/.test(n)) return { fg: "#256e72", bg: "#e2f0ef", icon: catIcon(<><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></>) };
+  if (/marriage|family|couple|marital|relationship/.test(n)) return { fg: "#a1556f", bg: "#f6e9ef", icon: catIcon(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>) };
+  if (/peers|assessment|psych|therap|evaluation|diagnos/.test(n)) return { fg: "#4b4fa6", bg: "#ececf7", icon: catIcon(<><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14l2 2 4-4" /></>) };
+  if (/mental|health|wellbeing|counsel|care/.test(n)) return { fg: "#3f8f5f", bg: "#e5f1ea", icon: catIcon(<path d="M20.8 5.6a4.6 4.6 0 0 0-6.5 0L12 7.9 9.7 5.6a4.6 4.6 0 1 0-6.5 6.5l8.8 8.8 8.8-8.8a4.6 4.6 0 0 0 0-6.5z" />) };
+  return { fg: "#256e72", bg: "#e2f0ef", icon: catIcon(<path d="M12 3l1.9 4.3L18 9l-4.1 1.7L12 15l-1.9-4.3L6 9l4.1-1.7z" />) };
+}
+
 // A service can be offered in person, online, or both. The catalogue stores
 // those as separate types (e.g. "Grief Counselling - In Person" and
 // "Grief Counselling - Online"); we pair them by their base name so the client
@@ -250,15 +263,19 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <>
                 <h2 className="bk-h2">What would you like to book?</h2>
                 <div className="bk-cards">
-                  {categories.map((c) => (
-                    <button key={c.name} className="bk-card" onClick={() => setCategory(c.name)}>
-                      <span className="bk-cardmain">
-                        <span className="bk-cardname">{c.name}</span>
-                        <span className="bk-cardmeta">{c.items.length} service{c.items.length === 1 ? "" : "s"}</span>
-                      </span>
-                      <span className="bk-chev">→</span>
-                    </button>
-                  ))}
+                  {categories.map((c) => {
+                    const cs = catStyle(c.name);
+                    return (
+                      <button key={c.name} className="bk-card bk-catcard" onClick={() => setCategory(c.name)}>
+                        <span className="bk-caticon" style={{ background: cs.bg, color: cs.fg }}>{cs.icon}</span>
+                        <span className="bk-cardmain">
+                          <span className="bk-cardname">{c.name}</span>
+                          <span className="bk-cardmeta">{c.items.length} service{c.items.length === 1 ? "" : "s"}</span>
+                        </span>
+                        <span className="bk-chev">→</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             ) : (

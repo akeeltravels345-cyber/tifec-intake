@@ -2029,7 +2029,8 @@ body:has(.biz) { background: var(--panel); }
 .bq-tabs { display: inline-flex; gap: 4px; background: var(--panel); border-radius: 10px; padding: 4px; }
 .bq-tab { border: none; background: transparent; border-radius: 7px; padding: 8px 15px; font: 600 13px "Open Sans"; color: var(--muted); cursor: pointer; }
 .bq-tab.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-.bq-search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--edge); border-radius: 10px; padding: 8px 12px; min-width: 190px; }
+.bq-filters { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.bq-search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--edge); border-radius: 10px; padding: 8px 12px; min-width: 0; flex: 1 1 auto; }
 .bq-search input { border: none; background: transparent; font: 14px "Open Sans"; color: var(--ink); width: 100%; }
 .bq-search input:focus { outline: none; }
 .bq-selct { border: 1px solid var(--edge); border-radius: 10px; padding: 9px 12px; font: 13px "Open Sans"; background: var(--surface); color: var(--ink); }
@@ -4078,6 +4079,12 @@ body:has(.pt) .sitefoot { display: none; }
 .bk-cardmeta { font-size: 13px; color: #6b7679; }
 .bk-chev { color: #b7c4c2; font-size: 17px; flex: none; transition: transform .12s; }
 .bk-card:hover .bk-chev { transform: translateX(3px); color: var(--teal); }
+/* Category cards on the first booking screen: an icon badge per category. */
+.bk-catcard { padding: 16px 18px; }
+.bk-caticon { flex: none; width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; transition: transform .12s ease; }
+.bk-caticon svg { display: block; }
+.bk-catcard .bk-cardname { font-size: 16.5px; }
+.bk-catcard:hover .bk-caticon { transform: scale(1.05); }
 
 .bk-daystrip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; margin: 0 -4px 6px; scroll-snap-type: x proximity; }
 .bk-day { scroll-snap-align: start; flex: none; width: 58px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 9px 0; background: var(--surface); border: 1px solid #e6ecea; border-radius: 13px; cursor: pointer; transition: border-color .12s, background .12s; }
