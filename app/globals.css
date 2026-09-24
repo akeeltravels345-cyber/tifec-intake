@@ -1907,6 +1907,13 @@ body:has(.biz) { background: var(--panel); }
 .ls-field:last-of-type { border-bottom: none; }
 .ls-q { display: block; font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--ink); }
 .ls-q .opt { font-weight: 400; color: var(--faint); font-size: 12.5px; margin-left: 6px; }
+/* Read-only recap shown when confirming a session from a scheduled appointment
+   (client + service + date are already fixed, so we don't re-ask them). */
+.ls-confirmsummary { background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ls-confirmsummary .lc-row { display: flex; gap: 12px; font-size: 14px; align-items: baseline; }
+.ls-confirmsummary .lc-k { flex: none; width: 64px; color: var(--muted); font-weight: 600; }
+.ls-confirmsummary .lc-v { color: var(--ink); font-weight: 600; }
+.ls-confirmsummary .lc-v em { font-weight: 400; font-style: normal; color: var(--muted); }
 .ls-req { color: var(--neg); }
 .ls-in { border: 1px solid #E1D9C8; border-radius: 9px; padding: 11px 13px; font: 15px "Open Sans"; background: var(--surface); width: 100%; color: var(--ink); }
 .ls-in:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,142,147,.12); }

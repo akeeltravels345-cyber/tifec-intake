@@ -293,6 +293,22 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </select>
             </div>
           )}
+          {prefill && (
+            <div className="ls-field">
+              <div className="ls-confirmsummary">
+                <div className="lc-row"><span className="lc-k">Client</span><span className="lc-v">{first} {last}<em>{prefill.returning ? " · returning client" : " · new client"}</em></span></div>
+                {prefill.serviceName && <div className="lc-row"><span className="lc-k">Service</span><span className="lc-v">{prefill.serviceName}</span></div>}
+                <div className="lc-row"><span className="lc-k">Date</span><span className="lc-v">{longDate(dos)}</span></div>
+              </div>
+              {mode === "new" && (
+                <>
+                  <label className="ls-q" style={{ marginTop: 12 }}>Date of birth <span className="opt">for insurance claims</span></label>
+                  <DobInput value={dob} onChange={setDob} />
+                </>
+              )}
+            </div>
+          )}
+          {!prefill && (<>
           <div className="ls-field">
             <label className="ls-q">Who is this session for? <span className="ls-req">*</span></label>
             {clients.length > 0 && (
@@ -374,6 +390,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               <p className="ls-refwarn">⚠ <b>{first} {last}</b>&apos;s referral ended {pickedReferralEnd}. A session on this date is after the referral and won&apos;t be paid.</p>
             )}
           </div>
+          </>)}
           <div className="ls-field">
             <label className="ls-q">How is this session paid? <span className="ls-req">*</span></label>
             <div className="ls-modes" role="tablist">
