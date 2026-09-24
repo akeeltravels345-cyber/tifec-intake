@@ -287,10 +287,13 @@ export default function ClientDetail({
   const [refStart, setRefStart] = useState(profile.referral?.startDate ?? "");
   const [refMonths, setRefMonths] = useState(profile.referral?.months ? String(profile.referral.months) : "");
   const [refSessions, setRefSessions] = useState(profile.referral?.sessions ? String(profile.referral.sessions) : "");
-  // "Valid for" (1/3/6 months) drives the end date. Fall back to any stored end
-  // date for a legacy referral that predates the duration picker, so editing it
-  // without changing the window keeps its existing end date.
-  const refEnd = refStart && refMonths ? addMonths(refStart, Number(refMonths)) : (profile.referral?.endDate ?? "");
+  // Direct "valid until" the biller can type — used when they're reading the date
+  // straight off the referral (e.g. correcting a flagged-for-review upload).
+  const [refEndInput, setRefEndInput] = useState(profile.referral?.endDate ?? "");
+  // Two ways to set the end date: "Valid from" + a "Valid for" length computes it,
+  // otherwise the biller's typed "Valid until" wins (falling back to any stored
+  // end date so an edit that changes nothing keeps the window).
+  const refEnd = refStart && refMonths ? addMonths(refStart, Number(refMonths)) : (refEndInput || profile.referral?.endDate || "");
   // Address + referral are collapsed by default (most records don't need them
   // open), and start open only when there's already something to show.
   const [showAddr, setShowAddr] = useState(!!(profile.address?.line1 || profile.address?.line2 || profile.address?.city || profile.address?.region || profile.address?.postal || profile.address?.country));
@@ -562,7 +565,11 @@ export default function ClientDetail({
                 {REFERRAL_MONTH_OPTIONS.map((m) => <option key={m} value={m}>{m} month{m === 1 ? "" : "s"}</option>)}
               </select>
             </label>
-            <label className="cd-f"><span className="cd-fl">Ends</span>{refStart && refMonths ? <span className="cd-v">{refEnd} <span className="su-hint">auto</span></span> : <span className="cd-v muted">set a start date and a length</span>}</label>
+            <label className="cd-f"><span className="cd-fl">Valid until</span>
+              {refStart && refMonths
+                ? <span className="cd-v">{refEnd} <span className="su-hint">auto from length</span></span>
+                : <input type="date" className="ls-in" value={refEndInput} onChange={(e) => setRefEndInput(e.target.value)} />}
+            </label>
             <label className="cd-f"><span className="cd-fl">Sessions authorised</span><input type="number" min="0" step="1" className="ls-in" value={refSessions} onChange={(e) => setRefSessions(e.target.value)} /></label>
           </div>
           <p className="su-hint" style={{ margin: "2px 2px 8px" }}>📎 Upload the referral letter in Documents below. The end date flags the clinician 30 days before it lapses.</p>
