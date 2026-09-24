@@ -298,7 +298,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       )}
 
       <div className="tm-card tm-first">
-        <div className="tm-rwho">{ticket.raisedBy}
+        <div className="tm-rwho">{ticket.raisedBy} <span className="tm-rwhen">{stamp(ticket.createdAt)}</span>
           {bodyEditable && editingId !== "body" && <button type="button" className="tm-editlink" onClick={() => startEdit("body", ticket.body)}>Edit</button>}
         </div>
         {editingId === "body" ? (
