@@ -74,6 +74,9 @@ export default function ClientDetail({
   const [ecBilled, setEcBilled] = useState("");
   const [ecPaid, setEcPaid] = useState("");
   const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived">("paid");
+  // Insured visit: the co-pay was waived (written off, not chased) rather than
+  // just not collected. Mirrors the "Waive" option on the log-a-session form.
+  const [ecCopayWaived, setEcCopayWaived] = useState(false);
   const [ecCodes, setEcCodes] = useState<string[]>([]);
   const cptFee = (code: string) => cptCodes.find((c) => c.code === code)?.fee ?? 0;
   const cptLabel = (code: string) => { const c = cptCodes.find((x) => x.code === code); return c ? `${c.code} · ${c.description}` : code; };
@@ -120,6 +123,7 @@ export default function ClientDetail({
     const paidOnOpen = a.insurerId ? a.stage === "paid" : (a.selfPayStatus !== "owing" && a.selfPayStatus !== "waived");
     setEcPaid(a.paidDate ?? (paidOnOpen ? today : ""));
     setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
+    setEcCopayWaived(!!a.insurerId && a.selfPayStatus === "waived");
     // Seed the adjustment amount from the stored collected amount (as the "adjusted" figure).
     const billedIns = round2(Math.max(0, (a.total || 0) - (a.copayDue || 0)));
     setEcAdjMode("adjusted");
@@ -193,7 +197,7 @@ export default function ClientDetail({
           copayCollected: ecInsurer ? Number(ecCopay) || 0 : (ecSelfPay === "owing" ? Number(ecCopay) || 0 : 0),
           copayDue: ecInsurer ? Number(ecDue) || 0 : 0,
           stage: ecInsurer ? ecStage : "paid",
-          selfPayStatus: ecInsurer ? null : (ecSelfPay === "paid" ? null : ecSelfPay),
+          selfPayStatus: ecInsurer ? (ecCopayWaived ? "waived" : null) : (ecSelfPay === "paid" ? null : ecSelfPay),
           billedDate: ecBilled || null,
           paidDate: markedPaid ? (ecPaid || today) : (ecPaid || null),
           insuranceCollected: adjusting ? ecInsuranceCollected() : null,
@@ -999,7 +1003,8 @@ export default function ClientDetail({
                               </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
-                                <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>
+                                <label>Co-pay collected<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} disabled={ecCopayWaived} /></label>
+                                <label className="cd-copaywaive"><input type="checkbox" checked={ecCopayWaived} onChange={(e) => { setEcCopayWaived(e.target.checked); if (e.target.checked) setEcCopay("0"); }} /> Co-pay waived <span className="opt">written off, not chased</span></label>
                                 <label>Status<select className="ls-in" value={ecStage} onChange={(e) => { const v = e.target.value as typeof ecStage; setEcStage(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="tobill">To bill</option><option value="awaiting">Awaiting payment</option><option value="paid">Collected</option><option value="writeoff">Contractual write-off</option><option value="writedown">Write down</option></select></label>
                                 {ecStage !== "tobill" && <label>Billed date<input type="date" className="ls-in" value={ecBilled} max={today} onChange={(e) => setEcBilled(e.target.value)} title="When this claim was submitted to the insurer. Back-date to the real date if needed." /></label>}
                                 {ecStage === "paid" && <label>Paid date<input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the insurer settled. Drives the payout month." /></label>}
