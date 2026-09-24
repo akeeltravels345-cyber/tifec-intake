@@ -19,7 +19,7 @@ function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
   return 0;
 }
 
-export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [], usualCodes = [], alreadyLogged = [], today = "" }: {
+export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [], usualCodes = [], alreadyLogged = [], today = "", prefill }: {
   insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[];
   forClinicians?: { id: string; name: string }[];
   /** This clinician's most-used codes, most frequent first. */
@@ -27,17 +27,33 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   /** "clientkey@date" for every session already logged, to catch double entry. */
   alreadyLogged?: string[];
   today?: string;
+  /** When confirming a scheduled visit: pre-fill the form from that appointment
+   *  and, on save, link the created session back to it (mark it seen + billed). */
+  prefill?: {
+    appointmentId: string;
+    first: string;
+    last: string;
+    dob?: string;
+    clientId?: string | null;
+    returning?: boolean;
+    insurerId?: string | null;
+    date?: string;
+    notes?: string;
+    codes?: string[];
+    serviceName?: string;
+  };
 }) {
   const router = useRouter();
-  const [first, setFirst] = useState("");
-  const [last, setLast] = useState("");
-  const [dob, setDob] = useState("");        // new client's date of birth (for the 1500)
-  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [first, setFirst] = useState(prefill?.first ?? "");
+  const [last, setLast] = useState(prefill?.last ?? "");
+  const [dob, setDob] = useState(prefill?.dob ?? "");        // new client's date of birth (for the 1500)
+  const [pickedId, setPickedId] = useState<string | null>(prefill?.clientId ?? null);
   const [pickedReferralEnd, setPickedReferralEnd] = useState<string | null>(null);
-  const [picked, setPicked] = useState("");
+  const [picked, setPicked] = useState(prefill?.returning ? clientKey(prefill.first, prefill.last) : "");
   // Which kind of client this is. Default to "returning" only when there ARE
   // returning clients; nobody is pre-selected, so it can't pick one by accident.
-  const [mode, setMode] = useState<"returning" | "new">(clients.length > 0 ? "returning" : "new");
+  // A prefilled visit knows whether the client was matched to an existing record.
+  const [mode, setMode] = useState<"returning" | "new">(prefill ? (prefill.returning ? "returning" : "new") : (clients.length > 0 ? "returning" : "new"));
   const [search, setSearch] = useState("");
   const [codeSearch, setCodeSearch] = useState("");
   // "Browse all codes" opens the full catalogue in a modal, so the inline form
@@ -47,7 +63,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Whether this visit goes through insurance or is paid in full on the day.
   // Kept separate from the insurer itself: an insured client may still choose
   // to pay upfront for a session, which is common in a psychology practice.
-  const [payMode, setPayMode] = useState<"insurance" | "upfront">("upfront");
+  const [payMode, setPayMode] = useState<"insurance" | "upfront">(prefill?.insurerId ? "insurance" : "upfront");
   // Self-pay disposition: paid in full now, owing (running balance), or waived.
   const [selfPay, setSelfPay] = useState<"paid" | "owing" | "waived">("paid");
   const [collectedNow, setCollectedNow] = useState("");
@@ -79,9 +95,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     if (next === mode) return;
     setMode(next); setPicked(""); setPickedId(null); setPickedReferralEnd(null); setFirst(""); setLast(""); setDob(""); setInsurerId(""); setPayMode("upfront"); resetCopay(); setSearch("");
   }
-  const [dos, setDos] = useState(today);
-  const [insurerId, setInsurerId] = useState("");
-  const [codes, setCodes] = useState<string[]>([]);
+  const [dos, setDos] = useState(prefill?.date || today);
+  const [insurerId, setInsurerId] = useState(prefill?.insurerId ?? "");
+  const [codes, setCodes] = useState<string[]>(prefill?.codes ?? []);
   // Which time/value option is chosen for each selected code (index into its
   // variants; defaults to 0 = the code's default option).
   const [variantByCode, setVariantByCode] = useState<Record<string, number>>({});
@@ -106,7 +122,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   const [discountPct, setDiscountPct] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const resetCopay = () => { setCollectedTouched(false); setCollectedInput(""); setDiscountPct(""); setDiscountReason(""); setCopayDisp("collected"); };
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(prefill?.notes ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // Set when the entered date of service is in another month or the future, so we
@@ -206,6 +222,19 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         // entry can interrupt the next rapid entry (the reported "second one won't
         // save"). The session is already saved server-side; the payout/roster views
         // refresh when the clinician leaves the form (Save session, or Back).
+        return;
+      }
+      // Confirming a scheduled visit: link the new session back to the
+      // appointment (marks it seen + billed) and return to the calendar.
+      if (prefill?.appointmentId) {
+        try {
+          await fetch("/api/scheduling/appointments", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "update", id: prefill.appointmentId, status: "seen", billingSessionId: data.id }),
+          });
+        } catch { /* session is saved; linking is best-effort */ }
+        router.push("/schedule");
+        router.refresh();
         return;
       }
       router.push("/billing/me");

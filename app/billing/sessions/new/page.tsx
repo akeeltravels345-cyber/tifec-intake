@@ -4,11 +4,14 @@ import { getBillingUser } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listSessions, cptVariantList } from "@/lib/billing";
 import { listClients } from "@/lib/clients";
 import { caymanToday } from "@/lib/caymanTime";
+import { getAppointment, listAppointmentTypes } from "@/lib/scheduling";
 import SessionForm from "@/components/billing/SessionForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewSessionPage() {
+const cayDate = (iso: string) => new Date(Date.parse(iso) - 5 * 3600e3).toISOString().slice(0, 10); // Cayman UTC-5
+
+export default async function NewSessionPage({ searchParams }: { searchParams: Promise<{ fromAppt?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/sessions/new");
 
@@ -60,14 +63,45 @@ export default async function NewSessionPage() {
 
   const today = caymanToday();
 
+  // Arrived from a scheduled appointment ("Log this session"): pre-fill from it
+  // so the clinician confirms instead of retyping, and link back on save.
+  const sp = await searchParams;
+  let prefill: undefined | { appointmentId: string; first: string; last: string; dob?: string; clientId?: string | null; returning?: boolean; insurerId?: string | null; date?: string; notes?: string; codes?: string[]; serviceName?: string };
+  if (sp.fromAppt) {
+    const appt = await getAppointment(sp.fromAppt);
+    if (appt && appt.kind === "appointment" && appt.billingSessionId) redirect("/schedule"); // already logged
+    if (appt && appt.kind === "appointment") {
+      const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+      const parts = appt.clientName.trim().split(/\s+/);
+      const first = parts.length > 1 ? parts.slice(0, -1).join(" ") : (parts[0] || appt.clientName);
+      const last = parts.length > 1 ? parts[parts.length - 1] : "";
+      const key = `${first}|${last}`.toLowerCase().trim();
+      const match = clients.find((c) => `${c.first}|${c.last}`.toLowerCase().trim() === key);
+      const insurerId = appt.insurancePath === "insurance" ? (appt.insurerId || match?.insurerId || null) : (match?.insurerId || null);
+      prefill = {
+        appointmentId: appt.id,
+        first, last,
+        clientId: match?.id ?? null,
+        returning: !!match,
+        insurerId,
+        date: cayDate(appt.startAt),
+        notes: appt.notes || "",
+        codes: type?.baselineCptCodes ?? [],
+        serviceName: type?.name,
+      };
+    }
+  }
+
   return (
     <>
-      <Link href="/billing/me" className="ls-back">← Back to my payout</Link>
+      <Link href={prefill ? "/schedule" : "/billing/me"} className="ls-back">← {prefill ? "Back to the calendar" : "Back to my payout"}</Link>
       <div className="ls-topbar">
-        <h1 className="ls-h1">Log a session</h1>
-        <p className="ls-sub">Logged as {user.clinician.name}. Pick the service code(s) and the money fills in.</p>
+        <h1 className="ls-h1">{prefill ? "Confirm this session" : "Log a session"}</h1>
+        <p className="ls-sub">{prefill
+          ? `${prefill.serviceName || "Session"} with ${prefill.first} ${prefill.last}${prefill.returning ? " (returning client)" : " (new client)"}. Check the details and save — it goes to the biller.`
+          : `Logged as ${user.clinician.name}. Pick the service code(s) and the money fills in.`}</p>
       </div>
-      <SessionForm insurers={activeInsurers} cptCodes={activeCpt} clients={clients} usualCodes={usualCodes} alreadyLogged={alreadyLogged} today={today} />
+      <SessionForm insurers={activeInsurers} cptCodes={activeCpt} clients={clients} usualCodes={usualCodes} alreadyLogged={alreadyLogged} today={today} prefill={prefill} />
     </>
   );
 }

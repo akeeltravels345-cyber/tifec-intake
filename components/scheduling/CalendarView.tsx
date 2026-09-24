@@ -637,10 +637,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 {STATUS.map((s) => <button key={s.key} className={draft.status === s.key ? `on ${s.key}` : ""} onClick={() => setStatus(draft as Appointment, s.key)}>{s.label}</button>)}
               </div>
             )}
-            {draft.id && draft.status === "seen" && draft.kind !== "block" && (
-              <p className="cal-bridge">{draft.billingSessionId
-                ? "✓ A billing session was created for this visit. It's in the billing queue for the biller."
-                : "Marked seen. Turn on “Connect to billing” in Settings to make seen visits into billing sessions automatically."}</p>
+            {draft.id && draft.kind !== "block" && (
+              draft.billingSessionId
+                ? <p className="cal-bridge">✓ This visit has been logged for billing — it&apos;s in the biller&apos;s queue.</p>
+                : <a className="cal-logsession" href={`/billing/sessions/new?fromAppt=${draft.id}`}><ToolIcon name="clipboard" /><span>Log this session</span></a>
             )}
             {draft.id && draft.seriesId && (
               <div className="cal-series-note">↻ Part of a recurring series. <button type="button" onClick={() => removeSeries(draft as Appointment)}>Remove this and all later</button></div>
@@ -690,6 +690,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 <strong>{title}</strong>
                 <span>{prettyDate(cayDay(a.startAt))} · {label12(s)}-{label12(s + dur)}</span>
               </div>
+
+              {!isBlock && editable && (
+                a.billingSessionId
+                  ? <p className="cal-bridge" style={{ margin: "0 0 6px" }}>✓ This visit has been logged for billing — it&apos;s in the biller&apos;s queue.</p>
+                  : <a className="cal-logsession" style={{ margin: "2px 0 8px" }} href={`/billing/sessions/new?fromAppt=${a.id}`}><ToolIcon name="clipboard" /><span>Log this session</span></a>
+              )}
 
               {isBlock ? (
                 <div className="cvr-sec">

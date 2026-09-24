@@ -3999,6 +3999,10 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-status button.on.seen { background: var(--green, #3f8f5f); border-color: var(--green, #3f8f5f); }
 .cal-status button.on.no_show, .cal-status button.on.cancelled { background: #b1543c; border-color: #b1543c; }
 .cal-bridge { font-size: 12px; color: var(--teal-deep); background: var(--teal-bg, var(--panel)); margin: 0 16px 12px; padding: 9px 12px; border-radius: 9px; }
+/* "Log this session" — the confirm-into-billing step, prominent on an unbilled visit. */
+.cal-logsession { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 12px; padding: 12px 16px; font: 700 14px "Open Sans"; color: #fff; background: var(--teal, #2f8e93); border: 1px solid var(--teal, #2f8e93); border-radius: 10px; text-decoration: none; }
+.cal-logsession:hover { filter: brightness(1.06); }
+.biz a.cal-logsession { color: #fff; }
 .cal-actions { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--card); }
 .cal-btn { font: 600 13px "Open Sans"; border-radius: 9px; padding: 9px 15px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .cal-btn.primary { background: var(--indigo); color: #fff; border-color: var(--indigo); }
