@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TICKET_STATUS_LABEL, statusActions, type TicketStatus } from "@/lib/ticketStatus";
 import { prepareUpload } from "@/lib/imageUpload";
@@ -77,6 +77,19 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   // The raiser can close/reopen their own ticket even if they aren't an assignee.
   const canClose = canManage || !!ticket.mine;
   const closed = ticket.status === "resolved";
+
+  // Long threads: keep the last few comments open and fold the older middle into
+  // a "Show N earlier comments" line, and land on the newest on open.
+  const RECENT = 3;
+  const [showEarlier, setShowEarlier] = useState(false);
+  const hiddenCount = Math.max(0, replies.length - RECENT);
+  const foldable = hiddenCount >= 2;                       // not worth folding one
+  const cut = foldable && !showEarlier ? hiddenCount : 0;  // how many to fold from the top
+  const endRef = useRef<HTMLDivElement>(null);
+  // On open, jump to the newest activity (skip the scroll while the middle is
+  // expanded, so opening old history doesn't yank you back to the bottom).
+  useEffect(() => { if (!showEarlier) endRef.current?.scrollIntoView({ block: "center" }); }, [showEarlier]);
+  const shortDay = (iso: string) => { const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
 
   // Inline editing of your own words. editingId is "body" for the first post, or a
   // reply's id. You can edit until someone posts after it, or for 10 minutes.
@@ -307,7 +320,17 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
       </div>
 
       <div className="tm-replies">
-        {replies.map((r, idx) => (
+        {/* The long middle folds to one line; the last few comments stay open. */}
+        {foldable && !showEarlier && (
+          <button type="button" className="tm-earlier" onClick={() => setShowEarlier(true)}>
+            Show {hiddenCount} earlier comment{hiddenCount === 1 ? "" : "s"}
+            {replies[0] && replies[cut - 1] ? ` (${shortDay(replies[0].at)} – ${shortDay(replies[cut - 1].at)})` : ""}
+          </button>
+        )}
+        {foldable && showEarlier && (
+          <button type="button" className="tm-earlier open" onClick={() => setShowEarlier(false)}>Hide earlier comments</button>
+        )}
+        {replies.map((r, idx) => (idx < cut ? null : (
           <div key={r.id} className={`tm-card tm-reply ${r.mine ? "me" : ""}`}>
             <div className="tm-rwho">{r.who} <span className="tm-rwhen">{stamp(r.at)}</span>
               {replyEditable(r, idx) && editingId !== r.id && <button type="button" className="tm-editlink" onClick={() => startEdit(r.id, r.body)}>Edit</button>}
@@ -330,7 +353,8 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
               </div>
             )}
           </div>
-        ))}
+        )))}
+        <div ref={endRef} />
       </div>
 
       {error && <p className="tm-err">{error}</p>}

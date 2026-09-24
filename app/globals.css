@@ -3187,6 +3187,10 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-manage #st { max-width: 260px; }
 .tm-first { padding: 18px 20px; margin-bottom: 14px; border-left: 3px solid var(--brand); }
 .tm-replies { display: grid; gap: 10px; margin-bottom: 16px; }
+/* "Show N earlier comments" — the one fold on a long thread. */
+.tm-earlier { width: 100%; text-align: center; background: var(--panel); border: 1px dashed var(--line); border-radius: 10px; padding: 11px; color: var(--muted); font: 600 13px "Open Sans"; cursor: pointer; }
+.tm-earlier:hover { border-color: var(--teal); color: var(--ink); }
+.tm-earlier.open { background: none; border-style: solid; }
 .tm-reply { padding: 14px 18px; }
 .tm-reply.me { border-left: 3px solid var(--teal); }
 .tm-rwho { font: 600 12.5px "Open Sans"; color: var(--ink); }
