@@ -8,13 +8,15 @@ const ACCENTS = ["#256e72", "#2f8e93", "#2e3192", "#3f8f5f", "#7a4fa3", "#b1543c
 const sample = { client: "Ada Rivers", service: "Individual therapy", clinician: "Dr. Shion O'Connor", when: "Mon, 8 Sep at 10:00 AM", practice: "Cayman Essential Care" };
 const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => (sample as Record<string, string>)[k] ?? `{${k}}`);
 
-export default function SchedulingSettingsView({ initial, types = [] }: {
+export default function SchedulingSettingsView({ initial, types = [], origin = "" }: {
   initial: SchedulingSettings; types?: { id: string; name: string }[];
+  // Absolute origin computed on the SERVER so the printed links render identically
+  // on server and client (no hydration mismatch) and copy/QR get full URLs.
+  origin?: string;
 }) {
   const [s, setS] = useState<SchedulingSettings>(initial);
   const [copied, setCopied] = useState("");
   const [qr, setQr] = useState<{ label: string; url: string; img: string } | null>(null);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const baseLink = `${origin}/book`;
   const copy = (text: string, key: string) => { try { navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(""), 1500); } catch { /* ignore */ } };
   const showQr = async (label: string, url: string) => { try { const img = await QRCode.toDataURL(url, { width: 320, margin: 1 }); setQr({ label, url, img }); } catch { /* ignore */ } };
