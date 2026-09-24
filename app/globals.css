@@ -3923,7 +3923,13 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 
 /* Scheduling — staff calendar (week view) */
 .cal { max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; color: var(--ink); }
-.cal-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+/* Two clear rows: primary controls (nav/view/New) on top, then whose-calendar
+   + tools beneath a hairline, so the toolbar reads as two groups not one jumble. */
+.cal-bar { display: flex; flex-direction: column; margin-bottom: 14px; }
+.cal-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cal-bar-tools { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.cal-tools { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal-tools .cal-hours { margin-right: 0; }
 .cal-nav { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .cal-nav button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 8px 13px; cursor: pointer; }
 .cal-nav button:first-child { border-left: 0; }

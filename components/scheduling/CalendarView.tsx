@@ -307,53 +307,63 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   return (
     <div className="cal">
       <div className="cal-bar">
-        <div className="cal-nav">
-          <button onClick={() => step(-1)} aria-label="Previous">‹</button>
-          <button className="today" onClick={() => setAnchor(todayCayman)}>Today</button>
-          <button onClick={() => step(1)} aria-label="Next">›</button>
-        </div>
-        <div className="cal-week">{rangeLabel}</div>
-        <div className="cal-viewseg">
-          {(["day", "week", "month"] as const).map((v) => (
-            <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
-          ))}
-        </div>
-        <span className="cal-sp" />
-        {lockedClinicianId ? (
-          <span className="cal-mine">{clinName(lockedClinicianId)}</span>
-        ) : (
-          <div className="cal-whoseg" role="tablist" aria-label="Filter calendar by clinician">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={who === "all"}
-              className={who === "all" ? "on" : ""}
-              onClick={() => setWho("all")}
-            >
-              All
-            </button>
-            {clinicians.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                role="tab"
-                aria-selected={who === c.id}
-                className={who === c.id ? "on" : ""}
-                onClick={() => setWho(c.id)}
-                title={c.name}
-              >
-                {shortName(c.name)}
-              </button>
+        {/* Row 1 — when you're looking, how you're viewing, and create. */}
+        <div className="cal-bar-row">
+          <div className="cal-nav">
+            <button onClick={() => step(-1)} aria-label="Previous">‹</button>
+            <button className="today" onClick={() => setAnchor(todayCayman)}>Today</button>
+            <button onClick={() => step(1)} aria-label="Next">›</button>
+          </div>
+          <div className="cal-week">{rangeLabel}</div>
+          <span className="cal-sp" />
+          <div className="cal-viewseg">
+            {(["day", "week", "month"] as const).map((v) => (
+              <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
             ))}
           </div>
-        )}
-        {setupHref && <a className="cal-hours cal-setup" href={setupHref}><ToolIcon name="wand" /><span>Set up</span></a>}
-        {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
-        {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
-        {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
-        {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
-        {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
-        {canCreate && <button className="cal-new" onClick={() => openNew()}><ToolIcon name="plus" /><span>New</span></button>}
+          {canCreate && <button className="cal-new" onClick={() => openNew()}><ToolIcon name="plus" /><span>New</span></button>}
+        </div>
+
+        {/* Row 2 — whose calendar, and the tools. */}
+        <div className="cal-bar-row cal-bar-tools">
+          {lockedClinicianId ? (
+            <span className="cal-mine">{clinName(lockedClinicianId)}</span>
+          ) : (
+            <div className="cal-whoseg" role="tablist" aria-label="Filter calendar by clinician">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={who === "all"}
+                className={who === "all" ? "on" : ""}
+                onClick={() => setWho("all")}
+              >
+                All
+              </button>
+              {clinicians.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={who === c.id}
+                  className={who === c.id ? "on" : ""}
+                  onClick={() => setWho(c.id)}
+                  title={c.name}
+                >
+                  {shortName(c.name)}
+                </button>
+              ))}
+            </div>
+          )}
+          <span className="cal-sp" />
+          <div className="cal-tools">
+            {setupHref && <a className="cal-hours cal-setup" href={setupHref}><ToolIcon name="wand" /><span>Set up</span></a>}
+            {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
+            {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
+            {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
+            {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
+            {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
+          </div>
+        </div>
       </div>
 
       {notice && (
