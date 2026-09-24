@@ -212,9 +212,12 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               })}
             </div>
             {viewingAsRole && (
-              <button type="button" className="bo-switch-back" onClick={() => switchView("me")}>
-                ← Back to my admin{viewingAsName ? ` · you are seeing ${viewingAsName}'s view` : ""}
-              </button>
+              <>
+                <button type="button" className="bo-switch-back" onClick={() => switchView("me")}>
+                  ← Back to my admin{viewingAsName ? ` · you are seeing ${viewingAsName}'s view` : ""}
+                </button>
+                <div className="bo-switch-ro">Read-only — changes are disabled while viewing as someone else, so nothing is logged under their name. Return to your own account to make changes.</div>
+              </>
             )}
           </div>
         )}

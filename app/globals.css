@@ -1522,6 +1522,7 @@ body:has(.biz) { background: var(--panel); }
 .bo-switch-btn:disabled { opacity: .4; cursor: not-allowed; }
 .bo-switch-back { margin-top: 8px; width: 100%; padding: 8px; border: none; border-radius: 8px; background: #D9A441; color: #3a2a06; cursor: pointer; font: 700 11.5px "Open Sans", system-ui, sans-serif; line-height: 1.3; }
 .bo-switch-back:hover { background: #cf982f; }
+.bo-switch-ro { margin-top: 6px; padding: 7px 9px; border-radius: 8px; background: rgba(217, 164, 65, .14); color: #8a6d1a; font: 600 10.5px "Open Sans", system-ui, sans-serif; line-height: 1.45; }
 .bo-logo { width: 36px; height: 36px; border-radius: 10px; background: var(--surface); border: 1px solid var(--edge); object-fit: contain; padding: 3px; }
 .bo-bt { font-weight: 700; font-size: 15px; line-height: 1.1; }
 .bo-bs { font-size: 11px; color: var(--faint); margin-top: 3px; letter-spacing: .03em; }
