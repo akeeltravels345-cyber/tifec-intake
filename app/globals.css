@@ -1494,6 +1494,7 @@ body:has(.biz) { background: var(--panel); }
    Restore each button's own colour with a specificity that beats `.biz a`. */
 .biz a.vc-connect { color: #fff; }                 /* Connect Zoom / Google (solid teal) */
 .biz a.ss-btn { color: #fff; }                     /* solid indigo button — was indigo-on-indigo */
+.biz a.fs-cta { color: #fff; }                     /* feature-spotlight CTA — was indigo-on-indigo */
 .biz a.calsub-btn { color: var(--ink); }           /* Add to Apple / Google calendar */
 .biz a.cal-hours { color: var(--teal-deep); }      /* calendar toolbar links */
 .biz a.cal-hours.cal-setup { color: #fff; }        /* the filled "Set up" toolbar button */
