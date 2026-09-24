@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listSessions, listExternalClinicians } from "@/lib/billing";
 import { insurancePortion, collectedAtVisit } from "@/lib/billingCalc";
-import { listClients, listAllClients } from "@/lib/clients";
+import { listClients, listAllClients, seenClientIds } from "@/lib/clients";
 import { getClinician, CLINICIANS, canTreatClients } from "@/lib/clinicians";
 import ClientsList, { type ClientRow } from "@/components/billing/ClientsList";
 
@@ -51,6 +51,10 @@ export default async function ClientsPage() {
     if (!prev || s.dateOfService > prev) lastVisitByClient.set(s.clientId, s.dateOfService);
   }
 
+  // "New" is per person: a recently added client stays New for THIS user until
+  // they open the record — so the biller clearing it doesn't clear it for the
+  // clinician, and vice versa.
+  const seen = await seenClientIds(user.clinician.id, clients.map((c) => c.id));
   const rows: ClientRow[] = [...clients]
     .sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`))
     .map((c) => ({
@@ -62,9 +66,10 @@ export default async function ClientsPage() {
       paid: Math.round((paidByClient.get(c.id) ?? 0) * 100) / 100,
       lastVisit: lastVisitByClient.get(c.id) ?? "",
       clinicianIds: c.clinicianIds,
-      // Highlight recently added clients (the intake / booking auto-creates land
-      // here) as "New" for their first two weeks, so the biller notices them.
-      isNew: !!c.createdAt && Date.now() - Date.parse(c.createdAt) < 14 * 24 * 3600 * 1000,
+      // "New" while recently added (intake / booking auto-creates land here) AND
+      // this user hasn't opened the record yet. The 14-day window bounds it so an
+      // old client a user simply never opened doesn't read as new.
+      isNew: !!c.createdAt && Date.now() - Date.parse(c.createdAt) < 14 * 24 * 3600 * 1000 && !seen.has(c.id),
     }));
 
   // For the biller/owner/admin: the distinct clinicians who actually have

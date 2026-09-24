@@ -171,6 +171,7 @@ async function pg() {
 const dir = (f: string) => path.join(process.cwd(), "data", f);
 const FILE = "billing-clients.local.json";
 const LINK_FILE = "billing-client-links.local.json";
+const SEEN_FILE = "billing-client-seen.local.json";
 function readJson<T>(file: string, fallback: T): T {
   try { return JSON.parse(fs.readFileSync(dir(file), "utf8")) as T; } catch { return fallback; }
 }
@@ -433,6 +434,47 @@ export async function deleteClient(id: string): Promise<void> {
   }
   writeJson(FILE, readJson<StoredClient[]>(FILE, []).filter((c) => c.id !== id));
   writeJson(LINK_FILE, readJson<StoredLink[]>(LINK_FILE, []).filter((l) => l.clientId !== id));
+}
+
+// ---- per-user "seen" (powers the "New" client tag, cleared per person) -------
+// Whether THIS user has opened a client record. The "New" tag on the client list
+// shows for a recently-added client until the viewing user has opened it — so the
+// biller opening it doesn't clear it for the clinician, and vice versa.
+interface StoredSeen { clientId: string; clinicianId: string; seenAt: string }
+
+/** Record that a user opened a client. Lazily creates the table so production
+ *  self-migrates on first use (the prod DB isn't reachable for a manual run).
+ *  Best-effort — a failure here must never break opening a client record. */
+export async function markClientSeen(clientId: string, clinicianId: string): Promise<void> {
+  if (!clientId || !clinicianId) return;
+  if (usePostgres) {
+    const sql = await pg();
+    try {
+      await sql`CREATE TABLE IF NOT EXISTS billing_client_seen (client_id text NOT NULL, clinician_id text NOT NULL, seen_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (client_id, clinician_id))`;
+      await sql`INSERT INTO billing_client_seen (client_id, clinician_id) VALUES (${clientId}, ${clinicianId}) ON CONFLICT (client_id, clinician_id) DO NOTHING`;
+    } catch (e) { console.error("markClientSeen failed:", e); }
+    return;
+  }
+  const all = readJson<StoredSeen[]>(SEEN_FILE, []);
+  if (!all.some((x) => x.clientId === clientId && x.clinicianId === clinicianId)) {
+    all.push({ clientId, clinicianId, seenAt: new Date().toISOString() });
+    writeJson(SEEN_FILE, all);
+  }
+}
+
+/** Which of these clients THIS user has already opened. A missing table (before
+ *  the first write) reads as "none seen", so a fresh client correctly shows New. */
+export async function seenClientIds(clinicianId: string, clientIds: string[]): Promise<Set<string>> {
+  const ids = clientIds.filter(Boolean);
+  if (!clinicianId || ids.length === 0) return new Set();
+  if (usePostgres) {
+    const sql = await pg();
+    try {
+      const rows = (await sql`SELECT client_id FROM billing_client_seen WHERE clinician_id = ${clinicianId} AND client_id = ANY(${ids})`) as Record<string, unknown>[];
+      return new Set(rows.map((r) => str(r.client_id)));
+    } catch { return new Set(); }
+  }
+  return new Set(readJson<StoredSeen[]>(SEEN_FILE, []).filter((x) => x.clinicianId === clinicianId && ids.includes(x.clientId)).map((x) => x.clientId));
 }
 
 /** Every seeded demo client, for bulk cleanup. Matches the `sample` flag AND the

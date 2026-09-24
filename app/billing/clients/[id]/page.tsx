@@ -5,7 +5,7 @@ import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { logAccess } from "@/lib/db";
 import { listInsurers, listCptCodes, listSessions, codeSummary } from "@/lib/billing";
-import { getClient, clinicianSeesClient } from "@/lib/clients";
+import { getClient, clinicianSeesClient, markClientSeen } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { listExternalClinicians } from "@/lib/billing";
 import { findIntakeForClient } from "@/lib/intakeLink";
@@ -32,6 +32,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   // force-dynamic (not prefetched), so this fires on a real open, not on hover.
   // Only the opaque client id is stored (no name), keeping the log PHI-free.
   await logAccess({ id: randomUUID(), clinician_id: user.clinician.id, submission_token: `client:${id}`, action: "view", detail: `viewed client record (client:${id})`, at: new Date().toISOString() });
+  // Clear the "New" tag for THIS user (per-person): the biller opening it doesn't
+  // clear it for the clinician, and vice versa. Best-effort.
+  await markClientSeen(id, user.clinician.id);
 
   const [insurers, cptCodes, sessions, external, intakeForms] = await Promise.all([
     listInsurers(),
