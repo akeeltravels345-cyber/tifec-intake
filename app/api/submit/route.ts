@@ -3,9 +3,40 @@ import { getClinician } from "@/lib/clinicians";
 import { buildSections, fieldVisible, templateLabel } from "@/lib/forms";
 import { encrypt, secureToken, randomId } from "@/lib/crypto";
 import { insertSubmission } from "@/lib/db";
+import { addClients, type ClientInput } from "@/lib/clients";
+import type { ClientProfile } from "@/lib/clients";
 import { sendNotification } from "@/lib/email";
 
 export const runtime = "nodejs"; // needs node crypto + nodemailer
+
+const splitName = (full: string): { first: string; last: string } => {
+  const p = full.trim().replace(/\s+/g, " ").split(" ");
+  return p.length <= 1 ? { first: p[0] ?? "", last: "" } : { first: p[0], last: p.slice(1).join(" ") };
+};
+
+/** Turn an intake submission into the client(s) it's for, so a new intake for
+ *  someone not yet on file auto-creates their client record (and an existing
+ *  person just links). Handles the individual form and both people on a couples
+ *  form. Only maps what intake reliably carries; the biller enriches the rest. */
+function clientsFromAnswers(a: Record<string, string>): ClientInput[] {
+  const mk = (name?: string, email?: string): ClientInput | null => {
+    if (!name || !name.trim()) return null;
+    const { first, last } = splitName(name);
+    const profile: ClientProfile = {};
+    if (a.dob && String(a.dob).trim()) profile.dob = String(a.dob).trim();
+    const em = (email && email.trim()) || (a.email && String(a.email).trim()) || "";
+    if (em) profile.email = em;
+    const phone = (a.cell_phone && String(a.cell_phone).trim()) || (a.home_phone && String(a.home_phone).trim()) || "";
+    if (phone) profile.phone = phone;
+    // Intake keeps address as one free-text field; drop it in line 1 so the biller
+    // sees it, rather than guessing at street/city/postal splits.
+    if (a.address && String(a.address).trim()) profile.address = { line1: String(a.address).trim() };
+    return { first, last, insurerId: null, profile };
+  };
+  const out: ClientInput[] = [];
+  for (const c of [mk(a.full_name, a.email), mk(a.his_name, a.his_email), mk(a.hers_name, a.hers_email)]) if (c) out.push(c);
+  return out;
+}
 
 export async function POST(req: Request) {
   let payload: { clinicianId?: string; formKey?: string; coupleId?: string; answers?: Record<string, string> };
@@ -78,6 +109,16 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("DB insert failed:", err);
     return NextResponse.json({ error: "Could not save your form. Please try again." }, { status: 500 });
+  }
+
+  // Make the client record the hub: find-or-create the client(s) this intake is
+  // for and link them to the clinician. Best-effort — a hiccup here must never
+  // fail or slow the client's submission (which is already safely saved).
+  try {
+    const inputs = clientsFromAnswers(answers);
+    if (inputs.length) await addClients(clinician.id, inputs);
+  } catch (err) {
+    console.error("intake -> client sync failed:", err);
   }
 
   // Notify the clinician with a secure link only - no PHI in the email.
