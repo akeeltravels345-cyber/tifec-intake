@@ -82,6 +82,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   // a "Show N earlier comments" line, and land on the newest on open.
   const RECENT = 3;
   const [showEarlier, setShowEarlier] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
   const hiddenCount = Math.max(0, replies.length - RECENT);
   const foldable = hiddenCount >= 2;                       // not worth folding one
   const cut = foldable && !showEarlier ? hiddenCount : 0;  // how many to fold from the top
@@ -276,7 +277,12 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
               ))}
             </div>
           </div>
-          <span className="tm-l">Assigned to</span>
+          <div className="tm-assignhead">
+            <span className="tm-l" style={{ margin: 0 }}>Assigned to</span>
+            <span className="tm-assignnames">{nameList(ticket.assignees.map((a) => a.name))}</span>
+            <button type="button" className="tm-editlink" onClick={() => setShowAssign((o) => !o)}>{showAssign ? "Done" : "Change"}</button>
+          </div>
+          {showAssign && (
           <div className="tm-picks">
             {contacts.map((c) => {
               const on = ids.includes(c.id);
@@ -299,6 +305,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
               );
             })}
           </div>
+          )}
           {canDelete && (
             <div className="tm-managefoot">
               <button type="button" className="tm-del" onClick={del} disabled={busy}>Delete ticket</button>

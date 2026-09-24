@@ -1489,6 +1489,14 @@ body:has(.biz) { background: var(--panel); }
   -webkit-font-smoothing: antialiased;
 }
 .biz a { color: var(--indigo); }
+/* `.biz a` above colours EVERY staff-area link indigo, which bleeds into anchors
+   that are really buttons/chips and gives them wrong (sometimes invisible) text.
+   Restore each button's own colour with a specificity that beats `.biz a`. */
+.biz a.vc-connect { color: #fff; }                 /* Connect Zoom / Google (solid teal) */
+.biz a.ss-btn { color: #fff; }                     /* solid indigo button — was indigo-on-indigo */
+.biz a.calsub-btn { color: var(--ink); }           /* Add to Apple / Google calendar */
+.biz a.cal-hours { color: var(--teal-deep); }      /* calendar toolbar links */
+.biz a.cal-hours.cal-setup { color: #fff; }        /* the filled "Set up" toolbar button */
 .biz .serif { font-family: "Newsreader", Georgia, serif; }
 .bo-side { width: 242px; flex: none; background: var(--surface); border-right: 1px solid var(--edge); padding: 24px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; z-index: 50; }
 .bo-brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 26px; }
@@ -3324,6 +3332,12 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 /* Multi-assignee picker: a ticket can need more than one person on it. */
 .tm-fs { border: none; padding: 0; margin: 0 0 4px; }
 .tm-fs .tm-l { margin-top: 0; }
+/* The ticket manage card is a normal card, not the pill-shaped group "Manage"
+   button that shares the .tm-manage class — pin its radius so it doesn't inherit. */
+.tm-card.tm-manage { border-radius: 14px; }
+/* Compact "Assigned to: names · Change" row; the checkbox picker is hidden until Change. */
+.tm-assignhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tm-assignnames { flex: 1; min-width: 120px; font: 600 13.5px "Open Sans"; color: var(--muted); }
 .tm-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 .tm-pick {
   display: flex; align-items: center; gap: 9px; cursor: pointer;
