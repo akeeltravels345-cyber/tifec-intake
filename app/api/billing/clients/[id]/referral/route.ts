@@ -40,8 +40,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const endDate = computedEnd || (isDate(body.endDate) ? String(body.endDate) : undefined);
   const sessions = Number.isFinite(Number(body.sessions)) && Number(body.sessions) > 0 ? Math.floor(Number(body.sessions)) : undefined;
 
-  const referral = { source: s(body.source), startDate, months, endDate, sessions };
-  const has = Object.values(referral).some((x) => x !== undefined);
+  // A manual edit is the biller taking ownership of the dates, so it clears any
+  // "needs review" flag and marks the source as manual.
+  const referral = { source: s(body.source), startDate, months, endDate, sessions, derivedFrom: "manual" as const, needsReview: false };
+  const has = [referral.source, referral.startDate, referral.months, referral.endDate, referral.sessions].some((x) => x !== undefined);
   await setReferral(id, has ? referral : null);
   await logChange(user.clinician.id, `client:${id}`, "edit", has ? `set referral (until ${endDate ?? "?"})` : "cleared referral");
   return NextResponse.json({ ok: true, referral: has ? referral : null });

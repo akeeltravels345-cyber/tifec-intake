@@ -114,6 +114,15 @@ export interface ClientReferral {
   endDate?: string;     // valid until (YYYY-MM-DD) — computed from startDate + months
   sessions?: number;    // sessions authorised (optional)
   notes?: string;
+  // Where endDate came from: a read of the uploaded referral's text ("document"),
+  // its filename ("filename"), or the biller's manual entry ("manual").
+  derivedFrom?: "document" | "filename" | "manual";
+  // Set when a referral was uploaded but its expiry couldn't be read — the record
+  // shows a "please review" prompt instead of a countdown, and never guesses.
+  needsReview?: boolean;
+  // The uploaded referral that set this (so the notice can point at it).
+  documentId?: string;
+  documentName?: string;
 }
 
 /** A document attached to a client — the intake form, the referral letter, etc.

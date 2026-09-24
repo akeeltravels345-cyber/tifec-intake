@@ -430,10 +430,16 @@ export default function ClientDetail({
   }
   const referral = referralStatus(profile.referral?.endDate, today);
   const refDays = referral.daysLeft;
+  // A referral was uploaded but its expiry couldn't be read — the notice asks for
+  // a review instead of showing a (wrong or missing) countdown.
+  const refReview = !!profile.referral?.needsReview;
+  // The uploaded referral that set the dates (so the notice can name its source).
+  const refFromDoc = profile.referral?.derivedFrom === "document" || profile.referral?.derivedFrom === "filename";
+  const refDocName = profile.referral?.documentName;
   // Only insurance clients need a referral. Show the referral panel when the
   // client bills insurance, or already has a referral on file; a self-pay client
   // with no referral isn't nudged to add one (that was over-flagging).
-  const showReferral = !!ins || referral.state !== "none";
+  const showReferral = !!ins || referral.state !== "none" || refReview;
 
   // Insured entries → CMS-1500 claim; self-pay entries (paid in full by the
   // client) → invoice. Both are selectable; the action bar offers whichever
@@ -517,10 +523,12 @@ export default function ClientDetail({
 
       {/* ---- Referral status (payment-critical; insurance clients only) ---- */}
       {showReferral && (
-        <div className={`cd-ref ${referral.state}`}>
+        <div className={`cd-ref ${refReview ? "expiring" : referral.state}`}>
           <div className="cd-refrow">
             <span className="cd-reflab">Referral</span>
-            {referral.state === "none" ? (
+            {refReview ? (
+              <span className="cd-refval">⚠ Referral uploaded, but I couldn&apos;t read the expiry date{refDocName ? ` from "${refDocName}"` : ""}. Open it and set the date so claims stay payable.</span>
+            ) : referral.state === "none" ? (
               <span className="cd-refval">No referral on file. Add one so claims stay payable.</span>
             ) : referral.state === "expired" ? (
               <span className="cd-refval"><b>Expired {profile.referral?.endDate}</b>. Sessions after this date can&apos;t be billed.</span>
@@ -529,9 +537,10 @@ export default function ClientDetail({
                 Covered for <b>{refDays} more day{refDays === 1 ? "" : "s"}</b> · until <b>{profile.referral?.endDate}</b>
               </span>
             )}
-            {profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
+            {!refReview && refFromDoc && <span className="cd-reffrom">from uploaded referral{refDocName ? `: ${refDocName}` : ""}</span>}
+            {!refReview && !refFromDoc && profile.referral?.source && <span className="cd-reffrom">from {profile.referral.source}{profile.referral.sessions ? ` · ${profile.referral.sessions} sessions` : ""}</span>}
           </div>
-          {canEdit && !refEdit && <button className="su-del" onClick={() => setRefEdit(true)}>{referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
+          {canEdit && !refEdit && <button className="su-del" onClick={() => setRefEdit(true)}>{refReview ? "Set date" : referral.state === "none" ? "Add referral" : referral.state === "valid" ? "Update" : "Renew referral"}</button>}
         </div>
       )}
       {showReferral && (referral.state === "expiring" || referral.state === "expired") && !refEdit && (

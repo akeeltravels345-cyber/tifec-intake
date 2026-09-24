@@ -3,8 +3,20 @@ import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, type ClientDocument } from "@/lib/clients";
 import { saveDocFile, MAX_DOC_BYTES } from "@/lib/clientDocs";
+import { extractReferral } from "@/lib/referralExtract";
 import { randomId } from "@/lib/crypto";
 import { logChange } from "@/lib/db";
+
+/** Pull text out of a PDF, server-side (unpdf bundles a serverless-safe pdf.js).
+ *  Returns "" for a scan with no text layer, or on any failure. */
+async function pdfText(buf: Buffer): Promise<string> {
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buf));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return Array.isArray(text) ? text.join("\n") : String(text ?? "");
+  } catch { return ""; }
+}
 
 // Files we accept for a client document. Referral letters and clinical paperwork
 // are PDFs or scans/photos; a couple of office formats are allowed too.
@@ -46,7 +58,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const name = s(form.get("name")) ?? file.name ?? "Document";
   const kind = s(form.get("kind")) ?? "other";
 
-  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const buf = Buffer.from(await file.arrayBuffer());
+  const base64 = buf.toString("base64");
   const docId = randomId();
   await saveDocFile(docId, id, base64, mime, file.size);
 
@@ -55,8 +68,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     addedAt: caymanToday(),
   };
   const documents = [...(client.profile.documents ?? []), doc];
-  await updateClient(id, client.insurerId, { ...client.profile, documents });
 
-  await logChange(user.clinician.id, `client:${id}`, "create", "added a document");
-  return NextResponse.json({ ok: true, documents });
+  // A referral upload is the source of truth for the referral window: read the
+  // expiry out of the PDF's text (or its filename), and drive the record's
+  // referral notice + countdown from that — no manual date entry needed. If the
+  // expiry can't be read, flag it for review rather than guessing.
+  let referral = client.profile.referral;
+  let referralLog = "";
+  if (kind === "referral") {
+    const text = mime === "application/pdf" ? await pdfText(buf) : "";
+    const ex = extractReferral(text, name);
+    const prev = client.profile.referral ?? {};
+    if (ex.endDate) {
+      referral = { ...prev, endDate: ex.endDate, startDate: ex.startDate ?? prev.startDate, months: undefined, derivedFrom: ex.source === "filename" ? "filename" : "document", needsReview: false, documentId: docId, documentName: name };
+      referralLog = ` · referral until ${ex.endDate} (from ${ex.source})`;
+    } else {
+      referral = { ...prev, derivedFrom: "document", needsReview: true, documentId: docId, documentName: name };
+      referralLog = " · referral expiry unreadable, flagged for review";
+    }
+  }
+
+  await updateClient(id, client.insurerId, { ...client.profile, documents, referral });
+
+  await logChange(user.clinician.id, `client:${id}`, "create", `added a document${referralLog}`);
+  return NextResponse.json({ ok: true, documents, referral: referral ?? null });
 }
