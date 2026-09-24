@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Worklist from "@/components/today/Worklist";
+import FeatureSpotlight from "@/components/billing/FeatureSpotlight";
 import type { BuilderTask } from "@/lib/builderTasks";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -74,6 +75,16 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
 
   return (
     <>
+      {!data.isAdmin && (
+        <FeatureSpotlight
+          id="owner-scheduling-hipaa"
+          title="Two new things for you"
+          body="You can now open the practice Scheduling calendar from the menu, and track HIPAA compliance under Team → HIPAA."
+          href="/scheduling/calendar"
+          cta="Open scheduling"
+          times={4}
+        />
+      )}
       <div className="bo-topbar">
         <div>
           <h1 className="bo-h1">Business overview</h1>
@@ -84,7 +95,6 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             <Link href="/billing/sessions/new" className="bo-qab pri"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" /></svg>Log a session</Link>
             <button className="bo-qab" onClick={() => setExportOpen(true)}>Export month</button>
             <Link href="#by-clinician" className="bo-qab">Payout statements</Link>
-            <Link href="/billing/guide" className="bo-qab">Handbook</Link>
           </div>
           <div className="bo-month">
             <button className="bo-mbtn" onClick={prev} aria-label="Previous month">‹</button>

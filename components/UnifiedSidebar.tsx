@@ -23,7 +23,7 @@ const IcWork = () => S(<><rect x="4" y="4" width="16" height="16" rx="2" /><path
 const IcKey = () => S(<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2" /></>);
 const IcSetup = () => S(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>);
 
-interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; beta?: boolean; }
+interface Item { href: string; label: string; icon: React.FC; badge?: number; match: (p: string) => boolean; glow?: string; highlight?: boolean; beta?: boolean; external?: boolean; }
 interface Group { label: string; items: Item[]; }
 
 function initialsOf(name: string): string {
@@ -60,6 +60,8 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   const navGlow = useGlowBudget("copaynav");
   const notesGlow = useGlowBudget("notesnew");
   const handbookGlow = useGlowBudget("handbooknew");
+  const hipaaGlow = useGlowBudget("hipaanew");
+  const schedGlow = useGlowBudget("schednew");
   const owner = role === "owner", biller = role === "biller";
   // Session notes are for the people who treat clients: every clinician and the
   // owner, plus a biller who also carries a caseload (Nick). A pure biller or the
@@ -82,6 +84,12 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // The reference handbook. One route, but /billing/guide renders the guide that
   // matches the signed-in role, so every menu can link to the same place.
   const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide"), highlight: handbookGlow };
+  // HIPAA compliance tracker — the live shared checklist (an Artifact), opened in a
+  // new tab. First item in the Team group so it's easy to find.
+  const uHipaa: Item = { href: "https://claude.ai/artifact/SMf5D5VGQZxdfTayWmapZk", label: "HIPAA", icon: IcKey, match: () => false, external: true, highlight: hipaaGlow };
+  // The full scheduling calendar. Now open to the owner (see app/scheduling/layout.tsx),
+  // highlighted as new for their first few sessions.
+  const uScheduling: Item = { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling"), highlight: schedGlow };
 
   let groups: Group[];
   if (isAdmin && hasBilling) {
@@ -90,7 +98,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     // via the switcher at the top of the sidebar — no duplicated menus here.
     groups = [
       { label: "", items: [uToday] },
-      { label: "Team", items: [uNotices, uMessages, uTickets] },
+      { label: "Team", items: [uHipaa, uNotices, uMessages, uTickets] },
       { label: "Admin", items: [
         { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
         { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
@@ -103,7 +111,9 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     ];
   } else {
     groups = [
-      { label: "", items: canSchedule ? [uToday, uSchedule] : [uToday] },
+      // The owner gets the full Scheduling calendar and no longer needs the old
+      // beta agenda; others who have the agenda keep it until Scheduling reaches them.
+      { label: "", items: [uToday, ...(canSchedule && !owner ? [uSchedule] : []), ...(owner ? [uScheduling] : [])] },
       { label: "Intake", items: [uDash, uForms] },
     ];
     if (hasBilling) {
@@ -142,7 +152,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             ];
       groups.push({ label: "Billing", items: billing });
     }
-    groups.push({ label: "Team", items: [uNotices, uMessages, uTickets] });
+    groups.push({ label: "Team", items: [uHipaa, uNotices, uMessages, uTickets] });
     const adminItems: Item[] = [];
     if (hasBilling && (owner || biller)) adminItems.push({ href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") });
     if (hasBilling && (owner || biller)) adminItems.push({ href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") });
@@ -229,13 +239,17 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               {g.items.map((n) => {
                 const Icon = n.icon;
                 const glowing = !!n.highlight || (!!n.glow && navGlow);
-                return (
-                  <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`}>
+                const cls = `${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`;
+                const inner = (
+                  <>
                     <Icon />{n.label}
                     {n.beta && <span className="bo-betachip">Beta</span>}
                     {n.badge ? <span className="bdg">{n.badge}</span> : glowing ? <span className="bo-newchip">New</span> : null}
-                  </Link>
+                  </>
                 );
+                return n.external
+                  ? <a key={n.href} href={n.href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+                  : <Link key={n.href} href={n.href} className={cls}>{inner}</Link>;
               })}
             </div>
           ))}
@@ -266,12 +280,16 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       <nav className="bo-mobtabs">
         {flat.map((n) => {
           const Icon = n.icon;
-          return (
-            <Link key={n.href} href={n.href} className={`${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}`}>
+          const cls = `${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}`;
+          const inner = (
+            <>
               <Icon />{n.label.startsWith("My ") ? n.label.slice(3).replace(/^./, (c) => c.toUpperCase()) : n.label.split(" ")[0]}
               {n.badge ? <span className="bdg">{n.badge}</span> : null}
-            </Link>
+            </>
           );
+          return n.external
+            ? <a key={n.href} href={n.href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+            : <Link key={n.href} href={n.href} className={cls}>{inner}</Link>;
         })}
       </nav>
     </>

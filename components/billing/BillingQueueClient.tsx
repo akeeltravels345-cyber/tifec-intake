@@ -247,11 +247,13 @@ export default function BillingQueueClient({ data }: { data: QueueData }) {
           {data.adjusted.length > 0 && <button className={`bq-tab ${tab === "adjusted" ? "on" : ""}`} onClick={() => switchTab("adjusted")}>Written off / down ({data.adjusted.length})</button>}
         </div>
         <span className="bq-tsp" />
-        <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-        <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
-          <option value="">All clinicians</option>
-          {data.clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <div className="bq-filters">
+          <div className="bq-search"><span style={{ color: "var(--faint)" }}>⌕</span><input placeholder="Search client…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+          <select className="bq-selct" value={filterClin} onChange={(e) => setFilterClin(e.target.value)}>
+            <option value="">All clinicians</option>
+            {data.clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
         <div className="bq-tabs">
           <button className={`bq-tab ${groupBy === "insurer" ? "on" : ""}`} onClick={() => setGroupBy("insurer")}>By insurer</button>
           <button className={`bq-tab ${groupBy === "clinician" ? "on" : ""}`} onClick={() => setGroupBy("clinician")}>By clinician</button>

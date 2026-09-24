@@ -20,7 +20,7 @@ const utcAtCayMidnight = (d: string) => { const [y, m, dd] = d.split("-").map(Nu
 export default async function CalendarPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/scheduling/calendar");
-  if (!isSystemAdmin(user.clinician)) redirect("/today");
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
 
   const today = caymanToday();
   const monday = mondayOf(today);

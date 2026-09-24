@@ -39,10 +39,10 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0);
   // The illustrative processing-fee line is admin-only (the builder).
   const isAdmin = user.clinician.contact === "admin";
-  // Personal worklist: each viewer gets their OWN list, scoped to whoever they're
-  // currently viewing as. The owner sees the owner's, the admin sees the admin's.
-  const builderTasks = await listBuilderTasks(user.clinician.id, isAdmin);
-  const worklistChip = isAdmin ? "Admin only" : "Private";
+  // The builder worklist is a builder tool, so it only mounts on the overview for
+  // the system admin — the owner/biller/clinician get a clean business overview.
+  const builderTasks = isAdmin ? await listBuilderTasks(user.clinician.id, isAdmin) : undefined;
+  const worklistChip = "Admin only";
 
   const earned = biz.revenueGenerated;
   const thisMonthOutstanding = r2(biz.perClinician.reduce((t, c) => t + c.outstandingThisMonth, 0));
