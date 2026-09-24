@@ -1074,7 +1074,7 @@ export default function ClientDetail({
                 <span className={`cd-em-badge ${e.ok ? "ok" : "bad"}`}>{e.ok ? "Sent" : "Failed"}</span>
                 <span className="cd-em-main">
                   <span className="cd-em-subj">{e.subject}</span>
-                  <span className="cd-em-meta">to {e.to}{e.invoiceNo ? ` · invoice ${e.invoiceNo}` : ""}{e.amount != null ? ` · ${money(e.amount)}` : ""}</span>
+                  <span className="cd-em-meta">{e.kind === "claim" ? "claim · " : ""}to {e.to}{e.payer ? ` · ${e.payer}` : ""}{e.invoiceNo ? ` · invoice ${e.invoiceNo}` : ""}{e.amount != null ? ` · ${money(e.amount)}` : ""}</span>
                   {!e.ok && e.reason && <span className="cd-em-reason">{e.reason}</span>}
                 </span>
                 <span className="cd-em-when">{fmtWhen(e.at)}<span className="cd-em-by">{e.byName}</span></span>

@@ -65,11 +65,12 @@ export interface ClientProfile {
 export interface SentEmail {
   id: string;
   at: string;                 // ISO timestamp
-  kind: "invoice";            // what was sent (room to grow)
+  kind: "invoice" | "claim";  // what was sent (room to grow)
   to: string;                 // recipient address at the time
   subject: string;
   invoiceNo?: string;
   amount?: number;
+  payer?: string;             // for a claim: the insurer it went to
   byId: string;               // clinician/biller who sent it
   byName: string;
   ok: boolean;                // did it actually send?

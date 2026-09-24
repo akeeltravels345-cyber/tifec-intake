@@ -634,3 +634,110 @@ export async function sendInvoiceEmail(args: InvoiceEmailArgs & { pdf: Uint8Arra
     return { sent: false, reason: "send failed" };
   }
 }
+
+// ---- Insurer claim email (CMS-1500 to the payer) ---------------------------
+
+export interface ClaimEmailArgs {
+  to: string;                 // the payer's claims email
+  payerName: string;          // insurer name, for the greeting/subject
+  patientName: string;        // "Last, First" — matches the form, no extra PHI beyond the claim itself
+  practiceName: string;
+  claimCount: number;         // number of service lines on the claim
+  total: number;              // total charge
+  memberId?: string;
+  subject?: string;           // sender-edited subject; falls back to the default when blank
+  message: string;            // the reviewed cover-note body (plain text)
+  replyToName?: string;       // the biller/clinician who sent it — replies (denials, queries) come here
+  replyToEmail?: string;
+  /** Practice contact details for the footer (from the Setup provider config). */
+  practice?: { addressLines?: string[]; phone?: string; email?: string; website?: string };
+  logoCid?: string;
+}
+
+/** Default cover note to the insurer, shown in the preview for the biller to edit. */
+export function defaultClaimMessage(payerName: string, patientName: string, practiceName: string, total: number, memberId?: string): string {
+  return [
+    `To the claims team${payerName ? ` at ${payerName}` : ""},`,
+    "",
+    `Please find attached a CMS-1500 claim for ${patientName}${memberId ? ` (member ID ${memberId})` : ""} for processing.`,
+    `The total charge is ${invMoney(total)}.`,
+    "",
+    "If anything further is needed to process this claim, please reply to this email and we'll respond promptly.",
+    "",
+    "Thank you,",
+    practiceName,
+  ].join("\n");
+}
+
+/** Subject + text + HTML for the claim email (exported so it can be previewed). */
+export function buildClaimEmail(args: ClaimEmailArgs): { subject: string; text: string; html: string } {
+  const subject = args.subject?.trim() || `CMS-1500 claim — ${args.patientName} — ${args.practiceName}`;
+  const text = args.message;
+  const bodyHtml = escapeHtml(args.message).replace(/\n/g, "<br>");
+
+  const header = args.logoCid
+    ? `<img src="cid:${args.logoCid}" alt="${escapeHtml(args.practiceName)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
+    : `<div style="font-size:20px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.practiceName)}</div>`;
+
+  const addressLine = (args.practice?.addressLines ?? []).map(escapeHtml).join(", ");
+  const contactLine = [args.practice?.phone, args.practice?.email, args.practice?.website]
+    .filter(Boolean).map((s) => escapeHtml(String(s))).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${BRAND_CREAM};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CREAM};padding:30px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND_CHARCOAL};">
+        <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td align="center" style="padding:32px 40px 0;">${header}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 0;">
+          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${BRAND_MUTED};">Insurance claim · CMS-1500</div>
+          <div style="font-size:26px;font-weight:700;color:${INV_INDIGO};margin:7px 0 3px;">${invMoney(args.total)}</div>
+          <div style="font-size:12.5px;color:${BRAND_MUTED};">${escapeHtml(args.patientName)}${args.memberId ? ` · member ${escapeHtml(args.memberId)}` : ""}</div>
+        </td></tr>
+        <tr><td style="padding:22px 40px 0;"><div style="border-top:1px solid ${BRAND_LINE};font-size:0;line-height:0;">&nbsp;</div></td></tr>
+        <tr><td style="padding:22px 40px 26px;font-size:15px;line-height:1.7;color:${BRAND_CHARCOAL};">${bodyHtml}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 26px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};">
+          <div style="font-size:13.5px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:5px;">${escapeHtml(args.practiceName)}</div>
+          ${addressLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${addressLine}</div>` : ""}
+          ${contactLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${contactLine}</div>` : ""}
+          <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;margin-top:9px;">This email and its attachment contain protected health information intended only for the named payer. If you received it in error, please delete it and notify us.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  return { subject, text, html };
+}
+
+/** Send a CMS-1500 claim PDF to a payer. `pdf` is the raw bytes; attached as
+ *  CMS-1500-<patient>.pdf. Replies (denials, queries) go to the sender. */
+export async function sendClaimEmail(args: ClaimEmailArgs & { pdf: Uint8Array; filename?: string }): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    const logo = invoiceEmailLogo();
+    const logoCid = logo ? INVOICE_LOGO_CID : undefined;
+    const { subject, text, html } = buildClaimEmail({ ...args, logoCid });
+    if (!process.env.SMTP_HOST) {
+      console.log(`[email:dev] would email CMS-1500 claim for ${args.patientName} to ${args.to} — "${subject}"`);
+      return { sent: false, reason: "SMTP not configured (dev mode)" };
+    }
+    const attachments: nodemailer.SendMailOptions["attachments"] = [
+      { filename: args.filename || `CMS-1500-${args.patientName.replace(/[^\w-]+/g, "_")}.pdf`, content: Buffer.from(args.pdf), contentType: "application/pdf" },
+    ];
+    if (logo && logoCid) {
+      attachments.push({ filename: "logo.png", content: logo, cid: logoCid, contentType: "image/png", contentDisposition: "inline" });
+    }
+    await transport().sendMail({
+      from: { name: args.practiceName || FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+      to: args.to,
+      replyTo: args.replyToEmail ? { name: args.replyToName || "", address: args.replyToEmail } : undefined,
+      subject, text, html,
+      attachments,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Claim email failed:", err);
+    return { sent: false, reason: "send failed" };
+  }
+}

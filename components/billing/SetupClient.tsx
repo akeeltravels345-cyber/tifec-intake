@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Foldable from "./Foldable";
 
 type CopayType = "none" | "fixed" | "percentage";
-interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; billStyle?: "claim" | "invoice"; }
+interface Insurer { id: string; name: string; copayType: CopayType; copayRate: number; active: boolean; claimCode?: string; billStyle?: "claim" | "invoice"; email?: string; }
 interface CptVar { label: string; minutes: number; fee: number; }
 interface Cpt { code: string; description: string; active: boolean; variants: CptVar[]; }
 interface Setting { clinicianId: string; retentionPct: number; otherDeductionPct: number; otherDeductionFixed: number; pension: number; pensionPct: number; billerPct: number; billerBasePct: number; billerCommissionApplies: boolean; noPayout: boolean; }
@@ -259,7 +259,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
         <div className="su-sec">
           <div className="su-sechead"><h2 className="su-sech">Insurers &amp; co-pay</h2></div>
           <div className="su-card"><Foldable unit="insurers" rowSelector="tbody > tr:not(:last-child)"><div className="su-tblwrap"><table className="su-tbl">
-            <thead><tr><th className="grow">Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th>Bill by</th><th></th></tr></thead>
+            <thead><tr><th className="grow">Insurer</th><th>Co-pay</th><th className="num">Rate</th><th>Claim code</th><th>Bill by</th><th>Claims email</th><th></th></tr></thead>
             <tbody>
               {ins.map((x, i) => (
                 <tr key={x.id}>
@@ -268,7 +268,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                   <td className="num"><NumInput className="su-in numwide" value={x.copayRate} disabled={x.copayType === "none"} onChange={(v) => setIns(upd(ins, i, { copayRate: v }))} /></td>
                   <td><input className="su-in short" placeholder="e.g. 362" value={x.claimCode ?? ""} onChange={(e) => setIns(upd(ins, i, { claimCode: e.target.value }))} /></td>
                   <td><select className="su-sel" title="How claims for this payer are generated" value={x.billStyle === "invoice" ? "invoice" : "claim"} onChange={(e) => setIns(upd(ins, i, { billStyle: e.target.value === "invoice" ? "invoice" : "claim" }))}><option value="claim">CMS-1500</option><option value="invoice">Invoice</option></select></td>
-                  <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "insurer", id: x.id, name: x.name, copayType: x.copayType, copayRate: x.copayRate, claimCode: x.claimCode ?? "", billStyle: x.billStyle === "invoice" ? "invoice" : "claim", active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "insurer", action: "delete", id: x.id }, "Removed")}>×</button></div></td>
+                  <td><input className="su-in" type="email" placeholder="claims@payer.ky" value={x.email ?? ""} onChange={(e) => setIns(upd(ins, i, { email: e.target.value }))} /></td>
+                  <td><div className="su-actions"><button className="su-save" onClick={() => run({ entity: "insurer", id: x.id, name: x.name, copayType: x.copayType, copayRate: x.copayRate, claimCode: x.claimCode ?? "", billStyle: x.billStyle === "invoice" ? "invoice" : "claim", email: x.email ?? "", active: true }, "Saved")}>Save</button><button className="su-del" onClick={() => run({ entity: "insurer", action: "delete", id: x.id }, "Removed")}>×</button></div></td>
                 </tr>
               ))}
               <tr>
@@ -277,7 +278,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
                 <td className="num"><NumInput className="su-in numwide" value={newIns.copayRate} onChange={(v) => setNewIns({ ...newIns, copayRate: v })} /></td>
                 <td><input className="su-in short" placeholder="e.g. 362" value={newIns.claimCode ?? ""} onChange={(e) => setNewIns({ ...newIns, claimCode: e.target.value })} /></td>
                 <td><select className="su-sel" value={newIns.billStyle === "invoice" ? "invoice" : "claim"} onChange={(e) => setNewIns({ ...newIns, billStyle: e.target.value === "invoice" ? "invoice" : "claim" })}><option value="claim">CMS-1500</option><option value="invoice">Invoice</option></select></td>
-                <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, claimCode: newIns.claimCode ?? "", billStyle: newIns.billStyle === "invoice" ? "invoice" : "claim", active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
+                <td><input className="su-in" type="email" placeholder="claims@payer.ky" value={newIns.email ?? ""} onChange={(e) => setNewIns({ ...newIns, email: e.target.value })} /></td>
+                <td><div className="su-actions"><button className="su-save" disabled={!newIns.name.trim()} onClick={() => { run({ entity: "insurer", name: newIns.name, copayType: newIns.copayType, copayRate: newIns.copayRate, claimCode: newIns.claimCode ?? "", billStyle: newIns.billStyle === "invoice" ? "invoice" : "claim", email: newIns.email ?? "", active: true }, "Added"); setNewIns({ id: "", name: "", copayType: "none", copayRate: 0, active: true }); }}>Add</button></div></td>
               </tr>
             </tbody>
           </table></div></Foldable></div>

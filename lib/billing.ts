@@ -23,6 +23,8 @@ export interface Insurer {
    *  "invoice" = a self-pay-style invoice billed to the payer, with its own
    *  sequential invoice number (e.g. Ponciana Rehabilitation). */
   billStyle?: "claim" | "invoice";
+  /** Claims email — where the biller sends this payer's CMS-1500 for processing. */
+  email?: string;
 }
 
 // A clinician OUTSIDE the practice whose billing the biller handles privately.
@@ -234,27 +236,36 @@ export async function listInsurers(): Promise<Insurer[]> {
   if (usePostgres) {
     const sql = await pg();
     const rows = (await sql`SELECT * FROM billing_insurers ORDER BY name`) as Record<string, unknown>[];
-    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined }));
+    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined, email: r.email ? String(r.email) : undefined }));
   }
   return readJson<Insurer[]>(INS_FILE, []);
 }
 
 export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }): Promise<Insurer> {
-  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined };
+  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined, email: ins.email?.trim() || undefined };
   if (usePostgres) {
     const sql = await pg();
     try {
       await sql`
-        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style)
-        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null})
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style`;
+        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style, email)
+        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null}, ${row.email ?? null})
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style, email = EXCLUDED.email`;
     } catch (e) {
-      if (!isMissingColumn(e)) throw e; // a real failure must surface, not silently drop bill_style
-      // bill_style column not migrated yet — write without it.
-      await sql`
-        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
-        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null})
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code`;
+      if (!isMissingColumn(e)) throw e; // a real failure must surface, not silently drop columns
+      try {
+        // email column not migrated yet — write with bill_style but without email.
+        await sql`
+          INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style)
+          VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null})
+          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style`;
+      } catch (e2) {
+        if (!isMissingColumn(e2)) throw e2;
+        // neither bill_style nor email migrated yet — write the base columns.
+        await sql`
+          INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code)
+          VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null})
+          ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code`;
+      }
     }
     return row;
   }

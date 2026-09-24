@@ -9,6 +9,7 @@ import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
 import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
 import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
+import ClaimEmail from "@/components/billing/ClaimEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,7 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
       <div className="hcfa-bar hcfa-noprint">
         <Link href={`/billing/clients/${id}`} className="ls-back">← Back to client</Link>
         <div style={{ flex: 1 }} />
+        {forms.length > 0 && <ClaimEmail clientId={id} clientName={client.first} />}
         {forms.length > 0 && <PrintButton label="Print / Save PDF" className="bl-cta hcfa-noprint" />}
       </div>
 

@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         active: body.active !== false,
         claimCode: t(body.claimCode),
         billStyle: body.billStyle === "invoice" ? "invoice" : undefined,
+        email: t(body.email),
       });
       return NextResponse.json({ ok: true, id: saved.id });
     }

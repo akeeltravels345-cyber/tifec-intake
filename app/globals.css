@@ -2437,6 +2437,7 @@ body:has(.biz) { background: var(--panel); }
 .cd-dockind { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--panel); color: #5b6472; }
 .cd-dockind.referral { background: var(--pos-bg); color: #1f6b52; }
 .cd-dockind.intake { background: var(--brand-tint); color: #3b3f8f; }
+.cd-dockind.claim { background: #ecedff; color: #2e3192; }
 .cd-docname { font-size: 14px; color: var(--indigo, #3b3f8f); font-weight: 600; text-decoration: none; }
 .cd-docname:hover { text-decoration: underline; }
 .cd-docdate { margin-left: auto; font-size: 12px; color: var(--faint, #8a93a3); }
@@ -4835,6 +4836,7 @@ body:has(.pt) .sitefoot { display: none; }
     :root[data-theme="dark"] .cd-dockind { color: var(--muted); }
     :root[data-theme="dark"] .cd-dockind.referral { background: var(--pos-bg); color: var(--pos); }
     :root[data-theme="dark"] .cd-dockind.intake { background: var(--brand-tint); color: var(--indigo); }
+    :root[data-theme="dark"] .cd-dockind.claim { background: var(--brand-tint); color: var(--indigo); }
     :root[data-theme="dark"] .su-tag { background: var(--brand-tint); color: var(--teal-deep); }
     :root[data-theme="dark"] .biz .icd-chip-code { background: var(--brand-tint); color: var(--indigo); }
     :root[data-theme="dark"] .cd-danger { color: var(--neg); border-color: #4a342d; }
