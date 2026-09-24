@@ -135,6 +135,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
           : [
               { href: "/billing/me", label: "My payout", icon: IcClin, match: (p) => p === "/billing/me" || p.startsWith("/billing/clinician"), glow: "copaynav" },
               { href: "/billing/clients", label: "My clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+              { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances") },
               ...(showNotes ? [notesLink] : []),
               { href: "/billing/sessions/new", label: "Log a session", icon: IcLog, match: (p) => p.startsWith("/billing/sessions") },
               uHandbook,

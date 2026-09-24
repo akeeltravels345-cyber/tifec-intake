@@ -17,11 +17,12 @@ export default async function BalancesPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/balances");
   const isAdmin = user.clinician.contact === "admin";
-  if (!isBiller(user.role) && !isOwner(user.role) && !isAdmin) redirect("/billing/me");
+  // Biller / owner / admin see the whole practice; a clinician sees only what
+  // THEIR clients owe (their own sessions), never anyone else's.
+  const seesAll = isBiller(user.role) || isOwner(user.role) || isAdmin;
+  const sessions = seesAll ? await listSessions() : await listSessions({ clinicianId: user.clinician.id });
 
-  const sessions = await listSessions();
-
-  interface Row { clientId: string | null; name: string; selfPay: number; copay: number; total: number; oldest: string; count: number; hasSelfPay: boolean; }
+  interface Row { clientId: string | null; name: string; selfPay: number; copay: number; total: number; oldest: string; count: number; hasSelfPay: boolean; sessionIds: string[]; }
   const byClient = new Map<string, Row>();
   for (const s of sessions) {
     const sp = selfPayOutstanding(s);
@@ -29,8 +30,9 @@ export default async function BalancesPage() {
     if (sp + cp <= 0) continue;
     const key = s.clientId ?? `${s.clientFirst}|${s.clientLast}`.toLowerCase();
     const name = `${s.clientFirst} ${s.clientLast}`.trim() || "Unnamed client";
-    const r = byClient.get(key) ?? { clientId: s.clientId ?? null, name, selfPay: 0, copay: 0, total: 0, oldest: s.dateOfService, count: 0, hasSelfPay: false };
+    const r = byClient.get(key) ?? { clientId: s.clientId ?? null, name, selfPay: 0, copay: 0, total: 0, oldest: s.dateOfService, count: 0, hasSelfPay: false, sessionIds: [] };
     r.selfPay += sp; r.copay += cp; r.total += sp + cp; r.count += 1;
+    r.sessionIds.push(s.id);
     if (sp > 0) r.hasSelfPay = true;
     if (s.dateOfService < r.oldest) r.oldest = s.dateOfService;
     byClient.set(key, r);
@@ -47,7 +49,7 @@ export default async function BalancesPage() {
     <>
       <div className="su-topbar">
         <h1 className="su-h1">Owed by clients</h1>
-        <p className="su-sub">Self-pay balances and co-pays that were due but not collected — chase or invoice the oldest first. Amounts in KYD.</p>
+        <p className="su-sub">{seesAll ? "Self-pay balances and co-pays that were due but not collected — chase or invoice the oldest first. Amounts in KYD." : "What your clients still owe — self-pay balances and co-pays not yet collected, oldest first. Amounts in KYD."}</p>
       </div>
 
       <div className="bal-kpis">
@@ -72,7 +74,14 @@ export default async function BalancesPage() {
                 <td className="r">{r.copay > 0 ? money(r.copay) : "—"}</td>
                 <td className="r bal-tot">{money(r.total)}</td>
                 <td>{r.oldest}</td>
-                <td className="r">{r.clientId && r.hasSelfPay ? <Link href={`/billing/clients/${r.clientId}/invoice`} className="bal-invoice">Invoice →</Link> : r.clientId ? <Link href={`/billing/clients/${r.clientId}`} className="bal-invoice">Open →</Link> : null}</td>
+                <td className="r">
+                  {r.clientId && (
+                    <div className="bal-acts">
+                      <Link href={r.sessionIds.length === 1 ? `/billing/clients/${r.clientId}?edit=${r.sessionIds[0]}` : `/billing/clients/${r.clientId}`} className="bal-edit" title={r.sessionIds.length === 1 ? "Edit this charge" : "Open the record to edit a charge"}>Edit</Link>
+                      <Link href={r.hasSelfPay ? `/billing/clients/${r.clientId}/invoice` : `/billing/clients/${r.clientId}/invoice?type=copay`} className="bal-invoice">Invoice →</Link>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
