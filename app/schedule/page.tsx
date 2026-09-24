@@ -48,6 +48,7 @@ export default async function SchedulePage() {
       initial={appts}
       canEditAll={all}
       lockedClinicianId={all ? null : me.id}
+      setupHref="/schedule/setup"
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
       connectionsLabel={me.test ? "Video" : "Settings"}
