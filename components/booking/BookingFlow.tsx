@@ -424,20 +424,25 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <label className="bk-f"><span>Full name</span><input value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} autoFocus /></label>
               <label className="bk-f"><span>Email</span><input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="For your confirmation & reminders" /></label>
               <label className="bk-f"><span>Phone <em>(optional)</em></span><input value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} /></label>
-              <div className="bk-f"><span>How will you pay?</span>
-                <div className="bk-seg">
-                  <button className={details.path === "self_pay" ? "on" : ""} onClick={() => setDetails({ ...details, path: "self_pay" })}>Self-pay</button>
-                  <button className={details.path === "insurance" ? "on" : ""} onClick={() => setDetails({ ...details, path: "insurance" })}>Insurance</button>
-                </div>
-              </div>
-              {details.path === "insurance" && (
+              {/* A free consultation collects no payment, so don't ask. */}
+              {type.price > 0 && (
                 <>
-                  <label className="bk-f"><span>Insurer</span>
-                    <select value={details.insurerId} onChange={(e) => setDetails({ ...details, insurerId: e.target.value })}>
-                      <option value="">Choose…</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="bk-f"><span>Policy / member no.</span><input value={details.policyNo} onChange={(e) => setDetails({ ...details, policyNo: e.target.value })} /></label>
+                  <div className="bk-f"><span>How will you pay?</span>
+                    <div className="bk-seg">
+                      <button className={details.path === "self_pay" ? "on" : ""} onClick={() => setDetails({ ...details, path: "self_pay" })}>Self-pay</button>
+                      <button className={details.path === "insurance" ? "on" : ""} onClick={() => setDetails({ ...details, path: "insurance" })}>Insurance</button>
+                    </div>
+                  </div>
+                  {details.path === "insurance" && (
+                    <>
+                      <label className="bk-f"><span>Insurer</span>
+                        <select value={details.insurerId} onChange={(e) => setDetails({ ...details, insurerId: e.target.value })}>
+                          <option value="">Choose…</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                        </select>
+                      </label>
+                      <label className="bk-f"><span>Policy / member no.</span><input value={details.policyNo} onChange={(e) => setDetails({ ...details, policyNo: e.target.value })} /></label>
+                    </>
+                  )}
                 </>
               )}
               {type.mode === "either" && (
@@ -471,6 +476,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                   </div>
                 </div>
               )}
+              <label className="bk-f"><span>Anything you&apos;d like your clinician to know? <em>(optional)</em></span>
+                <textarea rows={3} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} placeholder="A quick note that goes straight to your clinician" /></label>
             </div>
             {monthMode && picks.length > 0 && (
               <p className="bk-monthnote">You&apos;re booking <b>{picks.length} session{picks.length === 1 ? "" : "s"}</b> this month with {clinName(picks[0].clinicianId)}. Go back to add or remove times.</p>
@@ -496,8 +503,9 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 : <Row k="When" v={`${fmtDay(utcFromCay(date, slot!.minute))} · ${fmtTime(utcFromCay(date, slot!.minute))}`} />}
               <Row k="Length" v={`${type.durationMin} min · ${MODE_LABEL[type.mode]}`} />
               <Row k="You" v={`${details.name}${details.email ? " · " + details.email : ""}`} />
-              <Row k="Payment" v={details.path === "insurance" ? `Insurance${details.insurerId ? " · " + (insurers.find((i) => i.id === details.insurerId)?.name || "") : ""}` : "Self-pay"} />
+              {type.price > 0 && <Row k="Payment" v={details.path === "insurance" ? `Insurance${details.insurerId ? " · " + (insurers.find((i) => i.id === details.insurerId)?.name || "") : ""}` : "Self-pay"} />}
               {type.price > 0 && <Row k="Fee" v={monthMode && picks.length > 0 ? `${money(type.price)} × ${picks.length} = ${money(type.price * picks.length)}` : money(type.price)} strong />}
+              {details.notes.trim() && <Row k="Note" v={details.notes.trim()} />}
             </div>
             {monthMode && picks.length > 0 && (
               <div className="bk-picks-list bk-picks-confirm">
