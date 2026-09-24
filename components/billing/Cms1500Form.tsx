@@ -106,6 +106,11 @@ export const HCFA_CSS = `
 .hcfa-warn { border: 1px solid #e7d9b0; background: #fdf6e3; color: #6b5a2a; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
 .hcfa-warn a { color: var(--indigo, #3b3f8f); font-weight: 600; }
 .hcfa-clientlab { font: 600 15px "Newsreader", serif; color: #4a5262; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e3e7ee; }
+.hcfa-sendbar { border: 1px solid var(--edge, #e3e7ee); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; background: var(--surface, #fff); }
+.hcfa-sendhead { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted, #6b6b66); margin-bottom: 8px; }
+.hcfa-sendrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--edge, #eef1f5); }
+.hcfa-sendrow:first-of-type { border-top: none; }
+.hcfa-sendname { font-size: 14px; font-weight: 600; color: var(--ink, #26303a); }
 .hcfa { border: 1.5px solid #1c2330; border-radius: 8px; padding: 16px; margin-bottom: 28px; background: #fff; }
 .hcfa-title { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1c2330; padding-bottom: 8px; margin-bottom: 12px; }
 .hcfa-title .t { font: 600 17px "Newsreader", serif; }

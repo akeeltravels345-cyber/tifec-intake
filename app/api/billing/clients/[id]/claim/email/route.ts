@@ -33,10 +33,17 @@ async function load(id: string, req: Request) {
   if (!seesAll && !(await clinicianSeesClient(id, user.clinician.id)))
     return { error: NextResponse.json({ error: "Not allowed." }, { status: 403 }) };
 
-  const [insurers, cptCodes, cfg, external, allSessions] = await Promise.all([
+  const [insurers, cptCodes, cfg, external, loadedSessions] = await Promise.all([
     listInsurers(), listCptCodes(), getPracticeConfig(), listExternalClinicians(),
     seesAll ? listSessions({ clientId: id }) : listSessions({ clientId: id, clinicianId: user.clinician.id }),
   ]);
+
+  const url = new URL(req.url);
+  // Optional session scope (from the batch page, where the biller selected specific
+  // visits). When present, the claim covers exactly those sessions; otherwise it
+  // covers all of the payer's insured visits (the per-client page's behaviour).
+  const wantedIds = (url.searchParams.get("sessions") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const allSessions = wantedIds.length ? loadedSessions.filter((s) => wantedIds.includes(s.id)) : loadedSessions;
 
   // Payers this client can be claimed to = distinct insurers on their sessions that
   // bill by CMS-1500 (not invoice-style payers).
@@ -44,7 +51,6 @@ async function load(id: string, req: Request) {
     allSessions.filter((s) => s.insurerId && insurers.find((i) => i.id === s.insurerId)?.billStyle !== "invoice").map((s) => s.insurerId as string),
   )].map((pid) => insurers.find((i) => i.id === pid)).filter(Boolean) as Insurer[];
 
-  const url = new URL(req.url);
   const requested = url.searchParams.get("payer");
   const payer = (requested ? claimPayers.find((p) => p.id === requested) : undefined) ?? (claimPayers.length === 1 ? claimPayers[0] : undefined);
 

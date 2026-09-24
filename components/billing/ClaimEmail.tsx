@@ -25,7 +25,16 @@ interface Preview {
  *  will receive (recipient, subject, editable cover note, attached CMS-1500 PDF),
  *  then on confirm emails it, stores the PDF in the client's documents, and marks
  *  the claimed sessions submitted — the claims analogue of "Email to client". */
-export default function ClaimEmail({ clientId, clientName }: { clientId: string; clientName: string }) {
+export default function ClaimEmail({ clientId, clientName, sessions }: { clientId: string; clientName: string; sessions?: string }) {
+  // Build the API query: the chosen payer, plus an optional session scope (from the
+  // batch page, where the biller picked specific visits).
+  const qstr = (pid?: string) => {
+    const p = new URLSearchParams();
+    if (pid) p.set("payer", pid);
+    if (sessions) p.set("sessions", sessions);
+    const s = p.toString();
+    return s ? `?${s}` : "";
+  };
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -39,8 +48,7 @@ export default function ClaimEmail({ clientId, clientName }: { clientId: string;
   async function fetchPreview(pid?: string) {
     setLoading(true); setErr("");
     try {
-      const q = pid ? `?payer=${encodeURIComponent(pid)}` : "";
-      const res = await fetch(`/api/billing/clients/${clientId}/claim/email${q}`, { headers: { Accept: "application/json" } });
+      const res = await fetch(`/api/billing/clients/${clientId}/claim/email${qstr(pid)}`, { headers: { Accept: "application/json" } });
       const data = await res.json();
       if (!res.ok) { setErr(data.error || "Could not prepare the claim."); setPreview(null); return; }
       setPreview(data);
@@ -55,8 +63,7 @@ export default function ClaimEmail({ clientId, clientName }: { clientId: string;
   async function send() {
     setBusy(true); setErr("");
     try {
-      const q = payerId ? `?payer=${encodeURIComponent(payerId)}` : "";
-      const res = await fetch(`/api/billing/clients/${clientId}/claim/email${q}`, {
+      const res = await fetch(`/api/billing/clients/${clientId}/claim/email${qstr(payerId)}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, subject }),
       });

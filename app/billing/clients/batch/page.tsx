@@ -9,6 +9,7 @@ import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
 import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
 import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
+import ClaimEmail from "@/components/billing/ClaimEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
     }
   }
 
-  const blocks: { name: string; forms: ReturnType<typeof buildClaimForms> }[] = [];
+  const blocks: { name: string; clientId: string; clientFirst: string; sessionIds: string[]; forms: ReturnType<typeof buildClaimForms> }[] = [];
   // Invoice-style payers (e.g. Ponciana Rehab) don't go on a CMS-1500 — collect a
   // "generate invoice" link per client × payer instead.
   const invoiceLinks: { name: string; href: string }[] = [];
@@ -80,7 +81,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
     if (!client) { skipped++; continue; }
     const mine = sessionsByClient.get(cid) ?? [];
     const forms = buildClaimForms(client, mine, resolvers);
-    if (forms.length > 0) blocks.push({ name: `${client.first} ${client.last}`, forms });
+    if (forms.length > 0) blocks.push({ name: `${client.first} ${client.last}`, clientId: cid, clientFirst: client.first, sessionIds: mine.filter((s) => !isInvoicePayer(s.insurerId)).map((s) => s.id), forms });
     else if (!mine.some((s) => isInvoicePayer(s.insurerId))) noClaims++;
     // Invoice-style payers for this client, each as its own invoice link.
     const payerIds = [...new Set(mine.filter((s) => isInvoicePayer(s.insurerId)).map((s) => s.insurerId as string))];
@@ -130,6 +131,18 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
           <div style={{ marginBottom: 4 }}>These bill by invoice, not a CMS-1500 — generate each separately:</div>
           {invoiceLinks.map((l) => (
             <div key={l.href} style={{ marginBottom: 3 }}><Link href={l.href}>{l.name} invoice →</Link></div>
+          ))}
+        </div>
+      )}
+
+      {blocks.length > 0 && (
+        <div className="hcfa-sendbar hcfa-noprint">
+          <div className="hcfa-sendhead">Email each claim to the insurer</div>
+          {blocks.map((b) => (
+            <div key={b.clientId} className="hcfa-sendrow">
+              <span className="hcfa-sendname">{b.name}</span>
+              <ClaimEmail clientId={b.clientId} clientName={b.clientFirst} sessions={b.sessionIds.join(",")} />
+            </div>
           ))}
         </div>
       )}
