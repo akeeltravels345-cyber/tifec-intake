@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Fragment } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmojiPicker from "@/components/EmojiPicker";
 import type { ClientProfile } from "@/lib/clients";
@@ -53,6 +53,7 @@ export default function ClientDetail({
   cptCodes?: { code: string; description: string; fee: number }[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [edit, setEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -261,6 +262,19 @@ export default function ClientDetail({
   }
   const activityTotal = activity.reduce((t, a) => t + a.total, 0);
   const canManageCharges = canDelete || clinicians.length > 0;
+
+  // Deep-link from the outstanding co-pays list (?edit=<sessionId>): open that
+  // visit's charge editor and scroll to it, so "Edit" there jumps straight in.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || !canManageCharges) return;
+    const a = activity.find((x) => x.id === editId);
+    if (!a) return;
+    startEditCharge(a);
+    const t = setTimeout(() => document.getElementById(`ch-${editId}`)?.scrollIntoView({ block: "center" }), 120);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Emails the system has sent this client, most recent first.
   const sentEmails = [...(profile.sentEmails ?? [])].sort((a, b) => b.at.localeCompare(a.at));
@@ -917,7 +931,7 @@ export default function ClientDetail({
                     const claimable = a.stage !== "self";
                     return (
                       <Fragment key={a.id}>
-                      <tr className={sel.has(a.id) ? "cd-selrow" : ""}>
+                      <tr id={`ch-${a.id}`} className={`${sel.has(a.id) ? "cd-selrow" : ""}${editCharge === a.id ? " cd-editing" : ""}`}>
                         <td><input type="checkbox" checked={sel.has(a.id)} onChange={() => toggleSel(a.id)} title={isInvoicePayer(a.insurerId) ? "Bills by invoice to the payer" : claimable ? "Insured, goes on a CMS-1500" : "Self-pay, goes on an invoice"} aria-label={`Select ${a.date}`} /></td>
                         <td className="nm">{a.date}</td>
                         <td className="su-hint">{a.clinician}</td>

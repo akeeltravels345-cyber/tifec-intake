@@ -99,6 +99,7 @@ export default function OutstandingCopays({ rows, today, showClinician, canToggl
                   <td className="num cp-owe">{money(r.owed)}</td>
                   <td className="act">
                     <div className="cp-acts">
+                      {r.clientId && <Link href={`/billing/clients/${r.clientId}?edit=${r.id}`} className="cp-edit" title="Open this visit's charge to edit it (e.g. waive the co-pay)">Edit</Link>}
                       {r.clientId && <Link href={`/billing/clients/${r.clientId}/invoice?type=copay`} className="cp-invoice" title="Print an invoice for this client's outstanding co-pays to follow up">Invoice</Link>}
                       <button className="cp-collect" disabled={busy === r.id} onClick={() => collect(r.id)}>{busy === r.id ? "Recording…" : "Collect"}</button>
                     </div>

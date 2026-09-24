@@ -2082,6 +2082,10 @@ body:has(.biz) { background: var(--panel); }
 .cp-acts { display: inline-flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .cp-invoice { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--indigo); text-decoration: none; white-space: nowrap; }
 .cp-invoice:hover { background: var(--brand-tint); }
+.cp-edit { padding: 6px 12px; border: 1px solid var(--edge); border-radius: 8px; font: 600 12.5px "Open Sans"; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.cp-edit:hover { background: var(--panel); border-color: var(--teal); color: var(--teal-deep, #1f6b6f); }
+/* The charge row opened straight from a deep-link "Edit". */
+.cd-editing > td { background: var(--brand-tint, #eef7f7); }
 /* Add-a-client (biller on behalf of a clinician) */
 .cl-newbtn { background: var(--indigo); color: #fff; border: 0; border-radius: 10px; padding: 9px 18px; font: 600 13.5px "Open Sans"; cursor: pointer; white-space: nowrap; }
 .cl-newbtn:hover:not(:disabled) { filter: brightness(0.93); }
