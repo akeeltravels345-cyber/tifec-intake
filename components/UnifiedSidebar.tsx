@@ -84,9 +84,9 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // The reference handbook. One route, but /billing/guide renders the guide that
   // matches the signed-in role, so every menu can link to the same place.
   const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide"), highlight: handbookGlow };
-  // HIPAA compliance tracker — the live shared checklist (an Artifact), opened in a
-  // new tab. First item in the Team group so it's easy to find.
-  const uHipaa: Item = { href: "https://claude.ai/artifact/SMf5D5VGQZxdfTayWmapZk", label: "HIPAA", icon: IcKey, match: () => false, external: true, highlight: hipaaGlow };
+  // HIPAA compliance tracker — an in-app board (owner + admin). First item in the
+  // Team group so it's easy to find.
+  const uHipaa: Item = { href: "/team/hipaa", label: "HIPAA", icon: IcKey, match: (p) => p.startsWith("/team/hipaa"), highlight: hipaaGlow };
   // The full scheduling calendar. Now open to the owner (see app/scheduling/layout.tsx),
   // highlighted as new for their first few sessions.
   const uScheduling: Item = { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling"), highlight: schedGlow };
@@ -152,7 +152,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             ];
       groups.push({ label: "Billing", items: billing });
     }
-    groups.push({ label: "Team", items: [uHipaa, uNotices, uMessages, uTickets] });
+    groups.push({ label: "Team", items: [...(owner ? [uHipaa] : []), uNotices, uMessages, uTickets] });
     const adminItems: Item[] = [];
     if (hasBilling && (owner || biller)) adminItems.push({ href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") });
     if (hasBilling && (owner || biller)) adminItems.push({ href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") });
