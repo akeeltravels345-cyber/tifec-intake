@@ -7,7 +7,7 @@ import { randomId } from "@/lib/crypto";
 import {
   sendMessage, markThreadRead, dmThreadId, dmPartner, ticketThreadId, GROUP_THREAD_ID, touchPresence, claimEmailWindow,
   isCustomGroup, getGroup, createGroup, setGroupMembers, renameGroup, deleteGroup,
-  createTicket, updateTicket, deleteTicket, getTicket, editMessage, editTicketBody, type EditResult,
+  createTicket, updateTicket, deleteTicket, getTicket, editMessage, editTicketBody, deleteMessage, type EditResult,
   createNotice, deleteNotice, getNotice, updateNotice, acknowledgeNotice, notify, logEmail, listNotifications, markNotificationsRead,
   TICKET_AREAS, isTicketStatus, type TicketArea, type TicketStatus,
 } from "@/lib/comms";
@@ -192,6 +192,22 @@ export async function POST(req: Request) {
         const status = res.reason === "not_yours" ? 403 : res.reason === "locked" ? 409 : res.reason === "not_found" ? 404 : 400;
         return NextResponse.json({ error: msg }, { status });
       }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Delete your own comment, but only within 15 minutes of posting it. Enforced
+    // server-side (window + ownership); attachments on the comment go with it.
+    if (action === "message:delete") {
+      const id = String(body.id ?? "");
+      const res = await deleteMessage(id, me.id);
+      if (!res.ok) {
+        const msg = res.reason === "not_yours" ? "You can only delete your own comments."
+          : res.reason === "too_old" ? "Comments can only be deleted within 15 minutes of posting."
+          : "That comment no longer exists.";
+        const status = res.reason === "not_yours" ? 403 : res.reason === "too_old" ? 409 : 404;
+        return NextResponse.json({ error: msg }, { status });
+      }
+      if (res.threadId) await deleteDocFilesByPrefix(`${res.threadId}:msg:${id}`);
       return NextResponse.json({ ok: true });
     }
 

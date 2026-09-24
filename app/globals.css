@@ -3193,6 +3193,8 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-rwhen { font-weight: 400; color: var(--muted); font-size: 11.5px; margin-left: 8px; }
 .tm-editlink { margin-left: 10px; font: 600 11.5px "Open Sans"; color: var(--brand); background: none; border: none; cursor: pointer; padding: 0; }
 .tm-editlink:hover { text-decoration: underline; }
+.tm-dellink { color: var(--danger, #c0392b); }
+.tm-dellink:disabled { opacity: .6; cursor: default; text-decoration: none; }
 .tm-editbox { margin-top: 10px; }
 .tm-editactions { display: flex; gap: 8px; margin-top: 8px; }
 .tm-editsave { font: 600 13px "Open Sans"; color: #fff; background: var(--brand); border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer; }

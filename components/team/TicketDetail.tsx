@@ -86,6 +86,20 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
   const ageMin = (iso: string) => (Date.now() - Date.parse(iso)) / 60000;
   const bodyEditable = !!ticket.mine && (replies.length === 0 || ageMin(ticket.createdAt) < 10);
   const replyEditable = (r: Reply, idx: number) => r.mine && (idx === replies.length - 1 || ageMin(r.at) < 10);
+  // Your own comment can be deleted within 15 minutes of posting it.
+  const replyDeletable = (r: Reply) => r.mine && ageMin(r.at) < 15;
+  const [delBusy, setDelBusy] = useState<string | null>(null);
+  async function deleteReply(id: string) {
+    if (!window.confirm("Delete this comment? This removes it and any attachment on it for everyone. This can't be undone.")) return;
+    setDelBusy(id); setError("");
+    try {
+      const res = await fetch("/api/comms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "message:delete", id }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Could not delete the comment."); return; }
+      router.refresh();
+    } catch { setError("Could not reach the server."); }
+    finally { setDelBusy(null); }
+  }
   function startEdit(which: string, body: string) { setError(""); setEditingId(which); setEditText(body); }
   async function saveEdit(action: "message:edit" | "ticket:editbody", id: string) {
     const t = editText.trim();
@@ -122,7 +136,12 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
     if (!navigator.mediaDevices?.getUserMedia) { setError("This browser can't record audio."); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      // Cap the bitrate low — speech is clear at 32 kbps, and it keeps even long
+      // notes small enough to send (the default ~128 kbps made a 3-min note too
+      // big for the request, so it silently failed).
+      let rec: MediaRecorder;
+      try { rec = new MediaRecorder(stream, { audioBitsPerSecond: 32000 }); }
+      catch { rec = new MediaRecorder(stream); }
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
       rec.onstop = async () => {
@@ -292,6 +311,7 @@ export default function TicketDetail({ ticket, replies, threadId, canManage, can
           <div key={r.id} className={`tm-card tm-reply ${r.mine ? "me" : ""}`}>
             <div className="tm-rwho">{r.who} <span className="tm-rwhen">{stamp(r.at)}</span>
               {replyEditable(r, idx) && editingId !== r.id && <button type="button" className="tm-editlink" onClick={() => startEdit(r.id, r.body)}>Edit</button>}
+              {replyDeletable(r) && editingId !== r.id && <button type="button" className="tm-editlink tm-dellink" disabled={delBusy === r.id} onClick={() => deleteReply(r.id)}>{delBusy === r.id ? "Deleting…" : "Delete"}</button>}
             </div>
             {editingId === r.id ? (
               <div className="tm-editbox">

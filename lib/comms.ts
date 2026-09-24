@@ -599,6 +599,35 @@ export async function editMessage(id: string, senderId: string, body: string): P
   return { ok: true };
 }
 
+/** How long after posting a comment its author may delete it. */
+export const COMMENT_DELETE_MS = 15 * 60 * 1000;
+export type DeleteResult = { ok: boolean; reason?: "not_found" | "not_yours" | "too_old"; threadId?: string };
+
+/** Delete your OWN ticket comment, but only within 15 minutes of posting it.
+ *  Removes just the message row; the caller clears any attachments on it. The
+ *  window is enforced here (server-side) so a stale button can't bypass it. */
+export async function deleteMessage(id: string, senderId: string, windowMs = COMMENT_DELETE_MS): Promise<DeleteResult> {
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`SELECT thread_id, sender_id, created_at FROM comms_messages WHERE id = ${id}`) as Record<string, unknown>[];
+    const m = rows[0];
+    if (!m) return { ok: false, reason: "not_found" };
+    if (str(m.sender_id) !== senderId) return { ok: false, reason: "not_yours" };
+    if (Date.now() - Date.parse(iso(m.created_at)) > windowMs) return { ok: false, reason: "too_old" };
+    await sql`DELETE FROM comms_messages WHERE id = ${id}`;
+    return { ok: true, threadId: str(m.thread_id) };
+  }
+  const all = readJson<StoredMessage[]>(MSG_FILE, []);
+  const idx = all.findIndex((x) => x.id === id);
+  if (idx < 0) return { ok: false, reason: "not_found" };
+  const m = all[idx];
+  if (m.senderId !== senderId) return { ok: false, reason: "not_yours" };
+  if (Date.now() - Date.parse(m.createdAt) > windowMs) return { ok: false, reason: "too_old" };
+  all.splice(idx, 1);
+  writeJson(MSG_FILE, all);
+  return { ok: true, threadId: m.threadId };
+}
+
 /** Edit your own ticket's description (the first post). Only the raiser, and only
  *  while no one has replied yet OR inside the grace window. */
 export async function editTicketBody(id: string, userId: string, body: string): Promise<EditResult> {

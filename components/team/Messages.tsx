@@ -129,7 +129,12 @@ export default function Messages({ meId, people, threads, messages, activeWith, 
     if (!navigator.mediaDevices?.getUserMedia) { setAttErr("This browser can't record audio."); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      // Cap the bitrate low — speech is clear at 32 kbps, and it keeps even long
+      // notes small enough to send (the default ~128 kbps made a 3-min note too
+      // big for the request, so it silently failed).
+      let rec: MediaRecorder;
+      try { rec = new MediaRecorder(stream, { audioBitsPerSecond: 32000 }); }
+      catch { rec = new MediaRecorder(stream); }
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
       rec.onstop = async () => {
