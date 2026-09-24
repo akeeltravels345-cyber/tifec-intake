@@ -355,3 +355,32 @@ export async function listAccessLog(limit = 50): Promise<AuditEntry[]> {
     return [];
   }
 }
+
+// The audit actions that are actual CHANGES (not passive views/logins) — what the
+// client record's history should surface.
+const CHANGE_ACTIONS = ["create", "edit", "delete", "notes", "status"];
+
+/** Change-log entries for a client: pass the client's own token plus each of its
+ *  session tokens (`client:<id>`, `session:<id>`…). Views/logins are excluded, so
+ *  this reads as an edit history. Newest first. */
+export async function listClientChanges(tokens: string[], limit = 40): Promise<AuditEntry[]> {
+  const toks = [...new Set(tokens.filter(Boolean))];
+  if (toks.length === 0) return [];
+  if (usePostgres) {
+    const sql = await pgClient();
+    return (await sql`
+      SELECT * FROM access_log
+      WHERE submission_token = ANY(${toks})
+        AND action IN ('create','edit','delete','notes','status')
+      ORDER BY at DESC LIMIT ${limit}`) as AuditEntry[];
+  }
+  try {
+    const rows: AuditEntry[] = JSON.parse(fs.readFileSync(AUDIT_FILE, "utf8"));
+    return rows
+      .filter((r) => toks.includes(r.submission_token) && CHANGE_ACTIONS.includes(r.action))
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}

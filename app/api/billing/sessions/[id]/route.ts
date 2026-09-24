@@ -62,7 +62,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const ok = await updateSession(id, { dateOfService, insurerId, totalCost, copayCollected, copayDue, selfPayStatus, billedDate, insurancePaid: paid, paidDate, insuranceDisposition, insuranceCollected, notes, ...(cptCodes && cptCodes.length ? { cptCodes } : {}) });
   if (!ok) return NextResponse.json({ error: "Could not save the change." }, { status: 500 });
-  await logChange(me.id, `session:${id}`, "edit", "edited a charge");
+  // Describe what changed so the client record's history is meaningful (a co-pay
+  // waived, a claim written off, etc.), not just "edited a charge".
+  const changes: string[] = [];
+  if ((insurerId || null) !== (session.insurerId || null)) changes.push("changed insurer");
+  if (selfPayStatus === "waived" && session.selfPayStatus !== "waived") changes.push(insurerId ? "waived the co-pay" : "waived the balance");
+  if (stage === "writeoff" && curStage !== "writeoff") changes.push("wrote off the claim");
+  if (stage === "writedown" && curStage !== "writedown") changes.push("wrote down the claim");
+  if (paid && curStage !== "paid") changes.push("marked paid");
+  if (stage === "tobill" && curStage !== "tobill") changes.push("moved back to 'to bill'");
+  if (dateOfService !== session.dateOfService) changes.push("changed date of service");
+  if (Number(totalCost) !== Number(session.totalCost)) changes.push("changed the fee");
+  if (Number(copayDue) !== Number(session.copayDue)) changes.push("changed co-pay due");
+  if (Number(copayCollected) !== Number(session.copayCollected)) changes.push("changed co-pay collected");
+  const detail = `edited a charge (${session.dateOfService})${changes.length ? " — " + changes.join(", ") : ""}`;
+  await logChange(me.id, `session:${id}`, "edit", detail);
   return NextResponse.json({ ok: true });
 }
 

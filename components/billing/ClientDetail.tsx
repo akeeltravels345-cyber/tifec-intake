@@ -43,7 +43,7 @@ const STAGE: Record<Activity["stage"], { label: string; cls: string }> = {
 };
 
 export default function ClientDetail({
-  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, benefit = null, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician", cptCodes = [],
+  id, first, last, insurerId, profile, seenBy, insurers, clinicians = [], activity, benefit = null, canEdit, canDelete = false, today = "", intakeForms = [], currentUserId = "", currentUserRole = "clinician", cptCodes = [], history = [],
 }: {
   id: string; first: string; last: string; insurerId: string | null;
   profile: ClientProfile; seenBy: string[];
@@ -51,6 +51,7 @@ export default function ClientDetail({
   activity: Activity[]; benefit?: BenefitSummary | null; canEdit: boolean; canDelete?: boolean; today?: string;
   intakeForms?: LinkedIntake[]; currentUserId?: string; currentUserRole?: string;
   cptCodes?: { code: string; description: string; fee: number }[];
+  history?: { id: string; action: string; detail: string; at: string; byName: string }[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1071,6 +1072,27 @@ export default function ClientDetail({
                   {!e.ok && e.reason && <span className="cd-em-reason">{e.reason}</span>}
                 </span>
                 <span className="cd-em-when">{fmtWhen(e.at)}<span className="cd-em-by">{e.byName}</span></span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* ---- Record history (audit trail of every change) ---- */}
+      <div className="su-sec">
+        <div className="su-sechead">
+          <h2 className="su-sech">Record history{history.length > 0 && <span className="su-tag">{history.length}</span>}</h2>
+          <span className="su-hint">Every change to this client&apos;s record and charges — who and when. Views aren&apos;t listed.</span>
+        </div>
+        {history.length === 0 ? (
+          <p className="cd-emails-empty">No changes recorded yet. Edits to the record, charges, referral, notes and documents show here.</p>
+        ) : (
+          <ul className="cd-hist">
+            {history.map((h) => (
+              <li key={h.id}>
+                <span className={`cd-hist-act ${h.action}`}>{h.action === "delete" ? "Removed" : h.action === "create" ? "Added" : h.action === "notes" ? "Note" : h.action === "status" ? "Status" : "Edit"}</span>
+                <span className="cd-hist-main">{h.detail}</span>
+                <span className="cd-hist-when">{fmtWhen(h.at)}<span className="cd-em-by">{h.byName}</span></span>
               </li>
             ))}
           </ul>

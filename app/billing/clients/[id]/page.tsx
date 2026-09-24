@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { caymanToday } from "@/lib/caymanTime";
 import { redirect, notFound } from "next/navigation";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { logAccess } from "@/lib/db";
+import { logAccess, listClientChanges } from "@/lib/db";
 import { listInsurers, listCptCodes, listSessions, codeSummary } from "@/lib/billing";
 import { getClient, clinicianSeesClient, markClientSeen } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
@@ -74,6 +74,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     : [];
   const todayStr = caymanToday();
 
+  // Record history: every logged change to this client's record OR any of its
+  // charges (views excluded), newest first. Tokens tie the client + its sessions.
+  const changeLog = (await listClientChanges([`client:${id}`, ...sessions.map((s) => `session:${s.id}`)], 40))
+    .map((c) => ({ id: c.id, action: String(c.action), detail: c.detail, at: c.at, byName: clinName(c.clinician_id) || c.clinician_id }));
+
   // Total insurance funds: the pot the biller set for a plan year, drawn down by
   // the insurance portion of every insured visit in that year. Computed here (we
   // have the sessions) and shown on the record so clinicians see what's left.
@@ -106,6 +111,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         currentUserId={user.clinician.id}
         currentUserRole={user.clinician.contact === "admin" ? "admin" : user.role}
         cptCodes={cptCodes.filter((c) => c.active).map((c) => ({ code: c.code, description: c.description, fee: c.fee ?? 0 }))}
+        history={changeLog}
       />
       {canSeeNotes && (
         <div className="su-card" style={{ marginTop: 20, padding: "18px 20px" }}>
