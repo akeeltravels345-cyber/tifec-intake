@@ -2952,6 +2952,13 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .iem-cancel:hover { color: var(--ink); border-color: var(--muted, #6b6b66); }
 .iem-err { color: #b4451f; font-size: 13.5px; margin: 12px 0 0; }
 .iem-warn { color: #8a6d1a; font-size: 14px; line-height: 1.6; margin: 4px 0 0; }
+.iem-fineprint { color: var(--muted, #6b6b66); font-size: 12.5px; line-height: 1.5; margin: 12px 0 0; }
+/* Payer picker (when a client has more than one CMS-1500 insurer) */
+.iem-payers { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.iem-payer { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; width: 100%; border: 1px solid var(--edge, #d8d2c4); border-radius: 10px; padding: 11px 14px; background: none; cursor: pointer; }
+.iem-payer:hover { border-color: var(--brand); background: var(--brand-bg, #eef5f5); }
+.iem-payer-nm { font-size: 14px; font-weight: 600; color: var(--ink); }
+.iem-payer-em { font-size: 12.5px; color: var(--muted, #6b6b66); }
 .iem-sent { text-align: center; padding: 20px 8px 8px; }
 .iem-tick { width: 46px; height: 46px; border-radius: 50%; background: var(--pos-bg); color: var(--pos); font-size: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
 .iem-sent p { color: var(--ink); font-size: 15px; margin: 0 0 18px; }
@@ -4377,7 +4384,13 @@ body:has(.pt) .sitefoot { display: none; }
 .ss-preview-l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
 .ss-preview-s { font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
 .ss-preview-b { font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.5; }
-.ss-save { display: flex; align-items: center; gap: 12px; }
+.ss-card h3 { font: 600 13.5px "Open Sans"; margin: 0 0 6px; color: var(--ink); }
+/* A quieter divider that groups a sub-topic inside a card (e.g. the email
+   wording under "Messages to clients"). */
+.ss-subsec { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 16px; }
+.ss-ph { font: 600 11.5px "IBM Plex Mono", "Open Sans", monospace; background: var(--surface-2, #f4f7f6); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; color: var(--teal-deep); white-space: nowrap; }
+/* Save bar sticks to the bottom so it's always reachable on this long form. */
+.ss-save { position: sticky; bottom: 12px; display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; box-shadow: 0 8px 24px rgba(0,0,0,.10); }
 .ss-sp { flex: 1; }
 .ss-msg { font-size: 13px; font-weight: 600; } .ss-msg.ok { color: var(--green, #3f8f5f); } .ss-msg.err { color: #b3261e; }
 .ss-btn { font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 10px 16px; cursor: pointer; }
@@ -4561,17 +4574,15 @@ body:has(.pt) .sitefoot { display: none; }
 .bk-policy input { margin-top: 3px; flex: none; }
 .bk-policy b { color: #223038; }
 
-/* Settings: share links */
-.ss-link { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft, var(--bg)); }
+/* Settings: share links. Every row is the same 2-line grid — the service name
+   on its own line, then the URL + Copy + QR beneath — so long names never make
+   rows wrap unevenly. */
+.ss-link { display: grid; grid-template-columns: 1fr auto auto; align-items: center; column-gap: 8px; row-gap: 7px; padding: 11px 0; border-bottom: 1px solid var(--line-soft, var(--bg)); }
 .ss-link:last-child { border-bottom: 0; }
-@media (max-width: 560px) {
-  .ss-link { flex-wrap: wrap; }
-  .ss-link .ss-linkname { width: auto; flex: 1 1 auto; }
-  .ss-link code { order: 3; flex-basis: 100%; }
-}
-.ss-linkname { font-size: 13px; font-weight: 600; flex: none; width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ss-link code { flex: 1; min-width: 0; font: 400 12px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); background: var(--surface-2, #f4f7f6); border-radius: 7px; padding: 6px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ss-link button { font: 600 12px "Open Sans"; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 6px 11px; cursor: pointer; flex: none; }
+.ss-linkname { grid-column: 1 / -1; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.ss-linkname em { font-weight: 400; font-style: normal; color: var(--muted); }
+.ss-link code { grid-column: 1; min-width: 0; font: 400 12px "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); background: var(--surface-2, #f4f7f6); border-radius: 7px; padding: 7px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-link button { font: 600 12px "Open Sans"; color: var(--teal-deep); background: none; border: 1px solid var(--line); border-radius: 7px; padding: 7px 12px; cursor: pointer; }
 .ss-link button:hover { border-color: var(--teal); }
 
 /* Calendar: read-only "my schedule" mode */

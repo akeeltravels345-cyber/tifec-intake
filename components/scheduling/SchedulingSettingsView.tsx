@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import QRCode from "qrcode";
+import Foldable from "@/components/billing/Foldable";
 import type { SchedulingSettings } from "@/lib/scheduling";
 
 const ACCENTS = ["#256e72", "#2f8e93", "#2e3192", "#3f8f5f", "#7a4fa3", "#b1543c", "#c2841d"];
@@ -41,10 +42,11 @@ export default function SchedulingSettingsView({ initial, types = [], origin = "
 
   return (
     <div className="ss">
-      <div className="ss-head"><div><h1 className="ss-h1">Settings</h1><p className="ss-sub">Your booking page and the notifications clients would get.</p></div></div>
+      <div className="ss-head"><div><h1 className="ss-h1">Settings</h1><p className="ss-sub">Your booking page and the emails clients receive.</p></div></div>
 
       <div className="ss-card">
-        <h2>Booking page</h2>
+        <h2>Your booking page</h2>
+        <p className="ss-hint">What clients see and agree to when they book online.</p>
         <label className="ss-f"><span>Welcome message <em>(shown under the title)</em></span>
           <textarea rows={2} value={s.booking.welcome} onChange={(e) => setBooking({ welcome: e.target.value })} placeholder="e.g. We're glad you're here. Pick a time that works for you." /></label>
         <div className="ss-f"><span>Accent colour</span>
@@ -59,10 +61,14 @@ export default function SchedulingSettingsView({ initial, types = [], origin = "
       <div className="ss-card">
         <h2>Share your booking page</h2>
         <p className="ss-hint">Send clients straight to the right service. Each clinician also has their own personal links under My schedule → My link.</p>
-        <div className="ss-link"><span className="ss-linkname">Everything</span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button><button onClick={() => showQr("Everything", baseLink)}>QR</button></div>
-        {types.map((t) => { const l = `${baseLink}?type=${t.id}`; return (
-          <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button><button onClick={() => showQr(t.name, l)}>QR</button></div>
-        ); })}
+        <div className="ss-link"><span className="ss-linkname">Everything <em>(all services)</em></span><code>{baseLink}</code><button onClick={() => copy(baseLink, "base")}>{copied === "base" ? "Copied" : "Copy"}</button><button onClick={() => showQr("Everything", baseLink)}>QR</button></div>
+        <Foldable max={6} unit="services" rowSelector=".ss-link">
+          <div>
+            {types.map((t) => { const l = `${baseLink}?type=${t.id}`; return (
+              <div key={t.id} className="ss-link"><span className="ss-linkname">{t.name}</span><code>{l}</code><button onClick={() => copy(l, t.id)}>{copied === t.id ? "Copied" : "Copy"}</button><button onClick={() => showQr(t.name, l)}>QR</button></div>
+            ); })}
+          </div>
+        </Foldable>
       </div>
 
       {qr && (
@@ -81,41 +87,44 @@ export default function SchedulingSettingsView({ initial, types = [], origin = "
       )}
 
       <div className="ss-card">
-        <h2>Video appointments</h2>
-        <p className="ss-hint">Each clinician connects their own Zoom or Google Meet account from <b>My schedule → Video connections</b>. When one of their virtual appointments is booked, the meeting link is created on their account automatically.</p>
-      </div>
-
-      <div className="ss-card">
         <div className="ss-notihead">
-          <h2>Notifications</h2>
+          <h2>Messages to clients</h2>
           <label className="ss-switch"><input type="checkbox" checked={n.enabled} onChange={(e) => setNotif({ enabled: e.target.checked })} /> <span>{n.enabled ? "On" : "Off"}</span></label>
         </div>
-        {!n.enabled && <p className="ss-warn">Off. Nothing is sent to clients yet. Turn this on (and give the go-ahead) when you're ready to start sending.</p>}
-        <div className="ss-toggles">
-          {([["confirmation", "Booking confirmation"], ["reminder", "Reminders"], ["reschedule", "Reschedule notice"], ["cancellation", "Cancellation notice"]] as const).map(([k, label]) => (
-            <label key={k} className="ss-chk"><input type="checkbox" checked={n[k]} onChange={(e) => setNotif({ [k]: e.target.checked } as never)} /> {label}</label>
+        <p className="ss-hint">The emails clients get automatically. The switch turns all of them on or off at once.</p>
+        {!n.enabled && <p className="ss-warn">Off — nothing is sent to clients yet. Turn this on when you&apos;re ready to start sending.</p>}
+        <div className="ss-f"><span>Which emails to send</span>
+          <div className="ss-toggles">
+            {([["confirmation", "Booking confirmation"], ["reminder", "Reminders"], ["reschedule", "Reschedule notice"], ["cancellation", "Cancellation notice"]] as const).map(([k, label]) => (
+              <label key={k} className="ss-chk"><input type="checkbox" checked={n[k]} onChange={(e) => setNotif({ [k]: e.target.checked } as never)} /> {label}</label>
+            ))}
+          </div>
+        </div>
+        <label className="ss-f"><span>Reminder timing <em>hours before the appointment, separated by commas</em></span>
+          <input value={n.reminderOffsetsHours.join(", ")} onChange={(e) => setNotif({ reminderOffsetsHours: e.target.value.split(",").map((x) => parseInt(x.trim(), 10)).filter((x) => x > 0) })} placeholder="e.g. 24, 1" /></label>
+
+        <div className="ss-subsec">
+          <h3>What the emails say</h3>
+          <p className="ss-hint">Type your wording. These fill in automatically: <code className="ss-ph">{"{client}"}</code> <code className="ss-ph">{"{service}"}</code> <code className="ss-ph">{"{clinician}"}</code> <code className="ss-ph">{"{when}"}</code> <code className="ss-ph">{"{practice}"}</code></p>
+          {(["confirmation", "reminder"] as const).map((k) => (
+            <div key={k} className="ss-tpl">
+              <div className="ss-tpl-name">{k === "confirmation" ? "Confirmation email" : "Reminder email"}</div>
+              <label className="ss-f"><span>Subject</span><input value={n.templates[k].subject} onChange={(e) => setTpl(k, { subject: e.target.value })} /></label>
+              <label className="ss-f"><span>Body</span><textarea rows={4} value={n.templates[k].body} onChange={(e) => setTpl(k, { body: e.target.value })} /></label>
+              <div className="ss-preview"><div className="ss-preview-l">Preview</div><div className="ss-preview-s">{fill(n.templates[k].subject)}</div><div className="ss-preview-b">{fill(n.templates[k].body)}</div></div>
+            </div>
           ))}
         </div>
-        <label className="ss-f"><span>Reminder timing <em>(hours before, comma-separated)</em></span>
-          <input value={n.reminderOffsetsHours.join(", ")} onChange={(e) => setNotif({ reminderOffsetsHours: e.target.value.split(",").map((x) => parseInt(x.trim(), 10)).filter((x) => x > 0) })} placeholder="24, 1" /></label>
       </div>
 
       <div className="ss-card">
-        <h2>Templates</h2>
-        <p className="ss-hint">Placeholders: {"{client} {service} {clinician} {when} {practice}"}</p>
-        {(["confirmation", "reminder"] as const).map((k) => (
-          <div key={k} className="ss-tpl">
-            <div className="ss-tpl-name">{k === "confirmation" ? "Confirmation" : "Reminder"}</div>
-            <label className="ss-f"><span>Subject</span><input value={n.templates[k].subject} onChange={(e) => setTpl(k, { subject: e.target.value })} /></label>
-            <label className="ss-f"><span>Body</span><textarea rows={4} value={n.templates[k].body} onChange={(e) => setTpl(k, { body: e.target.value })} /></label>
-            <div className="ss-preview"><div className="ss-preview-l">Preview</div><div className="ss-preview-s">{fill(n.templates[k].subject)}</div><div className="ss-preview-b">{fill(n.templates[k].body)}</div></div>
-          </div>
-        ))}
+        <h2>Video appointments</h2>
+        <p className="ss-hint">Each clinician connects their own Zoom or Google Meet from <b>My schedule → Set up</b>. When one of their online appointments is booked, the meeting link is created for them automatically.</p>
       </div>
 
       <div className="ss-card">
         <div className="ss-notihead">
-          <h2>Connect to billing</h2>
+          <h2>Send visits to billing</h2>
           <label className="ss-switch"><input type="checkbox" checked={s.bridge.seenToBilling} onChange={(e) => setBridge({ seenToBilling: e.target.checked })} /> <span>{s.bridge.seenToBilling ? "On" : "Off"}</span></label>
         </div>
         {s.bridge.seenToBilling
