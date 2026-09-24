@@ -77,7 +77,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const r = await load(id, req);
   if ("error" in r) return r.error;
-  const { user, client, payer, forms, claimPayers, practiceName } = r;
+  const { user, client, prov, payer, forms, claimPayers, practiceName } = r;
+  const replyToEmail = prov.claimsReplyToEmail || user.clinician.email || "";
+  const replyToName = (prov.claimsReplyToEmail ? prov.claimsReplyToName : user.clinician.name) || "";
 
   if (!payer) {
     return NextResponse.json({
@@ -101,8 +103,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     payers: claimPayers,
     patientName, lineCount, formCount: forms.length, total,
     subject, message,
-    replyTo: user.clinician.email || "",
-    replyToName: user.clinician.name || "",
+    replyTo: replyToEmail,
+    replyToName,
   });
 }
 
@@ -114,6 +116,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const r = await load(id, req);
   if ("error" in r) return r.error;
   const { user, client, prov, payer, forms, payerSessions, practiceName } = r;
+  // Insurer replies (denials, queries) go to the configured billing inbox, or the
+  // sender when none is set.
+  const replyToEmail = prov.claimsReplyToEmail || user.clinician.email || undefined;
+  const replyToName = (prov.claimsReplyToEmail ? prov.claimsReplyToName : user.clinician.name) || "";
 
   if (!payer) return NextResponse.json({ error: "Choose which payer to send this claim to." }, { status: 400 });
   if (forms.length === 0) return NextResponse.json({ error: "There's nothing to claim for this payer." }, { status: 400 });
@@ -144,8 +150,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     memberId: forms[0]?.memberId,
     subject: subjectOverride,
     message,
-    replyToName: user.clinician.name,
-    replyToEmail: user.clinician.email || undefined,
+    replyToName,
+    replyToEmail,
     practice: {
       addressLines: [prov.addressLine1, prov.addressLine2, [prov.city, prov.region, prov.postal].filter(Boolean).join(" ")].filter(Boolean) as string[],
       phone: prov.phone, email: prov.email, website: prov.website,

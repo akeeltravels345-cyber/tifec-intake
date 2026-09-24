@@ -88,6 +88,10 @@ export interface ProviderConfig {
   email?: string;          // shown on self-pay invoices
   website?: string;        // shown on self-pay invoices
   renderingNpi?: Record<string, string>; // clinicianId -> rendering NPI (box 24J)
+  /** Where insurer replies to an emailed claim should go (the billing inbox), and
+   *  the name shown on that reply-to. Falls back to the sender when unset. */
+  claimsReplyToName?: string;
+  claimsReplyToEmail?: string;
 }
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
