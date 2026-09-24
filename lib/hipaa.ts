@@ -27,6 +27,19 @@ export interface HipaaTask {
 export interface HipaaTaskState { status: HipaaStatus; comments: HipaaComment[] }
 export interface HipaaBoardItem extends HipaaTask, HipaaTaskState {}
 
+// Safeguards already in place — the locks, keys and cameras the app already has.
+// Plain-language, for the owner. Static (not editable), shown above the checklist.
+export interface HipaaSafeguard { title: string; detail: string }
+export const HIPAA_SAFEGUARDS: HipaaSafeguard[] = [
+  { title: "Everything sensitive is encrypted", detail: "Client names, birth dates, clinical notes, intake answers and uploaded documents are all stored scrambled with a bank-grade method (AES-256), and scrambled again while travelling over the internet." },
+  { title: "Everyone has their own private login", detail: "Each person signs in with their own account, and passwords are never stored as readable text — only a one-way scrambled version, so even we can't see them." },
+  { title: "People only see what they should", detail: "A therapist sees only their own clients; the biller sees billing; the owner and admin oversee. Access is limited by role." },
+  { title: "There's a history log of who did what", detail: "The app records who opened or changed each client's record, and when — and the log itself never stores health details." },
+  { title: "It logs people out automatically", detail: "If a screen is left unattended, the app signs the person out after a set time, so an open computer doesn't leave records exposed." },
+  { title: "Emails and links never carry health details", detail: "Notification emails contain only a secure link that requires a login — never client information — and no personal details are ever put into web addresses." },
+  { title: "Changes are read-only when viewing as someone", detail: "When an admin views the app as another person, they can look but not change anything, so the audit trail always shows who really did what." },
+];
+
 // The compliance checklist. Order = the sensible order to work through it.
 export const HIPAA_TASKS: HipaaTask[] = [
   { id: "baa", title: "Sign Business Associate Agreements (BAAs)", category: "Agreements", priority: "now",

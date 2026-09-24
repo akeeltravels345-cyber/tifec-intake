@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { isSystemAdmin } from "@/lib/clinicians";
-import { getHipaaBoard } from "@/lib/hipaa";
+import { getHipaaBoard, HIPAA_SAFEGUARDS } from "@/lib/hipaa";
 import HipaaBoard from "@/components/team/HipaaBoard";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +14,5 @@ export default async function HipaaPage() {
   if (!isSystemAdmin(me) && me.contact !== "owner") redirect("/today");
 
   const board = await getHipaaBoard();
-  return <HipaaBoard board={board} meId={me.id} meName={me.name} />;
+  return <HipaaBoard board={board} safeguards={HIPAA_SAFEGUARDS} meId={me.id} meName={me.name} />;
 }
