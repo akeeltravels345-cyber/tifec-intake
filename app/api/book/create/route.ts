@@ -6,8 +6,27 @@ import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intake
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
+import { addClients } from "@/lib/clients";
 
 export const dynamic = "force-dynamic";
+
+/** Find-or-create the billing client this booking is for, linked to the
+ *  clinician, so a new person who books lands in the client hub (and an existing
+ *  one just links). Best-effort — booking must never fail because of this.
+ *  Returns the client id, or null if it couldn't be resolved. */
+async function ensureBookingClient(clinicianId: string, name: string, email: string, phone: string): Promise<string | null> {
+  try {
+    const parts = name.trim().replace(/\s+/g, " ").split(" ");
+    const first = parts[0] ?? "";
+    const last = parts.length > 1 ? parts.slice(1).join(" ") : "";
+    if (!first && !last) return null;
+    const { ids } = await addClients(clinicianId, [{ first, last, insurerId: null, profile: { email: email || undefined, phone: phone || undefined } }]);
+    return ids[0] ?? null;
+  } catch (err) {
+    console.error("booking -> client sync failed:", err);
+    return null;
+  }
+}
 
 const PREVIEW = "peek";
 const canBook = (id: string) => { const c = CLINICIANS.find((x) => x.id === id); return !!c && isBookableClinician(c); };
@@ -60,6 +79,8 @@ export async function POST(req: Request) {
       if (joined.reason === "duplicate") return NextResponse.json({ error: "You're already booked into this session." }, { status: 409 });
       return NextResponse.json({ error: "Sorry, that session just filled. Please pick another." }, { status: 409 });
     }
+    // A group attendee is still a client — give them the hub record too.
+    await ensureBookingClient(clinicianId, name, email, phone);
     const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
     const clinicianName = getClinician(clinicianId)?.name || "your clinician";
 
@@ -127,8 +148,12 @@ export async function POST(req: Request) {
   const isMulti = toBook.length > 1;
   const seriesId = isMulti ? randomBytes(8).toString("hex") : null;
 
+  // The client hub: find-or-create this person's client record and link the
+  // appointment(s) to it, so a new booker gets a profile and an existing one links.
+  const clientId = await ensureBookingClient(clinicianId, name, email, phone);
+
   const apptFields = {
-    kind: "appointment" as const, clientName: name, clientEmail: email, clinicianId, typeId: type.id,
+    kind: "appointment" as const, clientId, clientName: name, clientEmail: email, clinicianId, typeId: type.id,
     mode, status: "booked" as const, source: "client" as const,
     insurancePath: path, insurerId: path === "insurance" ? clean(body.insurerId, 64) || null : null,
     policyNo: path === "insurance" ? clean(body.policyNo, 60) : "",

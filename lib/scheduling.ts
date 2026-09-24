@@ -390,7 +390,7 @@ export interface Appointment {
   kind: AppointmentKind;         // "block" = staff personal time, no client
   capacity: number;              // seats; 1 = individual, >1 = group
   attendees: Attendee[];         // group roster (empty for individual)
-  clientId: string | null;       // reserved for the shared record; null for now
+  clientId: string | null;       // the linked billing client record (set at booking)
   clientName: string;
   clientEmail: string;
   clinicianId: string;
@@ -492,6 +492,7 @@ function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
     capacity: input.capacity !== undefined ? Math.max(1, num(input.capacity)) : b.capacity,
     attendees: input.attendees !== undefined ? parseAttendees(input.attendees) : b.attendees,
     kind: input.kind === "block" ? "block" : (input.kind === "appointment" ? "appointment" : b.kind),
+    clientId: input.clientId !== undefined ? (input.clientId ? str(input.clientId) : null) : b.clientId,
     clientName: input.clientName !== undefined ? str(input.clientName).trim() : b.clientName,
     clientEmail: input.clientEmail !== undefined ? str(input.clientEmail).trim() : b.clientEmail,
     clinicianId: input.clinicianId !== undefined ? str(input.clinicianId) : b.clinicianId,
