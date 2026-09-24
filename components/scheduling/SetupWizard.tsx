@@ -74,8 +74,8 @@ export default function SetupWizard({
           <h1 className="wiz-h1">Let’s get you set up</h1>
           <p className="wiz-lead">Two quick things, about three minutes. You can stop and come back any time.</p>
           <ul className="wiz-list">
-            <li><b>Video calls</b> — so your online sessions get a Zoom or Google Meet link made for you, automatically.</li>
-            <li><b>Your calendar</b> — so your TIFEC appointments show up on your own phone or computer.</li>
+            <li><b>Video calls</b> — when a client books an online session, we make the Zoom or Google Meet link for you and put it in their confirmation. You never make or send one.</li>
+            <li><b>Your calendar</b> — your TIFEC appointments show up in the calendar you already use on your phone or computer, so you can see your day without opening this portal.</li>
           </ul>
           <button className="wiz-btn big" onClick={() => setStep(1)}>Start →</button>
         </div>
@@ -84,8 +84,8 @@ export default function SetupWizard({
       {/* 1 — Video */}
       {step === 1 && (
         <div className="wiz-screen">
-          <h1 className="wiz-h1">Video calls</h1>
-          <p className="wiz-lead">Connect the one you use. When you have an online session, a meeting link is created for you and added to the booking. You only do this once.</p>
+          <h1 className="wiz-h1">Set up your video calls</h1>
+          <p className="wiz-lead">Pick the app you already use for video. From then on, whenever a client books an <b>online</b> session, we create the meeting link and add it to their confirmation email for you — you never have to make or send one. You only do this once.</p>
           <Note />
           <div className="wiz-provs">
             <ProviderRow p="google" name="Google Meet" blurb="Best if you use a Google (Gmail) account." />
@@ -103,9 +103,9 @@ export default function SetupWizard({
       {step === 2 && (
         <div className="wiz-screen">
           <h1 className="wiz-h1">See your appointments in your own calendar</h1>
-          <p className="wiz-lead">Tap the button for the calendar you use on your phone or computer. Your TIFEC appointments will appear there and keep themselves up to date.</p>
-          <div className="wiz-embed"><CalendarSubscribe url={feedUrl} /></div>
-          <p className="wiz-tip">On a phone, tap the button then tap <b>Subscribe / Add</b> when it asks.</p>
+          <p className="wiz-lead">Add your TIFEC schedule to the calendar app you already use. Your appointments show up there next to everything else and update themselves — so you always know your day without opening this portal. Tap the button for your calendar:</p>
+          <div className="wiz-embed"><CalendarSubscribe url={feedUrl} embedded /></div>
+          <p className="wiz-tip">On a phone, tap the button then tap <b>Subscribe</b> or <b>Add</b> when it asks. It’s just for you — no need to share the link.</p>
           <div className="wiz-nav">
             <button className="wiz-btn ghost" onClick={() => setStep(1)}>← Back</button>
             <button className="wiz-btn" onClick={() => setStep(3)}>Next →</button>
@@ -116,9 +116,9 @@ export default function SetupWizard({
       {/* 3 — Busy times (optional) */}
       {step === 3 && (
         <div className="wiz-screen">
-          <h1 className="wiz-h1">Keep your busy times private <span className="wiz-opt">(optional)</span></h1>
-          <p className="wiz-lead">If you keep another calendar, we can make sure clients are never offered a time when you’re already busy there. Skip this if you’re not sure.</p>
-          <div className="wiz-embed"><BusyFeeds initialFeeds={busyFeeds} googleConnected={googleConnected} /></div>
+          <h1 className="wiz-h1">Don’t get booked when you’re already busy <span className="wiz-opt">(optional)</span></h1>
+          <p className="wiz-lead">Do you keep your own calendar for the rest of your life — say a personal Google or Outlook calendar? Connect it here and the booking page will automatically skip any time you’re busy there, so no client can book you during your own appointments or a day off. If you only use TIFEC, just skip this.</p>
+          <div className="wiz-embed"><BusyFeeds initialFeeds={busyFeeds} googleConnected={googleConnected} embedded /></div>
           <div className="wiz-nav">
             <button className="wiz-btn ghost" onClick={() => setStep(2)}>← Back</button>
             <button className="wiz-btn" onClick={() => setStep(4)}>Finish →</button>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 // Shows the clinician's private calendar-subscribe URL with one-tap add links.
-export default function CalendarSubscribe({ url }: { url: string }) {
+export default function CalendarSubscribe({ url, embedded = false }: { url: string; embedded?: boolean }) {
   const [copied, setCopied] = useState(false);
   const webcal = url.replace(/^https?:/i, "webcal:");
   const googleAdd = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
@@ -15,8 +15,12 @@ export default function CalendarSubscribe({ url }: { url: string }) {
 
   return (
     <section className="calsub">
-      <h2 className="calsub-h">Subscribe to your calendar</h2>
-      <p className="calsub-p">Add your TIFEC schedule to Apple Calendar, Google or Outlook. It stays in sync on its own. This link is private, so keep it to yourself.</p>
+      {!embedded && (
+        <>
+          <h2 className="calsub-h">Subscribe to your calendar</h2>
+          <p className="calsub-p">Add your TIFEC schedule to Apple Calendar, Google or Outlook. It stays in sync on its own. This link is private, so keep it to yourself.</p>
+        </>
+      )}
       <div className="calsub-row">
         <input className="calsub-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="Calendar subscribe URL" />
         <button type="button" className="calsub-copy" onClick={copy}>{copied ? "Copied" : "Copy"}</button>

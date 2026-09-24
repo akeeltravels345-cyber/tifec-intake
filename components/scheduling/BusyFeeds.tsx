@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 // Clinician manages which external calendars block their bookings.
-export default function BusyFeeds({ initialFeeds, googleConnected }: { initialFeeds: string[]; googleConnected: boolean }) {
+// `embedded` hides the section's own heading/intro when it sits inside a flow
+// (the setup wizard) that already explains what this does in plain words.
+export default function BusyFeeds({ initialFeeds, googleConnected, embedded = false }: { initialFeeds: string[]; googleConnected: boolean; embedded?: boolean }) {
   const [feeds, setFeeds] = useState<string[]>(initialFeeds);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,18 +30,22 @@ export default function BusyFeeds({ initialFeeds, googleConnected }: { initialFe
   }
 
   return (
-    <section className="calsub" style={{ marginTop: 16 }}>
-      <h2 className="calsub-h">Block bookings over your other calendars</h2>
-      <p className="calsub-p">Clients won&apos;t be offered a time when you&apos;re busy elsewhere.</p>
+    <section className="calsub" style={{ marginTop: embedded ? 0 : 16 }}>
+      {!embedded && (
+        <>
+          <h2 className="calsub-h">Don’t get booked when you’re already busy</h2>
+          <p className="calsub-p">If you keep your own calendar too, clients won’t be offered a time you’re already busy there.</p>
+        </>
+      )}
 
       <div className="bf-status">
         <span className={`bf-dot ${googleConnected ? "on" : ""}`} />
         {googleConnected
-          ? <span>Your connected <b>Google Calendar</b> is blocking automatically.</span>
-          : <span>Connect Google above to block over your Google Calendar automatically.</span>}
+          ? <span>Done — we’re already checking your <b>Google Calendar</b>, so clients can’t book you over anything in it.</span>
+          : <span>Tip: if you connect Google in the video step, we’ll check your Google Calendar automatically and you can skip the box below.</span>}
       </div>
 
-      <p className="calsub-p" style={{ marginTop: 14, marginBottom: 8 }}>Add other calendars by their iCal (.ics) subscribe URL — e.g. your Outlook or a personal calendar&apos;s secret address:</p>
+      <p className="calsub-p" style={{ marginTop: 14, marginBottom: 8 }}>Use another calendar, like Outlook? Paste its private “subscribe” link (it ends in <b>.ics</b>) and we’ll avoid those times too:</p>
       {feeds.length > 0 && (
         <ul className="bf-list">
           {feeds.map((f) => (
