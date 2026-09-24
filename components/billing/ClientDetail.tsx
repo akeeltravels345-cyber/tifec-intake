@@ -325,6 +325,10 @@ export default function ClientDetail({
   const [ndUrl, setNdUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [showDocAdd, setShowDocAdd] = useState(false);
+  // Reference sections at the foot of the record collapse by default to keep it
+  // compact — the header shows the count, click to expand.
+  const [showEmails, setShowEmails] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   // shared cross-role notes
   const [notes, setNotes] = useState(profile.notes ?? []);
   const [noteText, setNoteText] = useState("");
@@ -1053,12 +1057,14 @@ export default function ClientDetail({
         </div>
       </div>
 
-      {/* ---- Emails sent ---- */}
+      {/* ---- Emails sent (collapsible) ---- */}
       <div className="su-sec">
-        <div className="su-sechead">
+        <div className="su-sechead cd-foldhead" role="button" tabIndex={0} aria-expanded={showEmails} onClick={() => setShowEmails((o) => !o)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowEmails((o) => !o); } }}>
           <h2 className="su-sech">Emails sent{sentEmails.length > 0 && <span className="su-tag">{sentEmails.length}</span>}</h2>
-          <span className="su-hint">Every invoice the system has emailed this client, most recent first.</span>
+          <span className="cd-foldchev">{showEmails ? "Hide ▾" : "Show ▸"}</span>
         </div>
+        {showEmails && (<>
+        <p className="su-hint" style={{ margin: "0 0 8px" }}>Every invoice the system has emailed this client, most recent first.</p>
         {sentEmails.length === 0 ? (
           <p className="cd-emails-empty">Nothing emailed yet. When you send an invoice to this client, it&apos;s recorded here.</p>
         ) : (
@@ -1076,14 +1082,17 @@ export default function ClientDetail({
             ))}
           </ul>
         )}
+        </>)}
       </div>
 
-      {/* ---- Record history (audit trail of every change) ---- */}
+      {/* ---- Record history (audit trail of every change) — collapsible ---- */}
       <div className="su-sec">
-        <div className="su-sechead">
+        <div className="su-sechead cd-foldhead" role="button" tabIndex={0} aria-expanded={showHistory} onClick={() => setShowHistory((o) => !o)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowHistory((o) => !o); } }}>
           <h2 className="su-sech">Record history{history.length > 0 && <span className="su-tag">{history.length}</span>}</h2>
-          <span className="su-hint">Every change to this client&apos;s record and charges — who and when. Views aren&apos;t listed.</span>
+          <span className="cd-foldchev">{showHistory ? "Hide ▾" : "Show ▸"}</span>
         </div>
+        {showHistory && (<>
+        <p className="su-hint" style={{ margin: "0 0 8px" }}>Every change to this client&apos;s record and charges — who and when. Views aren&apos;t listed.</p>
         {history.length === 0 ? (
           <p className="cd-emails-empty">No changes recorded yet. Edits to the record, charges, referral, notes and documents show here.</p>
         ) : (
@@ -1097,6 +1106,7 @@ export default function ClientDetail({
             ))}
           </ul>
         )}
+        </>)}
       </div>
     </div>
   );
