@@ -654,18 +654,16 @@ export interface ClaimEmailArgs {
   logoCid?: string;
 }
 
-/** Default cover note to the insurer, shown in the preview for the biller to edit. */
-export function defaultClaimMessage(payerName: string, patientName: string, practiceName: string, total: number, memberId?: string): string {
+/** Default cover note to the insurer, shown in the preview for the biller to edit.
+ *  Wording set by the biller; kept generic (no patient/amount interpolation). The
+ *  args remain for callers and in case the message is personalised again later. */
+export function defaultClaimMessage(_payerName: string, _patientName: string, _practiceName: string, _total: number, _memberId?: string): string {
   return [
-    `To the claims team${payerName ? ` at ${payerName}` : ""},`,
+    "Greetings to the Health Team,",
     "",
-    `Please find attached a CMS-1500 claim for ${patientName}${memberId ? ` (member ID ${memberId})` : ""} for processing.`,
-    `The total charge is ${invMoney(total)}.`,
+    "Please see attached claims for the subject patient.",
     "",
-    "If anything further is needed to process this claim, please reply to this email and we'll respond promptly.",
-    "",
-    "Thank you,",
-    practiceName,
+    "Thank you for your assistance with processing this claim.",
   ].join("\n");
 }
 
