@@ -25,7 +25,9 @@ const MONTHS: Record<string, number> = {
 };
 
 // Words that mean "this date is when it ENDS" / "starts", used to anchor a date.
-const EXPIRY = /(valid\s*(?:until|to|through|thru|up\s*to)|expir\w*|expiration|authoriz\w*\s*(?:until|through|thru|to|end|end\s*date)|good\s*(?:until|through|thru)|end\s*date|valid\s*end|until|through|thru)/i;
+// "ref exp <date>" is the practice's filename convention (e.g. "DAWES, Isabelle K.,
+// ref exp 27-FEB-27.pdf"), so it anchors the expiry directly.
+const EXPIRY = /(ref\.?\s*exp\w*|valid\s*(?:until|to|through|thru|up\s*to)|expir\w*|expiration|authoriz\w*\s*(?:until|through|thru|to|end|end\s*date)|good\s*(?:until|through|thru)|end\s*date|valid\s*end|until|through|thru)/i;
 const START = /(valid\s*from|effective\s*(?:date|from)?|start\s*date|issue\s*date|date\s*of\s*(?:referral|issue)|from|valid\s*start)/i;
 
 function toISO(y: number, m: number, d: number): string | null {
@@ -56,16 +58,17 @@ function findDates(text: string): Found[] {
     push(iso, m.index!, m.index! + m[0].length);
   }
 
-  // 31 Dec 2026 / 31st December, 2026
-  for (const m of text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b/g)) {
+  // Day month-name year, with hyphen, space or dot separators and a 2- or 4-digit
+  // year: 27-FEB-27, 12-SEP-26, 31 Dec 2026, 31st December, 2026, 27-FEB-2027.
+  for (const m of text.matchAll(/\b(\d{1,2})(?:st|nd|rd|th)?[-\s.]+([A-Za-z]{3,9})\.?,?[-\s.]+(\d{2,4})\b/g)) {
     const mon = MONTHS[m[2].toLowerCase()];
-    if (mon) push(toISO(+m[3], mon, +m[1]), m.index!, m.index! + m[0].length);
+    if (mon) push(toISO(yr(+m[3]), mon, +m[1]), m.index!, m.index! + m[0].length);
   }
 
-  // Dec 31, 2026 / December 31 2026
-  for (const m of text.matchAll(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b/g)) {
+  // Month-name day year: Dec 31, 2026 / December 31 2026 / FEB-27-27.
+  for (const m of text.matchAll(/\b([A-Za-z]{3,9})\.?[-\s]+(\d{1,2})(?:st|nd|rd|th)?,?[-\s]+(\d{2,4})\b/g)) {
     const mon = MONTHS[m[1].toLowerCase()];
-    if (mon) push(toISO(+m[3], mon, +m[2]), m.index!, m.index! + m[0].length);
+    if (mon) push(toISO(yr(+m[3]), mon, +m[2]), m.index!, m.index! + m[0].length);
   }
 
   return out.sort((x, y2) => x.index - y2.index);
