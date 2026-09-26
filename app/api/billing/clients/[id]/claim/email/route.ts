@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { caymanToday } from "@/lib/caymanTime";
-import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
+import { getBillingUser, isBiller, isOwner, billingRoleOf } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, recordSentEmail, type ClientDocument } from "@/lib/clients";
-import { getClinician } from "@/lib/clinicians";
+import { getClinician, CLINICIANS } from "@/lib/clinicians";
 import {
   listInsurers, listSessions, getPracticeConfig, listExternalClinicians, listCptCodes,
   markSessionBilled, type BillingSession, type Insurer,
@@ -59,6 +59,15 @@ async function load(id: string, req: Request) {
   const payerSessions: BillingSession[] = payer ? allSessions.filter((s) => s.insurerId === payer.id) : [];
 
   const prov = cfg.provider ?? {};
+  // Insurer replies go to the BILLER by default (they work the claims), so they
+  // reach the billing inbox no matter who sent the claim. Precedence: the Setup
+  // "Claims reply-to" override, then the biller, then the sender as a last resort.
+  const biller = CLINICIANS.find((c) => billingRoleOf(c) === "biller" && c.email);
+  const replyToEmail = prov.claimsReplyToEmail || biller?.email || user.clinician.email || "";
+  const replyToName = prov.claimsReplyToEmail ? (prov.claimsReplyToName || "")
+    : biller?.email ? (biller.name || "")
+    : (user.clinician.name || "");
+
   const forms = payer
     ? buildClaimForms(client, payerSessions, {
         insName: (idv) => insurers.find((i) => i.id === idv)?.name ?? "",
@@ -71,7 +80,7 @@ async function load(id: string, req: Request) {
     : [];
 
   return {
-    user, client, prov, payer, forms, payerSessions,
+    user, client, prov, payer, forms, payerSessions, replyToEmail, replyToName,
     claimPayers: claimPayers.map((p) => ({ id: p.id, name: p.name, email: p.email ?? "" })),
     practiceName: prov.practiceName || "the practice",
   };
@@ -83,9 +92,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const r = await load(id, req);
   if ("error" in r) return r.error;
-  const { user, client, prov, payer, forms, claimPayers, practiceName } = r;
-  const replyToEmail = prov.claimsReplyToEmail || user.clinician.email || "";
-  const replyToName = (prov.claimsReplyToEmail ? prov.claimsReplyToName : user.clinician.name) || "";
+  const { client, payer, forms, claimPayers, practiceName, replyToEmail, replyToName } = r;
 
   if (!payer) {
     return NextResponse.json({
@@ -122,10 +129,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const r = await load(id, req);
   if ("error" in r) return r.error;
   const { user, client, prov, payer, forms, payerSessions, practiceName } = r;
-  // Insurer replies (denials, queries) go to the configured billing inbox, or the
-  // sender when none is set.
-  const replyToEmail = prov.claimsReplyToEmail || user.clinician.email || undefined;
-  const replyToName = (prov.claimsReplyToEmail ? prov.claimsReplyToName : user.clinician.name) || "";
+  // Insurer replies go to the biller / configured billing inbox (see load()).
+  const replyToEmail = r.replyToEmail || undefined;
+  const replyToName = r.replyToName;
 
   if (!payer) return NextResponse.json({ error: "Choose which payer to send this claim to." }, { status: 400 });
   if (forms.length === 0) return NextResponse.json({ error: "There's nothing to claim for this payer." }, { status: 400 });
