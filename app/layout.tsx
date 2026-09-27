@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
   title: "The Institute for Essential Care",
@@ -21,6 +22,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             sanctioned pattern — passing JS as <Script> children is not executed
             on the client and warns in React 19. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {/* Installable web app (Add to Home Screen). */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="TIFEC" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#1e232b" media="(prefers-color-scheme: dark)" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -29,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <PwaRegister />
         <div className="brandbar">
           <div className="inner">
             {/* eslint-disable-next-line @next/next/no-img-element */}
