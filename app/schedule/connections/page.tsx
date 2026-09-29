@@ -11,6 +11,7 @@ import { getAvailability } from "@/lib/scheduling";
 import { getClinicianPrefs } from "@/lib/clinicianPrefs";
 import { hasGoogleConnection } from "@/lib/videoConnections";
 import AgendaPref from "@/components/scheduling/AgendaPref";
+import PushToggle from "@/components/scheduling/PushToggle";
 import { seesAllSchedule, isTreatingClinician } from "../layout";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
       <CalendarSubscribe url={feedUrl} />
       <BusyFeeds initialFeeds={av.busyFeeds} googleConnected={googleConnected} />
       <AgendaPref initial={prefs.dailyAgenda} />
+      <PushToggle />
     </div>
   );
 }

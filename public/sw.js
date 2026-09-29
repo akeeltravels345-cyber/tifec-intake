@@ -1,7 +1,7 @@
 // Minimal service worker: makes the app installable and speeds up loads by
 // caching only immutable, non-sensitive static assets. It never caches
 // authenticated pages or API responses, so clinicians always see live data.
-const CACHE = "tifec-static-v2";
+const CACHE = "tifec-static-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -37,5 +37,30 @@ self.addEventListener("fetch", (e) => {
       cache.put(req, res.clone());
     }
     return res;
+  })());
+});
+
+// ---- Web push ----
+self.addEventListener("push", (e) => {
+  let d = { title: "Cayman Essential Care", body: "", url: "/today", tag: undefined };
+  try { if (e.data) d = { ...d, ...e.data.json() }; } catch (_) { /* non-JSON payload */ }
+  e.waitUntil(self.registration.showNotification(d.title, {
+    body: d.body,
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: d.tag,
+    renotify: !!d.tag,
+    data: { url: d.url || "/today" },
+  }));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/today";
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const c of wins) { if (c.url.includes(url) && "focus" in c) return c.focus(); }
+    if (wins[0] && "navigate" in wins[0]) { await wins[0].focus(); return wins[0].navigate(url); }
+    return self.clients.openWindow(url);
   })());
 });

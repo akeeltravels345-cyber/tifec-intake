@@ -7,6 +7,7 @@ import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
 import { addClients } from "@/lib/clients";
+import { sendPushToClinician } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 
@@ -200,6 +201,17 @@ export async function POST(req: Request) {
     skippedDates: skippedWhen.length ? skippedWhen : undefined,
     events: isMulti ? booked.map((b) => ({ id: b.id, startAt: b.startAt, endAt: b.endAt })) : undefined,
   });
+
+  // Alert the clinician on their devices (best-effort; never blocks the booking).
+  try {
+    const extra = booked.length > 1 ? ` (+${booked.length - 1} more)` : "";
+    await sendPushToClinician(clinicianId, {
+      title: "New booking",
+      body: `${name} · ${type.name}${extra}\n${caymanWhen(appt.startAt)}`,
+      url: "/schedule",
+      tag: `booking-${appt.id}`,
+    });
+  } catch { /* non-fatal */ }
 
   return NextResponse.json({
     ok: true,
