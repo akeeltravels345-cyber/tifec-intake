@@ -239,7 +239,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               {g.items.map((n) => {
                 const Icon = n.icon;
                 const glowing = !!n.highlight || (!!n.glow && navGlow);
-                const cls = `${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}`;
+                const cls = `${n.match(path) ? "on" : ""}${glowing ? " bo-navglow" : ""}${(n.href === "/today" || n.href === "/schedule") ? " sched-keep" : ""}`;
                 const inner = (
                   <>
                     <Icon />{n.label}
@@ -280,7 +280,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       <nav className="bo-mobtabs">
         {flat.map((n) => {
           const Icon = n.icon;
-          const cls = `${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}`;
+          const cls = `${n.match(path) ? "on" : ""}${n.highlight ? " bo-mobglow" : ""}${(n.href === "/today" || n.href === "/schedule") ? " sched-keep" : ""}`;
           const inner = (
             <>
               <Icon />{n.label.startsWith("My ") ? n.label.slice(3).replace(/^./, (c) => c.toUpperCase()) : n.label.split(" ")[0]}

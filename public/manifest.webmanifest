@@ -2,7 +2,7 @@
   "name": "Cayman Essential Care",
   "short_name": "TIFEC",
   "description": "Scheduling, client intake and billing for Cayman Essential Care clinicians.",
-  "start_url": "/today",
+  "start_url": "/schedule",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
