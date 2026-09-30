@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Script from "next/script";
 import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
@@ -7,21 +8,14 @@ export const metadata: Metadata = {
   description: "The Institute for Essential Care: secure scheduling, client intake, and billing.",
 };
 
-// Set the theme (Auto/Light/Dark) on <html> before first paint so there's no
-// flash. "Auto" resolves to the device's prefers-color-scheme. See ThemeToggle.
-// Intake forms (/intake) are client-facing and must ALWAYS render light, never
-// following the device's dark setting — so force light there before paint.
-const THEME_INIT = `(function(){try{var p=location.pathname;var forceLight=p==='/intake'||p.indexOf('/intake/')===0;var t=localStorage.getItem('tifec-theme')||'system';var d=!forceLight&&(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches));document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Blocking inline script: sets the theme on <html> before first paint
-            (no flash). A raw script tag with dangerouslySetInnerHTML is the
-            sanctioned pattern — passing JS as <Script> children is not executed
-            on the client and warns in React 19. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {/* Sets the theme on <html> before first paint (no flash). An EXTERNAL
+            src script via next/script beforeInteractive — an inline <script>
+            (even dangerouslySetInnerHTML) triggers a React 19 dev warning. */}
+        <Script src="/theme-init.js" strategy="beforeInteractive" />
         {/* Installable web app (Add to Home Screen). */}
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
