@@ -35,6 +35,7 @@ const FORM_META: Record<string, { icon: string; desc: string; bg: string }> = {
   "parent-behaviour-assessment": { icon: "👪", desc: "Parent rates their child's behaviour across 10 areas.", bg: "#eaf3e4" },
   "ei-camp-agreement": { icon: "🏕️", desc: "Camp rules, confidentiality, and the participant's signed agreement.", bg: "#d9edec" },
   "peers-intake": { icon: "🤝", desc: "Parent/caregiver intake for the PEERS® social skills program.", bg: "#eaf3e4" },
+  "child-intake": { icon: "🧒", desc: "Detailed developmental and family intake for a child's psychological assessment.", bg: "#eaf3e4" },
   ...Object.fromEntries(
     LEVEL2_MEASURES.map((m) => [
       m.key,
@@ -57,6 +58,7 @@ const SHORT_FORM: Record<string, string> = {
   "parent-behaviour-assessment": "Parent Behaviour Assessment",
   "ei-camp-agreement": "EI Camp Agreement",
   "peers-intake": "PEERS Intake",
+  "child-intake": "Child Intake",
   ...Object.fromEntries(LEVEL2_MEASURES.map((m) => [m.key, m.short])),
 };
 

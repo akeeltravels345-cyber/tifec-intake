@@ -76,6 +76,7 @@ export type FormTemplateKey =
   | "parent-behaviour-assessment"
   | "ei-camp-agreement"
   | "peers-intake"
+  | "child-intake"
   | "l2p-depression"
   | "l2p-anxiety"
   | "l2p-anger"
@@ -1658,6 +1659,314 @@ export const PEERS_INTAKE: FormSection[] = [
   },
 ];
 
+// =============================================================================
+// CHILD INTAKE FORM  (from "Intake Form - Child.docx")
+// Detailed developmental / family intake for a child's psychological assessment.
+// Insurance + Informed Consent are appended automatically.
+// =============================================================================
+const CI_COMPARE = ["Same as other children the same age", "Advanced for their age", "Below level", "Very slow"];
+const CI_TIMING = [
+  "At the same age children usually do",
+  "Later than other children",
+  "Much later than other children",
+  "Don't know",
+];
+const CI_CLARITY = [
+  "Speaks clearly and can be understood by anyone",
+  "Can only be understood by those who know them",
+  "It is difficult to understand what is said",
+];
+const CI_WRITING = [
+  "Writes clearly and can be understood by anyone",
+  "Can only be understood by those who know them",
+  "It is difficult to understand what is written",
+];
+const CI_YNS = ["Yes", "No", "Sometimes"];
+const CI_MARITAL = ["Married", "Never Married", "Separated", "Domestic Partnership", "Widowed"];
+const CI_HEALTH = ["Very good", "Good", "Satisfactory", "Unsatisfactory", "Poor"];
+
+function childGuardianSection(who: "mother" | "father"): FormSection {
+  const p = who;
+  const Title = who === "mother" ? "Mother / Legal Guardian" : "Father / Legal Guardian";
+  return {
+    id: `child-${p}`,
+    title: Title,
+    fields: [
+      { name: `${p}_name`, label: `Name of ${who} / legal guardian`, type: "text" },
+      { name: `${p}_address`, label: "Home address", type: "textarea" },
+      { name: `${p}_dob`, label: "Date of birth", type: "date" },
+      { name: `${p}_email`, label: "Email", type: "email" },
+      { name: `${p}_home_phone`, label: "Telephone (home/cell)", type: "tel" },
+      { name: `${p}_work_phone`, label: "Telephone (work/cell)", type: "tel" },
+      { name: `${p}_marital_status`, label: "Marital status", type: "radio", options: CI_MARITAL },
+      { name: `${p}_employer`, label: "Employer", type: "text" },
+      { name: `${p}_work_address`, label: "Employer address", type: "textarea" },
+      { name: `${p}_occupation`, label: "Occupation", type: "text" },
+      { name: `${p}_employed_length`, label: "How long employed?", type: "text" },
+      { name: `${p}_education`, label: "Level of education", type: "radio", options: ["Elementary", "Secondary", "Tertiary"] },
+      { name: `${p}_num_children`, label: "Number of children", type: "number" },
+      { name: `${p}_birth_position`, label: "Birth position of the child", type: "text" },
+    ],
+  };
+}
+
+export const CHILD_INTAKE: FormSection[] = [
+  {
+    id: "ci-identifying",
+    title: "Identifying Information",
+    description:
+      "Kindly share your identifying information, family history, and current events. This provides useful information for your child's psychological assessment and treatment.",
+    fields: [
+      { name: "full_name", label: "Full name of child", type: "text", required: true },
+      { name: "home_address", label: "Home address", type: "textarea" },
+      { name: "dob", label: "Date of birth", type: "date", required: true },
+      { name: "gender", label: "Gender", type: "text" },
+      { name: "home_phone", label: "Telephone (home/cell)", type: "tel" },
+      { name: "work_phone", label: "Telephone (work/cell)", type: "tel" },
+      { name: "email", label: "Email", type: "email", required: true, help: EMAIL_NOTE },
+      { name: "language_at_home", label: "Language spoken at home", type: "text" },
+      { name: "school", label: "School", type: "text" },
+      { name: "grade", label: "Grade", type: "text" },
+      { name: "teacher_child_ratio", label: "Teacher / child ratio", type: "text" },
+      {
+        name: "referred_by",
+        label: "Who referred you for a psychological assessment?",
+        type: "textarea",
+        help: "Please specify name, address, and relationship.",
+      },
+      { name: "reason_for_referral", label: "Reason for referral", type: "textarea" },
+    ],
+  },
+  childGuardianSection("mother"),
+  childGuardianSection("father"),
+  {
+    id: "ci-development",
+    title: "Developmental Information",
+    description: "Please choose the response that best describes your child.",
+    fields: [
+      {
+        name: "compare_peers",
+        label: "How would you compare your child with other children the same age?",
+        type: "radio",
+        options: CI_COMPARE,
+      },
+      {
+        name: "talk_timing",
+        label: "Compared with other children, when did your child talk?",
+        type: "radio",
+        options: CI_TIMING,
+      },
+      {
+        name: "talk_timing_specify",
+        label: "If you don't know, please specify the reason",
+        type: "text",
+        showIf: { field: "talk_timing", equals: "Don't know" },
+      },
+      { name: "can_talk_now", label: "Can your child talk now?", type: "radio", options: YES_NO },
+      {
+        name: "speak_clearly",
+        label: "If yes, does your child speak clearly?",
+        type: "radio",
+        options: CI_CLARITY,
+        showIf: { field: "can_talk_now", equals: "Yes" },
+      },
+      {
+        name: "speak_clearly_specify",
+        label: "If it is difficult to understand, please specify the reason",
+        type: "text",
+        showIf: { field: "speak_clearly", equals: "It is difficult to understand what is said" },
+      },
+      {
+        name: "expressive_response",
+        label: "How does your child respond when asked a question? (expressive)",
+        type: "radio",
+        options: [
+          "Responds appropriately, using words to convey an understanding of what is asked",
+          "Responds by repeating what you say instead of giving an answer",
+          "Gives unusual answers to questions",
+          "Always asks you to repeat the question or explain",
+        ],
+      },
+      {
+        name: "receptive_response",
+        label: "How does your child respond when given a verbal instruction? (receptive)",
+        type: "radio",
+        options: [
+          "Responds appropriately by doing exactly as instructed",
+          "Usually hesitates until given a visual cue (pointing) or the instruction is repeated",
+          "Acts inappropriately, as if they do not understand the instruction given",
+          "Ignores the instruction given",
+        ],
+      },
+      {
+        name: "toilet_timing",
+        label: "At what age was your child toilet trained?",
+        type: "radio",
+        options: CI_TIMING,
+      },
+      {
+        name: "toilet_timing_specify",
+        label: "If you don't know, please specify the reason",
+        type: "text",
+        showIf: { field: "toilet_timing", equals: "Don't know" },
+      },
+      {
+        name: "handwriting",
+        label: "How does the teacher describe your child's handwriting?",
+        type: "radio",
+        options: CI_WRITING,
+      },
+      {
+        name: "handwriting_specify",
+        label: "If it is difficult to understand, please specify the reason",
+        type: "text",
+        showIf: { field: "handwriting", equals: "It is difficult to understand what is written" },
+      },
+      {
+        name: "walk_timing",
+        label: "Compared with other children, when did your child walk without help?",
+        type: "radio",
+        options: CI_TIMING,
+      },
+      {
+        name: "walk_timing_specify",
+        label: "If you don't know, please specify the reason",
+        type: "text",
+        showIf: { field: "walk_timing", equals: "Don't know" },
+      },
+      { name: "sees_well", label: "Does your child see well?", type: "radio", options: YES_NO },
+      {
+        name: "sees_well_specify",
+        label: "If no, please specify the reason",
+        type: "text",
+        showIf: { field: "sees_well", equals: "No" },
+      },
+      { name: "hears_well", label: "Does your child hear well?", type: "radio", options: CI_YNS },
+      {
+        name: "hears_well_specify",
+        label: "If no or sometimes, please specify the reason",
+        type: "text",
+        showIf: { field: "hears_well", in: ["No", "Sometimes"] },
+      },
+      {
+        name: "dresses_self",
+        label: "Does your child choose their own clothes and dress themselves?",
+        type: "radio",
+        options: CI_YNS,
+      },
+      {
+        name: "dresses_self_specify",
+        label: "If no or sometimes, please specify the reason",
+        type: "text",
+        showIf: { field: "dresses_self", in: ["No", "Sometimes"] },
+      },
+      { name: "eats_self", label: "Does your child eat on their own?", type: "radio", options: CI_YNS },
+      {
+        name: "eats_self_specify",
+        label: "If no or sometimes, please specify the reason",
+        type: "text",
+        showIf: { field: "eats_self", in: ["No", "Sometimes"] },
+      },
+      { name: "likes_games", label: "Does your child like to play games?", type: "radio", options: YES_NO },
+      {
+        name: "plays_with_peers",
+        label: "Does your child like to play with children their own age?",
+        type: "radio",
+        options: [
+          "Yes",
+          "No, they play with younger children",
+          "No, they play with older children",
+          "No, for another reason",
+        ],
+      },
+      {
+        name: "plays_with_peers_specify",
+        label: "If for another reason, please specify",
+        type: "text",
+        showIf: { field: "plays_with_peers", equals: "No, for another reason" },
+      },
+    ],
+  },
+  {
+    id: "ci-family",
+    title: "Family / Prenatal History",
+    fields: [
+      {
+        name: "physical_health",
+        label: "How would you rate your child's current physical health?",
+        type: "radio",
+        options: CI_HEALTH,
+      },
+      { name: "cond_allergies", label: "Does your child have allergies?", type: "radio", options: YES_NO },
+      {
+        name: "cond_respiratory",
+        label: "Does your child have respiratory problems (asthma, etc.)?",
+        type: "radio",
+        options: YES_NO,
+      },
+      { name: "cond_headache", label: "Does your child have constant headaches?", type: "radio", options: YES_NO },
+      { name: "cond_low_energy", label: "Does your child have low energy / tiredness?", type: "radio", options: YES_NO },
+      { name: "cond_high_energy", label: "Does your child have high energy?", type: "radio", options: YES_NO },
+      {
+        name: "cond_behavioural",
+        label: "Does your child have a behavioural challenge?",
+        type: "radio",
+        options: YES_NO,
+      },
+      { name: "cond_other", label: "Any other conditions?", type: "text" },
+      { name: "delivery_eventful", label: "Was your delivery eventful? Please describe.", type: "textarea" },
+      {
+        name: "apgar_score",
+        label: "APGAR score",
+        type: "radio",
+        options: ["Okay", "Not okay", "Don't know"],
+      },
+      { name: "low_birth_weight", label: "Low birth weight?", type: "radio", options: YES_NO },
+      {
+        name: "pregnancy_behaviour",
+        label: "Behaviour during pregnancy (select all that apply)",
+        type: "checkboxgroup",
+        options: ["Smoked / drug use", "Alcohol", "Medication", "Anxious / angry"],
+      },
+    ],
+  },
+  {
+    id: "ci-current-events",
+    title: "Current Events",
+    fields: [
+      {
+        name: "recent_changes",
+        label: "Recent changes in your child's life (select all that apply)",
+        type: "checkboxgroup",
+        options: [
+          "Divorce",
+          "Remarriage",
+          "Loss of a family member",
+          "Loss of a pet",
+          "Court / family services",
+          "Change or loss of teacher, school, or family member",
+        ],
+      },
+    ],
+  },
+  {
+    id: "ci-child-sheet",
+    title: "Child Information Sheet",
+    description: "This section is for the child to complete, in their own words.",
+    fields: [
+      { name: "favourite_subjects", label: "What are your favourite subjects?", type: "text" },
+      { name: "favourite_why", label: "Why?", type: "textarea" },
+      { name: "least_favourite_subjects", label: "What are your least favourite subjects?", type: "text" },
+      { name: "least_favourite_why", label: "Why?", type: "textarea" },
+      { name: "interests_goals", label: "My life's interests / goals", type: "textarea" },
+      { name: "leisure_time", label: "How do you use your leisure time?", type: "textarea" },
+      { name: "exercise_per_week", label: "How often do you exercise per week?", type: "text" },
+      { name: "chores", label: "What chores do you perform at home?", type: "text" },
+      { name: "fast_food_per_week", label: "How many times per week do you eat fast food?", type: "text" },
+    ],
+  },
+];
+
 export interface FormTemplate {
   key: FormTemplateKey;
   /** Internal name — what clinicians/admin see (dashboard, submissions, oversight). */
@@ -1753,6 +2062,14 @@ export const FORM_TEMPLATES = {
     label: "PEERS® Social Skills Program Intake",
     clientLabel: "PEERS® Social Skills Program - Parent/Caregiver Intake",
     body: PEERS_INTAKE,
+    appendConsent: true,
+  },
+  "child-intake": {
+    key: "child-intake",
+    label: "Child Intake Form",
+    clientLabel: "Child Intake Form",
+    body: CHILD_INTAKE,
+    appendInsurance: true,
     appendConsent: true,
   },
   ...L2_TEMPLATES,
