@@ -1559,9 +1559,9 @@ body:has(.biz) { background: var(--panel); }
 /* Installed home-screen app (standalone): a scheduling-only menu. Billing/intake
    stay reachable by direct link (e.g. "Log this session"), just not in the nav. */
 @media all and (display-mode: standalone) {
-  .bo-mobtabs a:not(.sched-keep),
+  .bo-mobtabs a:not([href="/today"]):not([href="/schedule"]),
   .bo-nav > div:not(:first-child),
-  .bo-nav > div:first-child > a:not(.sched-keep),
+  .bo-nav > div:first-child > a:not([href="/today"]):not([href="/schedule"]),
   .bo-nav > div:first-child > .bo-navl { display: none !important; }
 }
 .bo-mobtabs a.bo-mobglow::after { content: ""; position: absolute; top: 4px; right: 24%; width: 8px; height: 8px; border-radius: 50%; background: #2E8E93; animation: bo-mobglow 1.6s ease-in-out infinite; }
