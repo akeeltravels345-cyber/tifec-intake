@@ -8,7 +8,7 @@ export interface CopayRow { id: string; date: string; clientId: string | null; c
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function OutstandingCopays({ rows, today, showClinician, canToggle = false, scope = "all" }: { rows: CopayRow[]; today: string; showClinician: boolean; canToggle?: boolean; scope?: "all" | "mine" }) {
+export default function OutstandingCopays({ rows, today, showClinician, canToggle = false, scope = "all", clinicianName }: { rows: CopayRow[]; today: string; showClinician: boolean; canToggle?: boolean; scope?: "all" | "mine"; clinicianName?: string }) {
   const router = useRouter();
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState<string | null>(null);
@@ -49,9 +49,13 @@ export default function OutstandingCopays({ rows, today, showClinician, canToggl
   return (
     <>
       <div className="su-topbar">
-        <h1 className="su-h1">Outstanding co-pays</h1>
-        <p className="su-sub">Co-pays that were due at a visit but not collected. Record each one when it comes in, and it books to the date received.{scope === "mine" ? " Showing your clients." : ""}</p>
-        {canToggle && (
+        <h1 className="su-h1">Outstanding co-pays{clinicianName ? ` · ${clinicianName}` : ""}</h1>
+        <p className="su-sub">Co-pays that were due at a visit but not collected. Record each one when it comes in, and it books to the date received.{clinicianName ? ` Showing ${clinicianName}'s clients.` : scope === "mine" ? " Showing your clients." : ""}</p>
+        {clinicianName ? (
+          <div className="cp-scope">
+            <Link href="/billing/copays?scope=all" className="cp-scopebtn">← Everyone&apos;s co-pays</Link>
+          </div>
+        ) : canToggle && (
           <div className="cp-scope" role="tablist" aria-label="Whose co-pays">
             <Link href="/billing/copays?scope=mine" className={`cp-scopebtn ${scope === "mine" ? "on" : ""}`} role="tab" aria-selected={scope === "mine"}>My clients</Link>
             <Link href="/billing/copays?scope=all" className={`cp-scopebtn ${scope === "all" ? "on" : ""}`} role="tab" aria-selected={scope === "all"}>Everyone</Link>
