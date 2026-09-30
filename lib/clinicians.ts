@@ -78,7 +78,7 @@ export const CLINICIANS: Clinician[] = [
     id: "shion-oconnor",
     billingBeta: true, // BETA billing access
     contact: "owner",
-    name: "P. Gayle",
+    name: "Paulette Gayle",
     photo: "/clinicians/shion-oconnor.webp",
     credentials: "Clinical Psychologist · Founder",
     email: "Pgayle@selahtherapeutics.ky",
