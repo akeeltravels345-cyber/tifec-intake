@@ -9,7 +9,10 @@ interface Avail { clinicianId: string; weekly: DayHours[]; overrides: DateOverri
 
 const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_START = 7, DAY_END = 20, HOUR = 92; // 7am-8pm, 92px/hour (roomy so a session's details fit)
+const DAY_START = 7, DAY_END = 20; // 7am-8pm
+// Vertical scale of the day/week grid. Phones get a taller hour so a short
+// (15-30 min) appointment still has room to show the client name + time.
+const HOUR_DESKTOP = 92, HOUR_PHONE = 140;
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
 // How a mode reads on the calendar block (Acuity-style) and its colour.
 const CAL_MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In Person", virtual: "Online", either: "In Person / Online" };
@@ -98,6 +101,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
+  const [phone, setPhone] = useState(false); // taller grid rows on phones
+  const HOUR = phone ? HOUR_PHONE : HOUR_DESKTOP;
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
   const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number; status?: "not_required" | "pending" | "received"; missing?: string[] } } | null>(null);
   async function loadLinks(a: Appointment) {
@@ -171,9 +176,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   // Phones open on Day view — a 7-column week grid is unusable at phone width.
   // Only nudges the initial default; a manual pick of Week/Month afterwards stays.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) {
-      setView((v) => (v === "week" ? "day" : v));
-    }
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setPhone(mq.matches);
+    apply();
+    if (mq.matches) setView((v) => (v === "week" ? "day" : v));
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   const typeById = (id: string | null) => types.find((t) => t.id === id) || null;
