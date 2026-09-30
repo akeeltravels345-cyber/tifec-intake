@@ -3,17 +3,24 @@
 // authenticated pages or API responses, so clinicians always see live data.
 const CACHE = "tifec-static-v3";
 
+// On a dev host, never cache: Next serves stable-named chunks in dev, so a
+// cached copy would shadow freshly edited code between server restarts.
+const IS_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(self.location.hostname)
+  || self.location.hostname.endsWith(".localhost");
+
 self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    // Drop stale caches; on a dev host drop everything (including CACHE).
+    await Promise.all(keys.filter((k) => IS_LOCAL || k !== CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
 self.addEventListener("fetch", (e) => {
+  if (IS_LOCAL) return; // dev: always straight to network, never cache
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
