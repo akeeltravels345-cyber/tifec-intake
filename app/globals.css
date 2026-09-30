@@ -4026,14 +4026,15 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
   .cal-bar { margin-bottom: 10px; }
   .cal-bar-row { gap: 8px; }
   .cal-week { font: 400 18px "Newsreader", serif; }
-  .cal-bar-tools { flex-direction: row; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; }
-  .cal-bar-tools .cal-sp { display: block; flex: 1; }
-  .cal-whoseg {
+  .cal-bar .cal-bar-tools { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; }
+  .cal-bar-tools .cal-sp { display: none; }
+  .cal-bar .cal-whoseg {
+    flex: 1; min-width: 0;
     flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
-    min-width: 0; scrollbar-width: none;
+    scrollbar-width: none;
   }
-  .cal-whoseg::-webkit-scrollbar { display: none; }
-  .cal-whoseg button { flex: none; }
+  .cal-bar .cal-whoseg::-webkit-scrollbar { display: none; }
+  .cal-bar .cal-whoseg button { flex: none; }
   .cal-toolswrap { position: relative; flex: none; }
   .cal-moretoggle {
     display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
