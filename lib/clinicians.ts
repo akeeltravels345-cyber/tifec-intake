@@ -81,7 +81,7 @@ export const CLINICIANS: Clinician[] = [
     name: "Dr. Sarah Bennett",
     photo: "/clinicians/shion-oconnor.webp",
     credentials: "Clinical Psychologist · Founder",
-    email: "owner@demopractice.com",
+    email: "Pgayle@selahtherapeutics.ky",
     forms: [
       "individual",
       "couples",
