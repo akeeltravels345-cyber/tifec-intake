@@ -78,7 +78,7 @@ export const CLINICIANS: Clinician[] = [
     id: "shion-oconnor",
     billingBeta: true, // BETA billing access
     contact: "owner",
-    name: "Dr. Sarah Bennett",
+    name: "P. Gayle",
     photo: "/clinicians/shion-oconnor.webp",
     credentials: "Clinical Psychologist · Founder",
     email: "Pgayle@selahtherapeutics.ky",
@@ -295,9 +295,9 @@ export const CLINICIANS: Clinician[] = [
     contact: "biller",
     practicum: true, // biller who also treats practicum (unpaid) clients — assignable as a treating clinician for session notes
     privateBooking: true, // bookable for his practicum clients via a direct link, hidden from the public picker
-    name: "Mark Davis",
+    name: "Nick O'Connor",
     credentials: "Billing Coordinator",
-    email: "billing@demopractice.com",
+    email: "tifec.billing@gmail.com",
     forms: [
       "individual",
       "couples",
