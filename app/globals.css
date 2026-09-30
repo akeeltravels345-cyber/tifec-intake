@@ -1556,13 +1556,18 @@ body:has(.biz) { background: var(--panel); }
 @media (prefers-reduced-motion: reduce) { .bo-nav a.bo-navglow { animation: none; box-shadow: inset 0 0 0 1.5px rgba(67,169,174,.7); } }
 /* Mobile bottom tab highlight: teal label + a pulsing dot. */
 .bo-mobtabs a.bo-mobglow { color: var(--teal-deep, #1f6d70); }
-/* Installed home-screen app (standalone): a scheduling-only menu. Billing/intake
-   stay reachable by direct link (e.g. "Log this session"), just not in the nav. */
+/* Installed home-screen app (standalone): a scheduling-only menu everywhere. */
 @media all and (display-mode: standalone) {
   .bo-mobtabs a:not([href="/today"]):not([href="/schedule"]),
   .bo-nav > div:not(:first-child),
   .bo-nav > div:first-child > a:not([href="/today"]):not([href="/schedule"]),
   .bo-nav > div:first-child > .bo-navl { display: none !important; }
+}
+/* On any phone (bottom-tab layout, <=820px) the app is scheduling-first, so the
+   bottom bar shows only Today + Schedule — whether installed or in the browser.
+   Billing/intake stay reachable by direct link (e.g. "Log this session"). */
+@media (max-width: 820px) {
+  .bo-mobtabs a:not([href="/today"]):not([href="/schedule"]) { display: none !important; }
 }
 .bo-mobtabs a.bo-mobglow::after { content: ""; position: absolute; top: 4px; right: 24%; width: 8px; height: 8px; border-radius: 50%; background: #2E8E93; animation: bo-mobglow 1.6s ease-in-out infinite; }
 @keyframes bo-mobglow { 0%, 100% { box-shadow: 0 0 0 0 rgba(46,142,147,.5); } 50% { box-shadow: 0 0 0 5px rgba(46,142,147,0); } }
@@ -4012,8 +4017,9 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-tools { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cal-tools .cal-hours { margin-right: 0; }
 /* Phone calendar: tighter toolbar; filter + tools become single swipeable rows
-   instead of wrapping into many, so the calendar itself gets the space. */
-@media (max-width: 640px) {
+   instead of wrapping into many, so the calendar itself gets the space. Matches
+   the 820px point where the app switches to the bottom-tab (mobile) layout. */
+@media (max-width: 820px) {
   .cal-bar { margin-bottom: 10px; }
   .cal-bar-row { gap: 8px; }
   .cal-week { font: 400 18px "Newsreader", serif; }
