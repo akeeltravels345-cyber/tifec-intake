@@ -166,6 +166,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (res.ok) { setAppts(data.appointments || []); setExtBusy(data.externalBusy || []); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [view, anchor, who]);
+  // Phones open on Day view — a 7-column week grid is unusable at phone width.
+  // Only nudges the initial default; a manual pick of Week/Month afterwards stays.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches) {
+      setView((v) => (v === "week" ? "day" : v));
+    }
+  }, []);
 
   const typeById = (id: string | null) => types.find((t) => t.id === id) || null;
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || id;

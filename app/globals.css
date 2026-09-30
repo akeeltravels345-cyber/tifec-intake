@@ -4007,6 +4007,22 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-bar-tools { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .cal-tools { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cal-tools .cal-hours { margin-right: 0; }
+/* Phone calendar: tighter toolbar; filter + tools become single swipeable rows
+   instead of wrapping into many, so the calendar itself gets the space. */
+@media (max-width: 640px) {
+  .cal-bar { margin-bottom: 10px; }
+  .cal-bar-row { gap: 8px; }
+  .cal-week { font: 400 18px "Newsreader", serif; }
+  /* Row 2 stacks: a filter row, then a tools row, each swiping horizontally. */
+  .cal-bar-tools { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 10px; padding-top: 10px; }
+  .cal-bar-tools .cal-sp { display: none; }
+  .cal-whoseg, .cal-tools {
+    flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+    max-width: 100%; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .cal-whoseg::-webkit-scrollbar, .cal-tools::-webkit-scrollbar { display: none; }
+  .cal-whoseg button, .cal-tools > * { flex: none; }
+}
 .cal-nav { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .cal-nav button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 8px 13px; cursor: pointer; }
 .cal-nav button:first-child { border-left: 0; }
