@@ -1,10 +1,9 @@
 -- =============================================================================
 -- demo-setup.sql  ·  ONE-PASTE database setup for a fresh (demo or new) instance.
--- Generated from the individual schema + migration files, in dependency order.
--- Paste this once into the Neon SQL Editor of a NEW, EMPTY database.
--- Safe on a fresh DB. Do not run against a database that already has data.
+-- Base schemas, table-creating migrations, column migrations, scheduling base +
+-- catch-up, the self-created tables, and the sample config seed. Paste once into
+-- a NEW, EMPTY database (Neon SQL Editor). Do not run against a DB with data.
 -- =============================================================================
-
 
 -- >>>>>>>>>> db/schema.sql
 
@@ -303,67 +302,6 @@ CREATE TABLE IF NOT EXISTS comms_groups (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- >>>>>>>>>> db/migrate-avatar.sql
-
--- Per-user profile photo (small square JPEG data URL). Null = no photo.
--- Safe to run more than once.
-ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS avatar TEXT;
-
--- >>>>>>>>>> db/migrate-bill-note.sql
-
--- A biller's short note on a claim in the billing queue (e.g. why it isn't
--- billed yet, like "waiting on auth"). Operational, not clinical — it shows in
--- the To-bill queue and, read-only, to the clinician on their payout page and
--- the client record, so a claim sitting for days reads as "in hand", not
--- forgotten. Capped to 40 chars in the app. ADDITIVE and re-runnable.
-
-ALTER TABLE billing_sessions
-  ADD COLUMN IF NOT EXISTS bill_note TEXT;
-
--- >>>>>>>>>> db/migrate-biller-base.sql
-
--- The biller's per-clinician % is charged on what the clinician RECEIVES AFTER
--- the company retention (their after-retention share), not the gross insurance
--- billed. That's the default (stored as 0 = "auto"). A non-zero value is an
--- explicit override for a special deal — Nick bills Joan on 70% of hers right now.
-ALTER TABLE billing_clinician_settings
-  ADD COLUMN IF NOT EXISTS biller_base_pct NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE billing_clinician_settings
-  ALTER COLUMN biller_base_pct SET DEFAULT 0;
-
--- If an earlier version defaulted this to 100 (charge on the full billed amount),
--- reset those to 0 so they use the correct after-retention base.
-UPDATE billing_clinician_settings SET biller_base_pct = 0 WHERE biller_base_pct = 100;
-
--- Joan's special arrangement with Nick.
-UPDATE billing_clinician_settings
-  SET biller_base_pct = 70, updated_at = now()
-  WHERE clinician_id = 'joan-latty';
-
--- >>>>>>>>>> db/migrate-biller-commission-applies.sql
-
--- The practice-wide biller commission (3% of company retention) is only agreed
--- for select clinicians. This flag opts a clinician in; default off for everyone,
--- pre-enabled for Sofia Hamilton and Joan Latty (the two it currently applies to).
-ALTER TABLE billing_clinician_settings
-  ADD COLUMN IF NOT EXISTS biller_commission_applies BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Pre-enable the two clinicians it applies to today. If they don't have a
--- settings row yet, create one with the practice defaults.
-INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, pension, biller_commission_applies, updated_at)
-VALUES
-  ('sofia-hamilton', 40, 0, 0, 0, TRUE, now()),
-  ('joan-latty',     40, 0, 0, 0, TRUE, now())
-ON CONFLICT (clinician_id) DO UPDATE SET biller_commission_applies = TRUE, updated_at = now();
-
--- >>>>>>>>>> db/migrate-builder-tasks-archived.sql
-
--- Migration: archiving for worklists. A finished heading can be archived (tucked
--- into an "Archived" section) without deleting it; individual finished tasks are
--- archived inside the subs JSON, so only the heading-level flag needs a column.
--- ADDITIVE and safe to run more than once.
-ALTER TABLE builder_tasks ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
-
 -- >>>>>>>>>> db/migrate-builder-tasks.sql
 
 -- Migration: per-user worklists (the "My worklist" panel on Today, the business
@@ -480,6 +418,144 @@ CREATE TABLE IF NOT EXISTS comms_groups (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- >>>>>>>>>> db/migrate-email-log.sql
+
+-- Migration: email delivery log. Safe, additive. Run once on live.
+CREATE TABLE IF NOT EXISTS comms_email_log (
+  id              TEXT PRIMARY KEY,
+  recipient_id    TEXT,
+  recipient_email TEXT,
+  kind            TEXT,
+  status          TEXT NOT NULL,
+  detail          TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comms_email_log_at ON comms_email_log (created_at DESC);
+
+-- >>>>>>>>>> db/migrate-import-staging.sql
+
+-- Staging table for records imported from an external report (e.g. the PRC
+-- "Unpaid Services Report") so the biller can review, edit and accept them one
+-- by one before they become real billing sessions. Nothing here is live until
+-- the biller accepts it.
+CREATE TABLE IF NOT EXISTS billing_import_staging (
+  id              text PRIMARY KEY,
+  batch           text NOT NULL,
+  clinician_id    text NOT NULL,
+  client_first    text,
+  client_last     text,
+  dob             text,
+  insurer_name    text,
+  cpt             text,
+  fee             numeric,
+  duration_hours  numeric,
+  date_of_service text,
+  billed_date     text,
+  inv_no          text,
+  status          text NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected
+  created_at      text NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_import_staging_status ON billing_import_staging(status);
+CREATE INDEX IF NOT EXISTS idx_import_staging_batch  ON billing_import_staging(batch);
+
+-- >>>>>>>>>> db/migrate-insurer-created-at.sql
+
+-- billing_insurers.created_at was added to db/billing-schema.sql after some
+-- databases had already created the table (CREATE TABLE IF NOT EXISTS no-ops on
+-- an existing table), so those tables never gained the column. This backfills
+-- it. Idempotent and safe to re-run. No application code depends on the column.
+ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+
+-- >>>>>>>>>> db/migrate-notice-acks.sql
+
+-- Notice acknowledgements + "ask for acknowledgement" state, kept in a separate
+-- table so the notices table is untouched. Reads degrade to "no acks" if this
+-- hasn't been run yet (the app never 500s on a missing table).
+CREATE TABLE IF NOT EXISTS comms_notice_meta (
+  notice_id text PRIMARY KEY,
+  ask_ack   boolean NOT NULL DEFAULT false,
+  acks      jsonb   NOT NULL DEFAULT '[]'::jsonb
+);
+
+-- >>>>>>>>>> db/migrate-session-notes.sql
+
+-- Clinical session notes (SOAP). The note body is encrypted at rest (PHI); only
+-- clinicians linked to the client ever see the content. Optionally tied to a
+-- logged visit (session_id).
+CREATE TABLE IF NOT EXISTS session_notes (
+  id           text PRIMARY KEY,
+  client_id    text NOT NULL,
+  clinician_id text NOT NULL,       -- author
+  session_id   text,                -- optional link to a billing session (visit)
+  note_date    text NOT NULL,       -- YYYY-MM-DD
+  body_enc     text NOT NULL,       -- encrypted JSON { s, o, a, p }
+  created_at   text NOT NULL,
+  updated_at   text NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_session_notes_client ON session_notes(client_id);
+CREATE INDEX IF NOT EXISTS idx_session_notes_clin   ON session_notes(clinician_id);
+
+-- >>>>>>>>>> db/migrate-avatar.sql
+
+-- Per-user profile photo (small square JPEG data URL). Null = no photo.
+-- Safe to run more than once.
+ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS avatar TEXT;
+
+-- >>>>>>>>>> db/migrate-bill-note.sql
+
+-- A biller's short note on a claim in the billing queue (e.g. why it isn't
+-- billed yet, like "waiting on auth"). Operational, not clinical — it shows in
+-- the To-bill queue and, read-only, to the clinician on their payout page and
+-- the client record, so a claim sitting for days reads as "in hand", not
+-- forgotten. Capped to 40 chars in the app. ADDITIVE and re-runnable.
+
+ALTER TABLE billing_sessions
+  ADD COLUMN IF NOT EXISTS bill_note TEXT;
+
+-- >>>>>>>>>> db/migrate-biller-base.sql
+
+-- The biller's per-clinician % is charged on what the clinician RECEIVES AFTER
+-- the company retention (their after-retention share), not the gross insurance
+-- billed. That's the default (stored as 0 = "auto"). A non-zero value is an
+-- explicit override for a special deal — Nick bills Joan on 70% of hers right now.
+ALTER TABLE billing_clinician_settings
+  ADD COLUMN IF NOT EXISTS biller_base_pct NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE billing_clinician_settings
+  ALTER COLUMN biller_base_pct SET DEFAULT 0;
+
+-- If an earlier version defaulted this to 100 (charge on the full billed amount),
+-- reset those to 0 so they use the correct after-retention base.
+UPDATE billing_clinician_settings SET biller_base_pct = 0 WHERE biller_base_pct = 100;
+
+-- Joan's special arrangement with Nick.
+UPDATE billing_clinician_settings
+  SET biller_base_pct = 70, updated_at = now()
+  WHERE clinician_id = 'joan-latty';
+
+-- >>>>>>>>>> db/migrate-biller-commission-applies.sql
+
+-- The practice-wide biller commission (3% of company retention) is only agreed
+-- for select clinicians. This flag opts a clinician in; default off for everyone,
+-- pre-enabled for Sofia Hamilton and Joan Latty (the two it currently applies to).
+ALTER TABLE billing_clinician_settings
+  ADD COLUMN IF NOT EXISTS biller_commission_applies BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Pre-enable the two clinicians it applies to today. If they don't have a
+-- settings row yet, create one with the practice defaults.
+INSERT INTO billing_clinician_settings (clinician_id, retention_pct, other_deduction_pct, other_deduction_fixed, pension, biller_commission_applies, updated_at)
+VALUES
+  ('sofia-hamilton', 40, 0, 0, 0, TRUE, now()),
+  ('joan-latty',     40, 0, 0, 0, TRUE, now())
+ON CONFLICT (clinician_id) DO UPDATE SET biller_commission_applies = TRUE, updated_at = now();
+
+-- >>>>>>>>>> db/migrate-builder-tasks-archived.sql
+
+-- Migration: archiving for worklists. A finished heading can be archived (tucked
+-- into an "Archived" section) without deleting it; individual finished tasks are
+-- archived inside the subs JSON, so only the heading-level flag needs a column.
+-- ADDITIVE and safe to run more than once.
+ALTER TABLE builder_tasks ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
+
 -- >>>>>>>>>> db/migrate-copay-due.sql
 
 -- Migration: track the co-pay that SHOULD have been collected, so uncollected
@@ -526,51 +602,11 @@ ALTER TABLE billing_cpt_codes ADD COLUMN IF NOT EXISTS variants jsonb;
 ALTER TABLE billing_client_docs
   ADD COLUMN IF NOT EXISTS name TEXT;
 
--- >>>>>>>>>> db/migrate-email-log.sql
-
--- Migration: email delivery log. Safe, additive. Run once on live.
-CREATE TABLE IF NOT EXISTS comms_email_log (
-  id              TEXT PRIMARY KEY,
-  recipient_id    TEXT,
-  recipient_email TEXT,
-  kind            TEXT,
-  status          TEXT NOT NULL,
-  detail          TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS comms_email_log_at ON comms_email_log (created_at DESC);
-
 -- >>>>>>>>>> db/migrate-idle-minutes.sql
 
 -- Per-user auto-logout window (minutes). Null / absent = default (15).
 -- Safe to run more than once.
 ALTER TABLE clinician_users ADD COLUMN IF NOT EXISTS idle_minutes INTEGER;
-
--- >>>>>>>>>> db/migrate-import-staging.sql
-
--- Staging table for records imported from an external report (e.g. the PRC
--- "Unpaid Services Report") so the biller can review, edit and accept them one
--- by one before they become real billing sessions. Nothing here is live until
--- the biller accepts it.
-CREATE TABLE IF NOT EXISTS billing_import_staging (
-  id              text PRIMARY KEY,
-  batch           text NOT NULL,
-  clinician_id    text NOT NULL,
-  client_first    text,
-  client_last     text,
-  dob             text,
-  insurer_name    text,
-  cpt             text,
-  fee             numeric,
-  duration_hours  numeric,
-  date_of_service text,
-  billed_date     text,
-  inv_no          text,
-  status          text NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected
-  created_at      text NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_import_staging_status ON billing_import_staging(status);
-CREATE INDEX IF NOT EXISTS idx_import_staging_batch  ON billing_import_staging(batch);
 
 -- >>>>>>>>>> db/migrate-insurance-adjust.sql
 
@@ -597,14 +633,6 @@ ALTER TABLE billing_insurers
 -- Migration: per-insurer payer code for CMS-1500 (box 10d / header, e.g. "362").
 -- Safe, additive. Run once on the live Neon database.
 ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS claim_code TEXT;
-
--- >>>>>>>>>> db/migrate-insurer-created-at.sql
-
--- billing_insurers.created_at was added to db/billing-schema.sql after some
--- databases had already created the table (CREATE TABLE IF NOT EXISTS no-ops on
--- an existing table), so those tables never gained the column. This backfills
--- it. Idempotent and safe to re-run. No application code depends on the column.
-ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 
 -- >>>>>>>>>> db/migrate-insurer-email.sql
 
@@ -635,17 +663,6 @@ UPDATE billing_clinician_settings
   SET no_payout = FALSE, retention_pct = 40, updated_at = now()
   WHERE clinician_id = 'shion-oconnor';
 
--- >>>>>>>>>> db/migrate-notice-acks.sql
-
--- Notice acknowledgements + "ask for acknowledgement" state, kept in a separate
--- table so the notices table is untouched. Reads degrade to "no acks" if this
--- hasn't been run yet (the app never 500s on a missing table).
-CREATE TABLE IF NOT EXISTS comms_notice_meta (
-  notice_id text PRIMARY KEY,
-  ask_ack   boolean NOT NULL DEFAULT false,
-  acks      jsonb   NOT NULL DEFAULT '[]'::jsonb
-);
-
 -- >>>>>>>>>> db/migrate-pension-pct.sql
 
 -- Migration: pension is now a % of the clinician's after-retention share (the
@@ -670,24 +687,6 @@ ALTER TABLE billing_clinician_settings ADD COLUMN IF NOT EXISTS pension NUMERIC 
 
 ALTER TABLE billing_sessions ADD COLUMN IF NOT EXISTS self_pay_status text;
 
--- >>>>>>>>>> db/migrate-session-notes.sql
-
--- Clinical session notes (SOAP). The note body is encrypted at rest (PHI); only
--- clinicians linked to the client ever see the content. Optionally tied to a
--- logged visit (session_id).
-CREATE TABLE IF NOT EXISTS session_notes (
-  id           text PRIMARY KEY,
-  client_id    text NOT NULL,
-  clinician_id text NOT NULL,       -- author
-  session_id   text,                -- optional link to a billing session (visit)
-  note_date    text NOT NULL,       -- YYYY-MM-DD
-  body_enc     text NOT NULL,       -- encrypted JSON { s, o, a, p }
-  created_at   text NOT NULL,
-  updated_at   text NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_session_notes_client ON session_notes(client_id);
-CREATE INDEX IF NOT EXISTS idx_session_notes_clin   ON session_notes(clinician_id);
-
 -- >>>>>>>>>> db/migrate-ticket-entered-by.sql
 
 -- "On behalf of" tickets: when someone calls or messages about an issue and a
@@ -700,6 +699,73 @@ CREATE INDEX IF NOT EXISTS idx_session_notes_clin   ON session_notes(clinician_i
 
 ALTER TABLE comms_tickets
   ADD COLUMN IF NOT EXISTS entered_by TEXT;
+
+-- >>>>>>>>>> db/scheduling-base.sql
+
+-- =============================================================================
+-- Scheduling base tables. These three were originally created by hand on prod
+-- and never committed as SQL; reconstructed from lib/scheduling.ts so a fresh
+-- database (demo or new instance) can be stood up. The catch-up columns and the
+-- waitlist/settings/video/offers tables are added by scheduling-migrations.sql,
+-- which must run AFTER this file. Idempotent.
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS scheduling_appointment_types (
+  id                      text PRIMARY KEY,
+  name                    text,
+  category                text,
+  duration_min            integer DEFAULT 60,
+  buffer_before_min       integer DEFAULT 0,
+  buffer_after_min        integer DEFAULT 0,
+  price                   numeric DEFAULT 0,
+  color                   text,
+  mode                    text,
+  baseline_cpt_codes      jsonb DEFAULT '[]'::jsonb,
+  intake_form_key         text,
+  new_client_intake_only  boolean DEFAULT false,
+  active                  boolean DEFAULT true,
+  sort_order              integer DEFAULT 0,
+  created_at              text,
+  updated_at              text
+);
+
+CREATE TABLE IF NOT EXISTS scheduling_availability (
+  clinician_id      text PRIMARY KEY,
+  weekly            jsonb DEFAULT '[]'::jsonb,
+  overrides         jsonb DEFAULT '[]'::jsonb,
+  min_notice_hours  integer DEFAULT 0,
+  book_ahead_days   integer DEFAULT 60,
+  max_per_day       integer,
+  slot_interval_min integer DEFAULT 15,
+  updated_at        text
+);
+
+CREATE TABLE IF NOT EXISTS scheduling_appointments (
+  id                 text PRIMARY KEY,
+  kind               text,
+  client_id          text,
+  client_name        text,
+  client_email       text,
+  clinician_id       text,
+  type_id            text,
+  title              text,
+  start_at           timestamptz,
+  end_at             timestamptz,
+  mode               text,
+  location_or_link   text,
+  status             text,
+  insurance_path     text,
+  insurer_id         text,
+  policy_no          text,
+  intake_status      text,
+  billing_session_id text,
+  notes              text,
+  created_by         text,
+  source             text,
+  created_at         text,
+  updated_at         text
+);
+CREATE INDEX IF NOT EXISTS scheduling_appointments_start_idx ON scheduling_appointments (start_at);
 
 -- >>>>>>>>>> scheduling-migrations.sql
 
