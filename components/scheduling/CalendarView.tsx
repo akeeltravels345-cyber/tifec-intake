@@ -35,6 +35,7 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
   wand: <><path d="M12 3l1.7 3.9L18 8.5l-3.9 1.6L12 14l-1.6-3.9L6 8.5l3.9-1.6z" /><path d="M18.5 14.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" /></>,
+  dots: <><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></>,
 };
 function ToolIcon({ name }: { name: string }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{TOOL_ICONS[name]}</svg>;
@@ -96,6 +97,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [busyInfo, setBusyInfo] = useState<{ name: string; source: string; when: string; clinicianId: string } | null>(null);
   const [who, setWho] = useState<string>(lockedClinicianId || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
+  const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
   const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number; status?: "not_required" | "pending" | "received"; missing?: string[] } } | null>(null);
   async function loadLinks(a: Appointment) {
@@ -362,13 +364,20 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             </div>
           )}
           <span className="cal-sp" />
-          <div className="cal-tools">
-            {setupHref && <a className="cal-hours cal-setup" href={setupHref}><ToolIcon name="wand" /><span>Set up</span></a>}
-            {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
-            {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
-            {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
-            {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
-            {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
+          <div className="cal-toolswrap">
+            {/* On phones the tools collapse behind this "More" button. */}
+            <button type="button" className="cal-moretoggle" aria-expanded={moreOpen} aria-haspopup="true" onClick={() => setMoreOpen((o) => !o)}>
+              <ToolIcon name="dots" /><span>More</span>
+            </button>
+            {moreOpen && <div className="cal-moreoverlay" onClick={() => setMoreOpen(false)} />}
+            <div className={`cal-tools ${moreOpen ? "open" : ""}`} onClick={() => setMoreOpen(false)}>
+              {setupHref && <a className="cal-hours cal-setup" href={setupHref}><ToolIcon name="wand" /><span>Set up</span></a>}
+              {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
+              {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
+              {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
+              {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
+              {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
+            </div>
           </div>
         </div>
       </div>
