@@ -8,7 +8,7 @@
   --edge: #ECE6DA; --hair: #F0EADE;
   --amber: #BE8127; --amber-bg: #F6ECD9; --amber-line: #ECD9B8;
   --neg: #a5432f; --pos: #2c7a55; --green: #2c7a55; --neg-bg: #fbeeea; --pos-bg: #e7f3ec;
-  /* TIFEC brand palette (official: indigo + teal) */
+  /* Demo Practice brand palette (official: indigo + teal) */
   --teal: #319A9F;        /* brand teal accent */
   --teal-dark: #2a8488;
   --gold: #e7c350;        /* light accent */
@@ -20,7 +20,7 @@
   --ink: #232a3d;
   --muted: #6b7679;
   --line: #e3e9ed;        /* cool border */
-  --brand: #2E3192;       /* TIFEC indigo - primary actions */
+  --brand: #2E3192;       /* Demo Practice indigo - primary actions */
   --brand-dark: #25276f;
   --brand-tint: #eceef7;  /* light indigo wash for selected/tabs */
   --brand-glow: rgba(46, 49, 146, 0.2);

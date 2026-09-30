@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 // Public page (no login) so Zoom/Google reviewers and clinicians can read it.
-export const metadata: Metadata = { title: "Connecting video for appointments · Cayman Essential Care" };
+export const metadata: Metadata = { title: "Connecting video for appointments · Demo Practice" };
 
 const CONTACT_EMAIL = "Therapy@caymanessentialcare.com";
 
@@ -9,7 +9,7 @@ export default function VideoDocsPage() {
   return (
     <main className="lgl">
       <h1>Connecting video for your appointments</h1>
-      <p className="lgl-sub">How to add, use, and remove Zoom and Google Meet in the Cayman Essential Care scheduling app</p>
+      <p className="lgl-sub">How to add, use, and remove Zoom and Google Meet in the Demo Practice scheduling app</p>
 
       <p>
         Your schedule can create a Zoom or Google Meet link automatically for each of your virtual appointments, using
@@ -45,7 +45,7 @@ export default function VideoDocsPage() {
         Contact us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> and we will be glad to help.
       </p>
 
-      <div className="lgl-foot">Cayman Essential Care · Scheduling app documentation</div>
+      <div className="lgl-foot">Demo Practice · Scheduling app documentation</div>
     </main>
   );
 }

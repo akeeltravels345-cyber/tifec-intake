@@ -109,7 +109,7 @@ export default function NoticeBoard({ notices, canPost, meId = "", isAdmin = fal
       <div className="tm-head">
         <div>
           <h1 className="tm-h1">Notice board</h1>
-          <p className="tm-sub">Announcements for everyone at TIFEC.{isAdmin && <> · <Link href="/team/email-log" className="tm-editlink">Email delivery</Link></>}</p>
+          <p className="tm-sub">Announcements for everyone at Demo Practice.{isAdmin && <> · <Link href="/team/email-log" className="tm-editlink">Email delivery</Link></>}</p>
         </div>
         {canPost && <button className="tm-cta" onClick={() => setOpen(!open)}>{open ? "Cancel" : "Post a notice"}</button>}
       </div>

@@ -4,8 +4,8 @@ export default function Home() {
   return (
     <div className="container">
       <div className="card hero">
-        <span className="hero-eyebrow">The Institute for Essential Care</span>
-        <h1 className="hero-title">Welcome to TIFEC</h1>
+        <span className="hero-eyebrow">Demo Practice</span>
+        <h1 className="hero-title">Welcome to Demo Practice</h1>
         <p className="hero-sub">
           This is our secure portal for client intake forms. Choose the option below that
           applies to you.

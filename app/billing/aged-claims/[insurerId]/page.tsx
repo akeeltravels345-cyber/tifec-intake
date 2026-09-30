@@ -46,7 +46,7 @@ export default async function InsurerAgedClaimsPage({ params }: { params: Promis
         rows={rows}
         insurerName={insurer.name}
         claimCode={insurer.claimCode ?? null}
-        practiceName={cfg.provider?.practiceName || "TIFEC · Essential Care"}
+        practiceName={cfg.provider?.practiceName || "Demo Practice"}
         asOf={today}
       />
     </div>

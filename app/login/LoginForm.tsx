@@ -33,7 +33,7 @@ export default function LoginForm({ next }: { next: string }) {
   return (
     <form className="auth-form-inner" onSubmit={submit}>
       <h1 className="auth-heading">Welcome back</h1>
-      <p className="auth-subtle">Sign in to your TIFEC clinician dashboard.</p>
+      <p className="auth-subtle">Sign in to your Demo Practice clinician dashboard.</p>
 
       {error && (
         <div className="auth-error" role="alert">

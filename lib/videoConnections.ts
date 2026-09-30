@@ -268,7 +268,7 @@ export async function cancelVideoLink(clinicianId: string, locationOrLink: strin
 
 // ---------------------------------------------------------------------------
 // General Google Calendar sync (every appointment, not just virtual). Lets a
-// clinician who connected Google see their whole TIFEC schedule appear on their
+// clinician who connected Google see their whole Demo Practice schedule appear on their
 // Google Calendar instantly, updated/removed as bookings change.
 // ---------------------------------------------------------------------------
 export async function getGoogleConnection(clinicianId: string): Promise<VideoConnection | null> {

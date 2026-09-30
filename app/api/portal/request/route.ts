@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     if (await hasAppointmentsFor(email)) {
       const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
       const link = `${origin}/portal/${portalToken(email)}`;
-      await sendBrandedEmail(email, "Your appointments at The Institute for Essential Care", {
+      await sendBrandedEmail(email, "Your appointments at Demo Practice", {
         heading: "Here's your link",
         greetingName: undefined,
         intro: "Tap below to see your appointments, complete any intake, and manage your bookings. The link is just for you and works for 30 days.",

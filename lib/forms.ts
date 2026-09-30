@@ -1,5 +1,5 @@
 // =============================================================================
-// TIFEC intake form definitions - digitized from the practice's paper forms:
+// Demo Practice intake form definitions - digitized from the practice's paper forms:
 //   • Client Intake Form (individual adult)         -> INDIVIDUAL_INTAKE
 //   • Intake Form for Couples (His/Hers)            -> COUPLES_INTAKE
 //   • Informed Consent for Psychotherapy            -> INFORMED_CONSENT (appended)
@@ -438,14 +438,14 @@ function INSURANCE_SECTION(): FormSection {
     fields: [
       {
         name: "use_insurance",
-        label: "Do you intend to use your health insurance benefits as part payment for services provided by TIFEC?",
+        label: "Do you intend to use your health insurance benefits as part payment for services provided by Demo Practice?",
         type: "radio",
         options: YES_NO,
       },
       {
         name: "insurance_consent",
         label:
-          "I grant TIFEC permission to release information required to process my insurance claims to Premier Billing Services and to my insurance provider. I understand I may revoke this consent at any time and that I am solely responsible for any portion of my bills not covered by insurance.",
+          "I grant Demo Practice permission to release information required to process my insurance claims to Premier Billing Services and to my insurance provider. I understand I may revoke this consent at any time and that I am solely responsible for any portion of my bills not covered by insurance.",
         type: "checkbox",
         showIf: usingInsurance,
       },
@@ -495,7 +495,7 @@ export const INFORMED_CONSENT: FormSection = {
     {
       name: "data_consent",
       label:
-        "I consent to TIFEC collecting, encrypting, and securely storing my responses electronically (including via cloud providers that may be located outside the Cayman Islands) for the purpose of my care, in line with the Data Protection Act (2021).",
+        "I consent to Demo Practice collecting, encrypting, and securely storing my responses electronically (including via cloud providers that may be located outside the Cayman Islands) for the purpose of my care, in line with the Data Protection Act (2021).",
       type: "checkbox",
       required: true,
     },

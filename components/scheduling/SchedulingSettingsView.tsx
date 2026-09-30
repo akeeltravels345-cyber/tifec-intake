@@ -6,7 +6,7 @@ import Foldable from "@/components/billing/Foldable";
 import type { SchedulingSettings } from "@/lib/scheduling";
 
 const ACCENTS = ["#256e72", "#2f8e93", "#2e3192", "#3f8f5f", "#7a4fa3", "#b1543c", "#c2841d"];
-const sample = { client: "Ada Rivers", service: "Individual therapy", clinician: "Dr. Shion O'Connor", when: "Mon, 8 Sep at 10:00 AM", practice: "Cayman Essential Care" };
+const sample = { client: "Ada Rivers", service: "Individual therapy", clinician: "Dr. Shion O'Connor", when: "Mon, 8 Sep at 10:00 AM", practice: "Demo Practice" };
 const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => (sample as Record<string, string>)[k] ?? `{${k}}`);
 
 export default function SchedulingSettingsView({ initial, types = [], origin = "" }: {

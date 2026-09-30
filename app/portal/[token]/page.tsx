@@ -3,7 +3,7 @@ import { portalData, type PortalAppt } from "@/lib/portalData";
 
 export const dynamic = "force-dynamic";
 
-const BRAND = "The Institute for Essential Care";
+const BRAND = "Demo Practice";
 const CAY = "America/Cayman";
 const fmtTime = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 const fmtDayNum = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: CAY, day: "numeric" }).format(new Date(iso));

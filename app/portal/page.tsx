@@ -2,7 +2,7 @@ import PortalRequest from "@/components/portal/PortalRequest";
 
 export const dynamic = "force-dynamic";
 
-const BRAND = "The Institute for Essential Care";
+const BRAND = "Demo Practice";
 
 export default function PortalLanding() {
   return (

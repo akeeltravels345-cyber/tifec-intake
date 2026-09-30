@@ -91,7 +91,7 @@ export async function GET() {
   const emailRows = emails.map((e) => ({ When: e.createdAt?.slice(0, 16).replace("T", " ") ?? "", Type: e.kind, Recipient: nm(e.recipientId), Email: e.recipientEmail, Status: e.status, Detail: e.detail }));
 
   const readme = [
-    ["TIFEC — Cayman Essential Care: data export"],
+    ["Demo Practice: data export"],
     [`Generated: ${new Date().toISOString()} (Cayman date ${caymanToday()})`],
     [`Exported by: ${user.clinician.name}`],
     [],

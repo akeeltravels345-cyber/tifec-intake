@@ -35,9 +35,9 @@ export default async function BillerHome({ searchParams }: { searchParams: Promi
   const prevY = month === 1 ? year - 1 : year, prevM = month === 1 ? 12 : month - 1;
 
   const [all, insurerList, settingsList, external, cfg] = await Promise.all([listSessions(), listInsurers(), listClinicianSettings(), listExternalClinicians(), getPracticeConfig()]);
-  // TIFEC clinicians pay the biller two ways, both out of the company's share:
+  // Demo Practice clinicians pay the biller two ways, both out of the company's share:
   // a practice-wide % of the COMPANY RETENTION, plus an individual % agreed for
-  // that clinician. Outside clinicians aren't on TIFEC's books, so they just
+  // that clinician. Outside clinicians aren't on Demo Practice's books, so they just
   // carry their own rate on what's collected for them.
   // The biller's commission for the month (collected + pending + the per-clinician
   // and company breakdown) is computed in one shared place so this dashboard and

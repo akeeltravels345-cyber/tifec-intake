@@ -203,8 +203,8 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       <aside className="bo-side">
         <div className="bo-brandrow">
           <Link href="/today" className="bo-brand">
-            <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
-            <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
+            <img className="bo-logo" src="/tifec-mark.png" alt="Demo Practice" />
+            <div><div className="bo-bt">Demo Practice</div><div className="bo-bs">Practice management</div></div>
           </Link>
           <NotificationBell initialUnread={noteCount} unreadMessages={teamUnread} />
         </div>

@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     const endAt = utcFromCayMinutes(date, minute + dur);
     await updateAppointment(id, { startAt, endAt } as never);
     if (startAt !== a.startAt) {
-      const loc = a.mode === "virtual" ? a.locationOrLink : (a.locationOrLink || "The Institute for Essential Care");
+      const loc = a.mode === "virtual" ? a.locationOrLink : (a.locationOrLink || "Demo Practice");
       // Move the event on the clinician's Google Calendar to the new time.
       if (a.videoEventId) await upsertGoogleEvent(a.clinicianId, {
         eventId: a.videoEventId, summary: `${a.clientName} — ${type?.name || "Appointment"}`, location: loc, startAtISO: startAt, endAtISO: endAt,

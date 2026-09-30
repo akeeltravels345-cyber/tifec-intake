@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 // Public page (no login) so app-store reviewers and clients can reach it.
-export const metadata: Metadata = { title: "Privacy Policy · Cayman Essential Care" };
+export const metadata: Metadata = { title: "Privacy Policy · Demo Practice" };
 
 // ---- Edit these to match your practice's legal details ----------------------
-const PRACTICE = "Cayman Essential Care";
+const PRACTICE = "Demo Practice";
 const CONTACT_EMAIL = "Therapy@caymanessentialcare.com";
 const WEBSITE = "caymanessentialcare.com";
 const EFFECTIVE = "10 September 2026";

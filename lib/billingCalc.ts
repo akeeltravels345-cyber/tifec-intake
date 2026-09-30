@@ -1,5 +1,5 @@
 // =============================================================================
-// TIFEC Billing - money model (pure functions, no DB). Easy to reason about + test.
+// Demo Practice Billing - money model (pure functions, no DB). Easy to reason about + test.
 //
 // Vocabulary (confirmed with the practice):
 //   • A session has a fee (totalCost). If its insurer requires a co-pay, the client

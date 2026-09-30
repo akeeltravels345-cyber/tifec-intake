@@ -75,7 +75,7 @@ export default function SetupWizard({
           <p className="wiz-lead">Two quick things, about three minutes. You can stop and come back any time.</p>
           <ul className="wiz-list">
             <li><b>Video calls</b> — when a client books an online session, we make the Zoom or Google Meet link for you and put it in their confirmation. You never make or send one.</li>
-            <li><b>Your calendar</b> — your TIFEC appointments show up in the calendar you already use on your phone or computer, so you can see your day without opening this portal.</li>
+            <li><b>Your calendar</b> — your Demo Practice appointments show up in the calendar you already use on your phone or computer, so you can see your day without opening this portal.</li>
           </ul>
           <button className="wiz-btn big" onClick={() => setStep(1)}>Start →</button>
         </div>
@@ -103,7 +103,7 @@ export default function SetupWizard({
       {step === 2 && (
         <div className="wiz-screen">
           <h1 className="wiz-h1">See your appointments in your own calendar</h1>
-          <p className="wiz-lead">Add your TIFEC schedule to the calendar app you already use. Your appointments show up there next to everything else and update themselves — so you always know your day without opening this portal. Tap the button for your calendar:</p>
+          <p className="wiz-lead">Add your Demo Practice schedule to the calendar app you already use. Your appointments show up there next to everything else and update themselves — so you always know your day without opening this portal. Tap the button for your calendar:</p>
           <div className="wiz-embed"><CalendarSubscribe url={feedUrl} embedded /></div>
           <p className="wiz-tip">On a phone, tap the button then tap <b>Subscribe</b> or <b>Add</b> when it asks. It’s just for you — no need to share the link.</p>
           <div className="wiz-nav">
@@ -117,7 +117,7 @@ export default function SetupWizard({
       {step === 3 && (
         <div className="wiz-screen">
           <h1 className="wiz-h1">Don’t get booked when you’re already busy <span className="wiz-opt">(optional)</span></h1>
-          <p className="wiz-lead">Do you keep your own calendar for the rest of your life — say a personal Google or Outlook calendar? Connect it here and the booking page will automatically skip any time you’re busy there, so no client can book you during your own appointments or a day off. If you only use TIFEC, just skip this.</p>
+          <p className="wiz-lead">Do you keep your own calendar for the rest of your life — say a personal Google or Outlook calendar? Connect it here and the booking page will automatically skip any time you’re busy there, so no client can book you during your own appointments or a day off. If you only use Demo Practice, just skip this.</p>
           <div className="wiz-embed"><BusyFeeds initialFeeds={busyFeeds} googleConnected={googleConnected} embedded /></div>
           <div className="wiz-nav">
             <button className="wiz-btn ghost" onClick={() => setStep(2)}>← Back</button>

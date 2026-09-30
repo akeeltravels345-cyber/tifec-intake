@@ -6,7 +6,7 @@ import ClaimForm from "@/components/booking/ClaimForm";
 
 export const dynamic = "force-dynamic";
 
-const BRAND = "The Institute for Essential Care";
+const BRAND = "Demo Practice";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (

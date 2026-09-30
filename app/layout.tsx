@@ -4,8 +4,8 @@ import Script from "next/script";
 import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
-  title: "The Institute for Essential Care",
-  description: "The Institute for Essential Care: secure scheduling, client intake, and billing.",
+  title: "Demo Practice",
+  description: "Demo Practice: secure scheduling, client intake, and billing.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="TIFEC" />
+        <meta name="apple-mobile-web-app-title" content="Demo Practice" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1e232b" media="(prefers-color-scheme: dark)" />
@@ -37,10 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="brandbar">
           <div className="inner">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/tifec-mark.png" alt="TIFEC" className="brand-mark" />
+            <img src="/tifec-mark.png" alt="Demo Practice" className="brand-mark" />
             <div>
-              <h1>TIFEC</h1>
-              <p>The Institute for Essential Care</p>
+              <h1>Demo Practice</h1>
+              <p>Practice management</p>
             </div>
           </div>
         </div>

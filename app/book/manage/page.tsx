@@ -23,7 +23,7 @@ export default async function ManagePage({ searchParams }: { searchParams: Promi
   return (
     <ManageBooking
       preview={PREVIEW}
-      practiceName={cfg.provider?.practiceName || "TIFEC · Essential Care"}
+      practiceName={cfg.provider?.practiceName || "Demo Practice"}
       initial={{
         id: a.id, service: type?.name || "Appointment", typeId: a.typeId,
         durationMin: type?.durationMin || Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000),

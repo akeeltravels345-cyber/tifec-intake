@@ -23,11 +23,11 @@ export async function attachVideoAndCalendar(appt: Appointment, ctx: {
 }): Promise<Appointment> {
   let a = appt;
   if (a.mode === "virtual" && !a.locationOrLink) {
-    const link = await createVideoLink(a.clinicianId, { topic: `TIFEC session - ${ctx.clientName}`, startAtISO: a.startAt, durationMin: ctx.durationMin });
+    const link = await createVideoLink(a.clinicianId, { topic: `Demo Practice session - ${ctx.clientName}`, startAtISO: a.startAt, durationMin: ctx.durationMin });
     if (link) a = (await updateAppointment(a.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || a;
   }
   if (!a.videoEventId && await hasGoogleConnection(a.clinicianId)) {
-    const location = a.mode === "virtual" ? (a.locationOrLink || "Online") : (a.locationOrLink || "The Institute for Essential Care");
+    const location = a.mode === "virtual" ? (a.locationOrLink || "Online") : (a.locationOrLink || "Demo Practice");
     const eventId = await upsertGoogleEvent(a.clinicianId, {
       summary: `${ctx.clientName} — ${ctx.serviceName}`,
       description: [ctx.phone ? `Phone: ${ctx.phone}` : "", ctx.email].filter(Boolean).join("\n"),
@@ -45,7 +45,7 @@ export async function sendIntakeInvite(args: {
 }): Promise<void> {
   if (args.forms.length === 0) return;
   try {
-    await sendBrandedEmail(args.to, "Your intake forms for The Institute for Essential Care", {
+    await sendBrandedEmail(args.to, "Your intake forms for Demo Practice", {
       heading: args.forms.length > 1 ? "A couple of quick forms" : "One quick form",
       greetingName: firstNameOf(args.clientName),
       intro: `Thank you for booking your ${args.serviceName} appointment. Before your visit, please complete the following so we're ready for you:`,
@@ -77,7 +77,7 @@ export async function sendBookingConfirmation(args: {
   const isLink = /^https?:\/\//.test(args.locationOrLink);
   const location = args.mode === "virtual"
     ? (isLink ? "Online (video)" : "Online (your video link will follow by email)")
-    : (args.locationOrLink || "The Institute for Essential Care");
+    : (args.locationOrLink || "Demo Practice");
   const isSeries = !!args.seriesDates && args.seriesDates.length > 1;
   const buttons: { label: string; url: string }[] = [];
   if (args.mode === "virtual" && isLink) buttons.push({ label: "Join the video call", url: args.locationOrLink });
@@ -110,9 +110,9 @@ export async function sendBookingConfirmation(args: {
   const ics = (args.events && args.events.length > 1)
     ? buildIcs(args.events.map((e) => ({
         uid: `${e.id}@caymanessentialcare.com`, start: e.startAt, end: e.endAt,
-        summary: `${args.serviceName} with The Institute for Essential Care`,
+        summary: `${args.serviceName} with Demo Practice`,
         location: isLink ? args.locationOrLink : location,
-        organizerName: "The Institute for Essential Care", organizerEmail: organizerEmail(),
+        organizerName: "Demo Practice", organizerEmail: organizerEmail(),
         attendeeName: args.clientName, attendeeEmail: args.to,
         status: "CONFIRMED" as const, sequence: Math.floor(Date.now() / 1000),
       })), { method: "REQUEST" })
@@ -124,7 +124,7 @@ export async function sendBookingConfirmation(args: {
         recurrence: isSeries ? args.recurrence : undefined,
       });
   try {
-    await sendBrandedEmail(args.to, "You're booked with The Institute for Essential Care", {
+    await sendBrandedEmail(args.to, "You're booked with Demo Practice", {
       heading: "You're booked in! 🎉",
       greetingName: firstNameOf(args.clientName),
       intro: isSeries ? "We can't wait to see you. Here are the details of your sessions this month:" : "We can't wait to see you. Here are the details of your appointment:",

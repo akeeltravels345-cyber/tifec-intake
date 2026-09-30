@@ -255,7 +255,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
         <div className="bo-modal" onClick={(e) => { if (e.target === e.currentTarget) setExportOpen(false); }}>
           <div className="bo-sheet">
             <div className="bo-sheetbar">
-              <div><div className="bo-sheettitle">{data.monthName} {data.year} · month summary</div><div className="bo-sheetsub">The Institute for Essential Care · KYD</div></div>
+              <div><div className="bo-sheettitle">{data.monthName} {data.year} · month summary</div><div className="bo-sheetsub">Demo Practice · KYD</div></div>
               <div className="bo-sheetacts">
                 <button className="bo-qab" onClick={() => window.print()}>Print / Save PDF</button>
                 <button className="bo-close" onClick={() => setExportOpen(false)}>✕</button>

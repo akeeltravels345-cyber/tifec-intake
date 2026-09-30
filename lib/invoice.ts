@@ -124,7 +124,7 @@ export function buildInvoice(
     issueDate,
     dueDate,
     practice: {
-      name: provider.practiceName || "TIFEC · Essential Care",
+      name: provider.practiceName || "Demo Practice",
       addressLines: practiceAddr,
       phone: provider.phone || undefined,
       email: provider.email || undefined,

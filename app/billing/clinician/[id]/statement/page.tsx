@@ -43,8 +43,8 @@ export default async function PayoutStatement({ params, searchParams }: { params
       <article className="stmt">
         <header className="stmt-head">
           <div className="stmt-brand">
-            <img src="/tifec-logo.png" alt="The Institute for Essential Care" className="stmt-logo" />
-            <div className="stmt-brand-sub">The Institute for Essential Care</div>
+            <img src="/tifec-logo.png" alt="Demo Practice" className="stmt-logo" />
+            <div className="stmt-brand-sub">Demo Practice</div>
           </div>
           <div className="stmt-meta">
             <div className="stmt-doc">Monthly Payout Statement</div>
@@ -90,7 +90,7 @@ export default async function PayoutStatement({ params, searchParams }: { params
         </section>
 
         <footer className="stmt-foot">
-          <span>The Institute for Essential Care · Grand Cayman</span>
+          <span>Demo Practice · Grand Cayman</span>
           <span>This statement is generated automatically and reflects data as of {generated}.</span>
         </footer>
       </article>

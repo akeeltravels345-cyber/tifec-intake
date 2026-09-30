@@ -59,7 +59,7 @@ export default async function CollectionsPage({ params, searchParams }: { params
         rows={rows}
         clinicianName={clinician.name}
         monthLabel={`${MONTHS[month - 1]} ${year}`}
-        practiceName={cfg.provider?.practiceName || "TIFEC · Essential Care"}
+        practiceName={cfg.provider?.practiceName || "Demo Practice"}
         thisMonth={c.insuranceThisMonthVisits}
         prior={c.insurancePriorVisits}
         total={c.insuranceBilledThisMonth}

@@ -22,7 +22,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
 
   return (
     <BookingFlow
-      practiceName={cfg.provider?.practiceName || "TIFEC · Essential Care"}
+      practiceName={cfg.provider?.practiceName || "Demo Practice"}
       welcome={settings.booking.welcome}
       accent={settings.booking.accent}
       policy={settings.booking.policy}

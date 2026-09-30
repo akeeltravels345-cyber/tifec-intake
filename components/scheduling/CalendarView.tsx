@@ -732,7 +732,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       </>
                     ) : (
                       <>
-                        <div className="cvr-line">{a.locationOrLink || "The Institute for Essential Care"}</div>
+                        <div className="cvr-line">{a.locationOrLink || "Demo Practice"}</div>
                         <div className="cvr-sub">This location comes from the calendar settings.</div>
                       </>
                     )}

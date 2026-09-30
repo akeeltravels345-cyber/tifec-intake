@@ -1,7 +1,7 @@
 // =============================================================================
-// TIFEC clinician roster  ──  EDIT THIS FILE
+// Demo Practice clinician roster  ──  EDIT THIS FILE
 // -----------------------------------------------------------------------------
-// Add the real name and TIFEC email address for each of your 5 psychologists.
+// Add the real name and Demo Practice email address for each of your 5 psychologists.
 // `id` is used in the form URL (e.g. /intake?clinician=dr-smith) and must be
 // unique, lowercase, and contain no spaces.
 //
@@ -72,16 +72,16 @@ export interface Clinician {
   test?: boolean;
 }
 
-// TIFEC clinicians (from caymanessentialcare.com/team) + one practicum trainee.
+// Demo Practice clinicians + one practicum trainee.
 export const CLINICIANS: Clinician[] = [
   {
     id: "shion-oconnor",
     billingBeta: true, // BETA billing access
     contact: "owner",
-    name: "Dr. Shion O'Connor",
+    name: "Dr. Sarah Bennett",
     photo: "/clinicians/shion-oconnor.webp",
-    credentials: "Clinical Psychologist & Family Therapist · Founder",
-    email: "Therapy@caymanessentialcare.com",
+    credentials: "Clinical Psychologist · Founder",
+    email: "owner@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -121,6 +121,10 @@ export const CLINICIANS: Clinician[] = [
       "l2c-somatic",
       "l2c-repetitive",
       "l2c-substance",
+      "child-behaviour-self",
+      "parent-behaviour-assessment",
+      "ei-camp-agreement",
+      "peers-intake",
     ],
     extraSections: [],
     admin: true,
@@ -129,10 +133,10 @@ export const CLINICIANS: Clinician[] = [
   {
     id: "donnet-oconnor",
     billingBeta: true, // BETA billing access
-    name: "Dr. Donnet O'Connor",
+    name: "Dr. James Carter",
     photo: "/clinicians/donnet-oconnor.webp",
-    credentials: "Ph.D. · Counselling Psychologist & Therapist",
-    email: "donnetoconnor@caymanessentialcare.com",
+    credentials: "Ph.D. · Counselling Psychologist",
+    email: "james@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -172,16 +176,20 @@ export const CLINICIANS: Clinician[] = [
       "l2c-somatic",
       "l2c-repetitive",
       "l2c-substance",
+      "child-behaviour-self",
+      "parent-behaviour-assessment",
+      "ei-camp-agreement",
+      "peers-intake",
     ],
     extraSections: [],
   },
   {
     id: "joan-latty",
     billingBeta: true, // BETA billing access
-    name: "Dr. Joan Latty",
+    name: "Dr. Emily Foster",
     photo: "/clinicians/joan-latty.webp",
-    credentials: "Psy.D. · Clinical Psychologist, Marriage & Family Therapist",
-    email: "joanlatty@caymanessentialcare.com",
+    credentials: "Psy.D. · Clinical Psychologist",
+    email: "emily@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -221,16 +229,20 @@ export const CLINICIANS: Clinician[] = [
       "l2c-somatic",
       "l2c-repetitive",
       "l2c-substance",
+      "child-behaviour-self",
+      "parent-behaviour-assessment",
+      "ei-camp-agreement",
+      "peers-intake",
     ],
     extraSections: [],
   },
   {
     id: "sofia-hamilton",
     billingBeta: true, // BETA billing access
-    name: "Mrs. Sofia Hamilton",
+    name: "Ms. Olivia Reed",
     photo: "/clinicians/sofia-hamilton.webp",
     credentials: "MSc · Educational Psychologist",
-    email: "sofiahamilton@caymanessentialcare.com",
+    email: "olivia@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -283,9 +295,9 @@ export const CLINICIANS: Clinician[] = [
     contact: "biller",
     practicum: true, // biller who also treats practicum (unpaid) clients — assignable as a treating clinician for session notes
     privateBooking: true, // bookable for his practicum clients via a direct link, hidden from the public picker
-    name: "Nick O'Connor",
-    credentials: "Training Clinician (Practicum)",
-    email: "tifec.billing@gmail.com",
+    name: "Mark Davis",
+    credentials: "Billing Coordinator",
+    email: "billing@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -325,6 +337,10 @@ export const CLINICIANS: Clinician[] = [
       "l2c-somatic",
       "l2c-repetitive",
       "l2c-substance",
+      "child-behaviour-self",
+      "parent-behaviour-assessment",
+      "ei-camp-agreement",
+      "peers-intake",
     ],
     extraSections: [],
     billing: "biller", // handles insurer remittances; earns 3% of insurance collected
@@ -334,9 +350,9 @@ export const CLINICIANS: Clinician[] = [
     id: "akeel-test",
     billingBeta: true, // BETA billing access
     contact: "admin",
-    name: "Akeel",
+    name: "Demo Admin",
     credentials: "Practice Administrator",
-    email: "admin@caymanessentialcare.com",
+    email: "admin@demopractice.com",
     forms: [
       "individual",
       "couples",
@@ -392,8 +408,51 @@ export const CLINICIANS: Clinician[] = [
     id: "test-clinician",
     name: "Test Clinician",
     credentials: "Test account",
-    email: "test-clinician@caymanessentialcare.com",
-    forms: ["individual"],
+    email: "test@demopractice.com",
+    forms: [
+      "individual",
+      "couples",
+      "dsm5-level1-adult",
+      "dsm5-level1-child",
+      "dsm5-level1-child-self",
+      "psychoed-intake",
+      "l2-depression",
+      "l2-anxiety",
+      "l2-anger",
+      "l2-mania",
+      "l2-sleep",
+      "l2-somatic",
+      "l2-repetitive",
+      "l2-substance",
+      "sev-depression",
+      "sev-gad",
+      "sev-social-anxiety",
+      "sev-separation-anxiety",
+      "sev-acute-stress",
+      "sev-ptsd",
+      "l2p-depression",
+      "l2p-anxiety",
+      "l2p-anger",
+      "l2p-irritability",
+      "l2p-mania",
+      "l2p-inattention",
+      "l2p-sleep",
+      "l2p-somatic",
+      "l2p-substance",
+      "l2c-depression",
+      "l2c-anxiety",
+      "l2c-anger",
+      "l2c-irritability",
+      "l2c-mania",
+      "l2c-sleep",
+      "l2c-somatic",
+      "l2c-repetitive",
+      "l2c-substance",
+      "child-behaviour-self",
+      "parent-behaviour-assessment",
+      "ei-camp-agreement",
+      "peers-intake",
+    ],
     extraSections: [],
     intakeHidden: true,   // keeps it out of the public picker, intake, client lists and billing rosters
     test: true,           // opens the schedule + video-connection gates for it

@@ -1,5 +1,5 @@
 // =============================================================================
-// TIFEC Billing System - data access layer (ADDITIVE; isolated from intake).
+// Demo Practice Billing System - data access layer (ADDITIVE; isolated from intake).
 //   • Production: Neon Postgres (DATABASE_URL), billing_* tables (db/billing-schema.sql).
 //   • Local dev:  data/billing-*.local.json files (gitignored).
 // Client names are AES-encrypted at rest (lib/crypto), like intake answers.
@@ -28,7 +28,7 @@ export interface Insurer {
 }
 
 // A clinician OUTSIDE the practice whose billing the biller handles privately.
-// They have no intake login and never appear in TIFEC's own revenue or payouts —
+// They have no intake login and never appear in Demo Practice's own revenue or payouts —
 // the only money they drive is the biller's own commission.
 export interface ExternalClinician {
   id: string;

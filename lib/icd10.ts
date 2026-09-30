@@ -1,4 +1,4 @@
-// Psychology ICD-10 diagnosis library, extracted from TIFEC's Psychology_ICD10_Library.pdf
+// Psychology ICD-10 diagnosis library, extracted from Demo Practice's Psychology_ICD10_Library.pdf
 // and normalized to ICD-10-CM decimal form (e.g. F320 -> F32.0). Range/category rows
 // (e.g. F10-F19) are flagged and are NOT selectable as a single diagnosis.
 export interface Icd10Code { code: string; description: string; category: string; range?: boolean }

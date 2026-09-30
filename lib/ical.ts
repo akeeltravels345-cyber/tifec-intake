@@ -1,5 +1,5 @@
 // =============================================================================
-// iCalendar (RFC 5545) generation for TIFEC appointments.
+// iCalendar (RFC 5545) generation for Demo Practice appointments.
 //   - A single-event invite (.ics) attached to booking emails, so a client can
 //     add / update / cancel the appointment in Apple Calendar, Google or Outlook.
 //   - A multi-event VCALENDAR feed for a clinician's subscribe URL.
@@ -26,7 +26,7 @@ export interface IcsEvent {
   rrule?: string;              // e.g. "FREQ=WEEKLY;COUNT=6" for a standing series
 }
 
-const PRODID = "-//The Institute for Essential Care//Scheduling//EN";
+const PRODID = "-//Demo Practice//Scheduling//EN";
 
 // 2026-09-24T14:30:00.000Z -> 20260924T143000Z
 function fmtUtc(iso: string): string {
@@ -96,9 +96,9 @@ export function appointmentInvite(a: {
   return buildIcs([{
     uid: `${a.id}@caymanessentialcare.com`,
     start: a.startAt, end: a.endAt,
-    summary: `${a.serviceName} with The Institute for Essential Care`,
+    summary: `${a.serviceName} with Demo Practice`,
     description, location: a.location,
-    organizerName: "The Institute for Essential Care", organizerEmail: a.organizerEmail,
+    organizerName: "Demo Practice", organizerEmail: a.organizerEmail,
     attendeeName: a.clientName, attendeeEmail: a.clientEmail,
     status: a.cancelled ? "CANCELLED" : "CONFIRMED",
     sequence: Math.floor(Date.now() / 1000), // monotonic, so each change supersedes

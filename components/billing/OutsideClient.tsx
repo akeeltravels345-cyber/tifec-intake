@@ -46,7 +46,7 @@ export default function OutsideClient({ rows: rowsIn, monthLabel }: { rows: Row[
       <div className="su-sec">
         <div className="su-sechead">
           <h3 className="su-sech">Add an outside clinician</h3>
-          <span className="su-hint">Someone you bill for privately. They get no login, and their money stays out of TIFEC&apos;s books.</span>
+          <span className="su-hint">Someone you bill for privately. They get no login, and their money stays out of Demo Practice&apos;s books.</span>
         </div>
         <div className="su-card">
           <form onSubmit={add} style={{ display: "flex", gap: 10, padding: 16, flexWrap: "wrap", alignItems: "flex-end" }}>

@@ -1,9 +1,9 @@
-// SMTP notification sender (uses TIFEC's email account via nodemailer).
+// SMTP notification sender (uses Demo Practice's email account via nodemailer).
 //
 // Required env vars (set in .env.local / Vercel project settings):
 //   SMTP_HOST       e.g. smtp.office365.com or smtp.gmail.com
 //   SMTP_PORT       e.g. 587
-//   SMTP_USER       the TIFEC mailbox login
+//   SMTP_USER       the Demo Practice mailbox login
 //   SMTP_PASS       the mailbox password / app password
 //   SMTP_FROM       the "from" address shown to clinicians (often = SMTP_USER)
 //   APP_URL         public base URL of this app, e.g. https://intake.tifec.org
@@ -16,8 +16,8 @@ import fs from "fs";
 import path from "path";
 
 // ---- Branding (edit these to re-brand the notification email) --------------
-const PRACTICE_NAME = "The Institute for Essential Care";
-const FROM_NAME = "TIFEC Intake"; // friendly "From" name shown in the inbox
+const PRACTICE_NAME = "Demo Practice";
+const FROM_NAME = "Demo Practice Intake"; // friendly "From" name shown in the inbox
 const BRAND_BLUE = "#34659b";
 const BRAND_CREAM = "#f3efe6";
 const BRAND_CHARCOAL = "#2d2d2a";
@@ -192,7 +192,7 @@ export async function sendFeedback(args: {
 }): Promise<{ sent: boolean }> {
   const to = process.env.SUPPORT_EMAIL || "admin@caymanessentialcare.com";
   const when = new Date().toLocaleString("en-US");
-  const subject = `TIFEC issue report - ${args.category}`;
+  const subject = `Demo Practice issue report - ${args.category}`;
   const text = [
     `Issue report from ${args.fromName} (${args.fromId})`,
     `Category: ${args.category}`,
@@ -488,7 +488,7 @@ const invMoney = (n: number) => `$${(n || 0).toLocaleString("en-US", { minimumFr
 export interface InvoiceEmailArgs {
   to: string;                 // client's email
   clientName: string;         // full name, for the greeting
-  practiceName: string;       // e.g. "TIFEC · Essential Care"
+  practiceName: string;       // e.g. "Demo Practice"
   invoiceNo: string;
   amountDue: number;
   subject?: string;           // sender-edited subject; falls back to the default when blank

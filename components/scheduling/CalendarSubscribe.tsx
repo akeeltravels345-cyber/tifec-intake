@@ -18,7 +18,7 @@ export default function CalendarSubscribe({ url, embedded = false }: { url: stri
       {!embedded && (
         <>
           <h2 className="calsub-h">Subscribe to your calendar</h2>
-          <p className="calsub-p">Add your TIFEC schedule to Apple Calendar, Google or Outlook. It stays in sync on its own. This link is private, so keep it to yourself.</p>
+          <p className="calsub-p">Add your Demo Practice schedule to Apple Calendar, Google or Outlook. It stays in sync on its own. This link is private, so keep it to yourself.</p>
         </>
       )}
       <div className="calsub-row">

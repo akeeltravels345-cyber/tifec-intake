@@ -4,7 +4,7 @@ import { billingRoleOf, isBiller } from "@/lib/billingRole";
 import { upsertExternalClinician, deleteExternalClinician } from "@/lib/billing";
 
 // Outside clinicians are the biller's own private clients: his to manage, and
-// deliberately not the owner's business. They never touch TIFEC's books.
+// deliberately not the owner's business. They never touch Demo Practice's books.
 export async function POST(req: Request) {
   const me = await getCurrentClinician();
   if (!me) return NextResponse.json({ error: "Not signed in." }, { status: 401 });

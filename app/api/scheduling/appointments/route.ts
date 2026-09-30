@@ -21,7 +21,7 @@ async function attachVideo(appt: Appointment): Promise<Appointment> {
   //    OWN connected Zoom/Meet account. Best-effort; never blocks.
   if (a.kind !== "block" && a.mode === "virtual" && !a.locationOrLink && a.capacity <= 1) {
     const link = await createVideoLink(a.clinicianId, {
-      topic: `TIFEC session${a.clientName ? ` - ${a.clientName}` : ""}`,
+      topic: `Demo Practice session${a.clientName ? ` - ${a.clientName}` : ""}`,
       startAtISO: a.startAt, durationMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000),
     });
     if (link) a = (await updateAppointment(a.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || a;
@@ -29,7 +29,7 @@ async function attachVideo(appt: Appointment): Promise<Appointment> {
   // 2. Mirror onto the clinician's Google Calendar (any mode) if connected and
   //    a Google Meet event didn't already create it.
   if (a.kind !== "block" && !a.videoEventId && await hasGoogleConnection(a.clinicianId)) {
-    const location = a.mode === "virtual" ? (a.locationOrLink || "Online") : (a.locationOrLink || "The Institute for Essential Care");
+    const location = a.mode === "virtual" ? (a.locationOrLink || "Online") : (a.locationOrLink || "Demo Practice");
     const eventId = await upsertGoogleEvent(a.clinicianId, {
       summary: a.clientName || "Appointment", location, startAtISO: a.startAt, endAtISO: a.endAt,
     });
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
       // A drag/edit that moved the time can email the client (staff chose to).
       if (body.notifyClient && appt.kind !== "block" && appt.clientEmail && before && before.startAt !== appt.startAt) {
         const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
-        const loc = appt.mode === "virtual" ? appt.locationOrLink : (appt.locationOrLink || "The Institute for Essential Care");
+        const loc = appt.mode === "virtual" ? appt.locationOrLink : (appt.locationOrLink || "Demo Practice");
         await notifyClientReschedule({
           to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "Appointment",
           clinicianName: getClinician(appt.clinicianId)?.name || "your clinician",

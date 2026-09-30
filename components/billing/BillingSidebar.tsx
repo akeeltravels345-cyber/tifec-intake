@@ -95,8 +95,8 @@ export default function BillingSidebar({
     <>
     <aside className="bo-side">
       <div className="bo-brand">
-        <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
-        <div><div className="bo-bt">TIFEC Billing</div><div className="bo-bs">Essential Care</div></div>
+        <img className="bo-logo" src="/tifec-mark.png" alt="Demo Practice" />
+        <div><div className="bo-bt">Demo Practice Billing</div><div className="bo-bs">Practice management</div></div>
       </div>
 
       <Link href="/today" className="bo-backlink">

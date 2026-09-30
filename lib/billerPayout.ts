@@ -1,7 +1,7 @@
 // The biller's commission for a month, in one place so the biller dashboard and
 // the biller payout statement can never disagree on the money.
 //
-// TIFEC clinicians pay the biller two ways, both out of the company's share: a
+// Demo Practice clinicians pay the biller two ways, both out of the company's share: a
 // practice-wide % of the COMPANY RETENTION, plus an individual % agreed for that
 // clinician. Outside clinicians just carry their own rate on what's collected.
 // Commission is earned only on real (non-hidden) clinicians and outside clients.

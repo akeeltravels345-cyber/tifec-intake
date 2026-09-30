@@ -30,7 +30,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ clinici
         : `${a.clientName || type?.name || "Appointment"}${type ? ` — ${type.name}` : ""}`;
       const location = a.mode === "virtual"
         ? (a.locationOrLink || "Online")
-        : (a.locationOrLink || "The Institute for Essential Care");
+        : (a.locationOrLink || "Demo Practice");
       return {
         uid: `${a.id}@caymanessentialcare.com`,
         start: a.startAt, end: a.endAt, summary, location,
@@ -39,7 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ clinici
     });
   } catch { /* an empty feed is better than a 500 for a subscribed client */ }
 
-  const ics = buildIcs(events, { method: "PUBLISH", calName: `${c.name} · TIFEC` });
+  const ics = buildIcs(events, { method: "PUBLISH", calName: `${c.name} · Demo Practice` });
   return new NextResponse(ics, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",

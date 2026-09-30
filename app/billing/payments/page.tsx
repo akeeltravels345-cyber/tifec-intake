@@ -26,7 +26,7 @@ export default async function BillingQueuePage() {
     insurers.find((i) => i.id === id)?.name ?? (id ? "Unknown insurer" : "Self-pay");
   // Outside clinicians aren't on the roster, so resolve their names too.
   const clinName = (id: string) => getClinician(id)?.name ?? external.find((c) => c.id === id)?.name ?? id;
-  // Same rule as the biller dashboard: a % of the company retention for TIFEC
+  // Same rule as the biller dashboard: a % of the company retention for Demo Practice
   // clinicians, their own rate on collections for outside clients.
   // Matches the dashboard exactly: real clinicians and outside clients earn
   // commission; the admin/test account does not.

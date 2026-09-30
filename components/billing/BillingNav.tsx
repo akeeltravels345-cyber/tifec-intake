@@ -26,7 +26,7 @@ export default function BillingNav({ role }: { role: BillingRole }) {
     <div className="bz-bar">
       <div className="bz-bar-inner">
         <div className="bz-brand">
-          <span className="bz-logo">$</span> TIFEC Billing
+          <span className="bz-logo">$</span> Demo Practice Billing
         </div>
         <nav className="bz-nav">
           {items.map((i) => (

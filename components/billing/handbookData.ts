@@ -135,7 +135,7 @@ main {padding-bottom:80px; min-width:0;}
 
 export const HANDBOOK_HTML = String.raw`<div class="wrap">
   <header class="mast">
-    <p class="eyebrow">TIFEC · Essential Care · Billing</p>
+    <p class="eyebrow">Demo Practice · Billing</p>
     <h1>The Biller's Handbook</h1>
     <p class="sub">Every screen you touch as the biller, grouped by the job it does. What the page is for, what each thing on it means, and what every button does.</p>
     <div class="mchips">
@@ -613,7 +613,7 @@ export const HANDBOOK_HTML = String.raw`<div class="wrap">
       </section>
 
       <footer class="foot">
-        TIFEC Biller Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
+        Demo Practice Biller Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
       </footer>
     </main>
   </div>
@@ -624,7 +624,7 @@ export const HANDBOOK_HTML = String.raw`<div class="wrap">
 // ===========================================================================
 export const OWNER_HANDBOOK_HTML = String.raw`<div class="wrap">
   <header class="mast">
-    <p class="eyebrow">TIFEC · Essential Care · Billing</p>
+    <p class="eyebrow">Demo Practice · Billing</p>
     <h1>The Owner's Handbook</h1>
     <p class="sub">Every screen you touch as the practice owner, grouped by the job it does. The whole business, every clinician's numbers, and the money rules only you can set.</p>
     <div class="mchips">
@@ -1022,7 +1022,7 @@ export const OWNER_HANDBOOK_HTML = String.raw`<div class="wrap">
       </section>
 
       <footer class="foot">
-        TIFEC Owner Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
+        Demo Practice Owner Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
       </footer>
     </main>
   </div>
@@ -1033,7 +1033,7 @@ export const OWNER_HANDBOOK_HTML = String.raw`<div class="wrap">
 // ===========================================================================
 export const CLINICIAN_HANDBOOK_HTML = String.raw`<div class="wrap">
   <header class="mast">
-    <p class="eyebrow">TIFEC · Essential Care · Billing</p>
+    <p class="eyebrow">Demo Practice · Billing</p>
     <h1>The Clinician's Handbook</h1>
     <p class="sub">Every screen you touch as a clinician, grouped by the job it does. Your own clients, your own sessions, and your own payout, and nothing that isn't yours.</p>
     <div class="mchips">
@@ -1361,7 +1361,7 @@ export const CLINICIAN_HANDBOOK_HTML = String.raw`<div class="wrap">
       </section>
 
       <footer class="foot">
-        TIFEC Clinician Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
+        Demo Practice Clinician Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
       </footer>
     </main>
   </div>
@@ -1372,7 +1372,7 @@ export const CLINICIAN_HANDBOOK_HTML = String.raw`<div class="wrap">
 // ===========================================================================
 export const ADMIN_HANDBOOK_HTML = String.raw`<div class="wrap">
   <header class="mast">
-    <p class="eyebrow">TIFEC · Essential Care · Billing</p>
+    <p class="eyebrow">Demo Practice · Billing</p>
     <h1>The Admin &amp; Builder Handbook</h1>
     <p class="sub">Your lean oversight menu, plus the one power no one else has: stepping into any role to see the app exactly as they do. What each admin screen is for, and how to move around safely.</p>
     <div class="mchips">
@@ -1457,7 +1457,7 @@ export const ADMIN_HANDBOOK_HTML = String.raw`<div class="wrap">
 
         <div class="page">
           <div class="ph"><h3>The "Viewing as" switcher</h3><span class="gate">system admin only</span></div>
-          <p class="lede">A segmented control under the TIFEC brand: <code class="k">Me</code> <code class="k">Owner</code> <code class="k">Biller</code> <code class="k">Clinician</code>.</p>
+          <p class="lede">A segmented control under the Demo Practice brand: <code class="k">Me</code> <code class="k">Owner</code> <code class="k">Biller</code> <code class="k">Clinician</code>.</p>
           <div class="cols">
             <div class="block">
               <h4>How it works</h4>
@@ -1600,7 +1600,7 @@ export const ADMIN_HANDBOOK_HTML = String.raw`<div class="wrap">
       </section>
 
       <footer class="foot">
-        TIFEC Admin &amp; Builder Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
+        Demo Practice Admin &amp; Builder Handbook · generated for a functionality review · reflects the app as built on the feature/billing branch. If a screen differs from this guide, the app is the source of truth, flag it and it'll be updated.
       </footer>
     </main>
   </div>

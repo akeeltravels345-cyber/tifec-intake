@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SelfScreening from "@/components/SelfScreening";
 
 export const metadata: Metadata = {
-  title: "Wellbeing Self-Check · TIFEC",
+  title: "Wellbeing Self-Check · Demo Practice",
   description: "A private, on-device wellbeing self-check. Your answers are never saved or sent.",
 };
 
