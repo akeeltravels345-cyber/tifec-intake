@@ -51,8 +51,8 @@ export default async function SchedulePage() {
       setupHref="/schedule/setup"
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
-      connectionsLabel={me.test ? "Video" : "Settings"}
-      connectionsIcon={me.test ? "video" : "gear"}
+      connectionsLabel="Settings"
+      connectionsIcon="gear"
       statsHref="/schedule/stats"
       intakeHref="/schedule/intake"
       linksHref="/schedule/links"

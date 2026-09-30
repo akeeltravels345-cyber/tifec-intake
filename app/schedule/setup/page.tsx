@@ -33,7 +33,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
       <SetupWizard
         conns={conns.map((c) => ({ provider: c.provider, accountEmail: c.accountEmail, preferred: c.preferred }))}
         configured={{ zoom: zoomOAuthConfigured(), google: googleOAuthConfigured() }}
-        zoomComingSoon={!me.test}
+        zoomComingSoon={false}
         feedUrl={feedUrl}
         busyFeeds={av.busyFeeds}
         googleConnected={googleConnected}

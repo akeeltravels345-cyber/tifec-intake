@@ -36,7 +36,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         initial={initial}
         configured={{ zoom: zoomOAuthConfigured(), google: googleOAuthConfigured() }}
         notice={{ connected: sp.connected || "", error: sp.error || "" }}
-        comingSoon={!me.test}
+        comingSoon={false}
       />
       <CalendarSubscribe url={feedUrl} />
       <BusyFeeds initialFeeds={av.busyFeeds} googleConnected={googleConnected} />
