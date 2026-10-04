@@ -39,6 +39,8 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
   wand: <><path d="M12 3l1.7 3.9L18 8.5l-3.9 1.6L12 14l-1.6-3.9L6 8.5l3.9-1.6z" /><path d="M18.5 14.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" /></>,
   dots: <><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></>,
+  share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /></>,
+  check: <><polyline points="20 6 9 17 4 12" /></>,
 };
 function ToolIcon({ name }: { name: string }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{TOOL_ICONS[name]}</svg>;
@@ -64,8 +66,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -105,6 +107,38 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
   const [phone, setPhone] = useState(false); // taller grid rows on phones
   const HOUR = phone ? HOUR_PHONE : HOUR_DESKTOP;
+  const [shared, setShared] = useState(false); // "Copied" flash on the Share button
+
+  // The booking page to share. If a single clinician is in focus (locked, or
+  // the filter is set to one person), share their personal page; otherwise the
+  // whole-practice page. Always resolvable so every view has a link to share.
+  const shareTarget = lockedClinicianId || (who !== "all" ? who : null);
+  const bookingUrl = origin ? `${origin}/book${shareTarget ? `?clinician=${shareTarget}` : ""}` : null;
+  function legacyCopy(text: string): boolean {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch { return false; }
+  }
+  async function shareBooking() {
+    if (!bookingUrl) return;
+    const name = shareTarget ? clinName(shareTarget) : null;
+    const title = name ? `Book with ${name}` : "Book an appointment";
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title, url: bookingUrl });
+        return;
+      }
+    } catch { /* user dismissed the share sheet, or it's unavailable — fall back to copy */ }
+    let copied = false;
+    try { await navigator.clipboard.writeText(bookingUrl); copied = true; } catch { copied = legacyCopy(bookingUrl); }
+    // Flash "Copied" on success; the full URL is always in the button's tooltip.
+    if (copied) { setShared(true); setTimeout(() => setShared(false), 1800); }
+  }
   // Phase 0 surfacing: does this appointment's client already exist elsewhere?
   const [links, setLinks] = useState<{ billingClient: { id: string; name: string } | null; intake: { count: number; status?: "not_required" | "pending" | "received"; missing?: string[] } } | null>(null);
   async function loadLinks(a: Appointment) {
@@ -341,6 +375,11 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
             ))}
           </div>
+          {bookingUrl && (
+            <button type="button" className="cal-share" onClick={shareBooking} title={`Share booking link: ${bookingUrl}`}>
+              <ToolIcon name={shared ? "check" : "share"} /><span>{shared ? "Copied" : "Share"}</span>
+            </button>
+          )}
           {canCreate && <button className="cal-new" onClick={() => openNew()}><ToolIcon name="plus" /><span>New</span></button>}
         </div>
 

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
@@ -24,12 +25,14 @@ export default async function CalendarPage() {
 
   const today = caymanToday();
   const monday = mondayOf(today);
-  const [types, insurers, appts, avails] = await Promise.all([
+  const [types, insurers, appts, avails, h] = await Promise.all([
     listAppointmentTypes(),
     listInsurers(),
     listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)) }),
     Promise.all(bookable.map((c) => getAvailability(c.id))),
+    headers(),
   ]);
+  const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
 
   return (
     <div>
@@ -41,6 +44,7 @@ export default async function CalendarPage() {
         availabilities={avails.map((a) => ({ clinicianId: a.clinicianId, weekly: a.weekly, overrides: a.overrides }))}
         todayCayman={today}
         initial={appts}
+        origin={origin}
       />
     </div>
   );

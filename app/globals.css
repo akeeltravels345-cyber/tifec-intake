@@ -4067,6 +4067,10 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-whoseg button:hover { border-color: var(--teal, #2f8e93); color: var(--ink); }
 .cal-whoseg button.on { background: var(--teal, #2f8e93); border-color: var(--teal, #2f8e93); color: #fff; }
 .cal-new { display: inline-flex; align-items: center; gap: 6px; font: 600 13px "Open Sans"; color: #fff; background: var(--indigo); border: 0; border-radius: 9px; padding: 9px 15px; cursor: pointer; }
+/* Secondary toolbar action: copy / share the booking-page link (every view). */
+.cal-share { display: inline-flex; align-items: center; gap: 6px; font: 600 13px "Open Sans"; color: var(--teal-deep); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 8px 13px; cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s, color .12s; }
+.cal-share:hover { border-color: var(--teal, #2f8e93); background: var(--panel, #fff); }
+.cal-share svg { flex: none; }
 .cal-new svg { flex: none; }
 
 .cal-gridwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }

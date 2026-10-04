@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
@@ -34,12 +35,15 @@ export default async function SchedulePage() {
   const today = caymanToday();
   const monday = mondayOf(today);
 
-  const [types, insurers, appts, avails] = await Promise.all([
+  const [types, insurers, appts, avails, h] = await Promise.all([
     listAppointmentTypes(),
     listInsurers(),
     listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)), clinicianId: all ? (defaultWho ?? undefined) : me.id }),
     Promise.all(visible.map((c) => getAvailability(c.id))),
+    headers(),
   ]);
+  // Absolute origin so the Share button hands out a full, shareable booking URL.
+  const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
 
   return (
     <CalendarView
@@ -52,6 +56,7 @@ export default async function SchedulePage() {
       canEditAll={all}
       lockedClinicianId={all ? null : me.id}
       defaultWho={defaultWho}
+      origin={origin}
       setupHref="/schedule/setup"
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
