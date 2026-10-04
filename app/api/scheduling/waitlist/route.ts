@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 async function requireAdmin() {
   const user = await getBillingUser();
   if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (!isSystemAdmin(user.clinician)) return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
   return { user };
 }
 

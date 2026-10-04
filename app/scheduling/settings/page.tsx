@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/scheduling/settings");
-  if (!isSystemAdmin(user.clinician)) redirect("/today");
+  // The practice owner manages scheduling config too, not only the admin account.
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
   const [settings, types, h] = await Promise.all([getSchedulingSettings(), listAppointmentTypes(), headers()]);
   // Build the absolute origin on the server so the shareable links render the
   // same on server and client (no hydration mismatch).

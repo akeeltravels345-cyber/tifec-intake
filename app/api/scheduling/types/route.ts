@@ -8,12 +8,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Prototype: the whole scheduler is the system admin's alone for now. Owner,
-// billers and clinicians are all refused, read and write, until it's ready.
+// Scheduling config is managed by the system admin and the practice owner;
+// billers and regular clinicians are refused, read and write.
 async function requireAdmin() {
   const user = await getBillingUser();
   if (!user) return { error: NextResponse.json({ error: "Not signed in." }, { status: 401 }) };
-  if (!isSystemAdmin(user.clinician)) {
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") {
     return { error: NextResponse.json({ error: "Not permitted." }, { status: 403 }) };
   }
   return { user };

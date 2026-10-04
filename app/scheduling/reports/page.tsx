@@ -14,7 +14,8 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/scheduling/reports");
-  if (!isSystemAdmin(user.clinician)) redirect("/today");
+  // The practice owner manages scheduling config too, not only the admin account.
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
 
   const sp = await searchParams;
   const nowYM = caymanYearMonth();

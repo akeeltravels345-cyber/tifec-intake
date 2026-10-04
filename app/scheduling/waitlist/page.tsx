@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function WaitlistPage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/scheduling/waitlist");
-  if (!isSystemAdmin(user.clinician)) redirect("/today");
+  // The practice owner manages scheduling config too, not only the admin account.
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
 
   const [entries, types] = await Promise.all([listWaitlist(), listAppointmentTypes()]);
   const rows = entries.map((e) => ({

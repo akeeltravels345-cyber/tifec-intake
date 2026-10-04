@@ -13,7 +13,8 @@ const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "bill
 export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/scheduling/availability");
-  if (!isSystemAdmin(user.clinician)) redirect("/today");
+  // The practice owner manages scheduling config too, not only the admin account.
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
 
   const sp = await searchParams;
   const selectedId = bookable.find((c) => c.id === sp.c)?.id ?? bookable[0]?.id ?? "";
