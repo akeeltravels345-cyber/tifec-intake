@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-interface Summary { id: string; service: string; typeId: string | null; durationMin: number; clinicianId: string; clinicianName: string; clientName: string; startAt: string; endAt: string; mode: string; status: string; }
+interface Summary { id: string; service: string; typeId: string | null; durationMin: number; clinicianId: string; clinicianName: string; clientName: string; clientEmail: string; phone: string; startAt: string; endAt: string; mode: string; status: string; }
 interface Slot { minute: number; clinicianId: string; }
 
 const CAY = 5;
@@ -12,7 +12,8 @@ const utcFromCay = (dateStr: string, minute: number) => { const [y, m, d] = date
 export default function ManageBooking({ initial, preview, practiceName }: { initial: Summary; preview: string; practiceName: string }) {
   const tz = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return "your timezone"; } }, []);
   const [appt, setAppt] = useState<Summary>(initial);
-  const [mode, setMode] = useState<"view" | "reschedule" | "done" | "cancelled">(initial.status === "cancelled" ? "cancelled" : "view");
+  const [mode, setMode] = useState<"view" | "reschedule" | "edit" | "done" | "cancelled">(initial.status === "cancelled" ? "cancelled" : "view");
+  const [form, setForm] = useState({ name: initial.clientName, email: initial.clientEmail, phone: initial.phone });
   const [date, setDate] = useState("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,14 @@ export default function ManageBooking({ initial, preview, practiceName }: { init
     if (!res.ok) { setErr(data.error || "Could not reschedule."); return; }
     setAppt(data.appointment); setMode("done");
   }
+  async function saveEdit() {
+    setBusy(true); setErr("");
+    const res = await fetch("/api/book/manage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preview, id: appt.id, action: "edit", clientName: form.name, clientEmail: form.email, phone: form.phone }) });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(data.error || "Could not save your changes."); return; }
+    setAppt(data.appointment); setMode("view");
+  }
   async function cancel() {
     if (!confirm("Cancel this booking?")) return;
     setBusy(true); setErr("");
@@ -85,11 +94,26 @@ export default function ManageBooking({ initial, preview, practiceName }: { init
               <div className="bk-row"><span>Clinician</span><span>{appt.clinicianName}</span></div>
               <div className="bk-row"><span>When</span><span>{fmtWhen(appt.startAt)}</span></div>
               <div className="bk-row"><span>Name</span><span>{appt.clientName}</span></div>
+              {appt.clientEmail && <div className="bk-row"><span>Email</span><span>{appt.clientEmail}</span></div>}
             </div>
             <p className="bk-tznote">Time shown in {tz}. Clinic time is Cayman (EST).</p>
             {err && <p className="bk-err">{err}</p>}
             <button className="bk-cta" onClick={() => { setMode("reschedule"); setErr(""); }}>Reschedule</button>
+            <button className="bk-textbtn" onClick={() => { setForm({ name: appt.clientName, email: appt.clientEmail, phone: appt.phone }); setMode("edit"); setErr(""); }}>Edit your details</button>
             <button className="bk-textbtn" style={{ color: "#b1543c" }} onClick={cancel} disabled={busy}>Cancel booking</button>
+          </section>
+        )}
+
+        {mode === "edit" && (
+          <section className="bk-sec">
+            <button className="bk-back" onClick={() => { setMode("view"); setErr(""); }}>← Back</button>
+            <h2 className="bk-h2">Edit your details</h2>
+            <p className="bk-donesub" style={{ marginBottom: 16 }}>Fix a spelling, or update your email or phone. This won&apos;t change your appointment time.</p>
+            <label className="bk-f"><span>Full name</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" /></label>
+            <label className="bk-f"><span>Email</span><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="How we'll reach you" /></label>
+            <label className="bk-f"><span>Phone <em>(optional)</em></span><input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+            {err && <p className="bk-err">{err}</p>}
+            <button className="bk-cta" onClick={saveEdit} disabled={busy || !form.name.trim()}>{busy ? "Saving…" : "Save changes"}</button>
           </section>
         )}
 

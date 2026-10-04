@@ -28,7 +28,8 @@ export default async function ManagePage({ searchParams }: { searchParams: Promi
         id: a.id, service: type?.name || "Appointment", typeId: a.typeId,
         durationMin: type?.durationMin || Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000),
         clinicianId: a.clinicianId, clinicianName: getClinician(a.clinicianId)?.name || "",
-        clientName: a.clientName, startAt: a.startAt, endAt: a.endAt, mode: a.mode, status: a.status,
+        clientName: a.clientName, clientEmail: a.clientEmail, phone: (a.notes.match(/Phone:\s*([^·]+)/i)?.[1] || "").trim(),
+        startAt: a.startAt, endAt: a.endAt, mode: a.mode, status: a.status,
       }}
     />
   );

@@ -42,6 +42,7 @@ async function summarize(id: string) {
   return {
     id: a.id, service: type?.name || "Appointment", typeId: a.typeId, durationMin: type?.durationMin || Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000),
     clinicianId: a.clinicianId, clinicianName: getClinician(a.clinicianId)?.name || "", clientName: a.clientName,
+    clientEmail: a.clientEmail, phone: (a.notes.match(/Phone:\s*([^·]+)/i)?.[1] || "").trim(),
     startAt: a.startAt, endAt: a.endAt, mode: a.mode, status: a.status,
   };
 }
@@ -119,6 +120,21 @@ export async function POST(req: Request) {
         id: a.id, startAt, endAt, location: loc,
       });
     }
+    return NextResponse.json({ ok: true, appointment: await summarize(id) });
+  }
+
+  if (action === "edit") {
+    // Let a client fix their own details (e.g. a misspelt name or email). This
+    // only touches the appointment; it never changes the time or status.
+    const name = String(body.clientName ?? a.clientName).trim().slice(0, 120);
+    const email = String(body.clientEmail ?? a.clientEmail).trim().slice(0, 160);
+    const phone = String(body.phone ?? "").trim().slice(0, 40);
+    if (!name) return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: "That email doesn't look right." }, { status: 400 });
+    // Rebuild the notes, replacing the "Phone:" segment and keeping any others.
+    const segs = (a.notes || "").split(" · ").filter((s) => s && !/^Phone:/i.test(s.trim()));
+    const notes = [phone ? `Phone: ${phone}` : "", ...segs].filter(Boolean).join(" · ");
+    await updateAppointment(id, { clientName: name, clientEmail: email, notes } as never);
     return NextResponse.json({ ok: true, appointment: await summarize(id) });
   }
 

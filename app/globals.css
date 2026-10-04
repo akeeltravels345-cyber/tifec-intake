@@ -4161,7 +4161,7 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
    ============================================================================ */
 body:has(.bk-page) .brandbar, body:has(.pt) .brandbar { display: none; }
 body:has(.pt) .sitefoot { display: none; }
-.bk-page { min-height: 100vh; color-scheme: light; background:
+.bk-page { --bk-accent: #2f8e93; min-height: 100vh; color-scheme: light; background:
     radial-gradient(1200px 600px at 50% -10%, #e4f0ef 0%, rgba(228,240,239,0) 60%),
     linear-gradient(180deg, #f5f8f7 0%, #eef2f1 100%);
   padding: 40px 18px 60px; font-family: "Open Sans", system-ui, sans-serif; color: #26303a; -webkit-font-smoothing: antialiased;
@@ -4394,8 +4394,9 @@ body:has(.pt) .sitefoot { display: none; }
 .cal-appt:active { cursor: grabbing; }
 
 /* Booking: manage-booking link on the confirmation */
-.bk-managelink { display: inline-block; margin-top: 18px; color: #226e72; font: 600 14px "Open Sans"; text-decoration: none; }
+.bk-managelink { display: block; width: fit-content; margin: 14px auto 0; color: #226e72; font: 600 14px "Open Sans"; text-decoration: none; }
 .bk-managelink:hover { text-decoration: underline; }
+.bk-managelink + .bk-managelink { margin-top: 10px; }
 
 /* Scheduling insights (/scheduling/reports) */
 .sr { max-width: 860px; margin: 0 auto; padding: 22px 20px 70px; color: var(--ink); }

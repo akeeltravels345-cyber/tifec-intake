@@ -368,7 +368,7 @@ export async function sendClientEmail(to: string, subject: string, text: string)
     return { sent: true };
   } catch (err) {
     console.error("Client email failed:", err);
-    return { sent: false, reason: "send failed" };
+    return { sent: false, reason: `send failed: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
@@ -477,7 +477,7 @@ export async function sendBrandedEmail(to: string, subject: string, args: Client
     return { sent: true };
   } catch (err) {
     console.error("Client email failed:", err);
-    return { sent: false, reason: "send failed" };
+    return { sent: false, reason: `send failed: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
