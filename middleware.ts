@@ -1,6 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // =============================================================================
+// Canonical domain.
+//
+// The production deployment is reachable at both the branded portal domain and
+// the project's *.vercel.app URL. Video OAuth (Zoom/Google) is registered to the
+// portal, client-facing links use it, and separate per-domain logins confuse
+// staff — so page loads on the production vercel URL are bounced to the portal.
+// Gated to VERCEL_ENV === "production" so PREVIEW deployments (their own unique
+// *.vercel.app URLs) are left alone, and limited to page requests so Vercel cron
+// jobs and OAuth callbacks that may hit the vercel host over /api keep working.
+// =============================================================================
+const CANONICAL_HOST = "portal.caymanessentialcare.com";
+
+// =============================================================================
 // View-as is READ-ONLY.
 //
 // When a system admin "views as" another person, lib/auth.ts (getCurrentClinician)
@@ -39,6 +52,20 @@ function sessionCid(token: string | undefined): string {
 }
 
 export function middleware(req: NextRequest): NextResponse {
+  // Canonical domain: send production *.vercel.app page loads to the portal.
+  const host = req.headers.get("host") || "";
+  if (
+    process.env.VERCEL_ENV === "production" &&
+    host.endsWith(".vercel.app") &&
+    host !== CANONICAL_HOST &&
+    !req.nextUrl.pathname.startsWith("/api")
+  ) {
+    const url = req.nextUrl.clone();
+    url.protocol = "https:";
+    url.host = CANONICAL_HOST;
+    return NextResponse.redirect(url, 307);
+  }
+
   if (!WRITE_METHODS.has(req.method)) return NextResponse.next();
   const as = req.cookies.get("admin_as")?.value;
   if (!as) return NextResponse.next();                                  // not viewing as anyone
@@ -52,15 +79,8 @@ export function middleware(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: [
-    "/api/billing/:path*",
-    "/api/comms/:path*",
-    "/api/account/:path*",
-    "/api/builder-tasks/:path*",
-    "/api/feedback/:path*",
-    "/api/report/:path*",
-    "/api/scheduling/:path*",
-    "/api/submissions/:path*",
-    "/api/admin/:path*",
-  ],
+  // Runs on all routes (so the canonical-domain redirect catches page loads)
+  // except Next's own static assets. The view-as block self-limits to its API
+  // prefixes internally, so the wider match doesn't change its behaviour.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
