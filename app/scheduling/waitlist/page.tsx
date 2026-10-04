@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { listWaitlist, listAppointmentTypes } from "@/lib/scheduling";
-import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
 import WaitlistView from "@/components/scheduling/WaitlistView";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +20,8 @@ export default async function WaitlistPage() {
   }));
 
   return (
-    <div>
-      <SchedulingTabs />
+    <div className="sh-wrap">
+      <div className="sh-bar"><a className="sh-back" href="/schedule">← Back to my agenda</a></div>
       <WaitlistView initial={rows} />
     </div>
   );

@@ -4,7 +4,6 @@ import { isSystemAdmin } from "@/lib/clinicians";
 import { listAppointmentTypes } from "@/lib/scheduling";
 import { listCptCodes } from "@/lib/billing";
 import { FORM_TEMPLATES } from "@/lib/forms";
-import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
 import AppointmentTypesManager from "@/components/scheduling/AppointmentTypesManager";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +25,8 @@ export default async function AppointmentTypesPage() {
   const cptCodes = cpt.filter((c) => c.active !== false).map((c) => ({ code: c.code, description: c.description }));
 
   return (
-    <div>
-      <SchedulingTabs />
+    <div className="sh-wrap">
+      <div className="sh-bar"><a className="sh-back" href="/schedule">← Back to my agenda</a></div>
       <AppointmentTypesManager initial={types} cptCodes={cptCodes} formOptions={FORM_OPTIONS} />
     </div>
   );

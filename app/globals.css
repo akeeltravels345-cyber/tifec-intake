@@ -4014,14 +4014,36 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-bar { display: flex; flex-direction: column; margin-bottom: 14px; }
 .cal-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .cal-bar-tools { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
-.cal-tools { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cal-tools .cal-hours { margin-right: 0; }
-/* The "More" tools button + its overlay are mobile-only (hidden on desktop). */
-.cal-moretoggle, .cal-moreoverlay { display: none; }
+/* The calendar tools live behind one "More" button at every width now — the
+   agenda is the single scheduling home, so the menu holds all of its pages
+   (setup, hours, services, booking rules, connections, link, intake, waitlist,
+   insights, stats) without crowding the toolbar. */
+.cal-toolswrap { position: relative; flex: none; }
+.cal-moretoggle {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font: 600 13px "Open Sans"; color: var(--teal-deep); background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 13px; cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.cal-moretoggle:hover { border-color: var(--teal, #2f8e93); background: var(--panel, #fff); }
+.cal-tools { display: none; }
+.cal-tools.open {
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 224px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px;
+  box-shadow: 0 14px 30px rgba(0,0,0,.16);
+}
+.cal-tools.open .cal-hours { justify-content: flex-start; border: 0; margin: 0; padding: 11px 12px; font-size: 14px; border-radius: 8px; width: 100%; }
+.cal-tools.open .cal-hours:hover { background: var(--panel); }
+/* The filled "Set up" button reads as a plain menu row inside the dropdown. */
+.cal-tools.open .cal-hours.cal-setup { background: transparent; color: var(--teal-deep); }
+.cal-tools.open .cal-hours.cal-setup svg { opacity: .85; }
+.cal-tools.open .cal-hours span { display: inline; }
+.cal-moreoverlay { display: block; position: fixed; inset: 0; z-index: 55; }
 
 /* Phone calendar: row 2 becomes ONE compact row — the clinician filter (swipes
-   sideways) plus a "More" button that opens the tools in a dropdown — so the
-   toolbar stops eating the screen. Matches the 820px bottom-tab breakpoint. */
+   sideways) plus the "More" button — so the toolbar stops eating the screen.
+   Matches the 820px bottom-tab breakpoint. */
 @media (max-width: 820px) {
   .cal-bar { margin-bottom: 10px; }
   .cal-bar-row { gap: 8px; }
@@ -4035,23 +4057,6 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
   }
   .cal-bar .cal-whoseg::-webkit-scrollbar { display: none; }
   .cal-bar .cal-whoseg button { flex: none; }
-  .cal-toolswrap { position: relative; flex: none; }
-  .cal-moretoggle {
-    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-    font: 600 13px "Open Sans"; color: var(--teal-deep); background: var(--card);
-    border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer;
-  }
-  .cal-tools { display: none; }
-  .cal-tools.open {
-    display: flex; flex-direction: column; align-items: stretch; gap: 2px;
-    position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; min-width: 210px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px;
-    box-shadow: 0 14px 30px rgba(0,0,0,.16);
-  }
-  .cal-tools.open .cal-hours { justify-content: flex-start; border: 0; margin: 0; padding: 11px 12px; font-size: 14px; border-radius: 8px; }
-  .cal-tools.open .cal-hours:hover { background: var(--panel); }
-  .cal-tools.open .cal-hours span { display: inline; }
-  .cal-moreoverlay { display: block; position: fixed; inset: 0; z-index: 55; }
 }
 .cal-nav { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .cal-nav button { font: 600 14px "Open Sans"; border: 0; border-left: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 8px 13px; cursor: pointer; }

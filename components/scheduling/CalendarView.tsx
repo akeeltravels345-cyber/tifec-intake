@@ -41,6 +41,10 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   dots: <><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></>,
   share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /></>,
   check: <><polyline points="20 6 9 17 4 12" /></>,
+  list: <><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none" /></>,
+  users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+  sliders: <><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></>,
+  trend: <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></>,
 };
 function ToolIcon({ name }: { name: string }) {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{TOOL_ICONS[name]}</svg>;
@@ -66,8 +70,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null, servicesHref = null, waitlistHref = null, insightsHref = null, bookingRulesHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null; servicesHref?: string | null; waitlistHref?: string | null; insightsHref?: string | null; bookingRulesHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -423,9 +427,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
             <div className={`cal-tools ${moreOpen ? "open" : ""}`} onClick={() => setMoreOpen(false)}>
               {setupHref && <a className="cal-hours cal-setup" href={setupHref}><ToolIcon name="wand" /><span>Set up</span></a>}
               {hoursHref && <a className="cal-hours" href={hoursHref}><ToolIcon name="clock" /><span>My hours</span></a>}
+              {servicesHref && <a className="cal-hours" href={servicesHref}><ToolIcon name="list" /><span>Services</span></a>}
+              {bookingRulesHref && <a className="cal-hours" href={bookingRulesHref}><ToolIcon name="sliders" /><span>Booking rules</span></a>}
               {connectionsHref && <a className="cal-hours" href={connectionsHref}><ToolIcon name={connectionsIcon} /><span>{connectionsLabel}</span></a>}
               {linksHref && <a className="cal-hours" href={linksHref}><ToolIcon name="link" /><span>My link</span></a>}
               {intakeHref && <a className="cal-hours" href={intakeHref}><ToolIcon name="clipboard" /><span>Intake</span></a>}
+              {waitlistHref && <a className="cal-hours" href={waitlistHref}><ToolIcon name="users" /><span>Waitlist</span></a>}
+              {insightsHref && <a className="cal-hours" href={insightsHref}><ToolIcon name="trend" /><span>Insights</span></a>}
               {statsHref && <a className="cal-hours" href={statsHref}><ToolIcon name="chart" /><span>Stats</span></a>}
             </div>
           </div>

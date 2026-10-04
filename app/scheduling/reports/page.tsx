@@ -3,7 +3,6 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { schedulingStats } from "@/lib/scheduling";
 import { caymanYearMonth } from "@/lib/caymanTime";
-import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
 import MonthNav from "@/components/billing/MonthNav";
 
 export const dynamic = "force-dynamic";
@@ -32,8 +31,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   );
 
   return (
-    <div>
-      <SchedulingTabs />
+    <div className="sh-wrap">
+      <div className="sh-bar"><a className="sh-back" href="/schedule">← Back to my agenda</a></div>
       <div className="sr">
         <div className="sr-head">
           <div>

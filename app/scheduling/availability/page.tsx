@@ -1,29 +1,9 @@
 import { redirect } from "next/navigation";
-import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
-import { getAvailability } from "@/lib/scheduling";
-import SchedulingTabs from "@/components/scheduling/SchedulingTabs";
-import AvailabilityManager from "@/components/scheduling/AvailabilityManager";
 
+// Availability is now edited in one place: "My hours" on the /schedule agenda
+// (same editor, and owner/Donnet can still pick any clinician there).
 export const dynamic = "force-dynamic";
 
-// The clinicians who actually see clients — not the biller or the admin account.
-const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
-
-export default async function AvailabilityPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
-  const user = await getBillingUser();
-  if (!user) redirect("/login?next=/scheduling/availability");
-  // The practice owner manages scheduling config too, not only the admin account.
-  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") redirect("/today");
-
-  const sp = await searchParams;
-  const selectedId = bookable.find((c) => c.id === sp.c)?.id ?? bookable[0]?.id ?? "";
-  const initial = selectedId ? await getAvailability(selectedId) : { clinicianId: "", weekly: [], overrides: [], minNoticeHours: 12, bookAheadDays: 60, maxPerDay: 0, slotIntervalMin: 30, busyFeeds: [], updatedAt: "" };
-
-  return (
-    <div>
-      <SchedulingTabs />
-      <AvailabilityManager clinicians={bookable.map((c) => ({ id: c.id, name: c.name }))} selectedId={selectedId} initial={initial} />
-    </div>
-  );
+export default function SchedulingAvailabilityRedirect() {
+  redirect("/schedule/hours");
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { inScheduleBeta } from "@/lib/clinicians";
+import { inScheduleBeta, isSystemAdmin } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
@@ -44,6 +44,9 @@ export default async function SchedulePage() {
   ]);
   // Absolute origin so the Share button hands out a full, shareable booking URL.
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
+  // Practice-config doors (services, booking rules, waitlist, insights) are for
+  // the owner / system admin only — matching those pages' own guards.
+  const manages = isSystemAdmin(me) || me.contact === "owner";
 
   return (
     <CalendarView
@@ -60,11 +63,15 @@ export default async function SchedulePage() {
       setupHref="/schedule/setup"
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"
-      connectionsLabel="Settings"
+      connectionsLabel="Connections"
       connectionsIcon="gear"
       statsHref="/schedule/stats"
       intakeHref="/schedule/intake"
       linksHref="/schedule/links"
+      servicesHref={manages ? "/scheduling/types" : null}
+      bookingRulesHref={manages ? "/scheduling/settings" : null}
+      waitlistHref={manages ? "/scheduling/waitlist" : null}
+      insightsHref={manages ? "/scheduling/reports" : null}
     />
   );
 }

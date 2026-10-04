@@ -75,7 +75,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.
   const uToday: Item = { href: "/today", label: "Today", icon: IcToday, match: (p) => p === "/today" };
-  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p === "/schedule", beta: true };
+  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p.startsWith("/schedule") || p.startsWith("/scheduling"), beta: true, highlight: schedGlow };
   const uDash: Item = { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" };
   const uForms: Item = { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" };
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };
@@ -87,10 +87,6 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // HIPAA compliance tracker — an in-app board (owner + admin). First item in the
   // Team group so it's easy to find.
   const uHipaa: Item = { href: "/team/hipaa", label: "HIPAA", icon: IcKey, match: (p) => p.startsWith("/team/hipaa"), highlight: hipaaGlow };
-  // The full scheduling calendar. Now open to the owner (see app/scheduling/layout.tsx),
-  // highlighted as new for their first few sessions.
-  const uScheduling: Item = { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling"), highlight: schedGlow };
-
   let groups: Group[];
   if (isAdmin && hasBilling) {
     // The admin's own menu is intentionally lean: just their admin tools + team.
@@ -102,18 +98,15 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
       { label: "Admin", items: [
         { href: "/billing/config", label: "Setup", icon: IcSetup, match: (p) => p.startsWith("/billing/config") },
         { href: "/billing/worklist", label: "Worklist", icon: IcWork, match: (p) => p.startsWith("/billing/worklist") },
-        // Scheduling is admin-only while it is being built — not shown to the
-        // owner or anyone else until it's ready.
-        { href: "/scheduling/calendar", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/scheduling") },
+        { href: "/schedule", label: "Scheduling", icon: IcToday, match: (p) => p.startsWith("/schedule") || p.startsWith("/scheduling") },
         { href: "/admin", label: "Logins & oversight", icon: IcKey, match: (p) => p === "/admin" },
         uHandbook,
       ] },
     ];
   } else {
     groups = [
-      // The owner gets the full Scheduling calendar and no longer needs the old
-      // beta agenda; others who have the agenda keep it until Scheduling reaches them.
-      { label: "", items: [uToday, ...(canSchedule && !owner ? [uSchedule] : []), ...(owner ? [uScheduling] : [])] },
+      // One scheduling home for everyone who has it: the /schedule agenda.
+      { label: "", items: [uToday, ...(canSchedule || owner ? [uSchedule] : [])] },
       { label: "Intake", items: [uDash, uForms] },
     ];
     if (hasBilling) {
