@@ -39,10 +39,14 @@ async function run(req: Request, apply: boolean) {
   const target = all ? undefined : insurers.find((i) => i.name.toLowerCase() === insurerParam.toLowerCase() || i.id === insurerParam);
   if (!all && !target) return NextResponse.json({ error: `No insurer named "${insurerParam}". Try ?insurer=all or an exact name.` }, { status: 400 });
 
+  // By default only FILL IN empty referrals — never overwrite an existing (often
+  // manually-set) expiry with an old document's date. ?overwrite=1 forces it.
+  const overwrite = url.searchParams.get("overwrite") === "1";
+
   const clients = (await listAllClients()).filter((c) => all ? !!c.insurerId : c.insurerId === target!.id);
 
   const results: { client: string; clientId: string; doc: string; currentEnd: string | null; readEnd: string | null; action: string }[] = [];
-  let updated = 0, flagged = 0, noDoc = 0, unreadable = 0;
+  let updated = 0, flagged = 0, noDoc = 0, unreadable = 0, conflicts = 0;
 
   for (const c of clients) {
     const name = `${c.first} ${c.last}`.trim() || "Unnamed";
@@ -63,9 +67,16 @@ async function run(req: Request, apply: boolean) {
     const currentEnd = c.profile.referral?.endDate ?? null;
 
     if (ex.endDate) {
-      const action = currentEnd === ex.endDate ? "already set (no change)" : currentEnd ? `update ${currentEnd} -> ${ex.endDate}` : `set ${ex.endDate}`;
+      // Fill an empty one; a matching date is a no-op; a different EXISTING date is
+      // a conflict we skip (unless ?overwrite=1) so a manual date isn't clobbered.
+      const willWrite = currentEnd == null || (overwrite && currentEnd !== ex.endDate);
+      const action = currentEnd == null ? `set ${ex.endDate}`
+        : currentEnd === ex.endDate ? "already set (no change)"
+        : overwrite ? `overwrite ${currentEnd} -> ${ex.endDate}`
+        : `CONFLICT: record ${currentEnd}, file says ${ex.endDate} — skipped (review)`;
       results.push({ client: name, clientId: c.id, doc: fileName, currentEnd, readEnd: ex.endDate, action });
-      if (currentEnd !== ex.endDate) {
+      if (currentEnd != null && currentEnd !== ex.endDate && !overwrite) conflicts++;
+      if (willWrite) {
         updated++;
         if (apply) {
           const referral: ClientReferral = {
@@ -94,9 +105,11 @@ async function run(req: Request, apply: boolean) {
     ok: true,
     mode: apply ? "applied" : "dry-run (no changes made)",
     insurer: all ? "all" : target!.name,
+    overwrite,
     clientsMatched: clients.length,
     withReferralDoc: clients.length - noDoc,
-    wouldUpdateOrUpdated: updated,
+    wouldFillOrFilled: updated,
+    conflictsSkipped: conflicts,
     unreadable,
     needsManualReview: flagged,
     results,
