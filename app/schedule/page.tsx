@@ -28,13 +28,16 @@ export default async function SchedulePage() {
   // list (e.g. the hidden test account).
   const self = CLINICIANS.find((c) => c.id === me.id);
   const visible = all ? bookable : (self ? [self] : []);
+  // Owner/admin who is also a treating clinician opens on their OWN schedule
+  // (not everyone's); they can still switch the filter to All or a colleague.
+  const defaultWho = all && visible.some((c) => c.id === me.id) ? me.id : null;
   const today = caymanToday();
   const monday = mondayOf(today);
 
   const [types, insurers, appts, avails] = await Promise.all([
     listAppointmentTypes(),
     listInsurers(),
-    listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)), clinicianId: all ? undefined : me.id }),
+    listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)), clinicianId: all ? (defaultWho ?? undefined) : me.id }),
     Promise.all(visible.map((c) => getAvailability(c.id))),
   ]);
 
@@ -48,6 +51,7 @@ export default async function SchedulePage() {
       initial={appts}
       canEditAll={all}
       lockedClinicianId={all ? null : me.id}
+      defaultWho={defaultWho}
       setupHref="/schedule/setup"
       hoursHref="/schedule/hours"
       connectionsHref="/schedule/connections"

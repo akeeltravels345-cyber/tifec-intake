@@ -64,8 +64,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null;
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -98,7 +98,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [appts, setAppts] = useState<Appointment[]>(initial);
   const [extBusy, setExtBusy] = useState<{ clinicianId: string; start: string; end: string; title?: string; source?: string }[]>([]);
   const [busyInfo, setBusyInfo] = useState<{ name: string; source: string; when: string; clinicianId: string } | null>(null);
-  const [who, setWho] = useState<string>(lockedClinicianId || "all");
+  // Locked viewers see only themselves; everyone else opens on their own
+  // schedule when provided (defaultWho), but can switch to "All" or a colleague.
+  const [who, setWho] = useState<string>(lockedClinicianId || defaultWho || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
   const [phone, setPhone] = useState(false); // taller grid rows on phones
