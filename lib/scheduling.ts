@@ -567,6 +567,18 @@ export async function createAppointment(input: ApptInput): Promise<Appointment> 
   return row;
 }
 
+// Idempotent upsert keyed by a caller-supplied stable id (e.g. "acuity-<id>"),
+// so re-running an external import updates rather than duplicates. Unlike
+// createAppointment it does NOT generate a random id, send email, or create any
+// video link — it only writes the appointment row.
+export async function importAppointment(stableId: string, input: ApptInput): Promise<{ appt: Appointment; created: boolean }> {
+  const existing = await getAppointment(stableId);
+  const row = normalizeAppt(input, existing ?? undefined);
+  row.id = stableId; // force the stable id (normalizeAppt would randomise a new one)
+  await persistAppt(row, !existing);
+  return { appt: row, created: !existing };
+}
+
 export async function updateAppointment(id: string, input: ApptInput): Promise<Appointment | null> {
   const base = await getAppointment(id);
   if (!base) return null;
