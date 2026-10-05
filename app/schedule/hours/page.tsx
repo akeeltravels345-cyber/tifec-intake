@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { inScheduleBeta } from "@/lib/clinicians";
+import { inScheduleBeta, isBookableClinician } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { getAvailability } from "@/lib/scheduling";
@@ -8,7 +8,9 @@ import { seesAllSchedule, isTreatingClinician } from "../layout";
 
 export const dynamic = "force-dynamic";
 
-const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
+// Include private-booking practicum clinicians (e.g. Nick) so their hours can
+// be set too; exclude test accounts.
+const bookable = CLINICIANS.filter((c) => isBookableClinician(c) && !c.test);
 
 // A clinician sets their own weekly hours here; owner/Donnet can set anyone's.
 export default async function MyHoursPage() {

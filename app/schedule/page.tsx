@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { inScheduleBeta, isSystemAdmin } from "@/lib/clinicians";
+import { inScheduleBeta, isSystemAdmin, isBookableClinician } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
@@ -11,7 +11,9 @@ import { seesAllSchedule, isTreatingClinician } from "./layout";
 
 export const dynamic = "force-dynamic";
 
-const bookable = CLINICIANS.filter((c) => !c.intakeHidden && c.contact !== "biller");
+// Treating roster shown on the calendar: public clinicians PLUS private-booking
+// practicum clinicians (e.g. Nick), but not test accounts.
+const bookable = CLINICIANS.filter((c) => isBookableClinician(c) && !c.test);
 const CAY = 5;
 const addDays = (d: string, n: number) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10); };
 const mondayOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); const w = (new Date(Date.UTC(y, m - 1, dd)).getUTCDay() + 6) % 7; return addDays(d, -w); };
