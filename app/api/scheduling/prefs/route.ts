@@ -17,8 +17,9 @@ export async function POST(req: Request) {
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad request." }, { status: 400 }); }
-  const patch: { dailyAgenda?: boolean } = {};
+  const patch: { dailyAgenda?: boolean; newBookings?: boolean } = {};
   if (typeof body.dailyAgenda === "boolean") patch.dailyAgenda = body.dailyAgenda;
+  if (typeof body.newBookings === "boolean") patch.newBookings = body.newBookings;
   const prefs = await setClinicianPrefs(me.id, patch);
   return NextResponse.json({ ok: true, prefs });
 }

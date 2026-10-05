@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/daily-agenda",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/new-bookings",
+      "schedule": "0 4 * * *"
     }
   ]
 }

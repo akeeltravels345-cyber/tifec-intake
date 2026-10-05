@@ -40,7 +40,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
       />
       <CalendarSubscribe url={feedUrl} />
       <BusyFeeds initialFeeds={av.busyFeeds} googleConnected={googleConnected} />
-      <AgendaPref initial={prefs.dailyAgenda} />
+      <AgendaPref dailyAgenda={prefs.dailyAgenda} newBookings={prefs.newBookings} />
       <PushToggle />
     </div>
   );
