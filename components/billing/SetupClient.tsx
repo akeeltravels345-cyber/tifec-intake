@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type CopayType = "none" | "fixed" | "percentage";
@@ -16,11 +16,20 @@ function NumInput({ value, onChange, className = "set-num", disabled, style }: {
   value: number; onChange: (n: number) => void; className?: string; disabled?: boolean; style?: React.CSSProperties;
 }) {
   const [txt, setTxt] = useState(value === 0 ? "0" : String(value));
+  // Re-sync the display when `value` is changed from OUTSIDE (Discard revert, or
+  // the post-save refresh) — but only while unfocused, so typing (including a
+  // lone "." or clearing to empty) is never fought mid-edit.
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current && Number(txt || 0) !== value) setTxt(value === 0 ? "0" : String(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
   return (
     <input
       className={className} type="text" inputMode="decimal" disabled={disabled} style={style}
       value={txt}
-      onFocus={(e) => e.currentTarget.select()}
+      onFocus={(e) => { focused.current = true; e.currentTarget.select(); }}
+      onBlur={() => { focused.current = false; }}
       onChange={(e) => {
         const v = e.target.value;
         if (v === "" || /^-?\d*\.?\d*$/.test(v)) {
