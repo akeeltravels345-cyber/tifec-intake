@@ -46,9 +46,11 @@ export default async function SchedulePage() {
   ]);
   // Absolute origin so the Share button hands out a full, shareable booking URL.
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
-  // Practice-config doors (services, booking rules, waitlist, insights) are for
-  // the owner / system admin only — matching those pages' own guards.
+  // Waitlist + insights are for the owner / system admin. Services and booking
+  // rules are the owner's alone (per Dr. Shion's request) — the admin can still
+  // reach those pages directly, just not via this menu.
   const manages = isSystemAdmin(me) || me.contact === "owner";
+  const isOwner = me.contact === "owner";
 
   return (
     <CalendarView
@@ -70,8 +72,8 @@ export default async function SchedulePage() {
       statsHref="/schedule/stats"
       intakeHref="/schedule/intake"
       linksHref="/schedule/links"
-      servicesHref={manages ? "/scheduling/types" : null}
-      bookingRulesHref={manages ? "/scheduling/settings" : null}
+      servicesHref={isOwner ? "/scheduling/types" : null}
+      bookingRulesHref={isOwner ? "/scheduling/settings" : null}
       waitlistHref={manages ? "/scheduling/waitlist" : null}
       insightsHref={manages ? "/scheduling/reports" : null}
     />
