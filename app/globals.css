@@ -2846,7 +2846,7 @@ body:has(.biz) { background: var(--panel); }
 .su-two { display: grid; grid-template-columns: 1fr; gap: 22px; align-items: start; }
 .su-comm { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding: 22px 24px; }
 .su-comm .who { display: flex; align-items: center; gap: 12px; }
-.su-comm .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--indigo)); color: #fff; font: 500 16px "Newsreader", serif; display: flex; align-items: center; justify-content: center; }
+.su-comm .av { flex: none; box-sizing: border-box; padding: 0; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--indigo)); color: #fff; font: 500 16px "Newsreader", serif; display: flex; align-items: center; justify-content: center; }
 .su-comm .nm { font-weight: 700; font-size: 15px; }
 .su-comm .rl { font-size: 12.5px; color: var(--faint); margin-top: 2px; }
 .su-comm .rate { margin-left: auto; display: flex; align-items: center; gap: 10px; }
