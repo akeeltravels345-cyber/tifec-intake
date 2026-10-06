@@ -656,7 +656,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     <label className="cal-f grow"><span>Client name</span><input value={draft.clientName || ""} onChange={(e) => setDraft({ ...draft, clientName: e.target.value })} placeholder="Full name" autoFocus /></label>
                     <label className="cal-f grow"><span>Client email</span><input value={draft.clientEmail || ""} onChange={(e) => setDraft({ ...draft, clientEmail: e.target.value })} placeholder="for confirmation & reminders" /></label>
                   </>}
-                  <label className="cal-f"><span>Appointment type</span>
+                  <label className="cal-f grow"><span>Appointment type</span>
                     <select value={draft.typeId || ""} onChange={(e) => pickType(e.target.value)}>
                       {types.length === 0 && <option value="">No types yet</option>}
                       {Array.from(new Map(types.map((t) => [t.category || "Other", true])).keys()).map((cat) => (
