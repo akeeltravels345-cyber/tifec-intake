@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "–";
 
 // The biller's monthly payout statement. Their payout is the commission on what
 // was actually COLLECTED this month; pending is shown separately. Biller sees
@@ -49,40 +50,37 @@ export default async function BillerPayoutStatement({ searchParams }: { searchPa
       </div>
 
       <article className="stmt">
-        <header className="stmt-head">
-          <div className="stmt-brand">
-            <img src="/tifec-logo.png" alt="The Institute for Essential Care" className="stmt-logo" />
-            <div className="stmt-brand-sub">The Institute for Essential Care</div>
+        <div className="stmt-band">
+          <div className="stmt-band-l">
+            <div className="stmt-mono">{initials(biller?.name ?? "Biller")}</div>
+            <div>
+              <div className="stmt-name2">{biller?.name ?? "Biller"}</div>
+              <div className="stmt-doc2">{biller?.credentials ?? "Billing"}</div>
+            </div>
           </div>
-          <div className="stmt-meta">
-            <div className="stmt-doc">Biller Payout Statement</div>
-            <div className="stmt-period">{MONTHS[month - 1]} {year}</div>
-            <div className="stmt-gen">Generated {generated} · KYD</div>
+          <div className="stmt-band-r">
+            <div className="stmt-kind">Biller Payout Statement</div>
+            <div className="stmt-sub2">{MONTHS[month - 1]} {year}</div>
+            <div className="stmt-sub2">Generated {generated} · KYD</div>
           </div>
-        </header>
+        </div>
 
-        <section className="stmt-to">
-          <div>
-            <div className="stmt-label">Prepared for</div>
-            <div className="stmt-name">{biller?.name ?? "Biller"}</div>
-            <div className="stmt-cred">{biller?.credentials ?? "Billing"}</div>
+        <div className="stmt-body">
+          <div className="stmt-hero">
+            <span className="stmt-herolab">Net payout</span>
+            <span className="stmt-heroval">{money(netPayout)}</span>
           </div>
-          <div className="stmt-net">
-            <div className="stmt-label">Net payout</div>
-            <div className="stmt-net-val">{money(netPayout)}</div>
-          </div>
-        </section>
 
-        <section className="stmt-grid">
-          <div className="stmt-kpi"><span>Insurance collected</span><b>{money(bm.insuranceCollected)}</b></div>
-          <div className="stmt-kpi"><span>Claims paid</span><b>{bm.billedCount}</b></div>
-          <div className="stmt-kpi"><span>Blended rate</span><b>{bm.blendedRate}</b></div>
-        </section>
+          <section className="stmt-grid">
+            <div className="stmt-kpi"><span>Insurance collected</span><b>{money(bm.insuranceCollected)}</b></div>
+            <div className="stmt-kpi"><span>Claims paid</span><b>{bm.billedCount}</b></div>
+            <div className="stmt-kpi"><span>Blended rate</span><b>{bm.blendedRate}</b></div>
+          </section>
 
-        <section>
-          <h3 className="stmt-h3">Where your payout came from</h3>
-          <p className="stmt-sub">Each clinician&apos;s biller rate on their Setup biller-base (their share of the insurance the rate is charged on), plus {bm.billerRate}% of the company retention where commission applies. Based on money actually collected this month.</p>
-          <table className="stmt-calc">
+          <section>
+            <h3 className="stmt-h3">Where your payout came from</h3>
+            <p className="stmt-sub">Each clinician&apos;s biller rate on their Setup biller-base (their share of the insurance the rate is charged on), plus {bm.billerRate}% of the company retention where commission applies. Based on money actually collected this month.</p>
+            <table className="stmt-calc">
             <tbody>
               {clinRows.length === 0 && !hasCompany ? (
                 <tr><td>No commission collected this month</td><td className="num">{money(0)}</td></tr>
@@ -103,10 +101,11 @@ export default async function BillerPayoutStatement({ searchParams }: { searchPa
           </table>
         </section>
 
-        <footer className="stmt-foot">
-          <span>The Institute for Essential Care · Grand Cayman</span>
-          <span>This statement is generated automatically and reflects data as of {generated}.</span>
-        </footer>
+          <footer className="stmt-foot">
+            <span>The Institute for Essential Care · Grand Cayman</span>
+            <span>This statement is generated automatically and reflects data as of {generated}.</span>
+          </footer>
+        </div>
       </article>
     </div>
   );
