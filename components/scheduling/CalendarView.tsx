@@ -12,7 +12,7 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_START = 7, DAY_END = 20; // 7am-8pm
 // Vertical scale of the day/week grid. Phones get a taller hour so a short
 // (15-30 min) appointment still has room to show the client name + time.
-const HOUR_DESKTOP = 92, HOUR_PHONE = 140;
+const HOUR_DESKTOP = 118, HOUR_PHONE = 150;
 const MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In person", virtual: "Virtual", either: "Either" };
 // How a mode reads on the calendar block (Acuity-style) and its colour.
 const CAL_MODE_LABEL: Record<AppointmentMode, string> = { in_person: "In Person", virtual: "Online", either: "In Person / Online" };
