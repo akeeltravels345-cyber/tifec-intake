@@ -362,6 +362,7 @@ export interface BottomLine {
   billerFromCompany: number;
   billerCommissionPct: number;
   runningExpenses: number;
+  servicesInvoice: number; // the admin's fixed monthly services invoice (Akeel)
   net: number;
   outstanding: number;
   projectedNet: number; // net + what the practice keeps once outstanding lands (~37%)
@@ -372,9 +373,11 @@ export interface BottomLine {
   netAfterProcessing: number;
 }
 
-export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number, processingFeePct = 0): BottomLine {
+export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number, processingFeePct = 0, servicesInvoiceTotal = 0): BottomLine {
   const billerCommission = biz.billerCommission; // per-clinician, already summed
-  const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal);
+  // The admin's fixed monthly services fee (Akeel) is a real operating cost, so
+  // it comes out of net alongside payouts, biller commission and running expenses.
+  const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal - servicesInvoiceTotal);
   const processingFee = round2((biz.collected * processingFeePct) / 100);
   // Blended biller rate (varies by clinician) for the projected-net estimate. Once an
   // outstanding claim is paid: 60% to the clinician, ~blended% to the biller, rest kept.
@@ -388,6 +391,7 @@ export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: numb
     billerFromCompany: biz.billerFromCompany,
     billerCommissionPct: Math.round(effBillerPct * 10) / 10,
     runningExpenses: runningExpensesTotal,
+    servicesInvoice: servicesInvoiceTotal,
     net,
     outstanding: biz.outstanding,
     projectedNet: round2(net + biz.outstanding * keepRate),

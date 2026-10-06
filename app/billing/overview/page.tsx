@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth } from "@/lib/billing";
+import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth, servicesInvoiceTotal } from "@/lib/billing";
 import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { CLINICIANS } from "@/lib/clinicians";
 import { listBuilderTasks } from "@/lib/builderTasks";
@@ -36,7 +36,8 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const prev = bizFor(prevY, prevM);
   const expensesTotal = runningExpensesTotalForMonth(cfg, year, month);
   const monthExpenses = expensesForMonth(cfg, year, month).expenses;
-  const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0);
+  const servicesTotal = servicesInvoiceTotal(cfg);
+  const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0, servicesTotal);
   // The illustrative processing-fee line is admin-only (the builder).
   const isAdmin = user.clinician.contact === "admin";
   // The builder worklist is a builder tool, so it only mounts on the overview for
@@ -97,6 +98,9 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     isAdmin,
     builderTasks,
     worklistChip,
+    servicesInvoice: cfg.servicesInvoice?.enabled && servicesTotal > 0
+      ? { payee: cfg.servicesInvoice.payeeName || cfg.servicesInvoice.businessName || "Services", total: servicesTotal }
+      : null,
   };
 
   return <OverviewClient data={data} />;

@@ -5102,3 +5102,40 @@ body:has(.pt) .sitefoot { display: none; }
   --appt-on-bg: #1c3527; --appt-on-bar: #57a877; --appt-on-fg: #bfe2cc;
   --appt-ei-bg: #163330; --appt-ei-bar: #4fb0aa; --appt-ei-fg: #b6e0dc;
 }
+
+/* ============================================================================
+   SERVICES INVOICE (.inv-*) — the admin's fixed monthly invoice (Akeel → TIFEC).
+   Shares the .stmt-wrap / .stmt-actions shell with the payout statements.
+   ========================================================================= */
+.inv {
+  background: var(--card, #fff); color: var(--ink, #283039);
+  border: 1px solid var(--line, #e7e1d5); border-radius: 14px;
+  max-width: 760px; margin: 0 auto; padding: 34px 38px;
+  font-family: "Open Sans", -apple-system, system-ui, sans-serif;
+}
+.inv-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--line, #e7e1d5); }
+.inv-biz { font: 600 22px/1.1 "Newsreader", Georgia, serif; letter-spacing: .01em; }
+.inv-doc { font: 700 11px "Open Sans", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--muted, #6c6f73); margin-top: 4px; }
+.inv-meta { text-align: right; font-size: 12.5px; color: var(--muted, #6c6f73); }
+.inv-period { margin-top: 3px; font-weight: 600; color: var(--ink, #283039); }
+.inv-parties { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 18px; padding: 20px 0; border-bottom: 1px solid var(--line, #e7e1d5); }
+.inv-label { font: 700 10px "Open Sans", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--faint, #9aa0a6); margin-bottom: 5px; }
+.inv-pname { font-weight: 600; font-size: 14px; }
+.inv-psub { font-size: 12px; color: var(--muted, #6c6f73); }
+.inv-tbl { width: 100%; border-collapse: collapse; margin: 18px 0 4px; font-size: 13.5px; }
+.inv-tbl thead th { text-align: left; font: 700 10px "Open Sans", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--faint, #9aa0a6); padding: 0 8px 8px; border-bottom: 1px solid var(--line, #e7e1d5); }
+.inv-tbl thead th.num, .inv-tbl tbody td.num, .inv-tbl tfoot td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.inv-tbl tbody td { padding: 11px 8px; border-bottom: 1px solid var(--line-soft, #f0ece2); vertical-align: top; }
+.inv-itnm { font-weight: 600; }
+.inv-itdt { color: var(--muted, #6c6f73); }
+.inv-tbl tfoot td { padding: 8px; font-variant-numeric: tabular-nums; }
+.inv-tbl tfoot tr.inv-sub td { padding-top: 14px; font-weight: 600; }
+.inv-tbl tfoot tr.inv-due td { border-top: 2px solid var(--ink, #283039); font: 700 15px "Open Sans", sans-serif; padding-top: 12px; }
+.inv-pay { margin-top: 22px; padding: 16px 18px; background: var(--sink, #f4f1ea); border-radius: 12px; }
+.inv-paygrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 22px; margin-top: 8px; }
+.inv-paygrid > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; border-bottom: 1px dotted var(--line, #e7e1d5); padding-bottom: 6px; }
+.inv-paygrid span { color: var(--muted, #6c6f73); }
+.inv-paygrid b { font-variant-numeric: tabular-nums; }
+.inv-foot { display: flex; justify-content: space-between; gap: 16px; margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line, #e7e1d5); font-size: 11px; letter-spacing: .04em; color: var(--faint, #9aa0a6); }
+@media (max-width: 640px) { .inv { padding: 22px 18px; } .inv-parties { grid-template-columns: 1fr; gap: 12px; } .inv-paygrid { grid-template-columns: 1fr; } }
+@media print { .stmt-actions { display: none; } .inv { border: 0; max-width: none; } }

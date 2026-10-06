@@ -19,7 +19,8 @@ export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
   earned: number; earnedCollected: number; earnedOwed: number; earnedDelta: number | null;
   cashTotal: number; cashCopays: number; cashInsurance: number; cashRollover: number;
-  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; netAfterProcessing: number };
+  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; servicesInvoice: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; netAfterProcessing: number };
+  servicesInvoice?: { payee: string; total: number } | null; // the admin's fixed monthly services invoice (Akeel)
   isAdmin?: boolean; // the builder/admin sees the platform processing-fee line
   builderTasks?: BuilderTask[]; // the viewer's own worklist mounted on the overview
   worklistChip?: string; // chip label on the worklist ("Private" / "Admin only")
@@ -194,6 +195,9 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
               <div className="bo-wfl bo-wfl-sub"><span className="k">↳ the practice&apos;s own agreement</span><span className="v">{money(data.bottom.billerFromCompany)}</span></div>
             )}
             <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#D9A441" }} />Running expenses</span><span className="v">−{money(data.bottom.runningExpenses)}</span></div>
+            {data.servicesInvoice && (
+              <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#2F8E93" }} />{data.servicesInvoice.payee} — services <Link href={`/billing/services-invoice?y=${data.year}&m=${data.month}`} className="bo-seclink" style={{ marginLeft: 6 }}>View invoice →</Link></span><span className="v">−{money(data.bottom.servicesInvoice)}</span></div>
+            )}
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
             {data.bottom.processingFeePct > 0 && (
               <div className="bo-adminfee">
@@ -274,6 +278,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                   <tr className="minus"><td>Clinician payouts</td><td className="num">−{money(data.bottom.payouts)}</td></tr>
                   <tr className="minus"><td>Biller commission</td><td className="num">−{money(data.bottom.billerCommission)}</td></tr>
                   <tr className="minus"><td>Running expenses</td><td className="num">−{money(data.bottom.runningExpenses)}</td></tr>
+                  {data.servicesInvoice && <tr className="minus"><td>{data.servicesInvoice.payee} — services</td><td className="num">−{money(data.bottom.servicesInvoice)}</td></tr>}
                   <tr className="tot"><td>Net this month</td><td className="num">{money0(data.bottom.net)}</td></tr>
                 </tbody>
               </table>

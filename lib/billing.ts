@@ -93,6 +93,28 @@ export interface ProviderConfig {
   claimsReplyToName?: string;
   claimsReplyToEmail?: string;
 }
+export interface ServicesInvoiceLine {
+  id: string;
+  description: string;   // e.g. "Ongoing website support"
+  detail?: string;       // e.g. "Includes clinician online support"
+  amount: number;        // monthly KYD
+}
+/** A fixed monthly SERVICES invoice from a team member (e.g. the admin, Akeel)
+ *  to the practice. Unlike the biller's commission (computed from collections),
+ *  this is a flat agreed fee. It appears on the owner overview as its own cost
+ *  line and as a printable invoice. Bank details are entered in Setup and stored
+ *  here (in the DB) — deliberately NOT hardcoded in source. */
+export interface ServicesInvoiceConfig {
+  enabled: boolean;
+  businessName?: string;   // "Cosmic Caterpillar"
+  payeeName?: string;      // "Akeel O'Connor"
+  invoiceNumber?: string;  // "0014"
+  terms?: string;          // "Due on receipt"
+  lineItems: ServicesInvoiceLine[];
+  bankName?: string;       // entered in Setup, stored in DB (never in source)
+  accountNumber?: string;
+  routingNumber?: string;
+}
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
   processingFeePct?: number; // builder's platform fee — % of TOTAL cash collected
@@ -102,6 +124,9 @@ export interface PracticeConfig {
    *  the most recent earlier month's, falling back to the base list. */
   monthlyExpenses?: Record<string, RunningExpense[]>;
   provider?: ProviderConfig;
+  /** The admin's fixed monthly services invoice (Akeel). Its own cost line on the
+   *  owner overview + a printable invoice. */
+  servicesInvoice?: ServicesInvoiceConfig;
 }
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
@@ -116,6 +141,21 @@ export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
     { id: "workspace", name: "Google Workspace", detail: "Email & docs", amount: 40 },
     { id: "books", name: "Bookkeeping", detail: "Monthly accounts", amount: 30 },
   ],
+  servicesInvoice: {
+    enabled: true,
+    businessName: "Cosmic Caterpillar",
+    payeeName: "Akeel O'Connor",
+    invoiceNumber: "0014",
+    terms: "Due on receipt",
+    lineItems: [
+      { id: "web", description: "Ongoing website support", detail: "Includes clinician online support", amount: 500 },
+      { id: "smm", description: "Social media management", detail: "Marketing & content coordination", amount: 500 },
+      { id: "ads", description: "Social media ads", detail: "Ad spend management", amount: 300 },
+      { id: "billing", description: "Billing system maintenance", detail: "Upkeep of billing & invoicing module", amount: 100 },
+    ],
+    // Bank details intentionally empty here — enter them once in Setup; they save
+    // to the DB, never to source.
+  },
 };
 
 export interface ClinicianBillingSettings {
@@ -486,6 +526,12 @@ export async function savePracticeConfig(cfg: PracticeConfig): Promise<PracticeC
 
 export const runningExpensesTotal = (cfg: PracticeConfig): number =>
   Math.round(cfg.runningExpenses.reduce((t, e) => t + (e.amount || 0), 0) * 100) / 100;
+
+/** Total of the admin's fixed monthly services invoice (0 when disabled/unset). */
+export const servicesInvoiceTotal = (cfg: PracticeConfig): number =>
+  cfg.servicesInvoice?.enabled
+    ? Math.round(cfg.servicesInvoice.lineItems.reduce((t, l) => t + (l.amount || 0), 0) * 100) / 100
+    : 0;
 
 /** The expenses that apply to a given month: that month's snapshot if it exists,
  *  otherwise the most recent EARLIER month's snapshot (carried forward), otherwise

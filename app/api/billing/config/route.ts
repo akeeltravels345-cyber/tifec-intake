@@ -91,6 +91,28 @@ export async function POST(req: Request) {
         if (monthKey) next.monthlyExpenses = { ...(current.monthlyExpenses ?? {}), [monthKey]: expenses };
         else next.runningExpenses = expenses;
       }
+      if (body.servicesInvoice !== undefined && body.servicesInvoice !== null) {
+        const si = body.servicesInvoice as Record<string, unknown>;
+        const lineItems = (Array.isArray(si.lineItems) ? si.lineItems : [] as Record<string, unknown>[])
+          .map((l, i) => ({
+            id: String((l as Record<string, unknown>).id || `svc-${i}`),
+            description: String((l as Record<string, unknown>).description ?? "").trim(),
+            detail: t((l as Record<string, unknown>).detail),
+            amount: n((l as Record<string, unknown>).amount),
+          }))
+          .filter((l) => l.description || l.amount > 0);
+        next.servicesInvoice = {
+          enabled: si.enabled !== false,
+          businessName: t(si.businessName),
+          payeeName: t(si.payeeName),
+          invoiceNumber: t(si.invoiceNumber),
+          terms: t(si.terms),
+          lineItems,
+          bankName: t(si.bankName),
+          accountNumber: t(si.accountNumber),
+          routingNumber: t(si.routingNumber),
+        };
+      }
       await savePracticeConfig(next);
       return NextResponse.json({ ok: true });
     }

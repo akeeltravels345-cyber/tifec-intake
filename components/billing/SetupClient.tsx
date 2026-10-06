@@ -41,15 +41,20 @@ interface Provider {
   renderingNpi?: Record<string, string>;
 }
 
+interface SvcLine { id: string; description: string; detail?: string; amount: number; }
+interface SvcInvoice { enabled: boolean; businessName?: string; payeeName?: string; invoiceNumber?: string; terms?: string; lineItems: SvcLine[]; bankName?: string; accountNumber?: string; routingNumber?: string; }
+
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 async function post(body: Record<string, unknown>) {
   const res = await fetch("/api/billing/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, isBillerUser = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, isBillerUser = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true, servicesInvoice: svcIn }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
   billerPct: number; processingFeePct?: number; isAdmin?: boolean; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
+  /** The admin's fixed monthly services invoice (Akeel) — owner/admin only. */
+  servicesInvoice?: SvcInvoice;
   /** Per-month expense snapshots (key "YYYY-MM"); the current month to default to. */
   monthlyExpenses?: Record<string, Expense[]>; currentMonthKey: string;
   billerName: string; billerInitials: string;
@@ -86,6 +91,14 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   // Builder processing fee % (admin only) — % of total collected.
   const [procPct, setProcPct] = useState(String(procIn));
   const saveProcFee = (pct: string) => run({ entity: "practice", processingFeePct: Number(pct) || 0 }, "Processing fee saved");
+
+  // The admin's fixed monthly services invoice (Akeel). Its own cost line on the
+  // owner overview + a printable invoice; bank details live only in the DB.
+  const [svc, setSvc] = useState<SvcInvoice>(svcIn ?? { enabled: true, lineItems: [] });
+  const svcTotal = svc.lineItems.reduce((t, l) => t + (Number(l.amount) || 0), 0);
+  const setSvcField = (k: keyof SvcInvoice, v: string | boolean) => setSvc((s) => ({ ...s, [k]: v }));
+  const updSvcLine = (i: number, patch: Partial<SvcLine>) => setSvc((s) => ({ ...s, lineItems: s.lineItems.map((l, k) => (k === i ? { ...l, ...patch } : l)) }));
+  const saveSvc = () => run({ entity: "practice", servicesInvoice: svc }, "Services invoice saved");
 
   // Running expenses are PER MONTH: each month can carry its own set. A month with
   // no snapshot inherits the most recent earlier month's (or the base list).
@@ -253,6 +266,46 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           </table></div>
           <button className="su-add" onClick={() => setExpenses([...expenses, { id: `exp-${Date.now()}`, name: "", detail: "", amount: 0 }])}>+ Add a cost</button>
           <div style={{ padding: "0 16px 16px", display: "flex", justifyContent: "flex-end" }}><button className="su-save" onClick={() => saveExpenses(expenses)}>Save {monthLabel(expMonth)} expenses</button></div>
+        </div>
+      </div>
+
+      {/* My services invoice — the admin's fixed monthly fee (Akeel) */}
+      <div className="su-sec">
+        <div className="su-sechead"><h2 className="su-sech">My services invoice<span className="su-tag">{money(svcTotal)}/mo</span></h2><span className="su-hint">Your fixed monthly services fee (website, social, ads, billing upkeep, and so on). It appears as its own &ldquo;{svc.payeeName || "services"}&rdquo; line on the owner overview and as a printable invoice. Bank details are stored privately in the database, never in the app&apos;s code.</span></div>
+        <div className="su-card">
+          <div style={{ padding: "12px 16px" }}>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13 }}><input type="checkbox" className="su-check" checked={svc.enabled} onChange={(e) => setSvcField("enabled", e.target.checked)} /> Show this invoice on the owner dashboard and deduct it from net profit</label>
+          </div>
+          <div className="cd-grid" style={{ borderTop: "1px solid var(--line)" }}>
+            <div className="cd-f"><span className="cd-fl">Business name</span><input className="ls-in" value={svc.businessName ?? ""} onChange={(e) => setSvcField("businessName", e.target.value)} placeholder="e.g. Cosmic Caterpillar" /></div>
+            <div className="cd-f"><span className="cd-fl">Payee name</span><input className="ls-in" value={svc.payeeName ?? ""} onChange={(e) => setSvcField("payeeName", e.target.value)} placeholder="e.g. Akeel O'Connor" /></div>
+            <div className="cd-f"><span className="cd-fl">Invoice number</span><input className="ls-in" value={svc.invoiceNumber ?? ""} onChange={(e) => setSvcField("invoiceNumber", e.target.value)} placeholder="e.g. 0014" /></div>
+            <div className="cd-f"><span className="cd-fl">Payment terms</span><input className="ls-in" value={svc.terms ?? ""} onChange={(e) => setSvcField("terms", e.target.value)} placeholder="Due on receipt" /></div>
+          </div>
+          <div className="su-tblwrap"><table className="su-tbl su-exptbl">
+            <thead><tr><th>Item</th><th>Description</th><th className="num">Price (KYD)</th><th aria-label="Remove"></th></tr></thead>
+            <tbody>
+              {svc.lineItems.length === 0 && (<tr><td colSpan={4} className="su-expempty">No line items yet — add your services below.</td></tr>)}
+              {svc.lineItems.map((l, i) => (
+                <tr key={l.id}>
+                  <td className="nm"><input className="su-in" placeholder="e.g. Ongoing website support" value={l.description} onChange={(e) => updSvcLine(i, { description: e.target.value })} /></td>
+                  <td><input className="su-in" placeholder="optional detail" value={l.detail ?? ""} onChange={(e) => updSvcLine(i, { detail: e.target.value })} /></td>
+                  <td className="num"><div className="su-money"><span className="cur">$</span><NumInput className="su-moneyin" value={l.amount} onChange={(v) => updSvcLine(i, { amount: v })} /></div></td>
+                  <td className="act"><button className="su-rm" aria-label={`Remove ${l.description || "line"}`} title="Remove" onClick={() => setSvc((s) => ({ ...s, lineItems: s.lineItems.filter((_, k) => k !== i) }))}>Remove</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <button className="su-add" onClick={() => setSvc((s) => ({ ...s, lineItems: [...s.lineItems, { id: `svc-${Date.now()}`, description: "", detail: "", amount: 0 }] }))}>+ Add a line</button>
+          <div className="cd-grid" style={{ borderTop: "1px solid var(--line)" }}>
+            <div className="cd-f"><span className="cd-fl">Bank</span><input className="ls-in" value={svc.bankName ?? ""} onChange={(e) => setSvcField("bankName", e.target.value)} placeholder="e.g. Chase" /></div>
+            <div className="cd-f"><span className="cd-fl">Account number</span><input className="ls-in" value={svc.accountNumber ?? ""} onChange={(e) => setSvcField("accountNumber", e.target.value)} /></div>
+            <div className="cd-f"><span className="cd-fl">Routing number</span><input className="ls-in" value={svc.routingNumber ?? ""} onChange={(e) => setSvcField("routingNumber", e.target.value)} /></div>
+          </div>
+          <div style={{ padding: "12px 16px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <a href="/billing/services-invoice" target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "var(--teal, #2E8E93)", fontWeight: 600 }}>View invoice →</a>
+            <button className="su-save" onClick={saveSvc}>Save services invoice</button>
+          </div>
         </div>
       </div>
       </>)}

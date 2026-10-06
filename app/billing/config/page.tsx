@@ -37,6 +37,7 @@ export default async function SetupPage() {
       renderingClinicians={CLINICIANS.filter((c) => !c.intakeHidden && c.billing !== "biller").map((c) => ({ id: c.id, name: c.name }))}
       billerName={biller.name}
       billerInitials={initials(biller.name)}
+      servicesInvoice={cfg.servicesInvoice}
     />
   );
 }
