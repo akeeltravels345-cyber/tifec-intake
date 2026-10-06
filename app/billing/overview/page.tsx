@@ -3,7 +3,7 @@ import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth, servicesInvoiceTotal } from "@/lib/billing";
 import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
-import { CLINICIANS } from "@/lib/clinicians";
+import { CLINICIANS, isSystemAdmin } from "@/lib/clinicians";
 import { listBuilderTasks } from "@/lib/builderTasks";
 import OverviewClient, { type OverviewData, type ClinRow } from "@/components/billing/OverviewClient";
 
@@ -80,6 +80,23 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
       appts: c.appointments, collected: c.collected, owed: c.outstandingThisMonth, payout: c.payout,
       revenueGenerated: c.revenueGenerated, billed: c.billedFromThisMonth, outstandingThisMonth: c.outstandingThisMonth, copay: c.copayThisMonth, uncollectedCopay: c.uncollectedCopay, waivedCopay: c.waivedCopay,
     }));
+
+  // The admin (Akeel) draws no clinical payout — his "payout" is the fixed monthly
+  // services invoice. Show it as his row's figure and link the row to the invoice,
+  // so his line properly represents what he's paid (not an empty $0 clinical page).
+  if (servicesTotal > 0) {
+    const adminClin = CLINICIANS.find((c) => isSystemAdmin(c));
+    if (adminClin) {
+      const existing = clinicians.find((r) => r.id === adminClin.id);
+      if (existing) { existing.payout = servicesTotal; existing.servicesInvoice = true; }
+      else clinicians.push({
+        id: adminClin.id, name: adminClin.name, role: "",
+        appts: 0, collected: 0, owed: 0, payout: servicesTotal,
+        revenueGenerated: 0, billed: 0, outstandingThisMonth: 0, copay: 0, uncollectedCopay: 0, waivedCopay: 0,
+        servicesInvoice: true,
+      });
+    }
+  }
 
   const data: OverviewData = {
     year, month, monthName: MONTHS[month - 1], prevMonthName: MONTHS[prevM - 1],

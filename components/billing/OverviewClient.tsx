@@ -14,6 +14,9 @@ export interface ClinRow {
   id: string; name: string; role: string; appts: number;
   collected: number; owed: number; payout: number;
   revenueGenerated: number; billed: number; outstandingThisMonth: number; copay: number; uncollectedCopay: number; waivedCopay: number;
+  /** The admin's row (Akeel): payout is his fixed monthly services fee and the row
+   *  links to his services invoice rather than a clinical-detail page. */
+  servicesInvoice?: boolean;
 }
 export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
@@ -134,15 +137,24 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
           <div className="bo-clin">
             {clinicians.map((c) => {
               const total = c.collected + c.owed;
+              const href = c.servicesInvoice
+                ? `/billing/services-invoice?y=${data.year}&m=${data.month}`
+                : `/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`;
               return (
                 <div className="bo-clrow" key={c.id}>
-                  <div className="bo-clhead nav" onClick={() => router.push(`/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`)} role="button" title={`Open ${c.name}'s detail`}>
-                    <div className="nm">{c.name}<small>{c.appts} appointment{c.appts === 1 ? "" : "s"}</small></div>
+                  <div className="bo-clhead nav" onClick={() => router.push(href)} role="button" title={c.servicesInvoice ? `Open ${c.name}'s services invoice` : `Open ${c.name}'s detail`}>
+                    <div className="nm">{c.name}<small>{c.servicesInvoice ? "Monthly services" : `${c.appts} appointment${c.appts === 1 ? "" : "s"}`}</small></div>
                     <div className="bo-clmid">
-                      <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
-                      <div className="bo-clcap"><span>{money0(c.collected)} collected</span><span>{c.owed > 0 ? `${money0(c.owed)} outstanding` : "all collected"}</span></div>
+                      {c.servicesInvoice ? (
+                        <div className="bo-clcap bo-clsvc"><span>Fixed monthly services fee</span><span className="bo-clsvclink">View invoice →</span></div>
+                      ) : (
+                        <>
+                          <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
+                          <div className="bo-clcap"><span>{money0(c.collected)} collected</span><span>{c.owed > 0 ? `${money0(c.owed)} outstanding` : "all collected"}</span></div>
+                        </>
+                      )}
                     </div>
-                    <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">payout</div></div>
+                    <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">{c.servicesInvoice ? "services" : "payout"}</div></div>
                     <div className="bo-chev">›</div>
                   </div>
                 </div>

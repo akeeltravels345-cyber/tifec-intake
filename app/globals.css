@@ -5191,3 +5191,6 @@ body:has(.pt) .sitefoot { display: none; }
   .inv-trow, .inv-balance { min-width: 0; width: 100%; }
 }
 @media print { .stmt-actions { display: none; } .inv { border: 0; max-width: none; box-shadow: none; } }
+
+/* By-clinician row: the admin services-invoice variant. */
+.bo-clsvclink { color: var(--teal, #2E8E93); font-weight: 600; }
