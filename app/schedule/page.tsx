@@ -4,6 +4,7 @@ import { inScheduleBeta, isSystemAdmin, isBookableClinician } from "@/lib/clinic
 import { getBillingUser } from "@/lib/billingRole";
 import { CLINICIANS } from "@/lib/clinicians";
 import { listAppointmentTypes, listAppointments, getAvailability } from "@/lib/scheduling";
+import { FORM_TEMPLATES } from "@/lib/forms";
 import { listInsurers } from "@/lib/billing";
 import { caymanToday } from "@/lib/caymanTime";
 import CalendarView from "@/components/scheduling/CalendarView";
@@ -76,6 +77,7 @@ export default async function SchedulePage() {
       bookingRulesHref={isOwner ? "/scheduling/settings" : null}
       waitlistHref={manages ? "/scheduling/waitlist" : null}
       insightsHref={manages ? "/scheduling/reports" : null}
+      intakeForms={Object.values(FORM_TEMPLATES).map((f) => ({ key: f.key, label: f.label }))}
     />
   );
 }

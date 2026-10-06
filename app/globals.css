@@ -4789,6 +4789,21 @@ body:has(.pt) .sitefoot { display: none; }
 .cvr-line.muted { color: var(--muted); font-style: italic; }
 .cvr-sub { margin-top: 3px; font-size: 13px; color: var(--muted); }
 .cvr-sec .cvr-links { padding: 8px 0 0; }
+/* Detail-modal quick actions: send intake, cancel & rebook. */
+.cvr-actrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 16px 8px; }
+.cvr-actgroup { display: flex; gap: 6px; align-items: center; flex: 1; min-width: 0; }
+.cvr-actsel { flex: 1; min-width: 0; font: 500 13px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.cvr-actbtn { white-space: nowrap; font: 600 13px "Open Sans"; color: var(--teal-deep); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.cvr-actbtn:hover:not(:disabled) { border-color: var(--teal, #2f8e93); background: var(--panel, #fff); }
+.cvr-actbtn:disabled { opacity: .5; cursor: default; }
+.cvr-actbtn.warn { color: #b1543c; }
+.cvr-actbtn.warn:hover:not(:disabled) { border-color: #b1543c; }
+.cvr-actmsg { margin: 0 16px 8px; font-size: 13px; color: var(--teal-deep); }
+/* Shareable video link row. */
+.cvr-linkrow { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.cvr-linkin { flex: 1; min-width: 0; font: 400 13px "Open Sans"; color: var(--ink); background: var(--panel, #fff); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }
+.cvr-copy { white-space: nowrap; font: 600 13px "Open Sans"; color: var(--teal-deep); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.cvr-copy:hover { border-color: var(--teal, #2f8e93); }
 .cvr-hist { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; background: none; border: 0; padding: 6px 0; cursor: pointer; font: inherit; color: var(--ink); }
 .cvr-hist:hover span:first-child { color: var(--teal); }
 .cvr-hist > span:first-child { font-size: 14.5px; }

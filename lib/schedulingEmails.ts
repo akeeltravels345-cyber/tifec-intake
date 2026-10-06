@@ -38,6 +38,33 @@ export async function notifyClientReschedule(a: RescheduleNotice): Promise<void>
   } catch { /* never block the change on email */ }
 }
 
+/** Clinician-initiated: "I can't keep this appointment — please rebook." Cancels
+ *  on the clinician's side; this email apologises and gives the client a link to
+ *  choose a new time with the same clinician. Best-effort; never throws. */
+export async function notifyClientRebook(a: {
+  to: string; clientName: string; serviceName: string; clinicianName: string;
+  clinicianId: string; origin: string; wasStartAt: string; message?: string;
+}): Promise<void> {
+  if (!a.to) return;
+  const bookUrl = `${a.origin.replace(/\/$/, "")}/book?clinician=${encodeURIComponent(a.clinicianId)}`;
+  const intro = a.message?.trim()
+    || `I'm so sorry, but I'm no longer able to keep our upcoming ${a.serviceName} appointment. I'd really like to find another time that works for you.`;
+  try {
+    await sendBrandedEmail(a.to, "About your upcoming appointment", {
+      heading: "A change to your appointment",
+      greetingName: firstNameOf(a.clientName),
+      intro,
+      rows: [
+        { label: "Service", value: a.serviceName },
+        { label: "Clinician", value: a.clinicianName },
+        { label: "Was", value: caymanWhen(a.wasStartAt) },
+      ],
+      buttons: [{ label: "Choose a new time", url: bookUrl }],
+      outro: "Please pick a new time that suits you, or reply to this email and we'll be glad to help. Apologies again for the inconvenience.",
+    });
+  } catch { /* never block the cancellation on email */ }
+}
+
 /** A cancellation just freed this slot. Offer it to every matching waitlisted
  *  client at once, each with a personal one-tap claim link (first to confirm
  *  wins). Best-effort: never throws, and does nothing if nobody's waiting or the

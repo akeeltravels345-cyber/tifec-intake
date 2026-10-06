@@ -7,7 +7,7 @@ import {
   type Appointment,
 } from "@/lib/scheduling";
 import { externalBusyIntervals } from "@/lib/externalBusy";
-import { notifyClientReschedule, offerFreedSlotToWaitlist } from "@/lib/schedulingEmails";
+import { notifyClientReschedule, offerFreedSlotToWaitlist, notifyClientRebook } from "@/lib/schedulingEmails";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 
@@ -146,8 +146,13 @@ export async function POST(req: Request) {
       const before = await getAppointment(id);
       // A clinician can't reassign their appointment to someone else.
       const patch = all ? body : { ...body, clinicianId: me.id };
-      const appt = await updateAppointment(id, patch as never);
+      let appt = await updateAppointment(id, patch as never);
       if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      // Changed to online (e.g. in-person -> virtual) with no link yet: mint a
+      // meeting on the clinician's connected Zoom/Meet so they can share it.
+      if (action === "update" && appt.kind !== "block" && appt.mode === "virtual" && !appt.locationOrLink && appt.capacity <= 1) {
+        appt = await attachVideo(appt);
+      }
       // A drag/edit that moved the time can email the client (staff chose to).
       if (body.notifyClient && appt.kind !== "block" && appt.clientEmail && before && before.startAt !== appt.startAt) {
         const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
@@ -175,6 +180,31 @@ export async function POST(req: Request) {
         try { billingSessionId = (await maybeBridgeSeen(appt.id)) ?? appt.billingSessionId; } catch (e) { console.error("bridge failed", e); }
       }
       return NextResponse.json({ ok: true, appointment: { ...appt, billingSessionId } });
+    }
+    // Clinician can't keep an upcoming appointment: cancel it AND email the
+    // client an apology + a link to rebook a new time with the same clinician.
+    if (action === "cancelRebook") {
+      const id = String(body.id);
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      const existing = await getAppointment(id);
+      if (!existing || existing.kind !== "appointment") return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      const appt = await updateAppointment(id, { status: "cancelled" } as never);
+      // Free the meeting + remove the mirrored Google event.
+      if (existing.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink, existing.videoEventId || undefined);
+      if (existing.videoEventId && !/meet\.google\.com/i.test(existing.locationOrLink || "")) await deleteGoogleEvent(existing.clinicianId, existing.videoEventId);
+      const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+      let emailed = false;
+      if (existing.clientEmail) {
+        const type = (await listAppointmentTypes()).find((t) => t.id === existing.typeId);
+        await notifyClientRebook({
+          to: existing.clientEmail, clientName: existing.clientName,
+          serviceName: type?.name || "appointment", clinicianName: getClinician(existing.clinicianId)?.name || "your clinician",
+          clinicianId: existing.clinicianId, origin, wasStartAt: existing.startAt,
+          message: typeof body.message === "string" ? body.message : undefined,
+        });
+        emailed = true;
+      }
+      return NextResponse.json({ ok: true, appointment: appt, emailed });
     }
     if (action === "delete") {
       const id = String(body.id);

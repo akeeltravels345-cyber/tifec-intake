@@ -76,8 +76,8 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null, servicesHref = null, waitlistHref = null, insightsHref = null, bookingRulesHref = null }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null; servicesHref?: string | null; waitlistHref?: string | null; insightsHref?: string | null; bookingRulesHref?: string | null;
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null, servicesHref = null, waitlistHref = null, insightsHref = null, bookingRulesHref = null, intakeForms = [] }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null; servicesHref?: string | null; waitlistHref?: string | null; insightsHref?: string | null; bookingRulesHref?: string | null; intakeForms?: { key: string; label: string }[];
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
   const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
@@ -115,6 +115,9 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [who, setWho] = useState<string>(lockedClinicianId || defaultWho || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   const [groupView, setGroupView] = useState<Appointment[] | null>(null); // collapsed-group roster
+  const [intakeFormKey, setIntakeFormKey] = useState<string>(intakeForms[0]?.key || "individual");
+  const [actBusy, setActBusy] = useState(false);
+  const [actMsg, setActMsg] = useState("");
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
   const [phone, setPhone] = useState(false); // taller grid rows on phones
   const HOUR = phone ? HOUR_PHONE : HOUR_DESKTOP;
@@ -312,6 +315,26 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (!confirm(`Delete this ${a.kind === "block" ? "block" : "appointment"}? This can't be undone.`)) return;
     await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: a.id }) });
     setDraft(null); setViewAppt(null); load();
+  }
+  async function sendIntake(a: Appointment, formKey: string) {
+    setActBusy(true); setActMsg("");
+    try {
+      const res = await fetch("/api/scheduling/intake-send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id, form: formKey }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setActMsg(data.error || "Could not send the intake form.");
+      else { setActMsg("✓ Intake form sent to the client."); load(); }
+    } catch { setActMsg("Could not send the intake form."); }
+    finally { setActBusy(false); }
+  }
+  async function cancelAndRebook(a: Appointment) {
+    if (!confirm("Cancel this appointment and email the client to ask them to rebook?")) return;
+    setActBusy(true); setActMsg("");
+    try {
+      const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancelRebook", id: a.id }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setActMsg(data.error || "Could not cancel."); setActBusy(false); return; }
+      setViewAppt(null); setActMsg(""); load();
+    } catch { setActMsg("Could not cancel."); setActBusy(false); }
   }
   async function removeSeries(a: Appointment) {
     if (!a.seriesId) return;
@@ -689,7 +712,12 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       {(["in_person", "virtual", "either"] as AppointmentMode[]).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
                     </select>
                   </label>
-                  <label className="cal-f grow"><span>{draft.mode === "virtual" ? "Video link (optional)" : "Room / location"}</span><input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder={draft.mode === "virtual" ? "Leave blank to auto-create a Zoom/Meet link" : "Room"} /></label>
+                  {/* Clinicians each have their own office, so no room field for
+                      in-person. Virtual appointments show a video-link field (auto
+                      created on save when left blank). */}
+                  {draft.mode !== "in_person" && (
+                    <label className="cal-f grow"><span>Video link (optional)</span><input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder="Leave blank to auto-create a Zoom/Meet link" /></label>
+                  )}
                   <label className="cal-f"><span>Payment path</span>
                     <select value={draft.insurancePath || "self_pay"} onChange={(e) => setDraft({ ...draft, insurancePath: e.target.value as "self_pay" | "insurance" })}>
                       <option value="self_pay">Self-pay</option><option value="insurance">Insurance</option>
@@ -829,6 +857,19 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   : <a className="cal-logsession" style={{ margin: "2px 0 8px" }} href={`/billing/sessions/new?fromAppt=${a.id}`}><ToolIcon name="clipboard" /><span>Log this session</span></a>
               )}
 
+              {!isBlock && editable && a.status !== "cancelled" && (
+                <div className="cvr-actrow">
+                  <div className="cvr-actgroup">
+                    <select className="cvr-actsel" value={intakeFormKey} onChange={(e) => setIntakeFormKey(e.target.value)} disabled={actBusy}>
+                      {intakeForms.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                    </select>
+                    <button type="button" className="cvr-actbtn" disabled={actBusy || !a.clientEmail} onClick={() => sendIntake(a, intakeFormKey)} title={a.clientEmail ? "" : "No client email on file"}>Send intake form</button>
+                  </div>
+                  <button type="button" className="cvr-actbtn warn" disabled={actBusy} onClick={() => cancelAndRebook(a)}>Cancel &amp; ask to rebook</button>
+                </div>
+              )}
+              {actMsg && <p className="cvr-actmsg">{actMsg}</p>}
+
               {isBlock ? (
                 <div className="cvr-sec">
                   <div className="cvr-sec-h">Unavailable</div>
@@ -837,22 +878,24 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                 </div>
               ) : (
                 <>
-                  <div className="cvr-sec">
-                    <div className="cvr-sec-h">Location</div>
-                    {a.mode === "virtual" ? (
-                      <>
-                        <div className="cvr-line">{a.locationOrLink && /^https?:\/\//.test(a.locationOrLink)
-                          ? <a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Join video link</a>
-                          : "Online"}</div>
-                        <div className="cvr-sub">This session is held over video.</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="cvr-line">{a.locationOrLink || "The Institute for Essential Care"}</div>
-                        <div className="cvr-sub">This location comes from the calendar settings.</div>
-                      </>
-                    )}
-                  </div>
+                  {/* Clinicians use their own offices, so no room for in-person;
+                      only virtual sessions show a (shareable) video link. */}
+                  {a.mode === "virtual" && (
+                    <div className="cvr-sec">
+                      <div className="cvr-sec-h">Video link</div>
+                      {a.locationOrLink && /^https?:\/\//.test(a.locationOrLink) ? (
+                        <>
+                          <div className="cvr-linkrow">
+                            <input className="cvr-linkin" readOnly value={a.locationOrLink} onFocus={(e) => e.currentTarget.select()} />
+                            <button type="button" className="cvr-copy" onClick={() => { try { navigator.clipboard?.writeText(a.locationOrLink); } catch { /* ignore */ } }}>Copy</button>
+                          </div>
+                          <div className="cvr-sub"><a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Open</a> · share this link with the client.</div>
+                        </>
+                      ) : (
+                        <div className="cvr-sub">Online — a video link will be created when you save, or add one via Edit.</div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="cvr-sec">
                     <div className="cvr-sec-h">Client</div>
