@@ -30,7 +30,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if ("error" in r) return r.error;
   const { user, client, inv, itemCount, clinician } = r;
 
-  const to = client.profile.email ?? "";
+  // For a minor, the parent/guardian is the payer — invoice them when set.
+  const to = (client.profile.guardian?.email || client.profile.email) ?? "";
   const message = defaultInvoiceMessage(client.first, inv.practice.name, inv.amountDue, inv.number);
   // Derive the subject from the same builder that sends, so preview and sent email match.
   const { subject } = buildInvoiceEmail({ to, clientName: "", practiceName: inv.practice.name, invoiceNo: inv.number, amountDue: inv.amountDue, message });
@@ -59,8 +60,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ("error" in r) return r.error;
   const { user, client, inv, itemCount, isCopay, clinician } = r;
 
-  const to = client.profile.email?.trim();
-  if (!to) return NextResponse.json({ error: "This client has no email on file. Add one on their record first." }, { status: 400 });
+  const to = (client.profile.guardian?.email || client.profile.email)?.trim();
+  if (!to) return NextResponse.json({ error: "This client has no email on file (add the client's or the parent/guardian's email on their record first)." }, { status: 400 });
   if (itemCount === 0) return NextResponse.json({ error: "There's nothing to invoice." }, { status: 400 });
 
   let body: Record<string, unknown> = {};

@@ -69,6 +69,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const p = (body.profile ?? {}) as Record<string, unknown>;
   const addr = (p.address ?? {}) as Record<string, unknown>;
   const insr = (p.insurance ?? {}) as Record<string, unknown>;
+  const grd = (p.guardian ?? {}) as Record<string, unknown>;
 
   // Rebuild the profile from validated primitives — never trust the blob wholesale.
   const rel = s(insr.relationship);
@@ -77,6 +78,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     sex: p.sex === "M" || p.sex === "F" || p.sex === "U" ? p.sex : undefined,
     phone: s(p.phone),
     email: s(p.email),
+    guardian: (s(grd.name) || s(grd.email) || s(grd.phone) || s(grd.relationship))
+      ? { name: s(grd.name), relationship: s(grd.relationship), email: s(grd.email), phone: s(grd.phone) }
+      : undefined,
     address: (s(addr.line1) || s(addr.line2) || s(addr.city) || s(addr.region) || s(addr.postal) || s(addr.country))
       ? { line1: s(addr.line1), line2: s(addr.line2), city: s(addr.city), region: s(addr.region), postal: s(addr.postal), country: s(addr.country) }
       : undefined,

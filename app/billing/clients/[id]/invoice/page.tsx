@@ -30,7 +30,7 @@ export default async function InvoicePage({
 
   const now = new Date();
   const printedAt = now.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  const clientEmail = client.profile.email ?? "";
+  const clientEmail = (client.profile.guardian?.email || client.profile.email) ?? "";
 
   // Preserve the exact selection this page was opened with, so the emailed PDF
   // covers the same visits as the one on screen.

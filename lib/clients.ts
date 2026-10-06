@@ -30,6 +30,14 @@ export interface ClientProfile {
   };                            // box 5
   phone?: string;               // box 5
   email?: string;               // client contact email
+  // Parent / guardian — the responsible party who pays (for minors). When set,
+  // invoices and billing contact default to the guardian, not the child.
+  guardian?: {
+    name?: string;              // parent/guardian full name
+    relationship?: string;      // e.g. Mother, Father, Guardian
+    email?: string;             // where invoices/receipts go
+    phone?: string;
+  };
   insurance?: {
     memberId?: string;          // insured's ID number (box 1a)
     groupNo?: string;           // box 11

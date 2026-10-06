@@ -290,6 +290,10 @@ export default function ClientDetail({
   const [sex, setSex] = useState(profile.sex ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [email, setEmail] = useState(profile.email ?? "");
+  const [gName, setGName] = useState(profile.guardian?.name ?? "");
+  const [gRel, setGRel] = useState(profile.guardian?.relationship ?? "");
+  const [gEmail, setGEmail] = useState(profile.guardian?.email ?? "");
+  const [gPhone, setGPhone] = useState(profile.guardian?.phone ?? "");
   const [line1, setLine1] = useState(profile.address?.line1 ?? "");
   const [line2, setLine2] = useState(profile.address?.line2 ?? "");
   const [city, setCity] = useState(profile.address?.city ?? "");
@@ -343,6 +347,9 @@ export default function ClientDetail({
       sex: (sex || undefined) as ClientProfile["sex"],
       phone: phone || undefined,
       email: email.trim() || undefined,
+      guardian: (gName || gEmail || gPhone || gRel)
+        ? { name: gName.trim() || undefined, relationship: gRel.trim() || undefined, email: gEmail.trim() || undefined, phone: gPhone.trim() || undefined }
+        : undefined,
       address: (line1 || city || region || postal || country || line2)
         ? { line1: line1 || undefined, line2: line2 || undefined, city: city || undefined, region: region || undefined, postal: postal || undefined, country: country || undefined }
         : undefined,
@@ -616,6 +623,8 @@ export default function ClientDetail({
             {field("Phone", val(profile.phone ?? ""))}
             {field("Email", val(profile.email ?? ""))}
             {field("Address", val([profile.address?.line1, profile.address?.line2, profile.address?.city, profile.address?.region, profile.address?.postal, profile.address?.country].filter(Boolean).join(", ")))}
+            {(profile.guardian?.name || profile.guardian?.email || profile.guardian?.phone) &&
+              field("Parent / guardian", val([profile.guardian?.name, profile.guardian?.relationship ? `(${profile.guardian.relationship})` : "", profile.guardian?.email, profile.guardian?.phone].filter(Boolean).join(" · ")))}
             {field("Usual insurer", val(insurers.find((i) => i.id === insurerId)?.name ?? (insurerId ? "" : "Self-pay")))}
             {field("Member / ID no.", val(profile.insurance?.memberId ?? ""))}
             {field("Relationship to insured", val(profile.insurance?.relationship ?? "self"))}
@@ -628,6 +637,11 @@ export default function ClientDetail({
             {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
             {field("Email", <input className="ls-in" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />)}
+            <div style={{ gridColumn: "1 / -1", margin: "8px 0 -2px", fontWeight: 700, fontSize: "13.5px" }}>Parent / guardian <span style={{ fontWeight: 400, color: "var(--muted)" }}>· responsible for payment (for minors)</span></div>
+            {field("Full name", <input className="ls-in" value={gName} onChange={(e) => setGName(e.target.value)} placeholder="Parent / guardian name" />)}
+            {field("Relationship", <input className="ls-in" value={gRel} onChange={(e) => setGRel(e.target.value)} placeholder="Mother, Father, Guardian…" />)}
+            {field("Email (for invoices)", <input className="ls-in" type="email" inputMode="email" value={gEmail} onChange={(e) => setGEmail(e.target.value)} placeholder="name@example.com" />)}
+            {field("Phone", <input className="ls-in" value={gPhone} onChange={(e) => setGPhone(e.target.value)} />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
             {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />)}
             {field("Relationship to insured", <select className="ls-in" value={relationship} onChange={(e) => setRelationship(e.target.value as typeof relationship)}><option value="self">Self</option><option value="spouse">Spouse</option><option value="child">Child</option><option value="other">Other</option></select>)}
