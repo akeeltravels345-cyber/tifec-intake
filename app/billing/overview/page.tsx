@@ -98,6 +98,22 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     }
   }
 
+  // The biller (Nick) is paid by commission, not clinical collections, so he's
+  // filtered out of the clinician list above. Always show his row — with his
+  // commission as the figure and a link to his payout statement — so his pay is
+  // represented alongside everyone else's, even in a month with no collections yet.
+  const billerClin = CLINICIANS.find((c) => c.billing === "biller");
+  if (billerClin) {
+    const existing = clinicians.find((r) => r.id === billerClin.id);
+    if (existing) { existing.payout = bottom.billerCommission; existing.billerStatement = true; }
+    else clinicians.push({
+      id: billerClin.id, name: billerClin.name, role: "",
+      appts: 0, collected: 0, owed: 0, payout: bottom.billerCommission,
+      revenueGenerated: 0, billed: 0, outstandingThisMonth: 0, copay: 0, uncollectedCopay: 0, waivedCopay: 0,
+      billerStatement: true,
+    });
+  }
+
   const data: OverviewData = {
     year, month, monthName: MONTHS[month - 1], prevMonthName: MONTHS[prevM - 1],
     earned, earnedCollected, earnedOwed: thisMonthOutstanding,

@@ -17,6 +17,9 @@ export interface ClinRow {
   /** The admin's row (Akeel): payout is his fixed monthly services fee and the row
    *  links to his services invoice rather than a clinical-detail page. */
   servicesInvoice?: boolean;
+  /** The biller's row (Nick): payout is his commission and the row links to his
+   *  payout statement rather than a clinical-detail page. */
+  billerStatement?: boolean;
 }
 export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
@@ -137,16 +140,22 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
           <div className="bo-clin">
             {clinicians.map((c) => {
               const total = c.collected + c.owed;
-              const href = c.servicesInvoice
-                ? `/billing/services-invoice?y=${data.year}&m=${data.month}`
-                : `/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`;
+              // Akeel (services invoice) and the biller (commission statement) don't
+              // have clinical collections — their rows show their own payout and link
+              // to their own document instead of a clinical-detail page.
+              const special = c.servicesInvoice
+                ? { href: `/billing/services-invoice?y=${data.year}&m=${data.month}`, sub: "Monthly services", cap: "Fixed monthly services fee", link: "View invoice →", title: `Open ${c.name}'s services invoice`, lab: "services" }
+                : c.billerStatement
+                ? { href: `/billing/biller/statement?y=${data.year}&m=${data.month}`, sub: "Billing commission", cap: "Commission on insurance collected", link: "View statement →", title: `Open ${c.name}'s payout statement`, lab: "commission" }
+                : null;
+              const href = special ? special.href : `/billing/clinician/${c.id}?y=${data.year}&m=${data.month}`;
               return (
                 <div className="bo-clrow" key={c.id}>
-                  <div className="bo-clhead nav" onClick={() => router.push(href)} role="button" title={c.servicesInvoice ? `Open ${c.name}'s services invoice` : `Open ${c.name}'s detail`}>
-                    <div className="nm">{c.name}<small>{c.servicesInvoice ? "Monthly services" : `${c.appts} appointment${c.appts === 1 ? "" : "s"}`}</small></div>
+                  <div className="bo-clhead nav" onClick={() => router.push(href)} role="button" title={special ? special.title : `Open ${c.name}'s detail`}>
+                    <div className="nm">{c.name}<small>{special ? special.sub : `${c.appts} appointment${c.appts === 1 ? "" : "s"}`}</small></div>
                     <div className="bo-clmid">
-                      {c.servicesInvoice ? (
-                        <div className="bo-clcap bo-clsvc"><span>Fixed monthly services fee</span><span className="bo-clsvclink">View invoice →</span></div>
+                      {special ? (
+                        <div className="bo-clcap bo-clsvc"><span>{special.cap}</span><span className="bo-clsvclink">{special.link}</span></div>
                       ) : (
                         <>
                           <div className="bo-cltrack"><span className="c" style={{ width: `${pct(c.collected, total)}%` }} /><span className="o" style={{ width: `${pct(c.owed, total)}%` }} /></div>
@@ -154,7 +163,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                         </>
                       )}
                     </div>
-                    <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">{c.servicesInvoice ? "services" : "payout"}</div></div>
+                    <div className="bo-clpay"><div className="p">{money(c.payout)}</div><div className="s">{special ? special.lab : "payout"}</div></div>
                     <div className="bo-chev">›</div>
                   </div>
                 </div>
