@@ -5089,18 +5089,21 @@ body:has(.pt) .sitefoot { display: none; }
   --appt-ip-bg: #dbe8f6; --appt-ip-bar: #4a86c7; --appt-ip-fg: #1d3f63;
   --appt-on-bg: #dcecdf; --appt-on-bar: #3f8f5f; --appt-on-fg: #1f5a3a;
   --appt-ei-bg: #d9ecea; --appt-ei-bar: #2f8e93; --appt-ei-fg: #1b5254;
+  --appt-free-bg: #f8dcdc; --appt-free-bar: #c0392b; --appt-free-fg: #7a241b;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --appt-ip-bg: #1f3350; --appt-ip-bar: #5a9cd8; --appt-ip-fg: #bcd4ec;
     --appt-on-bg: #1c3527; --appt-on-bar: #57a877; --appt-on-fg: #bfe2cc;
     --appt-ei-bg: #163330; --appt-ei-bar: #4fb0aa; --appt-ei-fg: #b6e0dc;
+    --appt-free-bg: #3f1f1d; --appt-free-bar: #e06a5c; --appt-free-fg: #f1c4bd;
   }
 }
 :root[data-theme="dark"] {
   --appt-ip-bg: #1f3350; --appt-ip-bar: #5a9cd8; --appt-ip-fg: #bcd4ec;
   --appt-on-bg: #1c3527; --appt-on-bar: #57a877; --appt-on-fg: #bfe2cc;
   --appt-ei-bg: #163330; --appt-ei-bar: #4fb0aa; --appt-ei-fg: #b6e0dc;
+  --appt-free-bg: #3f1f1d; --appt-free-bar: #e06a5c; --appt-free-fg: #f1c4bd;
 }
 
 /* ============================================================================

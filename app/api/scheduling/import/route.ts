@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, CLINICIANS } from "@/lib/clinicians";
-import { listAppointmentTypes, importAppointment } from "@/lib/scheduling";
+import { listAppointmentTypes, importAppointment, listAppointments, deleteAppointment } from "@/lib/scheduling";
 import { parseAcuityCsv, normalizeTypeKey } from "@/lib/acuityImport";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +31,43 @@ const fmtCayman = (iso: string) => {
   } catch { return iso; }
 };
 
+// Diagnostic: list appointments for a clinician in a date range (to spot
+// duplicates). GET ?clinicianId=&from=&to= (ISO). Secret or admin/owner.
+export async function GET(req: Request) {
+  const auth = await authorize(req);
+  if (!auth.ok) return auth.res;
+  const p = new URL(req.url).searchParams;
+  const appts = await listAppointments({
+    clinicianId: p.get("clinicianId") || undefined,
+    from: p.get("from") || undefined,
+    to: p.get("to") || undefined,
+  });
+  const types = await listAppointmentTypes();
+  const typeName = (id: string | null) => types.find((t) => t.id === id)?.name || null;
+  return NextResponse.json({
+    count: appts.length,
+    appts: appts.map((a) => ({
+      id: a.id, when: fmtCayman(a.startAt), startAt: a.startAt, endAt: a.endAt,
+      client: a.clientName, type: typeName(a.typeId), kind: a.kind, status: a.status,
+      source: a.source, createdBy: a.createdBy, createdAt: a.createdAt,
+    })),
+  });
+}
+
 export async function POST(req: Request) {
   const auth = await authorize(req);
   if (!auth.ok) return auth.res;
 
-  let body: { csv?: string; clinicianId?: string; commit?: boolean };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Body must be JSON { csv, clinicianId?, commit? }." }, { status: 400 }); }
+  let body: { csv?: string; clinicianId?: string; commit?: boolean; deleteIds?: string[] };
+  try { body = await req.json(); } catch { return NextResponse.json({ error: "Body must be JSON." }, { status: 400 }); }
+
+  // Targeted deletion of specific appointment ids (e.g. a confirmed duplicate).
+  if (Array.isArray(body.deleteIds) && body.deleteIds.length) {
+    const deleted: string[] = [];
+    for (const id of body.deleteIds) { await deleteAppointment(String(id)); deleted.push(String(id)); }
+    return NextResponse.json({ ok: true, deleted });
+  }
+
   if (!body.csv || typeof body.csv !== "string") return NextResponse.json({ error: "Missing csv." }, { status: 400 });
 
   const rows = parseAcuityCsv(body.csv);

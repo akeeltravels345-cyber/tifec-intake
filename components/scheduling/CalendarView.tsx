@@ -9,7 +9,7 @@ interface Avail { clinicianId: string; weekly: DayHours[]; overrides: DateOverri
 
 const CAY = 5; // Cayman is UTC-5 year-round (no DST)
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_START = 7, DAY_END = 20; // 7am-8pm
+const DAY_START = 8, DAY_END = 20; // 8am-8pm
 // Vertical scale of the day/week grid. Phones get a taller hour so a short
 // (15-30 min) appointment still has room to show the client name + time.
 const HOUR_DESKTOP = 118, HOUR_PHONE = 150;
@@ -23,6 +23,9 @@ const MODE_TINT: Record<AppointmentMode, { bg: string; bar: string; fg: string }
   virtual: { bg: "var(--appt-on-bg)", bar: "var(--appt-on-bar)", fg: "var(--appt-on-fg)" },   // green
   either: { bg: "var(--appt-ei-bg)", bar: "var(--appt-ei-bar)", fg: "var(--appt-ei-fg)" },    // teal
 };
+// Free consultations stand out in red so they're easy to spot on the calendar.
+const FREE_TINT = { bg: "var(--appt-free-bg)", bar: "var(--appt-free-bar)", fg: "var(--appt-free-fg)" };
+const isFreeConsult = (name: string | undefined | null) => /free\b.*consult/i.test(name || "");
 const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "booked", label: "Booked" }, { key: "confirmed", label: "Confirmed" },
   { key: "seen", label: "Seen" }, { key: "no_show", label: "No-show" }, { key: "cancelled", label: "Cancelled" },
@@ -462,7 +465,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   onClick={() => { setAnchor(day); setView("day"); }}>
                   <div className="cal-mnum">{partsOf(day)[2]}</div>
                   {shown.map((a) => {
-                    const tint = MODE_TINT[a.mode] || MODE_TINT.either;
+                    const tint = isFreeConsult(typeById(a.typeId)?.name) ? FREE_TINT : (MODE_TINT[a.mode] || MODE_TINT.either);
                     return (
                       <div key={a.id} className="cal-mchip" style={{ background: tint.bg, color: tint.fg }}
                         onClick={(ev) => { ev.stopPropagation(); openView(a); }}>
@@ -513,7 +516,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const height = Math.max(18, ((e - s) / 60) * HOUR - 2);
                     const width = 100 / laneCount, left = lane * width;
                     const isBlock = a.kind === "block";
-                    const tint = MODE_TINT[a.mode] || MODE_TINT.either;
+                    const tint = isFreeConsult(t?.name) ? FREE_TINT : (MODE_TINT[a.mode] || MODE_TINT.either);
                     // Acuity-style label: "Client: Service - Format", then the time range.
                     const service = a.capacity > 1 ? `${t?.name || "Group"} (${(a.attendees || []).length}/${a.capacity})` : (t?.name || "");
                     const title = [service, CAL_MODE_LABEL[a.mode]].filter(Boolean).join(" - ");
