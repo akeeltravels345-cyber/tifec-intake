@@ -26,6 +26,9 @@ const MODE_TINT: Record<AppointmentMode, { bg: string; bar: string; fg: string }
 // Free consultations stand out in red so they're easy to spot on the calendar.
 const FREE_TINT = { bg: "var(--appt-free-bg)", bar: "var(--appt-free-bar)", fg: "var(--appt-free-fg)" };
 const isFreeConsult = (name: string | undefined | null) => /free\b.*consult/i.test(name || "");
+// Most TIFEC type names embed the mode ("… - In Person" / "… - Online"); the
+// calendar shows mode on its own line, so strip that suffix from the type label.
+const cleanTypeName = (name: string | undefined | null) => (name || "").replace(/\s*-\s*(in\s*person|online|virtual)\b/i, "").replace(/\s{2,}/g, " ").trim();
 const STATUS: { key: AppointmentStatus; label: string }[] = [
   { key: "booked", label: "Booked" }, { key: "confirmed", label: "Confirmed" },
   { key: "seen", label: "Seen" }, { key: "no_show", label: "No-show" }, { key: "cancelled", label: "Cancelled" },
@@ -111,6 +114,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   // schedule when provided (defaultWho), but can switch to "All" or a colleague.
   const [who, setWho] = useState<string>(lockedClinicianId || defaultWho || "all");
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
+  const [groupView, setGroupView] = useState<Appointment[] | null>(null); // collapsed-group roster
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
   const [phone, setPhone] = useState(false); // taller grid rows on phones
   const HOUR = phone ? HOUR_PHONE : HOUR_DESKTOP;
@@ -347,7 +351,19 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
   // ---- lane layout per day (side-by-side for overlaps) ----
   function layout(dayAppts: Appointment[]) {
-    const items = dayAppts.map((a) => ({ a, s: cayMinutes(a.startAt), e: cayMinutes(a.startAt) + Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) })).sort((x, y) => x.s - y.s);
+    // Collapse group bookings — several clients booked into the SAME clinician +
+    // type + exact time slot (e.g. a PEERS class) — into one cell carrying its
+    // members, so the group shows as a single block instead of N narrow lanes.
+    // Each member stays its own appointment (so each is billed individually).
+    const bySlot = new Map<string, Appointment[]>();
+    for (const a of dayAppts) {
+      const key = `${a.clinicianId}|${a.typeId || ""}|${a.startAt}|${a.endAt}`;
+      (bySlot.get(key) || bySlot.set(key, []).get(key)!).push(a);
+    }
+    const items = [...bySlot.values()].map((members) => {
+      const a = members[0];
+      return { a, members, s: cayMinutes(a.startAt), e: cayMinutes(a.startAt) + Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) };
+    }).sort((x, y) => x.s - y.s);
     const lanes: number[] = []; // lane -> end minute
     const placed = items.map((it) => {
       let lane = lanes.findIndex((end) => end <= it.s);
@@ -510,12 +526,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const a = Math.min(sel.from, sel.to), b = Math.max(sel.from, sel.to);
                     return <div className="cal-select" style={{ top: ((a - DAY_START * 60) / 60) * HOUR, height: ((b - a) / 60) * HOUR }}>{label12(a)}-{label12(b)}</div>;
                   })()}
-                  {placed.map(({ a, s, e, lane, laneCount }) => {
+                  {placed.map(({ a, members, s, e, lane, laneCount }) => {
                     const t = typeById(a.typeId);
                     const top = ((s - DAY_START * 60) / 60) * HOUR;
                     const height = Math.max(18, ((e - s) / 60) * HOUR - 2);
                     const width = 100 / laneCount, left = lane * width;
                     const isBlock = a.kind === "block";
+                    const isGroup = members.length > 1; // several clients in one slot
                     const tint = isFreeConsult(t?.name) ? FREE_TINT : (MODE_TINT[a.mode] || MODE_TINT.either);
                     // Acuity-style label: "Client: Service - Format", then the time range.
                     const service = a.capacity > 1 ? `${t?.name || "Group"} (${(a.attendees || []).length}/${a.capacity})` : (t?.name || "");
@@ -524,18 +541,27 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     const style = { top, height, left: `${left}%`, width: `calc(${width}% - 3px)`,
                       ...(isBlock ? {} : { background: tint.bg, borderLeftColor: tint.bar, color: tint.fg }) };
                     return (
-                      <div key={a.id} className={`cal-appt st-${a.status}${isBlock ? " cal-appt-block" : ""}`} style={style}
-                        draggable={canEdit(a)} onDragStart={(ev) => { if (!canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
-                        onClick={(ev) => { ev.stopPropagation(); openView(a); }}>
+                      <div key={isGroup ? `grp-${a.startAt}-${a.typeId}` : a.id} className={`cal-appt st-${a.status}${isBlock ? " cal-appt-block" : ""}${isGroup ? " cal-appt-grp" : ""}`} style={style}
+                        draggable={!isGroup && canEdit(a)} onDragStart={(ev) => { if (isGroup || !canEdit(a)) return; ev.dataTransfer.setData("text/plain", a.id); ev.dataTransfer.effectAllowed = "move"; }}
+                        onClick={(ev) => { ev.stopPropagation(); if (isGroup) setGroupView(members); else openView(a); }}>
                         {isBlock ? (
                           <>
                             <div className="cal-appt-n">Unavailable{a.title ? `: ${a.title}` : ""}</div>
                             <div className="cal-appt-m">{timeRange}</div>
                           </>
+                        ) : isGroup ? (
+                          <>
+                            <div className="cal-appt-n"><b>{cleanTypeName(t?.name) || "Group"}</b></div>
+                            <div className="cal-appt-type">{members.length} {members.length === 1 ? "person" : "people"}</div>
+                            <div className="cal-appt-sub">{CAL_MODE_LABEL[a.mode]}</div>
+                            <div className="cal-appt-m">{timeRange}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>
+                          </>
                         ) : (
                           <>
                             {a.intakeStatus === "pending" && <span className="cal-intake" title="Intake outstanding" />}
-                            <div className="cal-appt-n"><b>{a.clientName || service || "Appointment"}</b>{title ? `: ${title}` : ""}</div>
+                            <div className="cal-appt-n"><b>{a.clientName || "Appointment"}</b></div>
+                            <div className="cal-appt-type">{cleanTypeName(t?.name) || service || "Appointment"}</div>
+                            <div className="cal-appt-sub">{CAL_MODE_LABEL[a.mode]}</div>
                             <div className="cal-appt-m">{a.seriesId ? "↻ " : ""}{timeRange}{who === "all" ? ` · ${clinName(a.clinicianId).split(" ").slice(-1)}` : ""}</div>
                           </>
                         )}
@@ -739,6 +765,35 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
           </div>
         </div>
       )}
+
+      {groupView && groupView.length > 0 && (() => {
+        const g = groupView; const a0 = g[0]; const t = typeById(a0.typeId);
+        const s = cayMinutes(a0.startAt);
+        const dur = Math.round((Date.parse(a0.endAt) - Date.parse(a0.startAt)) / 60000);
+        return (
+          <div className="cal-modal" onClick={() => setGroupView(null)}>
+            <div className="cal-sheet cvr" onClick={(e) => e.stopPropagation()}>
+              <div className="cvr-head"><button className="cvr-hbtn" onClick={() => setGroupView(null)}>Close</button></div>
+              <div className="cvr-title">
+                <strong>{t?.name || "Group session"}</strong>
+                <span>{prettyDate(cayDay(a0.startAt))} · {label12(s)}-{label12(s + dur)} · {CAL_MODE_LABEL[a0.mode]}</span>
+              </div>
+              <div className="cvr-sec">
+                <div className="cvr-sec-h">{g.length} {g.length === 1 ? "person" : "people"} booked</div>
+                <div className="cal-grouplist">
+                  {g.slice().sort((x, y) => (x.clientName || "").localeCompare(y.clientName || "")).map((m) => (
+                    <button key={m.id} type="button" className="cal-groupitem" onClick={() => { setGroupView(null); openView(m); }}>
+                      <span className="cal-groupname">{m.clientName || "(no name)"}</span>
+                      <span className="cal-groupgo">{m.billingSessionId ? "✓ logged" : "View / log →"}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="cvr-sub" style={{ marginTop: 8 }}>Tap a person to see their appointment and log their session individually.</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {viewAppt && (() => {
         const a = viewAppt; const t = typeById(a.typeId); const s = cayMinutes(a.startAt);
