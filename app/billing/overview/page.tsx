@@ -99,7 +99,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     builderTasks,
     worklistChip,
     servicesInvoice: cfg.servicesInvoice?.enabled && servicesTotal > 0
-      ? { payee: cfg.servicesInvoice.payeeName || cfg.servicesInvoice.businessName || "Services", total: servicesTotal }
+      ? { payee: cfg.servicesInvoice.payeeName || "Services", total: servicesTotal }
       : null,
   };
 

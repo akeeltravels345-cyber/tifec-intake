@@ -56,7 +56,7 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
       <article className="inv">
         <header className="inv-head">
           <div className="inv-brand">
-            <div className="inv-biz">{inv.businessName || inv.payeeName || "Services"}</div>
+            <div className="inv-biz">{inv.payeeName || "Services"}</div>
             <div className="inv-doc">Invoice</div>
           </div>
           <div className="inv-meta">
@@ -73,7 +73,7 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
           </div>
           <div>
             <div className="inv-label">From</div>
-            <div className="inv-pname">{inv.payeeName || inv.businessName}</div>
+            <div className="inv-pname">{inv.payeeName}</div>
           </div>
           <div>
             <div className="inv-label">Payment terms</div>
@@ -108,13 +108,13 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
               {inv.bankName && <div><span>Bank</span><b>{inv.bankName}</b></div>}
               {inv.accountNumber && <div><span>Account number</span><b>{inv.accountNumber}</b></div>}
               {inv.routingNumber && <div><span>Routing number</span><b>{inv.routingNumber}</b></div>}
-              <div><span>Payee</span><b>{inv.payeeName || inv.businessName}</b></div>
+              <div><span>Payee</span><b>{inv.payeeName}</b></div>
             </div>
           </section>
         )}
 
         <footer className="inv-foot">
-          <span>{(inv.businessName || "").toUpperCase()}{inv.payeeName ? ` · ${inv.payeeName.toUpperCase()}` : ""}</span>
+          <span>{(inv.payeeName || "").toUpperCase()}</span>
           <span>Generated {generated}.</span>
         </footer>
       </article>

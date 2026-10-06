@@ -103,7 +103,6 @@ export async function POST(req: Request) {
           .filter((l) => l.description || l.amount > 0);
         next.servicesInvoice = {
           enabled: si.enabled !== false,
-          businessName: t(si.businessName),
           payeeName: t(si.payeeName),
           invoiceNumber: t(si.invoiceNumber),
           terms: t(si.terms),

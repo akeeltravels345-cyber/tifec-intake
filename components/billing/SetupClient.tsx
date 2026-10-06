@@ -42,7 +42,7 @@ interface Provider {
 }
 
 interface SvcLine { id: string; description: string; detail?: string; amount: number; }
-interface SvcInvoice { enabled: boolean; businessName?: string; payeeName?: string; invoiceNumber?: string; terms?: string; lineItems: SvcLine[]; bankName?: string; accountNumber?: string; routingNumber?: string; }
+interface SvcInvoice { enabled: boolean; payeeName?: string; invoiceNumber?: string; terms?: string; lineItems: SvcLine[]; bankName?: string; accountNumber?: string; routingNumber?: string; }
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 async function post(body: Record<string, unknown>) {
@@ -277,7 +277,6 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
             <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13 }}><input type="checkbox" className="su-check" checked={svc.enabled} onChange={(e) => setSvcField("enabled", e.target.checked)} /> Show this invoice on the owner dashboard and deduct it from net profit</label>
           </div>
           <div className="cd-grid" style={{ borderTop: "1px solid var(--line)" }}>
-            <div className="cd-f"><span className="cd-fl">Business name</span><input className="ls-in" value={svc.businessName ?? ""} onChange={(e) => setSvcField("businessName", e.target.value)} placeholder="e.g. Cosmic Caterpillar" /></div>
             <div className="cd-f"><span className="cd-fl">Payee name</span><input className="ls-in" value={svc.payeeName ?? ""} onChange={(e) => setSvcField("payeeName", e.target.value)} placeholder="e.g. Akeel O'Connor" /></div>
             <div className="cd-f"><span className="cd-fl">Invoice number</span><input className="ls-in" value={svc.invoiceNumber ?? ""} onChange={(e) => setSvcField("invoiceNumber", e.target.value)} placeholder="e.g. 0014" /></div>
             <div className="cd-f"><span className="cd-fl">Payment terms</span><input className="ls-in" value={svc.terms ?? ""} onChange={(e) => setSvcField("terms", e.target.value)} placeholder="Due on receipt" /></div>

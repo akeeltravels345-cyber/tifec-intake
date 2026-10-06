@@ -106,7 +106,6 @@ export interface ServicesInvoiceLine {
  *  here (in the DB) — deliberately NOT hardcoded in source. */
 export interface ServicesInvoiceConfig {
   enabled: boolean;
-  businessName?: string;   // "Cosmic Caterpillar"
   payeeName?: string;      // "Akeel O'Connor"
   invoiceNumber?: string;  // "0014"
   terms?: string;          // "Due on receipt"
@@ -143,7 +142,6 @@ export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   ],
   servicesInvoice: {
     enabled: true,
-    businessName: "Cosmic Caterpillar",
     payeeName: "Akeel O'Connor",
     invoiceNumber: "0014",
     terms: "Due on receipt",
