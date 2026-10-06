@@ -116,6 +116,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [viewAppt, setViewAppt] = useState<Appointment | null>(null); // read-only detail
   const [groupView, setGroupView] = useState<Appointment[] | null>(null); // collapsed-group roster
   const [intakeFormKey, setIntakeFormKey] = useState<string>(intakeForms[0]?.key || "individual");
+  const [linkEdit, setLinkEdit] = useState(false); // editor: show the video link editable vs read-only
   const [actBusy, setActBusy] = useState(false);
   const [actMsg, setActMsg] = useState("");
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
@@ -243,6 +244,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
   // ---- new / edit ----
   function openNew(date?: string, startMin?: number) {
+    setLinkEdit(false);
     const t = types[0];
     setErr("");
     setDraft({
@@ -255,7 +257,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     });
   }
   function openEdit(a: Appointment) {
-    setErr("");
+    setErr(""); setLinkEdit(false);
     setDraft({ ...a, _date: cayDay(a.startAt), _startMin: cayMinutes(a.startAt), _durMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) });
     loadLinks(a);
   }
@@ -716,7 +718,22 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       in-person. Virtual appointments show a video-link field (auto
                       created on save when left blank). */}
                   {draft.mode !== "in_person" && (
-                    <label className="cal-f grow"><span>Video link (optional)</span><input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder="Leave blank to auto-create a Zoom/Meet link" /></label>
+                    <div className="cal-f grow"><span>Video link</span>
+                      {draft.locationOrLink && !linkEdit ? (
+                        <div className="cal-linkbox">
+                          {/^https?:\/\//.test(draft.locationOrLink)
+                            ? <a className="cal-linktext" href={draft.locationOrLink} target="_blank" rel="noopener noreferrer" title={draft.locationOrLink}>{draft.locationOrLink}</a>
+                            : <span className="cal-linktext">{draft.locationOrLink}</span>}
+                          <button type="button" className="cal-linkbtn" onClick={() => { try { navigator.clipboard?.writeText(draft.locationOrLink || ""); } catch { /* ignore */ } }}>Copy</button>
+                          <button type="button" className="cal-linkbtn" onClick={() => setLinkEdit(true)}>Replace</button>
+                        </div>
+                      ) : (
+                        <>
+                          <input value={draft.locationOrLink || ""} onChange={(e) => setDraft({ ...draft, locationOrLink: e.target.value })} placeholder="Leave blank to auto-create a Zoom/Meet link" />
+                          {draft.locationOrLink && linkEdit && <button type="button" className="cal-linkbtn" style={{ marginTop: 6, alignSelf: "flex-start" }} onClick={() => setLinkEdit(false)}>Done</button>}
+                        </>
+                      )}
+                    </div>
                   )}
                   <label className="cal-f"><span>Payment path</span>
                     <select value={draft.insurancePath || "self_pay"} onChange={(e) => setDraft({ ...draft, insurancePath: e.target.value as "self_pay" | "insurance" })}>
@@ -885,11 +902,11 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                       <div className="cvr-sec-h">Video link</div>
                       {a.locationOrLink && /^https?:\/\//.test(a.locationOrLink) ? (
                         <>
-                          <div className="cvr-linkrow">
-                            <input className="cvr-linkin" readOnly value={a.locationOrLink} onFocus={(e) => e.currentTarget.select()} />
-                            <button type="button" className="cvr-copy" onClick={() => { try { navigator.clipboard?.writeText(a.locationOrLink); } catch { /* ignore */ } }}>Copy</button>
+                          <div className="cal-linkbox">
+                            <a className="cal-linktext" href={a.locationOrLink} target="_blank" rel="noopener noreferrer" title={a.locationOrLink}>{a.locationOrLink}</a>
+                            <button type="button" className="cal-linkbtn" onClick={() => { try { navigator.clipboard?.writeText(a.locationOrLink); } catch { /* ignore */ } }}>Copy</button>
                           </div>
-                          <div className="cvr-sub"><a href={a.locationOrLink} target="_blank" rel="noopener noreferrer">Open</a> · share this link with the client.</div>
+                          <div className="cvr-sub">Share this link with the client.</div>
                         </>
                       ) : (
                         <div className="cvr-sub">Online — a video link will be created when you save, or add one via Edit.</div>
