@@ -5215,3 +5215,32 @@ a.cal-linktext:hover { text-decoration: underline; }
 
 /* By-clinician row: the admin services-invoice variant. */
 .bo-clsvclink { color: var(--teal, #2E8E93); font-weight: 600; }
+
+/* ============================================================================
+   Clinician payout statement — restored to its ORIGINAL look, scoped to the
+   .classic wrapper so the biller statement keeps the newer band design.
+   ========================================================================= */
+.stmt-wrap.classic .stmt { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 44px 48px; overflow: visible; box-shadow: 0 1px 2px rgba(20,30,55,.03), 0 12px 34px rgba(20,30,55,.06); }
+.stmt-wrap.classic .stmt-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--brand); padding-bottom: 22px; }
+.stmt-wrap.classic .stmt-logo { height: 46px; width: auto; display: block; }
+.stmt-wrap.classic .stmt-brand-sub { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.stmt-wrap.classic .stmt-meta { text-align: right; }
+.stmt-wrap.classic .stmt-doc { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.stmt-wrap.classic .stmt-period { font-size: 14px; color: var(--brand); font-weight: 700; margin-top: 2px; }
+.stmt-wrap.classic .stmt-gen { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.stmt-wrap.classic .stmt-to { display: flex; justify-content: space-between; align-items: flex-end; margin: 26px 0; }
+.stmt-wrap.classic .stmt-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.stmt-wrap.classic .stmt-name { font-size: 21px; font-weight: 800; margin-top: 5px; letter-spacing: -.01em; }
+.stmt-wrap.classic .stmt-cred { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.stmt-wrap.classic .stmt-net { text-align: right; }
+.stmt-wrap.classic .stmt-net-val { font-size: 34px; font-weight: 800; color: var(--brand); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stmt-wrap.classic .stmt-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 22px 0 30px; }
+.stmt-wrap.classic .stmt-kpi { background: var(--surface); border: 0; border-radius: 10px; padding: 12px 14px; }
+.stmt-wrap.classic .stmt-kpi span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 400; }
+.stmt-wrap.classic .stmt-kpi b { font-size: 17px; font-variant-numeric: tabular-nums; margin-top: 0; display: block; }
+.stmt-wrap.classic .stmt-h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; margin: 0 0 8px; }
+.stmt-wrap.classic .stmt-calc td { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.stmt-wrap.classic .stmt-calc tr.sub td { font-weight: 700; border-bottom: 2px solid #d7dee3; }
+.stmt-wrap.classic .stmt-calc tr.total td { font-size: 19px; font-weight: 800; border-bottom: none; border-top: 0; padding-top: 15px; }
+.stmt-wrap.classic .stmt-calc tr.total td.num { color: var(--brand); font-family: inherit; font-size: 19px; font-weight: 800; }
+.stmt-wrap.classic .stmt-foot { display: flex; justify-content: space-between; gap: 20px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); letter-spacing: 0; }
