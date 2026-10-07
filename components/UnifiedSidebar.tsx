@@ -75,7 +75,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // Items every role shares, identical for all — defined once and reused so each
   // admin "view" can be a faithful, complete replica of that role's real menu.
   const uToday: Item = { href: "/today", label: "Today", icon: IcToday, match: (p) => p === "/today" };
-  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p.startsWith("/schedule") || p.startsWith("/scheduling"), beta: true, highlight: schedGlow };
+  const uSchedule: Item = { href: "/schedule", label: "Schedule", icon: IcToday, match: (p) => p.startsWith("/schedule") || p.startsWith("/scheduling"), highlight: schedGlow };
   const uDash: Item = { href: "/dashboard", label: "Dashboard", icon: IcDoc, badge: needReview, match: (p) => p === "/dashboard" && tab !== "forms" };
   const uForms: Item = { href: "/dashboard?tab=forms", label: "Forms", icon: IcForms, match: (p) => p === "/dashboard" && tab === "forms" };
   const uNotices: Item = { href: "/team/notices", label: "Notice board", icon: IcBoard, match: (p) => p.startsWith("/team/notices") };

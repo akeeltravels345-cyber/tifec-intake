@@ -424,19 +424,17 @@ export const publicBookableClinicians = (): Clinician[] => CLINICIANS.filter(isP
  *  admin: true for business oversight, but is NOT a system admin. */
 export const isSystemAdmin = (c: Clinician | null | undefined): boolean => c?.contact === "admin";
 
-// BETA ROLLOUT: the new scheduling system is live only for these clinicians
-// (Shion + Nick), plus the admin and the test account (for Zoom review). Everyone
-// else is kept out of /schedule for now. Widen this to open it to the whole team.
-const SCHEDULE_BETA_IDS = new Set<string>(["shion-oconnor", "nick-oconnor"]);
-export const inScheduleBeta = (c: Clinician | null | undefined): boolean =>
-  !!c && (isSystemAdmin(c) || !!c.test || SCHEDULE_BETA_IDS.has(c.id));
-
 /** Can this internal person be assigned clients as their treating clinician?
  *  Regular clinicians can; the biller normally can't — except a practicum biller
  *  (Nick), whose unpaid practicum clients live as no-charge records so he can
  *  keep session notes. Never a hidden/admin-only account. */
 export const canTreatClients = (c: Clinician | null | undefined): boolean =>
   !!c && !c.intakeHidden && (c.contact !== "biller" || !!c.practicum);
+
+// Scheduling is now LIVE for the whole team (rolled out 2026-10-06 from the
+// Shion + Nick beta): every treating clinician, plus the admin and test account.
+export const inScheduleBeta = (c: Clinician | null | undefined): boolean =>
+  !!c && (isSystemAdmin(c) || !!c.test || canTreatClients(c));
 
 /** The people behind the owner / biller / admin contacts. */
 export const CONTACTS = CLINICIANS.filter((c) => !!c.contact);

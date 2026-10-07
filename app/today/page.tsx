@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, isOwner, isBiller, hasBillingBeta, devMode } from "@/lib/billingRole";
-import { isSystemAdmin } from "@/lib/clinicians";
+import { isSystemAdmin, inScheduleBeta } from "@/lib/clinicians";
+import FeatureSpotlight from "@/components/billing/FeatureSpotlight";
 import { getSubmissionsByClinician } from "@/lib/db";
 import { unreadCount, listTickets, unreadNotifications } from "@/lib/comms";
 import { listSessions, getPracticeConfig } from "@/lib/billing";
@@ -163,6 +164,18 @@ export default async function TodayPage() {
             <p className="today-sub">Here&apos;s your day across intake, billing and the team.</p>
           </div>
         </header>
+
+        {/* Scheduling just rolled out to the whole team — announce it once. */}
+        {inScheduleBeta(me) && !admin && (
+          <FeatureSpotlight
+            id="sched-live-2026-10"
+            title="Scheduling is now in the app"
+            body="Your calendar, client bookings, availability and intake all live here now. Set your weekly hours and share your booking link to start taking appointments."
+            href="/schedule"
+            cta="Open my schedule"
+            times={5}
+          />
+        )}
 
         {/* Start here — hidden for the builder/admin, who doesn't need the
             "where the money sits" nudge. Everyone else still gets it. */}
