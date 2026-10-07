@@ -4147,12 +4147,14 @@ html.tm-banner-open .bo-side { height: calc(100vh - 74px); }
 .cal-kind button.on { background: var(--teal); color: #fff; }
 .cal-close { border: 0; background: none; font-size: 22px; color: var(--muted); cursor: pointer; line-height: 1; }
 .cal-err { color: #b3261e; font-size: 13px; margin: 10px 16px 0; }
-.cal-form { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px; }
-.cal-f { display: flex; flex-direction: column; gap: 5px; min-width: 130px; flex: 1; }
+.cal-form { display: flex; flex-wrap: wrap; gap: 15px 12px; padding: 18px 16px 10px; }
+.cal-f { display: flex; flex-direction: column; gap: 6px; min-width: 130px; flex: 1; }
 .cal-f.grow { flex-basis: 100%; }
-.cal-f > span { font-size: 12px; font-weight: 600; }
-.cal-f input, .cal-f select { font: 400 14px "Open Sans"; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px; }
-.cal-f input:focus, .cal-f select:focus { outline: none; border-color: var(--teal); }
+.cal-f > span { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cal-f input, .cal-f select, .cal-f textarea { font: 500 14.5px "Open Sans"; color: var(--ink); background: var(--surface-2, var(--card)); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; transition: border-color .12s, box-shadow .12s, background .12s; }
+.cal-f input::placeholder { color: var(--muted); opacity: .75; }
+.cal-f input:hover, .cal-f select:hover, .cal-f textarea:hover { border-color: var(--muted); }
+.cal-f input:focus, .cal-f select:focus, .cal-f textarea:focus { outline: none; border-color: var(--teal, #2f8e93); background: var(--card); box-shadow: 0 0 0 3px rgba(47,142,147,.2); }
 .cal-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 16px 12px; }
 .cal-status-l { font-size: 12px; font-weight: 600; color: var(--muted); margin-right: 4px; }
 .cal-status button { font: 600 12px "Open Sans"; border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 20px; padding: 5px 11px; cursor: pointer; }
