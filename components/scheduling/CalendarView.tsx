@@ -117,6 +117,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   const [groupView, setGroupView] = useState<Appointment[] | null>(null); // collapsed-group roster
   const [intakeFormKey, setIntakeFormKey] = useState<string>(intakeForms[0]?.key || "individual");
   const [linkEdit, setLinkEdit] = useState(false); // editor: show the video link editable vs read-only
+  const [notifyClient, setNotifyClient] = useState(true); // editor: email the client their confirmation
   const [actBusy, setActBusy] = useState(false);
   const [actMsg, setActMsg] = useState("");
   const [moreOpen, setMoreOpen] = useState(false); // mobile "More" tools menu
@@ -244,7 +245,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
   // ---- new / edit ----
   function openNew(date?: string, startMin?: number) {
-    setLinkEdit(false);
+    setLinkEdit(false); setNotifyClient(true);
     const t = types[0];
     setErr("");
     setDraft({
@@ -257,7 +258,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     });
   }
   function openEdit(a: Appointment) {
-    setErr(""); setLinkEdit(false);
+    setErr(""); setLinkEdit(false); setNotifyClient(true);
     setDraft({ ...a, _date: cayDay(a.startAt), _startMin: cayMinutes(a.startAt), _durMin: Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000) });
     loadLinks(a);
   }
@@ -296,7 +297,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     }
     delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount; delete payload._repeatEnds; delete payload._repeatUntil;
     const action = draft.id ? "update" : "create";
-    const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload }) });
+    const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload, notifyClient }) });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setErr(data.error || "Could not save."); return; }
@@ -800,6 +801,13 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               const outside = blocks !== null && !blocks.some((b) => s >= b.s && e <= b.e);
               return outside ? <p className="cal-warn">Outside {clinName(draft.clinicianId)}&apos;s set hours for that day. You can still book it.</p> : null;
             })()}
+
+            {draft.kind !== "block" && (
+              <label className="cal-notify">
+                <input type="checkbox" checked={notifyClient} onChange={(e) => setNotifyClient(e.target.checked)} />
+                <span>{draft.id ? "Email the client if the time changed" : "Email the client their confirmation (and intake, if any)"}</span>
+              </label>
+            )}
 
             <div className="cal-actions">
               {draft.id ? <button className="cal-btn del" onClick={() => remove(draft as Appointment)}>Delete</button> : <span />}

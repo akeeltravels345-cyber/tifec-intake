@@ -43,10 +43,14 @@ export async function notifyClientReschedule(a: RescheduleNotice): Promise<void>
  *  choose a new time with the same clinician. Best-effort; never throws. */
 export async function notifyClientRebook(a: {
   to: string; clientName: string; serviceName: string; clinicianName: string;
-  clinicianId: string; origin: string; wasStartAt: string; message?: string;
+  clinicianId: string; typeId?: string | null; origin: string; wasStartAt: string; message?: string;
 }): Promise<void> {
   if (!a.to) return;
-  const bookUrl = `${a.origin.replace(/\/$/, "")}/book?clinician=${encodeURIComponent(a.clinicianId)}`;
+  // Include the service type so the booking page opens straight on the date/time
+  // picker for the right clinician + service (BookingFlow jumps to "time").
+  const q = new URLSearchParams({ clinician: a.clinicianId });
+  if (a.typeId) q.set("type", a.typeId);
+  const bookUrl = `${a.origin.replace(/\/$/, "")}/book?${q.toString()}`;
   const intro = a.message?.trim()
     || `I'm so sorry, but I'm no longer able to keep our upcoming ${a.serviceName} appointment. I'd really like to find another time that works for you.`;
   try {

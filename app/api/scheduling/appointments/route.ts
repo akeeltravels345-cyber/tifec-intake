@@ -10,8 +10,38 @@ import { externalBusyIntervals } from "@/lib/externalBusy";
 import { notifyClientReschedule, offerFreedSlotToWaitlist, notifyClientRebook } from "@/lib/schedulingEmails";
 import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
+import { sendBookingConfirmation, sendIntakeInvite } from "@/lib/bookingCore";
+import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
+import { caymanWhen } from "@/lib/caymanTime";
+import { portalToken } from "@/lib/portalAuth";
+import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
+
+// A staff-booked appointment can email the client the same "you're booked"
+// confirmation (and any required intake) that a public booking sends. Best-effort.
+async function notifyClientOfBooking(appt: Appointment, origin: string): Promise<string[]> {
+  if (appt.kind === "block" || !appt.clientEmail) return [];
+  const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+  const clinicianName = getClinician(appt.clinicianId)?.name || "your clinician";
+  const assessment = await assessClientIntake(appt.clientName, type?.name || "", appt.clientEmail);
+  const missingForms = assessment.missingForms;
+  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
+  const coupleId = needsIntake && missingForms.includes("couples") ? (appt.coupleId || randomBytes(6).toString("hex")) : undefined;
+  if (needsIntake) {
+    const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(appt.clinicianId, form, coupleId)}` }));
+    await sendIntakeInvite({ to: appt.clientEmail, clientName: appt.clientName, clinicianName, serviceName: type?.name || "your appointment", whenText: caymanWhen(appt.startAt), forms });
+  }
+  await sendBookingConfirmation({
+    id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
+    to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+    whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
+    manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
+    portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
+    intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
+  });
+  return needsIntake ? missingForms.map((f) => formShortLabel(f)) : [];
+}
 
 // For a virtual individual appointment with no link yet, auto-create a meeting
 // on the clinician's OWN connected Zoom/Meet account. Best-effort: never blocks.
@@ -125,13 +155,18 @@ export async function POST(req: Request) {
           count = Math.min(52, Math.floor((untilMs - startMs) / (everyDays * 86400e3)) + 1);
         }
       }
+      const notify = body.notifyClient !== false; // default: email the client their confirmation
+      const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
       if (everyDays > 0 && count > 1) {
         const { created, skipped } = await createRecurring(base as never, everyDays, count);
         const withVideo = await Promise.all(created.map((a) => attachVideo(a)));
+        if (notify && withVideo[0]) { try { await notifyClientOfBooking(withVideo[0], origin); } catch (e) { console.error("staff booking email failed", e); } }
         return NextResponse.json({ ok: true, appointment: withVideo[0], count: withVideo.length, skipped: skipped.length });
       }
       const appt = await attachVideo(await createAppointment(base as never));
-      return NextResponse.json({ ok: true, appointment: appt });
+      let intakeSent: string[] = [];
+      if (notify) { try { intakeSent = await notifyClientOfBooking(appt, origin); } catch (e) { console.error("staff booking email failed", e); } }
+      return NextResponse.json({ ok: true, appointment: appt, intakeSent });
     }
 
     if (action === "series:removeFrom") {
@@ -199,7 +234,7 @@ export async function POST(req: Request) {
         await notifyClientRebook({
           to: existing.clientEmail, clientName: existing.clientName,
           serviceName: type?.name || "appointment", clinicianName: getClinician(existing.clinicianId)?.name || "your clinician",
-          clinicianId: existing.clinicianId, origin, wasStartAt: existing.startAt,
+          clinicianId: existing.clinicianId, typeId: existing.typeId, origin, wasStartAt: existing.startAt,
           message: typeof body.message === "string" ? body.message : undefined,
         });
         emailed = true;
