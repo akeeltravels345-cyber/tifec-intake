@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export interface BenefitSummary { amount: number; year: number; used: number; remaining: number; }
+export interface BenefitSummary {
+  amount: number; year: number; used: number; remaining: number;
+  /** The payer's benefit-cap rule (from Setup). Set = this is a capped benefit plan. */
+  runOut?: "fullyCovered" | "clientPays" | "pause";
+  insurerName?: string;
+  copayPct?: number;   // the client's co-pay % while funds remain (percentage plans)
+  capped?: boolean;    // the payer has a benefit-cap rule configured
+}
 const money = (n: number) => `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // A client's total insurance funds for a plan year. Each insured date of service
@@ -38,7 +45,8 @@ export default function BenefitPanel({ clientId, benefit, today, canEdit }: {
     finally { setBusy(false); }
   }
 
-  const out = benefit && benefit.remaining <= 0;
+  const out = !!benefit && benefit.remaining <= 0;
+  const pct = benefit && benefit.amount > 0 ? Math.max(0, Math.min(100, (Math.max(0, benefit.remaining) / benefit.amount) * 100)) : 0;
 
   return (
     <div className="ded">
@@ -68,11 +76,39 @@ export default function BenefitPanel({ clientId, benefit, today, canEdit }: {
           <div className="ded-stats">
             <div className="ded-stat"><span className="k">Total funds</span><span className="v">{money(benefit.amount)}</span></div>
             <div className="ded-stat"><span className="k">Used ({benefit.year})</span><span className="v">{money(benefit.used)}</span></div>
-            <div className={`ded-stat ${out ? "out" : "hl"}`}><span className="k">Remaining</span><span className="v">{money(benefit.remaining)}</span></div>
+            <div className={`ded-stat ${out ? "out" : "hl"}`}><span className="k">Remaining</span><span className="v">{money(Math.max(0, benefit.remaining))}</span></div>
           </div>
-          {out
-            ? <p className="ded-hint" style={{ color: "var(--bad, #bd3a29)", fontWeight: 600 }}>⚠ Funds used up for {benefit.year}. New insured charges will exceed the client&apos;s available funds.</p>
-            : <p className="ded-hint">Each insured date of service draws this down by the amount billed to the insurer. Co-pays and self-pay visits don&apos;t count.</p>}
+
+          <div style={{ height: 8, borderRadius: 999, background: "var(--sink, #f0ece2)", overflow: "hidden", margin: "6px 0 10px" }}>
+            <i style={{ display: "block", height: "100%", width: `${pct}%`, borderRadius: 999, background: out ? "#9aa0a6" : "linear-gradient(90deg,#2f8e93,#1c6a6e)", transition: "width .35s" }} />
+          </div>
+
+          {benefit.capped ? (
+            out ? (
+              benefit.runOut === "fullyCovered" ? (
+                <div style={{ background: "linear-gradient(115deg,#2E3192,#2E8E93)", color: "#fff", borderRadius: 10, padding: "11px 14px", fontSize: 13, fontWeight: 600, boxShadow: "0 8px 20px rgba(46,49,146,.18)" }}>
+                  ✓ <b>100% COVERED</b> — the {benefit.insurerName} benefit for {benefit.year} is used up, so insurance now covers visits in full (no co-pay) for the rest of the year.
+                </div>
+              ) : benefit.runOut === "clientPays" ? (
+                <div style={{ background: "#faf0dc", color: "#8a5a12", border: "1px solid #e9d7a8", borderRadius: 10, padding: "11px 14px", fontSize: 13, fontWeight: 600 }}>
+                  Benefit used up for {benefit.year} — per {benefit.insurerName}&apos;s rule the client now pays <b>100%</b> for the rest of the benefit year.
+                </div>
+              ) : (
+                <div style={{ background: "#fbecec", color: "#9a3b2a", border: "1px solid #eccfca", borderRadius: 10, padding: "11px 14px", fontSize: 13, fontWeight: 600 }}>
+                  ⚠ Benefit used up for {benefit.year} — {benefit.insurerName} needs review before billing further charges.
+                </div>
+              )
+            ) : (
+              <p className="ded-hint">
+                {benefit.copayPct != null ? <>While funds remain, <b>{benefit.insurerName}</b> pays <b>{100 - benefit.copayPct}%</b> and the client&apos;s co-pay is <b>{benefit.copayPct}%</b>. </> : null}
+                Each insured visit draws this down automatically; it switches coverage the moment the benefit is used up.
+              </p>
+            )
+          ) : (
+            out
+              ? <p className="ded-hint" style={{ color: "var(--bad, #bd3a29)", fontWeight: 600 }}>⚠ Funds used up for {benefit.year}. New insured charges will exceed the client&apos;s available funds.</p>
+              : <p className="ded-hint">Each insured date of service draws this down by the amount billed to the insurer. Co-pays and self-pay visits don&apos;t count.</p>
+          )}
         </>
       )}
 

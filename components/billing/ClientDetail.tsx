@@ -547,11 +547,21 @@ export default function ClientDetail({
 
       {msg && <div className="ls-saved" style={{ margin: "0 0 14px" }}>{msg}</div>}
 
-      {/* ---- Insurance funds used up (alerts on open) ---- */}
+      {/* ---- Benefit used up — presented per the payer's run-out rule ---- */}
       {benefit && benefit.remaining <= 0 && (
-        <div className="cd-fundsalert">
-          ⚠ <b>Insurance funds used up.</b> {money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left for {benefit.year}. Any new insured charge will exceed {first}&apos;s available funds.
-        </div>
+        benefit.runOut === "fullyCovered" ? (
+          <div className="cd-fundsalert" style={{ background: "#e5f3ec", color: "#1c6a6e", borderColor: "#bfe0dd" }}>
+            ✓ <b>100% COVERED.</b> {first}&apos;s {benefit.insurerName} benefit for {benefit.year} is used up ({money(benefit.amount)} total), so insurance now covers visits in full — no co-pay — for the rest of the year.
+          </div>
+        ) : benefit.runOut === "clientPays" ? (
+          <div className="cd-fundsalert">
+            <b>Benefit used up.</b> {first}&apos;s {benefit.insurerName} funds for {benefit.year} are exhausted — the client now pays 100% for the rest of the benefit year.
+          </div>
+        ) : (
+          <div className="cd-fundsalert">
+            ⚠ <b>Insurance funds used up.</b> {money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left for {benefit.year}.{benefit.runOut === "pause" ? ` ${benefit.insurerName} needs review before billing further.` : ` Any new insured charge will exceed ${first}'s available funds.`}
+          </div>
+        )
       )}
 
       {/* ---- Referral status (payment-critical; insurance clients only) ---- */}
@@ -906,7 +916,11 @@ export default function ClientDetail({
                   </div>
                 )}
                 {benefit && benefit.remaining <= 0 && (
-                  <p className="cd-refwarn">⚠ {first}&apos;s insurance funds for {benefit.year} are used up ({money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left). This charge will exceed their available funds.</p>
+                  benefit.runOut === "fullyCovered"
+                    ? <p className="cd-refwarn" style={{ background: "#e5f3ec", color: "#1c6a6e" }}>✓ Benefit used up for {benefit.year} — {benefit.insurerName} now covers this charge 100% (no co-pay).</p>
+                    : benefit.runOut === "clientPays"
+                    ? <p className="cd-refwarn">Benefit used up for {benefit.year} — the client pays 100% of this charge.</p>
+                    : <p className="cd-refwarn">⚠ {first}&apos;s insurance funds for {benefit.year} are used up ({money(Math.max(0, benefit.remaining))} of {money(benefit.amount)} left). This charge will exceed their available funds.</p>
                 )}
                 {acInsurer && chargeAfterReferral(acDate, profile.referral?.endDate) && (
                   <p className="cd-refwarn">⚠ This date is after the referral ends ({profile.referral?.endDate}). It won&apos;t be paid.</p>

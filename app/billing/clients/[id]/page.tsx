@@ -86,7 +86,17 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     ? (() => {
         const { amount, year } = client.profile.benefit!;
         const used = benefitUsed(sessions, year);
-        return { amount, year, used, remaining: Math.round((amount - used) * 100) / 100 };
+        const ins = insurers.find((i) => i.id === client.insurerId);
+        return {
+          amount, year, used,
+          remaining: Math.round((amount - used) * 100) / 100,
+          // The payer's benefit-cap rule drives how "used up" is presented (100%
+          // covered vs. client-pays vs. review) instead of a blanket warning.
+          runOut: ins?.benefitRunOut,
+          insurerName: ins?.name,
+          copayPct: ins?.copayType === "percentage" ? ins.copayRate : undefined,
+          capped: !!ins?.benefitRunOut,
+        };
       })()
     : null;
 
