@@ -25,7 +25,17 @@ export interface Insurer {
   billStyle?: "claim" | "invoice";
   /** Claims email — where the biller sends this payer's CMS-1500 for processing. */
   email?: string;
+  /** Insurance BENEFIT-POOL behaviour (V2 auto-calc). When set, this payer treats
+   *  the client's annual benefit (ClientBenefit) as a pool: the copay % applies
+   *  while the pool has funds, then coverage changes per this rule once it's used
+   *  up — "fullyCovered" (insurance 100% / copay 0), "clientPays" (client 100%),
+   *  or "pause" (needs review). UNSET = a flat copay % with no annual cap (today's
+   *  behaviour), so the benefit-pool logic is fully opt-in per payer. */
+  benefitRunOut?: "fullyCovered" | "clientPays" | "pause";
 }
+/** The allowed benefit run-out rules (shared by the API + the Setup UI). */
+export const BENEFIT_RUN_OUT = ["fullyCovered", "clientPays", "pause"] as const;
+export type BenefitRunOut = (typeof BENEFIT_RUN_OUT)[number];
 
 // A clinician OUTSIDE the practice whose billing the biller handles privately.
 // They have no intake login and never appear in TIFEC's own revenue or payouts —
@@ -287,6 +297,7 @@ async function ensureInsurerColumns(sql: Awaited<ReturnType<typeof pg>>): Promis
     await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS claim_code TEXT`;
     await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS bill_style TEXT`;
     await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS email TEXT`;
+    await sql`ALTER TABLE billing_insurers ADD COLUMN IF NOT EXISTS benefit_run_out TEXT`;
     insurerColsEnsured = true;
   } catch (e) { console.error("ensureInsurerColumns failed:", e); }
 }
@@ -296,25 +307,25 @@ export async function listInsurers(): Promise<Insurer[]> {
     const sql = await pg();
     await ensureInsurerColumns(sql);
     const rows = (await sql`SELECT * FROM billing_insurers ORDER BY name`) as Record<string, unknown>[];
-    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined, email: r.email ? String(r.email) : undefined }));
+    return rows.map((r) => ({ id: r.id as string, name: r.name as string, copayType: r.copay_type as CopayType, copayRate: num(r.copay_rate), active: !!r.active, claimCode: r.claim_code ? String(r.claim_code) : undefined, billStyle: r.bill_style === "invoice" ? "invoice" : undefined, email: r.email ? String(r.email) : undefined, benefitRunOut: (BENEFIT_RUN_OUT as readonly string[]).includes(String(r.benefit_run_out)) ? (String(r.benefit_run_out) as BenefitRunOut) : undefined }));
   }
   return readJson<Insurer[]>(INS_FILE, []);
 }
 
 export async function upsertInsurer(ins: Omit<Insurer, "id"> & { id?: string }): Promise<Insurer> {
-  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined, email: ins.email?.trim() || undefined };
+  const row: Insurer = { id: ins.id || randomId(), name: ins.name, copayType: ins.copayType, copayRate: ins.copayRate, active: ins.active ?? true, claimCode: ins.claimCode?.trim() || undefined, billStyle: ins.billStyle === "invoice" ? "invoice" : undefined, email: ins.email?.trim() || undefined, benefitRunOut: (BENEFIT_RUN_OUT as readonly string[]).includes(String(ins.benefitRunOut)) ? (ins.benefitRunOut as BenefitRunOut) : undefined };
   if (usePostgres) {
     const sql = await pg();
     await ensureInsurerColumns(sql); // make sure claim_code/bill_style/email exist before we write them
     try {
       await sql`
-        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style, email)
-        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null}, ${row.email ?? null})
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style, email = EXCLUDED.email`;
+        INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style, email, benefit_run_out)
+        VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null}, ${row.email ?? null}, ${row.benefitRunOut ?? null})
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, copay_type = EXCLUDED.copay_type, copay_rate = EXCLUDED.copay_rate, active = EXCLUDED.active, claim_code = EXCLUDED.claim_code, bill_style = EXCLUDED.bill_style, email = EXCLUDED.email, benefit_run_out = EXCLUDED.benefit_run_out`;
     } catch (e) {
       if (!isMissingColumn(e)) throw e; // a real failure must surface, not silently drop columns
       try {
-        // email column not migrated yet — write with bill_style but without email.
+        // email/benefit_run_out column not migrated yet — write with bill_style but without them.
         await sql`
           INSERT INTO billing_insurers (id, name, copay_type, copay_rate, active, claim_code, bill_style)
           VALUES (${row.id}, ${row.name}, ${row.copayType}, ${row.copayRate}, ${row.active}, ${row.claimCode ?? null}, ${row.billStyle ?? null})

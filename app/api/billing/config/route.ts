@@ -51,6 +51,7 @@ export async function POST(req: Request) {
         claimCode: t(body.claimCode),
         billStyle: body.billStyle === "invoice" ? "invoice" : undefined,
         email: t(body.email),
+        benefitRunOut: (["fullyCovered", "clientPays", "pause"].includes(String(body.benefitRunOut)) ? body.benefitRunOut : undefined) as "fullyCovered" | "clientPays" | "pause" | undefined,
       });
       return NextResponse.json({ ok: true, id: saved.id });
     }
