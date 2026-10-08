@@ -81,7 +81,7 @@ export default function LoginForm({ next }: { next: string }) {
         {busy ? "Signing in…" : "Sign in"}
       </button>
 
-      <p className="auth-foot">Forgot your password? Contact your practice admin.</p>
+      <p className="auth-foot"><a href="/forgot">Forgot your password?</a></p>
     </form>
   );
 }
