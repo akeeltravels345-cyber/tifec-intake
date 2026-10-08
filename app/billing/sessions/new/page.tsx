@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { listInsurers, listCptCodes, listSessions, cptVariantList } from "@/lib/billing";
-import { listClients } from "@/lib/clients";
+import { listClients, listAllClients } from "@/lib/clients";
+import { benefitRemaining } from "@/lib/billingCalc";
 import { caymanToday } from "@/lib/caymanTime";
 import { getAppointment, listAppointmentTypes } from "@/lib/scheduling";
 import SessionForm from "@/components/billing/SessionForm";
@@ -15,13 +16,25 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/billing/sessions/new");
 
-  const [insurers, cptCodes, mySessions, roster] = await Promise.all([
+  const [insurers, cptCodes, allSessions, roster, allClients] = await Promise.all([
     listInsurers(),
     listCptCodes(),
-    listSessions({ clinicianId: user.clinician.id }),
+    listSessions(),
     listClients(user.clinician.id),
+    listAllClients(),
   ]);
-  const activeInsurers = insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, copayType: i.copayType, copayRate: i.copayRate }));
+  const mySessions = allSessions.filter((s) => s.clinicianId === user.clinician.id);
+  const activeInsurers = insurers.filter((i) => i.active).map((i) => ({ id: i.id, name: i.name, copayType: i.copayType, copayRate: i.copayRate, benefitRunOut: i.benefitRunOut }));
+
+  // Each client's remaining annual insurance benefit (pool − what this year's insured
+  // visits across the practice have drawn down). Reuses benefitRemaining/benefitUsed —
+  // no separate stored balance. Lets the form auto-fill a benefit-aware co-pay.
+  const remainingByClient = new Map<string, number>();
+  for (const cl of allClients) {
+    const ben = cl.profile.benefit;
+    if (!ben) continue;
+    remainingByClient.set(cl.id, benefitRemaining(ben.amount, allSessions.filter((s) => s.clientId === cl.id), ben.year));
+  }
   const activeCpt = cptCodes.filter((c) => c.active).map((c) => { const vs = cptVariantList(c); return { code: c.code, description: c.description, fee: c.fee ?? 0, hrs: c.hrs ?? 1, variants: vs }; });
 
   // Distinct clients this clinician has seen before, most recent first, with the
@@ -47,7 +60,9 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
     if (prev) { if (!prev.id) prev.id = c.id; prev.referralEnd = c.profile.referral?.endDate ?? null; }
     else seen.set(key, { id: c.id, first, last, insurerId: c.insurerId, lastVisit: "", visits: 0, referralEnd: c.profile.referral?.endDate ?? null });
   }
-  const clients = [...seen.values()].sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`));
+  const clients = [...seen.values()]
+    .sort((a, b) => `${a.last} ${a.first}`.localeCompare(`${b.last} ${b.first}`))
+    .map((c) => ({ ...c, remainingBenefit: c.id ? remainingByClient.get(c.id) : undefined }));
 
   // Which codes this clinician actually reaches for. Practice-wide only 5 of the
   // 39 codes have ever been used, so leading with their own habits beats a wall

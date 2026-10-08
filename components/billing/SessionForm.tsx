@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DobInput from "./DobInput";
-import { suggestCopay } from "@/lib/billingCalc";
+import { computeCopay } from "@/lib/billingCalc";
 
-interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
+interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; benefitRunOut?: "fullyCovered" | "clientPays" | "pause"; }
 interface CptVar { label: string; minutes: number; fee: number; }
 interface CptOpt { code: string; description: string; fee: number; hrs: number; variants?: CptVar[]; }
-interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; referralEnd?: string | null; }
+interface ClientOpt { id?: string | null; first: string; last: string; insurerId: string | null; lastVisit: string; visits: number; referralEnd?: string | null; remainingBenefit?: number; }
 const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -141,7 +141,14 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // A short label that shows multiplicity, e.g. "99355 ×2, 90837" — used in the
   // summary card and the "logged" confirmation so units are always visible.
   const codeSummary = useMemo(() => codes.map((c) => (unitsOf(c) > 1 ? `${c} ×${unitsOf(c)}` : c)).join(", "), [codes, unitsByCode]);
-  const suggested = suggestCopay(insurer, totalCost);
+  // The client's remaining annual insurance benefit (when they're a known client
+  // with a benefit set). Lets the co-pay auto-respond to a benefit-capped payer.
+  const selectedClient = useMemo(() => (pickedId ? clients.find((c) => c.id === pickedId) : picked ? clients.find((c) => clientKey(c.first, c.last) === picked) : undefined), [clients, pickedId, picked]);
+  const remainingBenefit = selectedClient?.remainingBenefit;
+  // One shared calculator (benefit drawdown + run-out + straddle). With no benefit
+  // cap on the payer it's exactly the old flat co-pay.
+  const coverage = useMemo(() => computeCopay(insurer, totalCost, remainingBenefit ?? Infinity), [insurer, totalCost, remainingBenefit]);
+  const suggested = coverage.copayDue;
   // The co-pay figure the clinician enters is what was DUE (defaults to the
   // insurer's suggested rule). Whether it was collected depends on copayDisp:
   //   collected → taken at the visit; didn't collect → owed (biller invoices);
@@ -556,6 +563,17 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
                     ? <>Based on <b>{insurer?.name}</b> rules, the co-pay due should be <b>{money(suggested)}</b>. Plans vary from client to client — enter the specific amount for this client.</>
                     : <><b>{insurer?.name}</b> has no standard co-pay. Enter an amount only if this client&apos;s plan requires one.</>}
                 </p>
+                {coverage.coverage !== "flat" && (
+                  <p className="ls-help" style={{ marginTop: -4, fontWeight: 500, color: coverage.coverage === "benefitFull" ? "#1f7a5c" : coverage.coverage === "benefitPaused" ? "#9a3b2a" : "var(--muted)" }}>
+                    {coverage.coverage === "benefitFull"
+                      ? <>✓ <b>100% covered</b> — this client&apos;s annual insurance benefit is used up, so <b>{insurer?.name}</b> covers this visit in full (no co-pay).</>
+                      : coverage.coverage === "benefitClientPays"
+                      ? <>Annual benefit used up — per <b>{insurer?.name}</b>&apos;s rule the client now pays in full for the rest of the benefit year.</>
+                      : coverage.coverage === "benefitPaused"
+                      ? <>Annual benefit used up — <b>{insurer?.name}</b> needs review before billing further.</>
+                      : <>Insurance benefit drawing down — about <b>{money(coverage.remainingAfter)}</b> of this client&apos;s benefit left after this visit.</>}
+                  </p>
+                )}
                 <div style={{ width: 170, marginBottom: 10 }}>
                   <span className="ls-sublab">{copayDisp === "collected" ? "Amount collected" : "Amount due"}</span>
                   <div className="ls-money"><span className="cur">$</span><input className="ls-in" type="number" step="0.01" min="0" placeholder="0.00" value={collectedTouched ? collectedInput : (suggested ? String(suggested) : "")} onChange={(e) => { setCollectedTouched(true); setCollectedInput(e.target.value); }} /></div>
