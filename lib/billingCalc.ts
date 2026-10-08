@@ -420,10 +420,79 @@ export function agingBucketIndex(days: number): number {
   return AGING_BUCKETS.findIndex((b) => days >= b.min && days <= b.max);
 }
 
-/** Auto-suggest the co-pay for a session from the insurer's rule. Editable by the clinician. */
-export function suggestCopay(insurer: { copayType: "none" | "fixed" | "percentage"; copayRate: number } | null | undefined, totalCost: number): number {
-  if (!insurer) return 0;
-  if (insurer.copayType === "fixed") return round2(insurer.copayRate);
-  if (insurer.copayType === "percentage") return round2((totalCost * insurer.copayRate) / 100);
-  return 0;
+// ---- Co-pay / benefit split (the single source of truth) -------------------------
+// One function computes a charge's co-pay vs. insurance portion. When the payer has
+// a BENEFIT CAP rule (Insurer.benefitRunOut) AND we know the client's remaining
+// annual benefit, it draws the insurance share down from that pool and switches
+// coverage once the pool is used up (incl. a charge that straddles the $0 boundary).
+// With no cap rule (or no known balance) it is EXACTLY the old flat suggestCopay, so
+// every existing caller is unchanged. The result's copayDue flows through the normal
+// money model (insurancePortion = charge − copayDue), so nothing downstream changes.
+
+type InsurerRule = { copayType: "none" | "fixed" | "percentage"; copayRate: number; benefitRunOut?: "fullyCovered" | "clientPays" | "pause" };
+export type CopayCoverage = "flat" | "benefitSplit" | "benefitFull" | "benefitClientPays" | "benefitPaused";
+export interface CopayResult {
+  copayDue: number;          // what the client owes for this charge
+  insurancePortion: number;  // what's billed to the insurer (charge − copayDue)
+  remainingAfter: number;    // the client's benefit left after this charge (≥ 0; Infinity when untracked)
+  coverage: CopayCoverage;   // how it was decided
+  benefitActive: boolean;    // was the annual benefit pool funding this charge
+}
+
+export function computeCopay(insurer: InsurerRule | null | undefined, charge: number, remainingBenefit = Infinity): CopayResult {
+  const c = round2(Math.max(0, charge || 0));
+  if (!insurer || c <= 0) return { copayDue: 0, insurancePortion: c, remainingAfter: remainingBenefit, coverage: "flat", benefitActive: false };
+
+  // The normal (uncapped) split for a full charge.
+  const flatCopay = insurer.copayType === "fixed" ? round2(Math.min(insurer.copayRate, c))
+    : insurer.copayType === "percentage" ? round2((c * insurer.copayRate) / 100)
+    : 0; // "none" → insurance covers 100%
+  const flatIns = round2(c - flatCopay);
+
+  // No benefit cap configured, or no known balance → today's flat behaviour exactly.
+  if (!insurer.benefitRunOut || !isFinite(remainingBenefit)) {
+    return { copayDue: flatCopay, insurancePortion: flatIns, remainingAfter: remainingBenefit, coverage: "flat", benefitActive: false };
+  }
+
+  const R = round2(Math.max(0, remainingBenefit));
+  const outFull = insurer.benefitRunOut === "fullyCovered";
+  const outClient = insurer.benefitRunOut === "clientPays";
+
+  // Pool already empty → apply the run-out rule to the whole charge.
+  if (R <= 0) {
+    if (outFull) return { copayDue: 0, insurancePortion: c, remainingAfter: 0, coverage: "benefitFull", benefitActive: false };
+    return { copayDue: c, insurancePortion: 0, remainingAfter: 0, coverage: outClient ? "benefitClientPays" : "benefitPaused", benefitActive: false };
+  }
+  // Pool fully covers this charge's insurance share.
+  if (flatIns <= R + 0.0001) {
+    return { copayDue: flatCopay, insurancePortion: flatIns, remainingAfter: round2(R - flatIns), coverage: "benefitSplit", benefitActive: true };
+  }
+  // STRADDLE: the pool funds part of this charge at the normal split; the overflow
+  // follows the run-out rule. Split the charge in proportion to the insurance share.
+  const frac = flatIns > 0 ? R / flatIns : 0;
+  const part1 = round2(c * frac), part2 = round2(c - part1);
+  const copay1 = round2(Math.max(0, part1 - R)); // part1's client share (ins1 = R)
+  const copay2 = outFull ? 0 : part2;            // overflow: 100% covered, or client pays
+  const ins2 = outFull ? part2 : 0;
+  return {
+    copayDue: round2(copay1 + copay2),
+    insurancePortion: round2(R + ins2),
+    remainingAfter: 0,
+    coverage: outFull ? "benefitFull" : outClient ? "benefitClientPays" : "benefitPaused",
+    benefitActive: true,
+  };
+}
+
+/** Auto-suggest the co-pay for a session from the insurer's rule. Editable by the
+ *  clinician. Thin wrapper over computeCopay — pass a remaining benefit to make it
+ *  benefit-aware; omit it for the plain flat-copay behaviour. */
+export function suggestCopay(insurer: InsurerRule | null | undefined, totalCost: number, remainingBenefit = Infinity): number {
+  return computeCopay(insurer, totalCost, remainingBenefit).copayDue;
+}
+
+/** A client's remaining annual insurance benefit: the pool amount less what this
+ *  year's insured visits have already drawn down (capped at 0). Reuses benefitUsed,
+ *  so there is no separately-stored balance to drift. */
+export function benefitRemaining(amount: number, sessions: BillingSession[], year: number): number {
+  return round2(Math.max(0, amount - benefitUsed(sessions, year)));
 }

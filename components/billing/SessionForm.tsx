@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DobInput from "./DobInput";
+import { suggestCopay } from "@/lib/billingCalc";
 
 interface InsurerOpt { id: string; name: string; copayType: "none" | "fixed" | "percentage"; copayRate: number; }
 interface CptVar { label: string; minutes: number; fee: number; }
@@ -12,12 +13,6 @@ const clientKey = (f: string, l: string) => `${f}|${l}`.toLowerCase().trim();
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-function suggestCopay(ins: InsurerOpt | undefined, total: number): number {
-  if (!ins) return 0;
-  if (ins.copayType === "fixed") return round2(ins.copayRate);
-  if (ins.copayType === "percentage") return round2((total * ins.copayRate) / 100);
-  return 0;
-}
 
 export default function SessionForm({ insurers, cptCodes, clients = [], forClinicians = [], usualCodes = [], alreadyLogged = [], today = "", prefill }: {
   insurers: InsurerOpt[]; cptCodes: CptOpt[]; clients?: ClientOpt[];
