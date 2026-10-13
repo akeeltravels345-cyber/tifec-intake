@@ -36,6 +36,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     notes?: string;
     codes?: string[];
     serviceName?: string;
+    nextApptId?: string | null; // the next unlogged visit that day — powers "Save & next appointment"
   };
 }) {
   const router = useRouter();
@@ -212,6 +213,28 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
+      // Confirming a scheduled visit (arrived from the calendar): link the new
+      // session back to the appointment — marks it seen + billed, so it drops
+      // off the calendar's "to log" and feeds the payout + billing queue.
+      if (prefill?.appointmentId) {
+        try {
+          await fetch("/api/scheduling/appointments", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "update", id: prefill.appointmentId, status: "seen", billingSessionId: data.id }),
+          });
+        } catch { /* session is saved; linking is best-effort */ }
+        // "Save & next appointment": jump straight to the next unlogged visit
+        // that day (computed server-side, in time order, already-logged ones
+        // skipped). The changing fromAppt remounts this form with fresh prefill.
+        if (andAnother && prefill.nextApptId) {
+          router.push(`/billing/sessions/new?fromAppt=${prefill.nextApptId}`);
+          router.refresh();
+          return;
+        }
+        router.push("/schedule");
+        router.refresh();
+        return;
+      }
       if (andAnother) {
         // A clinician logging a day's work does several in a row, so keep the
         // date and clear only what changes from one client to the next.
@@ -224,19 +247,6 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         // entry can interrupt the next rapid entry (the reported "second one won't
         // save"). The session is already saved server-side; the payout/roster views
         // refresh when the clinician leaves the form (Save session, or Back).
-        return;
-      }
-      // Confirming a scheduled visit: link the new session back to the
-      // appointment (marks it seen + billed) and return to the calendar.
-      if (prefill?.appointmentId) {
-        try {
-          await fetch("/api/scheduling/appointments", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "update", id: prefill.appointmentId, status: "seen", billingSessionId: data.id }),
-          });
-        } catch { /* session is saved; linking is best-effort */ }
-        router.push("/schedule");
-        router.refresh();
         return;
       }
       router.push("/billing/me");
@@ -597,9 +607,17 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
           {saved && <div className="ls-saved">{saved} Ready for the next one.</div>}
           <div className="ls-submit">
             <button type="submit" className="ls-save" disabled={busy}>{busy ? "Saving…" : "Save session"}</button>
-            <button type="button" className="ls-savemore" disabled={busy} onClick={(e) => submit(e, true)}>
-              Save &amp; log another
-            </button>
+            {prefill?.appointmentId
+              ? prefill.nextApptId && (
+                  <button type="button" className="ls-savemore" disabled={busy} onClick={(e) => submit(e, true)}>
+                    Save &amp; next appointment
+                  </button>
+                )
+              : (
+                  <button type="button" className="ls-savemore" disabled={busy} onClick={(e) => submit(e, true)}>
+                    Save &amp; log another
+                  </button>
+                )}
           </div>
         </div>
       </div>

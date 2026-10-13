@@ -4,6 +4,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
 import { deleteDocFilesForClient } from "@/lib/clientDocs";
 import { listSessions, deleteSession } from "@/lib/billing";
+import { clearBillingSessionLink } from "@/lib/scheduling";
 import { logChange } from "@/lib/db";
 
 const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
@@ -43,7 +44,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const sessions = await listSessions({ clientId: id });
   let removedCharges = 0;
-  for (const sess of sessions) { if (await deleteSession(sess.id)) removedCharges++; }
+  for (const sess of sessions) { if (await deleteSession(sess.id)) { removedCharges++; try { await clearBillingSessionLink(sess.id); } catch { /* best-effort */ } } }
   await deleteDocFilesForClient(id);
   await deleteClient(id);
   await logChange(user.clinician.id, `client:${id}`, "delete", `deleted client record and ${removedCharges} charge(s)`);

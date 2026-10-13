@@ -596,6 +596,27 @@ export async function deleteAppointment(id: string): Promise<void> {
   }
 }
 
+/** Un-link any appointment that pointed at a billing session that's being
+ *  deleted, so the calendar stops showing it as "logged" and the clinician can
+ *  log it again. The visit's status (e.g. "seen") is left as-is — only the
+ *  billing link is cleared. Returns the ids that were cleared. */
+export async function clearBillingSessionLink(sessionId: string): Promise<string[]> {
+  if (!sessionId) return [];
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`UPDATE scheduling_appointments SET billing_session_id=NULL, updated_at=${now()}
+      WHERE billing_session_id=${sessionId} RETURNING id`) as { id: string }[];
+    return res.map((r) => r.id);
+  }
+  const all = readJson<Appointment[]>(APPT_FILE, []);
+  const cleared: string[] = [];
+  for (const a of all) {
+    if (a.billingSessionId === sessionId) { a.billingSessionId = null; a.updatedAt = now(); cleared.push(a.id); }
+  }
+  if (cleared.length) writeJson(APPT_FILE, all);
+  return cleared;
+}
+
 /** True if this clinician already has a non-cancelled appointment or block
  *  overlapping [startAt, endAt). Used to keep a recurring series from
  *  double-booking a slot a later week already occupies. */

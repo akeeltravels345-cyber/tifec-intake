@@ -5,7 +5,7 @@ import { listInsurers, listCptCodes, listSessions, cptVariantList } from "@/lib/
 import { listClients, listAllClients } from "@/lib/clients";
 import { benefitRemaining } from "@/lib/billingCalc";
 import { caymanToday } from "@/lib/caymanTime";
-import { getAppointment, listAppointmentTypes } from "@/lib/scheduling";
+import { getAppointment, listAppointments, listAppointmentTypes } from "@/lib/scheduling";
 import SessionForm from "@/components/billing/SessionForm";
 
 export const dynamic = "force-dynamic";
@@ -81,11 +81,22 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
   // Arrived from a scheduled appointment ("Log this session"): pre-fill from it
   // so the clinician confirms instead of retyping, and link back on save.
   const sp = await searchParams;
-  let prefill: undefined | { appointmentId: string; first: string; last: string; dob?: string; clientId?: string | null; returning?: boolean; insurerId?: string | null; date?: string; notes?: string; codes?: string[]; serviceName?: string };
+  let prefill: undefined | { appointmentId: string; first: string; last: string; dob?: string; clientId?: string | null; returning?: boolean; insurerId?: string | null; date?: string; notes?: string; codes?: string[]; serviceName?: string; nextApptId?: string | null };
   if (sp.fromAppt) {
     const appt = await getAppointment(sp.fromAppt);
     if (appt && appt.kind === "appointment" && appt.billingSessionId) redirect("/schedule"); // already logged
     if (appt && appt.kind === "appointment") {
+      // The next visit to log: same clinician, same Cayman day, ordered by
+      // start time (ties broken by id so same-slot PEERS siblings each get a
+      // turn), skipping anything cancelled or already logged. Powers the
+      // "Save & next appointment" button so the clinician walks the day in order.
+      const cayDay = cayDate(appt.startAt);
+      const curKey = `${appt.startAt}|${appt.id}`;
+      const dayAppts = await listAppointments({ clinicianId: appt.clinicianId });
+      const nextApptId = dayAppts
+        .filter((a) => a.kind === "appointment" && a.status !== "cancelled" && !a.billingSessionId && cayDate(a.startAt) === cayDay)
+        .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id.localeCompare(b.id))
+        .find((a) => `${a.startAt}|${a.id}` > curKey)?.id ?? null;
       const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
       const parts = appt.clientName.trim().split(/\s+/);
       const first = parts.length > 1 ? parts.slice(0, -1).join(" ") : (parts[0] || appt.clientName);
@@ -103,6 +114,7 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
         notes: appt.notes || "",
         codes: type?.baselineCptCodes ?? [],
         serviceName: type?.name,
+        nextApptId,
       };
     }
   }
@@ -116,7 +128,7 @@ export default async function NewSessionPage({ searchParams }: { searchParams: P
           ? `${prefill.serviceName || "Session"} with ${prefill.first} ${prefill.last}${prefill.returning ? " (returning client)" : " (new client)"}. Check the details and save — it goes to the biller.`
           : `Logged as ${user.clinician.name}. Pick the service code(s) and the money fills in.`}</p>
       </div>
-      <SessionForm insurers={activeInsurers} cptCodes={activeCpt} clients={clients} usualCodes={usualCodes} alreadyLogged={alreadyLogged} today={today} prefill={prefill} />
+      <SessionForm key={prefill?.appointmentId ?? "manual"} insurers={activeInsurers} cptCodes={activeCpt} clients={clients} usualCodes={usualCodes} alreadyLogged={alreadyLogged} today={today} prefill={prefill} />
     </>
   );
 }

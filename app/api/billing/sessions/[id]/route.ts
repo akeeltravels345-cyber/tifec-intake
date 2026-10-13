@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentClinician } from "@/lib/auth";
 import { billingRoleOf, canMarkBilled } from "@/lib/billingRole";
 import { getSession, deleteSession, updateSession } from "@/lib/billing";
+import { clearBillingSessionLink } from "@/lib/scheduling";
 import { logChange } from "@/lib/db";
 
 const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -98,6 +99,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const ok = await deleteSession(id);
   if (!ok) return NextResponse.json({ error: "Charge not found." }, { status: 404 });
+  // Un-link any scheduled appointment that was logged via this session, so the
+  // calendar stops showing it as "logged" and it can be logged again.
+  try { await clearBillingSessionLink(id); } catch { /* best-effort */ }
   await logChange(me.id, `session:${id}`, "delete", "deleted a charge");
   return NextResponse.json({ ok: true });
 }
