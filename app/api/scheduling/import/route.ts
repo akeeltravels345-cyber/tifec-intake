@@ -75,6 +75,21 @@ export async function POST(req: Request) {
   const typeByKey = new Map(types.map((t) => [normalizeTypeKey(t.name), t]));
   const clinByName = new Map(CLINICIANS.map((c) => [c.name.trim().toLowerCase(), c.id]));
 
+  // Guard against re-importing a visit that was already booked natively in the
+  // app. Native bookings carry a random id (and richer wiring: intake, video,
+  // billing links); an Acuity row keys to "acuity-<id>", so the importer can't
+  // otherwise tell they're the same visit and would create a second copy. Build
+  // a set of the native (non-Acuity) appointments by clinician + exact start +
+  // client, and skip any row that collides with one.
+  const nativeKey = (clinicianId: string, startAt: string, client: string) =>
+    `${clinicianId}|${startAt}|${(client || "").trim().toLowerCase()}`;
+  const existing = await listAppointments({});
+  const nativeBooked = new Set(
+    existing
+      .filter((a) => a.kind === "appointment" && a.status !== "cancelled" && !a.id.startsWith("acuity-"))
+      .map((a) => nativeKey(a.clinicianId, a.startAt, a.clientName))
+  );
+
   const targetClinician = body.clinicianId || null;
   const commit = body.commit === true;
 
@@ -88,6 +103,13 @@ export async function POST(req: Request) {
     if (!clinicianId) { skipped.push({ acuityId: row.acuityId, reason: `unknown calendar: ${row.calendarName}` }); continue; }
     if (targetClinician && clinicianId !== targetClinician) continue; // filtered out, not an error
     if (!row.startAt || !row.endAt) { skipped.push({ acuityId: row.acuityId, reason: "unparseable date" }); continue; }
+
+    // Already booked in the app at this exact clinician/time/client? Skip it —
+    // the native booking is authoritative; importing would duplicate it.
+    if (nativeBooked.has(nativeKey(clinicianId, row.startAt, row.clientName))) {
+      skipped.push({ acuityId: row.acuityId, reason: "already booked in-app (kept the native booking)" });
+      continue;
+    }
 
     const matchedType = typeByKey.get(normalizeTypeKey(row.typeName)) || null;
     if (!matchedType) unmatchedTypes.add(row.typeName);
