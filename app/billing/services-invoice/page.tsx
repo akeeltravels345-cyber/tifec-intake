@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
-import { getPracticeConfig, servicesInvoiceTotal } from "@/lib/billing";
+import { getPracticeConfig, servicesInvoiceTotal, listSessions } from "@/lib/billing";
+import { collectedInMonthSince } from "@/lib/billingCalc";
 import PrintButton from "@/components/billing/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
   const year = Number(sp.y) || nowYM.year;
   const month = Number(sp.m) || nowYM.month;
 
-  const cfg = await getPracticeConfig();
+  const [cfg, allSessions] = await Promise.all([getPracticeConfig(), listSessions()]);
   const inv = cfg.servicesInvoice;
   const generated = caymanToday();
   const practiceName = cfg.provider?.practiceName || "The Institute for Essential Care";
@@ -44,7 +45,17 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
     );
   }
 
-  const total = servicesInvoiceTotal(cfg);
+  // The 2% platform fee for THIS month, itemised on the invoice: % of cash collected
+  // on/after the fee's start date. It equals the overview's separate processing-fee
+  // deduction, so the invoice total reconciles with net (no double-count).
+  const feeStart = cfg.processingFeeStart;
+  const feePct = cfg.processingFeePct ?? 0;
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const feeOn = !!feeStart && feePct > 0 && monthKey >= feeStart.slice(0, 7);
+  const feeAmount = feeOn ? Math.round(collectedInMonthSince(allSessions, year, month, feeStart!) * feePct) / 100 : 0;
+  const feeSince = feeStart ? new Date(feeStart + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  const fixedTotal = servicesInvoiceTotal(cfg);
+  const total = Math.round((fixedTotal + feeAmount) * 100) / 100;
   const payee = inv.payeeName || "Services";
   const mono = payee.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "AO";
 
@@ -100,6 +111,13 @@ export default async function ServicesInvoice({ searchParams }: { searchParams: 
                   <td className="num inv-amt">{money(l.amount)}</td>
                 </tr>
               ))}
+              {feeOn && (
+                <tr>
+                  <td className="inv-itnm">Platform processing fee</td>
+                  <td className="inv-itdt">{feePct}% of cash collected{feeSince ? ` from ${feeSince}` : ""}</td>
+                  <td className="num inv-amt">{money(feeAmount)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
 
