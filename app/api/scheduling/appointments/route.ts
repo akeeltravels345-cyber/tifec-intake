@@ -80,8 +80,9 @@ export async function GET(req: Request) {
   const all = seesAll(me);
   if (!all && !isTreating(me)) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
   const p = new URL(req.url).searchParams;
-  // Clinicians are locked to their own id no matter what they ask for.
-  const clinicianId = all ? (p.get("clinicianId") || undefined) : me.id;
+  // Everyone on the team can VIEW any clinician's calendar (or all). Editing is
+  // still restricted per-appointment below; colleague event titles stay hidden.
+  const clinicianId = p.get("clinicianId") || undefined;
   const from = p.get("from") || undefined;
   const to = p.get("to") || undefined;
   const appointments = await listAppointments({ from, to, clinicianId });

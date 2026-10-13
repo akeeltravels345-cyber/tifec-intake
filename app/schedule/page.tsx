@@ -24,24 +24,23 @@ export default async function SchedulePage() {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/schedule");
   const me = user.clinician;
-  const all = seesAllSchedule(me);
   if (!inScheduleBeta(me)) redirect("/today");
+  // EVERYONE sees the whole team's calendar now. Editing stays scoped: managers
+  // (owner/admin/Donnet/Nick) can edit anyone's; everyone else edits only their
+  // own appointments (enforced here AND server-side in /api/scheduling/appointments).
+  const canEditAll = seesAllSchedule(me);
 
-  // Who the viewer can see: everyone (owner/Donnet/admin) or just themselves.
-  // A treating clinician sees themselves even if they're not in the bookable
-  // list (e.g. the hidden test account).
-  const self = CLINICIANS.find((c) => c.id === me.id);
-  const visible = all ? bookable : (self ? [self] : []);
-  // Owner/admin who is also a treating clinician opens on their OWN schedule
-  // (not everyone's); they can still switch the filter to All or a colleague.
-  const defaultWho = all && visible.some((c) => c.id === me.id) ? me.id : null;
+  const visible = bookable; // the whole treating roster is visible to all
+  // Open on your own schedule when you're a treating clinician in the list; you
+  // can still switch the filter to "All" or a colleague.
+  const defaultWho = visible.some((c) => c.id === me.id) ? me.id : null;
   const today = caymanToday();
   const monday = mondayOf(today);
 
   const [types, insurers, appts, avails, h] = await Promise.all([
     listAppointmentTypes(),
     listInsurers(),
-    listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)), clinicianId: all ? (defaultWho ?? undefined) : me.id }),
+    listAppointments({ from: utcAtCayMidnight(monday), to: utcAtCayMidnight(addDays(monday, 7)), clinicianId: defaultWho ?? undefined }),
     Promise.all(visible.map((c) => getAvailability(c.id))),
     headers(),
   ]);
@@ -61,8 +60,9 @@ export default async function SchedulePage() {
       availabilities={avails.map((a) => ({ clinicianId: a.clinicianId, weekly: a.weekly, overrides: a.overrides }))}
       todayCayman={today}
       initial={appts}
-      canEditAll={all}
-      lockedClinicianId={all ? null : me.id}
+      canEditAll={canEditAll}
+      lockedClinicianId={null}
+      myClinicianId={me.id}
       defaultWho={defaultWho}
       origin={origin}
       setupHref="/schedule/setup"

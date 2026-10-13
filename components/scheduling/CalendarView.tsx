@@ -76,12 +76,15 @@ type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMi
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
-export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null, servicesHref = null, waitlistHref = null, insightsHref = null, bookingRulesHref = null, intakeForms = [] }: {
-  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null; servicesHref?: string | null; waitlistHref?: string | null; insightsHref?: string | null; bookingRulesHref?: string | null; intakeForms?: { key: string; label: string }[];
+export default function CalendarView({ clinicians, types, insurers, availabilities, todayCayman, initial, canEditAll = true, lockedClinicianId = null, myClinicianId = null, defaultWho = null, origin = null, hoursHref = null, connectionsHref = null, connectionsLabel = "Settings", connectionsIcon = "gear", statsHref = null, intakeHref = null, linksHref = null, setupHref = null, servicesHref = null, waitlistHref = null, insightsHref = null, bookingRulesHref = null, intakeForms = [] }: {
+  clinicians: Clin[]; types: AppointmentType[]; insurers: Insurer[]; availabilities: Avail[]; todayCayman: string; initial: Appointment[]; canEditAll?: boolean; lockedClinicianId?: string | null; myClinicianId?: string | null; defaultWho?: string | null; origin?: string | null; hoursHref?: string | null; connectionsHref?: string | null; connectionsLabel?: string; connectionsIcon?: string; statsHref?: string | null; intakeHref?: string | null; linksHref?: string | null; setupHref?: string | null; servicesHref?: string | null; waitlistHref?: string | null; insightsHref?: string | null; bookingRulesHref?: string | null; intakeForms?: { key: string; label: string }[];
 }) {
   // Who can edit what: everyone (admin/owner/Donnet) or only your own bookings.
-  const canEdit = (a: Appointment) => canEditAll || (!!lockedClinicianId && a.clinicianId === lockedClinicianId);
-  const canCreate = canEditAll || !!lockedClinicianId;
+  // Everyone can see the whole team's calendar; a non-manager can only edit
+  // their OWN appointments (their own id), never a colleague's.
+  const ownId = lockedClinicianId || myClinicianId;
+  const canEdit = (a: Appointment) => canEditAll || (!!ownId && a.clinicianId === ownId);
+  const canCreate = canEditAll || !!ownId;
   const availMap = new Map(availabilities.map((a) => [a.clinicianId, a]));
   // Working intervals (minutes) for a clinician on a date; null = we don't know.
   function workingBlocks(clinId: string, dayStr: string): { s: number; e: number }[] | null {
@@ -249,7 +252,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     const t = types[0];
     setErr("");
     setDraft({
-      kind: "appointment", clientName: "", clientEmail: "", clinicianId: lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || "")),
+      kind: "appointment", clientName: "", clientEmail: "", clinicianId: canEditAll ? (lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || ""))) : (ownId || ""),
       typeId: t?.id || null, mode: t?.mode || "in_person", locationOrLink: "", status: "booked",
       insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "",
       capacity: t?.capacity || 1, attendees: [],
@@ -266,7 +269,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
   function openBlock(date: string, startMin: number, endMin: number) {
     setErr("");
     setDraft({
-      kind: "block", clientName: "", clientEmail: "", clinicianId: lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || "")),
+      kind: "block", clientName: "", clientEmail: "", clinicianId: canEditAll ? (lockedClinicianId || (who !== "all" ? who : (clinicians[0]?.id || ""))) : (ownId || ""),
       typeId: null, mode: "in_person", locationOrLink: "", status: "booked",
       insurancePath: "self_pay", insurerId: null, policyNo: "", notes: "", title: "",
       capacity: 1, attendees: [],
@@ -678,7 +681,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     {clinicians.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 ) : (
-                  <input value={clinName(draft.clinicianId || lockedClinicianId || "")} readOnly disabled />
+                  <input value={clinName(draft.clinicianId || ownId || "")} readOnly disabled />
                 )}
               </label>
               <label className="cal-f"><span>Date</span><input type="date" value={draft._date || ""} onChange={(e) => setDraft({ ...draft, _date: e.target.value })} /></label>
