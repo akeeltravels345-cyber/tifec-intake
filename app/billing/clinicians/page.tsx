@@ -2,10 +2,10 @@ import Link from "next/link";
 import { caymanYearMonth } from "@/lib/caymanTime";
 import { redirect } from "next/navigation";
 import { getBillingUser, canSeeBusiness, isBiller } from "@/lib/billingRole";
-import { listSessions, getClinicianSettings, getPracticeConfig, listClinicianSettings, listExternalClinicians, type BillingSession } from "@/lib/billing";
+import { listSessions, getClinicianSettings, getPracticeConfig, listClinicianSettings, listExternalClinicians, servicesInvoiceTotal, type BillingSession } from "@/lib/billing";
 import { computeClinicianMonth } from "@/lib/billingCalc";
 import { computeBillerMonth } from "@/lib/billerPayout";
-import { CLINICIANS } from "@/lib/clinicians";
+import { CLINICIANS, isSystemAdmin } from "@/lib/clinicians";
 import MonthNav from "@/components/billing/MonthNav";
 import Foldable from "@/components/billing/Foldable";
 
@@ -45,6 +45,12 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
   const billerPensionPct = allSettings.find((s) => s.clinicianId === billerClin?.id)?.pensionPct ?? 0;
   const billerNet = Math.round((bm.commission * (1 - billerPensionPct / 100)) * 100) / 100;
 
+  // The admin (Akeel) draws no clinical payout — his pay is the fixed monthly
+  // services invoice. Show his row with that figure + a link to the invoice,
+  // mirroring the owner overview's by-clinician list.
+  const servicesTotal = servicesInvoiceTotal(cfg);
+  const servicesOn = !!cfg.servicesInvoice?.enabled && servicesTotal > 0;
+
   return (
     <>
       <div className="cd-topbar">
@@ -58,17 +64,25 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
       <Foldable rowSelector=".bo-clrow" unit="clinicians">
       <div className="bo-clin">
         {rows.map(({ c, m }) => {
-          // The biller's real payout is their commission (less pension); it lives
-          // on the biller statement, not the empty clinician-payout page.
+          // The biller's real payout is their commission (less pension); the admin's
+          // (Akeel) is the fixed monthly services invoice. Both link to their own
+          // document rather than an empty clinical-payout page.
           const isBiller = c.billing === "biller";
-          const href = isBiller ? `/billing/biller/statement?y=${year}&m=${month}` : `/billing/clinician/${c.id}?y=${year}&m=${month}`;
-          const payout = isBiller ? billerNet : m.payout;
+          const isAdminSvc = isSystemAdmin(c) && servicesOn;
+          const href = isAdminSvc ? `/billing/services-invoice?y=${year}&m=${month}`
+            : isBiller ? `/billing/biller/statement?y=${year}&m=${month}`
+            : `/billing/clinician/${c.id}?y=${year}&m=${month}`;
+          const payout = isAdminSvc ? servicesTotal : isBiller ? billerNet : m.payout;
           const total = m.collected + m.outstandingThisMonth;
           return (
             <Link key={c.id} href={href} className="bo-clrow" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
               <div className="bo-clhead">
-                <div className="nm">{c.name}<small>{isBiller ? "biller" : `${m.appointments} appointment${m.appointments === 1 ? "" : "s"}${c.admin ? " · owner" : ""}`}</small></div>
-                {isBiller ? (
+                <div className="nm">{c.name}<small>{isAdminSvc ? "monthly services" : isBiller ? "biller" : `${m.appointments} appointment${m.appointments === 1 ? "" : "s"}${c.admin ? " · owner" : ""}`}</small></div>
+                {isAdminSvc ? (
+                  <div>
+                    <div className="bo-clcap" style={{ marginTop: 6 }}><span>Fixed monthly services fee</span><span style={{ color: "var(--teal, #2E8E93)", fontWeight: 600 }}>View invoice →</span></div>
+                  </div>
+                ) : isBiller ? (
                   <div>
                     <div className="bo-cltrack"><span className="c" style={{ width: bm.commission > 0 ? "100%" : "0%" }} /></div>
                     <div className="bo-clcap"><span>{money0(bm.commission)} commission earned</span><span>{bm.billedCount} claim{bm.billedCount === 1 ? "" : "s"} processed</span></div>
@@ -79,7 +93,7 @@ export default async function ClinicianDirectory({ searchParams }: { searchParam
                     <div className="bo-clcap"><span>{money0(m.collected)} collected</span><span>{m.outstandingThisMonth > 0 ? `${money0(m.outstandingThisMonth)} outstanding` : (m.appointments ? "all collected" : "no activity")}</span></div>
                   </div>
                 )}
-                <div className="bo-clpay"><div className="p">{money(payout)}</div><div className="s">{isBiller ? "biller payout" : "payout"}</div></div>
+                <div className="bo-clpay"><div className="p">{money(payout)}</div><div className="s">{isAdminSvc ? "services" : isBiller ? "biller payout" : "payout"}</div></div>
                 <div className="bo-chev">›</div>
               </div>
             </Link>
