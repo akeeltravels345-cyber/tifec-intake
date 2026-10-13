@@ -72,7 +72,7 @@ const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minute
 const label12 = (minutes: number) => { let h = Math.floor(minutes / 60); const m = minutes % 60; const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}${m ? ":" + pad(m) : ""}${ap}`; };
 const prettyDate = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }); };
 
-type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number; _repeatEnds?: "count" | "date"; _repeatUntil?: string };
+type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number; _repeatEnds?: "count" | "date" | "year"; _repeatUntil?: string };
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
@@ -296,6 +296,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (!draft.id && draft._repeatEvery) {
       payload.repeatEveryDays = draft._repeatEvery;
       if (draft._repeatEnds === "date" && draft._repeatUntil) payload.repeatUntil = draft._repeatUntil;
+      // "Ongoing" materialises about a year's worth (the server caps at 52).
+      else if (draft._repeatEnds === "year") payload.repeatCount = Math.min(52, Math.floor(365 / draft._repeatEvery));
       else payload.repeatCount = draft._repeatCount || 1;
     }
     delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount; delete payload._repeatEnds; delete payload._repeatUntil;
@@ -688,7 +690,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
               <label className="cal-f"><span>Start</span><input type="time" value={hhmm(draft._startMin || 540)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); setDraft({ ...draft, _startMin: h * 60 + m }); }} /></label>
               <label className="cal-f"><span>Duration (min)</span><input type="number" min={5} step={5} value={draft._durMin || 50} onChange={(e) => setDraft({ ...draft, _durMin: Number(e.target.value) })} /></label>
 
-              {!draft.id && draft.kind !== "block" && (
+              {!draft.id && (
                 <>
                   <label className="cal-f"><span>Repeat</span>
                     <select value={draft._repeatEvery || 0} onChange={(e) => setDraft({ ...draft, _repeatEvery: Number(e.target.value) })}>
@@ -700,13 +702,14 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   </label>
                   {!!draft._repeatEvery && (
                     <label className="cal-f"><span>Ends</span>
-                      <select value={draft._repeatEnds || "count"} onChange={(e) => setDraft({ ...draft, _repeatEnds: e.target.value as "count" | "date" })}>
-                        <option value="count">After a number of sessions</option>
+                      <select value={draft._repeatEnds || "count"} onChange={(e) => setDraft({ ...draft, _repeatEnds: e.target.value as "count" | "date" | "year" })}>
+                        <option value="count">After a set number of times</option>
                         <option value="date">On a date</option>
+                        <option value="year">Ongoing (about a year)</option>
                       </select>
                     </label>
                   )}
-                  {!!draft._repeatEvery && (draft._repeatEnds || "count") === "count" && <label className="cal-f"><span>Occurrences</span><input type="number" min={2} max={52} value={draft._repeatCount || 4} onChange={(e) => setDraft({ ...draft, _repeatCount: Number(e.target.value) })} /></label>}
+                  {!!draft._repeatEvery && (draft._repeatEnds || "count") === "count" && <label className="cal-f"><span>How many</span><input type="number" min={2} max={52} value={draft._repeatCount || 4} onChange={(e) => setDraft({ ...draft, _repeatCount: Number(e.target.value) })} /></label>}
                   {!!draft._repeatEvery && draft._repeatEnds === "date" && <label className="cal-f"><span>Until</span><input type="date" value={draft._repeatUntil || ""} min={draft._date} onChange={(e) => setDraft({ ...draft, _repeatUntil: e.target.value })} /></label>}
                 </>
               )}
