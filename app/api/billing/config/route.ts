@@ -80,6 +80,10 @@ export async function POST(req: Request) {
       const next: PracticeConfig = { ...current };
       if (body.billerCommissionPct !== undefined) next.billerCommissionPct = n(body.billerCommissionPct);
       if (body.processingFeePct !== undefined) next.processingFeePct = n(body.processingFeePct);
+      if (body.processingFeeStart !== undefined) {
+        const d = String(body.processingFeeStart).trim();
+        next.processingFeeStart = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : undefined; // empty/invalid clears it (fee back to illustrative)
+      }
       if (Array.isArray(body.runningExpenses)) {
         const expenses = (body.runningExpenses as Record<string, unknown>[]).map((e, i) => ({
           id: String(e.id || `exp-${i}`),

@@ -51,11 +51,13 @@ async function post(body: Record<string, unknown>) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
 }
 
-export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, isBillerUser = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true, servicesInvoice: svcIn }: {
+export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicians, settings: setIn, billerPct: pctIn, processingFeePct: procIn = 0, isAdmin = false, isBillerUser = false, expenses: expIn, monthlyExpenses = {}, currentMonthKey, provider: provIn, renderingClinicians = [], billerName, billerInitials, canManageMoney = true, canSeeProvider = true, servicesInvoice: svcIn, processingFeeStart: feeStartIn = "" }: {
   insurers: Insurer[]; cptCodes: Cpt[]; clinicians: ClinRef[]; settings: Setting[];
   billerPct: number; processingFeePct?: number; isAdmin?: boolean; expenses: Expense[]; provider?: Provider; renderingClinicians?: ClinRef[];
   /** The admin's fixed monthly services invoice (Akeel) — owner/admin only. */
   servicesInvoice?: SvcInvoice;
+  /** Date (YYYY-MM-DD) the processing fee becomes a real deduction; "" = illustrative. */
+  processingFeeStart?: string;
   /** Per-month expense snapshots (key "YYYY-MM"); the current month to default to. */
   monthlyExpenses?: Record<string, Expense[]>; currentMonthKey: string;
   billerName: string; billerInitials: string;
@@ -92,6 +94,10 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
   // Builder processing fee % (admin only) — % of total collected.
   const [procPct, setProcPct] = useState(String(procIn));
   const saveProcFee = (pct: string) => run({ entity: "practice", processingFeePct: Number(pct) || 0 }, "Processing fee saved");
+  // The date the fee becomes a REAL deduction (charged only on cash collected
+  // on/after it). Empty = illustrative only.
+  const [procStart, setProcStart] = useState(feeStartIn || "");
+  const saveProcStart = (d: string) => run({ entity: "practice", processingFeeStart: d }, d ? "Fee start date saved" : "Fee set to illustrative");
 
   // The admin's fixed monthly services invoice (Akeel). Its own cost line on the
   // owner overview + a printable invoice; bank details live only in the DB.
@@ -162,17 +168,18 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           (read-only) since it's charged to the practice. Hidden from the biller. */}
       {(isAdmin || canManageMoney) && (
       <div className="su-sec">
-        <div className="su-sechead"><h2 className="su-sech">Processing fee {isAdmin && <span className="su-tag">builder</span>}</h2><span className="su-hint">{isAdmin ? "Your platform fee as a % of total cash collected." : "The platform fee charged on every dollar the practice collects — set by your administrator."}</span></div>
+        <div className="su-sechead"><h2 className="su-sech">Processing fee {isAdmin && <span className="su-tag">builder</span>}</h2><span className="su-hint">{isAdmin ? "Your platform fee as a % of total cash collected. Set a start date to make it a REAL deduction from net — it's charged only on cash collected on/after that date, so earlier months are untouched. Leave the date blank to keep it illustrative." : "The platform fee charged on every dollar the practice collects — set by your administrator."}</span></div>
         <div className="su-card su-comm">
-          <div className="who"><div className="av" style={{ background: "linear-gradient(135deg,#7c5cff,#2E3192)" }}>%</div><div><div className="nm">Platform processing fee</div><div className="rl">% of total collected</div></div></div>
+          <div className="who"><div className="av" style={{ background: "linear-gradient(135deg,#7c5cff,#2E3192)" }}>%</div><div><div className="nm">Platform processing fee</div><div className="rl">{procStart ? `Real · from ${procStart}` : "Illustrative (not deducted)"}</div></div></div>
           <div className="rate">
             {isAdmin ? (
               <>
                 <div><div className="ratebox"><input type="number" step="0.5" min="0" value={procPct} onChange={(e) => setProcPct(e.target.value)} onBlur={() => saveProcFee(procPct)} /><span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
-                <button className="su-save" onClick={() => saveProcFee(procPct)}>Save</button>
+                <div><div className="ratebox"><input type="date" value={procStart} onChange={(e) => setProcStart(e.target.value)} onBlur={() => saveProcStart(procStart)} style={{ border: 0, background: "transparent", font: "inherit", color: "inherit" }} /></div><div className="basis">{procStart ? "real deduction from this date" : "blank = illustrative only"}</div></div>
+                <button className="su-save" onClick={() => { saveProcFee(procPct); saveProcStart(procStart); }}>Save</button>
               </>
             ) : (
-              <div><div className="ratebox readonly">{procPct || 0}<span className="pct">%</span></div><div className="basis">of every dollar the practice collects</div></div>
+              <div><div className="ratebox readonly">{procPct || 0}<span className="pct">%</span></div><div className="basis">{procStart ? `deducted from ${procStart}` : "of every dollar the practice collects"}</div></div>
             )}
           </div>
         </div>

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { caymanToday, caymanYearMonth } from "@/lib/caymanTime";
 import { getBillingUser, canSeeBusiness } from "@/lib/billingRole";
 import { listSessions, listInsurers, getClinicianSettings, getPracticeConfig, runningExpensesTotalForMonth, expensesForMonth, servicesInvoiceTotal } from "@/lib/billing";
-import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, insurancePortion, ageDays } from "@/lib/billingCalc";
+import { computeClinicianMonth, computeBusinessMonth, computeBottomLine, collectedInMonthSince, insurancePortion, ageDays } from "@/lib/billingCalc";
 import { CLINICIANS, isSystemAdmin } from "@/lib/clinicians";
 import { listBuilderTasks } from "@/lib/builderTasks";
 import OverviewClient, { type OverviewData, type ClinRow } from "@/components/billing/OverviewClient";
@@ -37,7 +37,13 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
   const expensesTotal = runningExpensesTotalForMonth(cfg, year, month);
   const monthExpenses = expensesForMonth(cfg, year, month).expenses;
   const servicesTotal = servicesInvoiceTotal(cfg);
-  const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0, servicesTotal);
+  // Platform fee goes live as a real deduction on cfg.processingFeeStart, charged
+  // only on cash collected on/after that date — so the feeable base for this month
+  // is the collections since the start (full month once the start has passed).
+  const feeStart = cfg.processingFeeStart;
+  const feeApplied = !!feeStart && (cfg.processingFeePct ?? 0) > 0;
+  const feeBase = feeStart ? collectedInMonthSince(allSessions, year, month, feeStart) : biz.collected;
+  const bottom = computeBottomLine(biz, expensesTotal, cfg.processingFeePct ?? 0, servicesTotal, feeBase, feeApplied);
   // The illustrative processing-fee line is admin-only (the builder).
   const isAdmin = user.clinician.contact === "admin";
   // The builder worklist is a builder tool, so it only mounts on the overview for
@@ -134,6 +140,7 @@ export default async function OwnerOverview({ searchParams }: { searchParams: Pr
     servicesInvoice: cfg.servicesInvoice?.enabled && servicesTotal > 0
       ? { payee: cfg.servicesInvoice.payeeName || "Services", total: servicesTotal }
       : null,
+    processingFeeStart: feeStart ?? null,
   };
 
   return <OverviewClient data={data} />;

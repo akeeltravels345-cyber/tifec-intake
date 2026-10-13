@@ -119,6 +119,25 @@ export function collectedInMonth(sessions: BillingSession[], year: number, month
   return round2(total);
 }
 
+/** Cash collected in a given month whose collection date falls on/after `startISO`
+ *  (YYYY-MM-DD) — same buckets as collectedInMonth. Lets a fee apply "as of" a date
+ *  without charging earlier collections. */
+export function collectedInMonthSince(sessions: BillingSession[], year: number, month: number, startISO: string): number {
+  const onOrAfter = (d: string | null | undefined) => !!d && d.slice(0, 10) >= startISO;
+  let total = 0;
+  for (const s of sessions) {
+    if (s.insurerId) {
+      const copayDate = s.copayPaidDate || s.dateOfService;
+      if ((s.copayCollected || 0) > 0 && inMonth(copayDate, year, month) && onOrAfter(copayDate)) total += round2(s.copayCollected || 0);
+      if (insuranceSettled(s) && inMonth(s.paidDate, year, month) && onOrAfter(s.paidDate)) total += insuranceCash(s);
+    } else {
+      const spDate = s.paidDate || s.dateOfService;
+      if (inMonth(spDate, year, month) && onOrAfter(spDate)) total += collectedAtVisit(s);
+    }
+  }
+  return round2(total);
+}
+
 // One insurance payment that landed this month, tagged by whether it paid for a
 // visit in this month or an earlier one. Names are resolved in the UI layer.
 export interface InsuranceCollectedItem {
@@ -366,19 +385,25 @@ export interface BottomLine {
   net: number;
   outstanding: number;
   projectedNet: number; // net + what the practice keeps once outstanding lands (~37%)
-  // Builder's platform fee — % of total cash collected. Kept OUT of `net` (the
-  // practice's operating net) and surfaced only to the admin/builder.
+  // Platform fee — % of cash collected (on/after its start date). Once applied it's
+  // a real deduction inside `net`; before that it's reference-only (netAfterProcessing).
   processingFee: number;
   processingFeePct: number;
+  processingFeeBase: number;      // the collected amount the fee was charged on
+  processingFeeApplied: boolean;  // true once it's a real deduction from net
   netAfterProcessing: number;
 }
 
-export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number, processingFeePct = 0, servicesInvoiceTotal = 0): BottomLine {
+export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: number, processingFeePct = 0, servicesInvoiceTotal = 0, processingFeeBase?: number, processingFeeApplied = false): BottomLine {
   const billerCommission = biz.billerCommission; // per-clinician, already summed
+  // The platform fee is charged on its feeable base (collections on/after the fee's
+  // start date); `biz.collected` is the fallback when no base is supplied.
+  const feeBase = processingFeeBase ?? biz.collected;
+  const processingFee = round2((feeBase * processingFeePct) / 100);
   // The admin's fixed monthly services fee (Akeel) is a real operating cost, so
-  // it comes out of net alongside payouts, biller commission and running expenses.
-  const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal - servicesInvoiceTotal);
-  const processingFee = round2((biz.collected * processingFeePct) / 100);
+  // it comes out of net alongside payouts, biller commission and running expenses —
+  // and so is the platform fee, once it's applied (a real deduction).
+  const net = round2(biz.collected - biz.totalPayout - billerCommission - runningExpensesTotal - servicesInvoiceTotal - (processingFeeApplied ? processingFee : 0));
   // Blended biller rate (varies by clinician) for the projected-net estimate. Once an
   // outstanding claim is paid: 60% to the clinician, ~blended% to the biller, rest kept.
   const effBillerPct = biz.billed > 0 ? (billerCommission / biz.billed) * 100 : 8.5;
@@ -397,7 +422,9 @@ export function computeBottomLine(biz: BusinessMonth, runningExpensesTotal: numb
     projectedNet: round2(net + biz.outstanding * keepRate),
     processingFee,
     processingFeePct,
-    netAfterProcessing: round2(net - processingFee),
+    processingFeeBase: feeBase,
+    processingFeeApplied,
+    netAfterProcessing: processingFeeApplied ? net : round2(net - processingFee),
   };
 }
 

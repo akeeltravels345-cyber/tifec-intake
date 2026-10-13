@@ -29,6 +29,7 @@ export default async function SetupPage() {
       canSeeProvider={isBiller(user.role)}
       billerPct={cfg.billerCommissionPct}
       processingFeePct={cfg.processingFeePct ?? 0}
+      processingFeeStart={cfg.processingFeeStart ?? ""}
       isAdmin={user.clinician.contact === "admin"}
       expenses={cfg.runningExpenses}
       monthlyExpenses={cfg.monthlyExpenses ?? {}}

@@ -127,6 +127,10 @@ export interface ServicesInvoiceConfig {
 export interface PracticeConfig {
   billerCommissionPct: number; // % of insurance collected paid to the biller
   processingFeePct?: number; // builder's platform fee — % of TOTAL cash collected
+  /** The date (YYYY-MM-DD) the processing fee becomes a REAL deduction: it is
+   *  charged only on cash collected on/after this date, so switching it on never
+   *  rewrites closed months. Unset = the fee is illustrative only (not deducted). */
+  processingFeeStart?: string;
   runningExpenses: RunningExpense[]; // base/default list — the fallback for any month
   /** Per-month expense snapshots (key "YYYY-MM"). Expenses change month to month,
    *  so each month can carry its own set; a month with no snapshot carries forward
@@ -140,6 +144,9 @@ export interface PracticeConfig {
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
   processingFeePct: 2,
+  // The 2% platform fee went live as a real deduction on 2026-10-13 — charged only
+  // on cash collected on/after this date, so earlier months are untouched.
+  processingFeeStart: "2026-10-13",
   provider: {},
   runningExpenses: [
     { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [

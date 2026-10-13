@@ -25,8 +25,9 @@ export interface OverviewData {
   year: number; month: number; monthName: string; prevMonthName: string;
   earned: number; earnedCollected: number; earnedOwed: number; earnedDelta: number | null;
   cashTotal: number; cashCopays: number; cashInsurance: number; cashRollover: number;
-  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; servicesInvoice: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; netAfterProcessing: number };
+  bottom: { cashCollected: number; payouts: number; billerCommission: number; billerFromClinicians: number; billerFromCompany: number; billerCommissionPct: number; runningExpenses: number; servicesInvoice: number; net: number; outstanding: number; projectedNet: number; processingFee: number; processingFeePct: number; processingFeeBase: number; processingFeeApplied: boolean; netAfterProcessing: number };
   servicesInvoice?: { payee: string; total: number } | null; // the admin's fixed monthly services invoice (Akeel)
+  processingFeeStart?: string | null; // date the 2% platform fee became a real deduction
   isAdmin?: boolean; // the builder/admin sees the platform processing-fee line
   builderTasks?: BuilderTask[]; // the viewer's own worklist mounted on the overview
   worklistChip?: string; // chip label on the worklist ("Private" / "Admin only")
@@ -79,6 +80,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
 
   const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
   const insMax = Math.max(1, ...data.insurers.map((i) => i.amount));
+  const feeSince = data.processingFeeStart ? new Date(data.processingFeeStart + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
   return (
     <>
@@ -219,8 +221,11 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
             {data.servicesInvoice && (
               <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#2F8E93" }} />{data.servicesInvoice.payee} — services <Link href={`/billing/services-invoice?y=${data.year}&m=${data.month}`} className="bo-seclink" style={{ marginLeft: 6 }}>View invoice →</Link></span><span className="v">−{money(data.bottom.servicesInvoice)}</span></div>
             )}
+            {data.bottom.processingFeeApplied && data.bottom.processingFee > 0 && (
+              <div className="bo-wfl minus"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />Platform processing fee ({data.bottom.processingFeePct}%{feeSince ? ` · from ${feeSince}` : ""})</span><span className="v">−{money(data.bottom.processingFee)}</span></div>
+            )}
             <div className="bo-wftot"><span className="k">Net this month</span><span className="v" style={{ color: data.bottom.net < 0 ? "var(--neg)" : "var(--ink)" }}>{money0(data.bottom.net)}</span></div>
-            {data.bottom.processingFeePct > 0 && (
+            {!data.bottom.processingFeeApplied && data.bottom.processingFeePct > 0 && (
               <div className="bo-adminfee">
                 <div className="bo-wfl"><span className="k"><span className="bo-dot" style={{ background: "#7c5cff" }} />Platform processing fee <span className="bo-illus">illustrative</span> ({data.bottom.processingFeePct}% of collected)</span><span className="v" style={{ color: "var(--muted)" }}>{money(data.bottom.processingFee)}</span></div>
                 <div className="bo-wfl"><span className="k">Net if it applied</span><span className="v" style={{ color: "var(--muted)" }}>{money0(data.bottom.netAfterProcessing)}</span></div>
@@ -300,6 +305,7 @@ export default function OverviewClient({ data }: { data: OverviewData }) {
                   <tr className="minus"><td>Biller commission</td><td className="num">−{money(data.bottom.billerCommission)}</td></tr>
                   <tr className="minus"><td>Running expenses</td><td className="num">−{money(data.bottom.runningExpenses)}</td></tr>
                   {data.servicesInvoice && <tr className="minus"><td>{data.servicesInvoice.payee} — services</td><td className="num">−{money(data.bottom.servicesInvoice)}</td></tr>}
+                  {data.bottom.processingFeeApplied && data.bottom.processingFee > 0 && <tr className="minus"><td>Platform processing fee ({data.bottom.processingFeePct}%)</td><td className="num">−{money(data.bottom.processingFee)}</td></tr>}
                   <tr className="tot"><td>Net this month</td><td className="num">{money0(data.bottom.net)}</td></tr>
                 </tbody>
               </table>
