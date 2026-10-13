@@ -69,6 +69,8 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
   const [confirmed, setConfirmed] = useState<{ startAt: string; id: string } | null>(null);
   const [remembered, setRemembered] = useState(false);
   const [firstVisit, setFirstVisit] = useState<"" | "yes" | "no">(""); // "have you been here before?"
+  const [heardFrom, setHeardFrom] = useState(""); // new-client self-report: "how did you hear about us?"
+  const [referralChannel, setReferralChannel] = useState(""); // auto-captured: utm_source / referrer / ?src tag
   const [intakeSent, setIntakeSent] = useState<string[]>([]); // forms emailed on booking
   const [category, setCategory] = useState<string | null>(null); // chosen category on the service step
   const [group, setGroup] = useState<Service | null>(null); // chosen service (its in-person/online variants)
@@ -131,6 +133,38 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     setDetails({ name: "", email: "", phone: "", path: "self_pay", insurerId: "", policyNo: "", notes: "" });
     setRemembered(false);
   }
+
+  // Auto-capture where this booking came from, for marketing. Prefer an explicit
+  // campaign/link tag (?utm_source=… or ?src=…), then fall back to the site that
+  // referred the click, else "Direct". Runs once on load, before the client
+  // touches anything. Paired with the new client's self-reported "how did you
+  // hear about us?" on the details step.
+  useEffect(() => {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      const tag = (qs.get("utm_source") || qs.get("src") || "").trim();
+      const campaign = (qs.get("utm_campaign") || "").trim();
+      let channel = tag;
+      if (!channel) {
+        const ref = document.referrer || "";
+        if (ref) {
+          const host = (() => { try { return new URL(ref).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+          const map: Record<string, string> = {
+            "google.com": "Google", "google.ky": "Google", "bing.com": "Bing", "duckduckgo.com": "DuckDuckGo",
+            "instagram.com": "Instagram", "l.instagram.com": "Instagram", "facebook.com": "Facebook", "m.facebook.com": "Facebook",
+            "l.facebook.com": "Facebook", "fb.com": "Facebook", "t.co": "Twitter/X", "x.com": "Twitter/X",
+            "linkedin.com": "LinkedIn", "youtube.com": "YouTube", "tiktok.com": "TikTok",
+          };
+          const sameSite = host && window.location.hostname.endsWith(host);
+          channel = sameSite ? "" : (map[host] || host);
+        }
+      }
+      if (!channel) channel = "Direct";
+      // Title-case a bare tag like "instagram" -> "Instagram" for a tidy report.
+      channel = channel.length <= 3 ? channel.toUpperCase() : channel.charAt(0).toUpperCase() + channel.slice(1);
+      setReferralChannel(campaign ? `${channel} · ${campaign}` : channel);
+    } catch { /* non-browser / blocked */ }
+  }, []);
 
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || "";
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -210,6 +244,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ preview, typeId: type.id, clinicianId, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers,
+        heardFrom: firstVisit === "yes" ? heardFrom : "", referralChannel,
         ...(month ? { sessions: picks.map((p) => ({ date: p.date, minute: p.minute })) } : { date, minute: slot!.minute }) }),
     });
     const data = await res.json().catch(() => ({}));
@@ -492,6 +527,25 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                     <button type="button" className={firstVisit === "yes" ? "on" : ""} onClick={() => setFirstVisit("yes")}>No, I&apos;m new</button>
                   </div>
                 </div>
+              )}
+              {/* New clients only: a light-touch marketing question. Returning
+                  clients already know us, so we never ask them. */}
+              {firstVisit === "yes" && !/free\s+online\s+consultation/i.test(type.name) && (
+                <label className="bk-f"><span>How did you hear about us? <em>(optional)</em></span>
+                  <select value={heardFrom} onChange={(e) => setHeardFrom(e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="Google search">Google search</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Friend or family">Friend or family</option>
+                    <option value="Doctor or clinician referral">Doctor or clinician referral</option>
+                    <option value="School or workplace">School or workplace</option>
+                    <option value="Our website">Our website</option>
+                    <option value="Flyer or event">Flyer or event</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
               )}
               <label className="bk-f"><span>Anything you&apos;d like your clinician to know? <em>(optional)</em></span>
                 <textarea rows={3} value={details.notes} onChange={(e) => setDetails({ ...details, notes: e.target.value })} placeholder="A quick note that goes straight to your clinician" /></label>

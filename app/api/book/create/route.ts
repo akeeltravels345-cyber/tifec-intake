@@ -124,6 +124,16 @@ export async function POST(req: Request) {
     .map((q) => ({ questionId: q.id, label: q.label, value: clean(ansMap[q.id], 1000) }))
     .filter((a) => a.value);
 
+  // Marketing attribution. A new client's self-reported "How did you hear about
+  // us?" (we don't ask returning clients), plus the auto-captured booking
+  // channel (utm_source / referring site / a link's ?src tag). Stored as
+  // reserved _mkt_* answers so it needs no schema change; hidden from the
+  // clinician's booking-answers view and rolled up in Scheduling insights.
+  const heardFrom = clean((body as Record<string, unknown>).heardFrom, 60);
+  const referralChannel = clean((body as Record<string, unknown>).referralChannel, 60);
+  if (heardFrom && body.firstVisit === true) answers.push({ questionId: "_mkt_source", label: "How did you hear about us?", value: heardFrom });
+  if (referralChannel) answers.push({ questionId: "_mkt_ref", label: "Booking channel", value: referralChannel });
+
   const path = body.insurancePath === "insurance" ? "insurance" : "self_pay";
   // For an "either" service the client picks; otherwise the service dictates.
   const mode = type.mode === "either" ? (body.mode === "virtual" ? "virtual" : "in_person") : type.mode;

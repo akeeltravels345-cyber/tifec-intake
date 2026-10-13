@@ -25,6 +25,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const maxType = Math.max(1, ...s.popularTypes.map((t) => t.count));
   const maxClin = Math.max(1, ...s.byClinician.map((c) => c.count));
   const maxDow = Math.max(1, ...s.byWeekday);
+  const maxSource = Math.max(1, ...s.bySource.map((x) => x.count));
+  const maxChannel = Math.max(1, ...s.byChannel.map((x) => x.count));
+  const hasMarketing = s.bySource.length > 0 || s.byChannel.length > 0;
 
   const Tile = ({ k, v, sub, tone }: { k: string; v: string | number; sub?: string; tone?: string }) => (
     <div className={`sr-tile ${tone || ""}`}><div className="sr-k">{k}</div><div className="sr-v">{v}</div>{sub && <div className="sr-s">{sub}</div>}</div>
@@ -77,6 +80,42 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </div>
           </div>
         )}
+
+        <div className="sr-card">
+          <h2>Where clients come from</h2>
+          {!hasMarketing ? (
+            <p className="sr-sub" style={{ margin: 0 }}>
+              Nothing yet for {MONTHS[month - 1]}. New clients are asked &ldquo;How did you hear about us?&rdquo; when they book online, and every online booking records the channel it came from (a link&rsquo;s <code>?utm_source=</code> / <code>?src=</code> tag, or the referring site). Returning clients aren&rsquo;t asked, and staff-entered bookings have no channel, so this fills in as new people book themselves.
+            </p>
+          ) : (
+            <div className="sr-cols">
+              <div>
+                <h3 className="sr-subh">How did you hear about us? <span className="sr-sub">new clients</span></h3>
+                {s.bySource.length === 0
+                  ? <p className="sr-sub" style={{ margin: 0 }}>No new-client answers this month.</p>
+                  : s.bySource.map((x) => (
+                      <div key={x.source} className="sr-bar">
+                        <span className="sr-barlabel">{x.source}</span>
+                        <span className="sr-bartrack"><i style={{ width: `${(x.count / maxSource) * 100}%`, background: "var(--teal, #2f8e93)" }} /></span>
+                        <span className="sr-barval">{x.count}</span>
+                      </div>
+                    ))}
+              </div>
+              <div>
+                <h3 className="sr-subh">Booking channel <span className="sr-sub">auto-tracked</span></h3>
+                {s.byChannel.length === 0
+                  ? <p className="sr-sub" style={{ margin: 0 }}>No tracked channels this month.</p>
+                  : s.byChannel.map((x) => (
+                      <div key={x.channel} className="sr-bar">
+                        <span className="sr-barlabel">{x.channel}</span>
+                        <span className="sr-bartrack"><i style={{ width: `${(x.count / maxChannel) * 100}%`, background: "var(--indigo, #5b63b7)" }} /></span>
+                        <span className="sr-barval">{x.count}</span>
+                      </div>
+                    ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {s.total > 0 && (
           <div className="sr-card">

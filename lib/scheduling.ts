@@ -798,6 +798,8 @@ export interface SchedulingStats {
   clientBookings: number; staffBookings: number;
   popularTypes: { typeId: string | null; name: string; color: string; count: number }[];
   byClinician: { clinicianId: string; count: number }[];
+  bySource: { source: string; count: number }[];   // new clients' self-reported "how did you hear about us?"
+  byChannel: { channel: string; count: number }[];  // auto-captured booking channel (utm / referrer / link tag)
   byWeekday: number[]; // Mon..Sun
   bookedMinutes: number; // clinician time held by non-cancelled appointments this month
   bookedValue: number;   // sum of fees for non-cancelled appointments this month (scheduled, not collected)
@@ -849,6 +851,20 @@ export async function schedulingStats(year: number, month: number, clinicianId?:
   for (const a of inMonth) clinCount.set(a.clinicianId, (clinCount.get(a.clinicianId) || 0) + 1);
   const byClinician = [...clinCount.entries()].map(([clinicianId, count]) => ({ clinicianId, count })).sort((a, b) => b.count - a.count);
 
+  // Marketing attribution, from the reserved _mkt_* booking answers: the new
+  // client's self-reported "how did you hear about us?" and the auto-captured
+  // channel (utm / referring site / link tag). Only non-cancelled bookings count.
+  const mktVal = (a: Appointment, id: string) => (a.answers.find((x) => x.questionId === id)?.value || "").trim();
+  const sourceCount = new Map<string, number>();
+  const channelCount = new Map<string, number>();
+  for (const a of inMonth) {
+    if (a.status === "cancelled") continue;
+    const src = mktVal(a, "_mkt_source"); if (src) sourceCount.set(src, (sourceCount.get(src) || 0) + 1);
+    const ch = mktVal(a, "_mkt_ref"); if (ch) channelCount.set(ch, (channelCount.get(ch) || 0) + 1);
+  }
+  const bySource = [...sourceCount.entries()].map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count);
+  const byChannel = [...channelCount.entries()].map(([channel, count]) => ({ channel, count })).sort((a, b) => b.count - a.count);
+
   const byWeekday = [0, 0, 0, 0, 0, 0, 0];
   for (const a of inMonth) byWeekday[cayWeekdayMon(a.startAt)]++;
 
@@ -866,7 +882,7 @@ export async function schedulingStats(year: number, month: number, clinicianId?:
     total, upcoming, seen, noShow, cancelled,
     noShowRate: pct(noShow, nonCancelled), cancelRate: pct(cancelled, total),
     newClients, returningClients: totalClients - newClients, totalClients,
-    clientBookings, staffBookings, popularTypes, byClinician, byWeekday,
+    clientBookings, staffBookings, popularTypes, byClinician, bySource, byChannel, byWeekday,
     bookedMinutes, bookedValue, seenValue,
   };
 }

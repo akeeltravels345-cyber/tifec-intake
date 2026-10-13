@@ -957,10 +957,10 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     <div className={a.notes ? "cvr-line" : "cvr-line muted"}>{a.notes || "No notes"}</div>
                   </div>
 
-                  {(a.answers || []).length > 0 && (
+                  {(a.answers || []).filter((ans) => !ans.questionId.startsWith("_mkt")).length > 0 && (
                     <div className="cvr-sec">
                       <div className="cvr-sec-h">Booking answers</div>
-                      {(a.answers || []).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}
+                      {(a.answers || []).filter((ans) => !ans.questionId.startsWith("_mkt")).map((ans, i) => <div key={i} className="cvr-att-row"><b>{ans.label}:</b> {ans.value}</div>)}
                     </div>
                   )}
 
