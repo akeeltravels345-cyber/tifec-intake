@@ -4,6 +4,7 @@
 // the right link and the clinician can see who is still outstanding.
 //
 //   - Couples / Marriage / Pre-Marital services  -> Couples Intake
+//   - PEERS social-skills programs                -> PEERS Intake + age-appropriate DSM-5
 //   - Free Online Consultation                   -> no intake (a pre-therapy chat)
 //   - Everything else                            -> General Intake + DSM-5 screener
 //
@@ -21,14 +22,29 @@ export function isCoupleService(name: string): boolean {
   return /\b(couples?|marriage|pre[\s-]?marital)\b/i.test(name);
 }
 
+export function isPeersService(name: string): boolean {
+  // Any PEERS social-skills program (Primary Group, Middle/High School, Young Adult).
+  return /\bpeers\b/i.test(name);
+}
+
 export function skipsIntake(name: string): boolean {
   return /free\s+online\s+consultation/i.test(name);
+}
+
+/** The age-appropriate DSM-5 Level 1 screener for a PEERS booking, read from the
+ *  age band in the service name. The Young Adult (15+) group gets the adult
+ *  self-report; the younger groups get the child (6-17, parent/guardian-rated)
+ *  measure, which matches the parent-completed PEERS intake. The clinician can
+ *  still send the 11-17 self-report variant manually for an older child. */
+function peersDsm5(name: string): FormTemplateKey {
+  return /young\s*adult|15\s*\+/i.test(name) ? "dsm5-level1-adult" : "dsm5-level1-child";
 }
 
 /** The intake form(s) a booking of this service requires. */
 export function requiredIntakeForms(typeName: string): FormTemplateKey[] {
   if (skipsIntake(typeName)) return [];
   if (isCoupleService(typeName)) return ["couples"];
+  if (isPeersService(typeName)) return ["peers-intake", peersDsm5(typeName)];
   return ["individual", "dsm5-level1-adult"];
 }
 
@@ -43,6 +59,9 @@ export function formShortLabel(form: FormTemplateKey): string {
   if (form === "couples") return "Couples Intake";
   if (form === "individual") return "General Intake";
   if (form === "dsm5-level1-adult") return "Wellbeing Screening (DSM-5)";
+  if (form === "dsm5-level1-child") return "Child Wellbeing Screening (DSM-5)";
+  if (form === "dsm5-level1-child-self") return "Wellbeing Check-In (DSM-5)";
+  if (form === "peers-intake") return "PEERS Intake";
   return String(form);
 }
 
