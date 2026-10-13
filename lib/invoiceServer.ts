@@ -66,13 +66,13 @@ export async function resolveClientInvoice(
 
   // Payer invoice: sessions billed to that insurer, at full fee, billed to the
   // payer. Otherwise self-pay (no insurer, what the client still owes) vs co-pay
-  // (insured visit with an outstanding co-pay, just that piece). Waived self-pay
-  // is excluded — there's nothing left to bill.
+  // (insured visit with an outstanding co-pay, just that piece). Waived and pro
+  // bono self-pay are excluded — there's nothing to bill.
   let items = payer
     ? allForClient.filter((s) => s.insurerId === payer.id)
     : isCopay
     ? allForClient.filter((s) => s.insurerId && uncollectedCopay(s) > 0)
-    : allForClient.filter((s) => !s.insurerId && s.selfPayStatus !== "waived");
+    : allForClient.filter((s) => !s.insurerId && s.selfPayStatus !== "waived" && s.selfPayStatus !== "probono");
   const wantIds = (sessionsParam ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (wantIds.length) {
     const want = new Set(wantIds);

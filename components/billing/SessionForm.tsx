@@ -59,7 +59,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Whether this visit goes through insurance or is paid in full on the day.
   // Kept separate from the insurer itself: an insured client may still choose
   // to pay upfront for a session, which is common in a psychology practice.
-  const [payMode, setPayMode] = useState<"insurance" | "upfront">(prefill?.insurerId ? "insurance" : "upfront");
+  const [payMode, setPayMode] = useState<"insurance" | "upfront" | "probono">(prefill?.insurerId ? "insurance" : "upfront");
   // Self-pay disposition: paid in full now, owing (running balance), or waived.
   const [selfPay, setSelfPay] = useState<"paid" | "owing" | "waived">("paid");
   const [collectedNow, setCollectedNow] = useState("");
@@ -78,10 +78,10 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
 
   /** Paying upfront means no insurer at all, so the money model treats the
    *  whole fee as collected at the visit. */
-  function switchPay(next: "insurance" | "upfront") {
+  function switchPay(next: "insurance" | "upfront" | "probono") {
     if (next === payMode) return;
     setPayMode(next);
-    if (next === "upfront") setInsurerId("");
+    if (next !== "insurance") setInsurerId(""); // self-pay and pro bono carry no insurer
     resetCopay();
   }
 
@@ -160,7 +160,8 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
   // Discount applies to self-pay only; the charged total is the fee less the discount.
   const discPct = payMode === "upfront" ? Math.min(100, Math.max(0, Number(discountPct) || 0)) : 0;
   const chargedTotal = discPct > 0 ? round2(totalCost * (1 - discPct / 100)) : totalCost;
-  const collectedAtVisit = insurerId ? copayCollected
+  const collectedAtVisit = payMode === "probono" ? 0
+    : insurerId ? copayCollected
     : selfPay === "owing" ? Math.min(chargedTotal, Number(collectedNow) || 0)
     : selfPay === "waived" ? 0
     : chargedTotal;
@@ -209,7 +210,7 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
     try {
       const res = await fetch("/api/billing/sessions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: expandedCodes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "insurance" ? (copayDisp === "waived" ? "waived" : null) : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
+        body: JSON.stringify({ clientFirst: first.trim(), clientLast: last.trim(), clientId: mode === "returning" ? pickedId : null, dob: mode === "new" && dob ? dob : null, insurerId: insurerId || null, dateOfService: dos, cptCodes: expandedCodes, durationHours: duration, totalCost: chargedTotal, copayCollected: payMode === "insurance" ? copayCollected : (payMode === "upfront" && selfPay === "owing" ? Number(collectedNow) || 0 : 0), copayDue: payMode === "insurance" ? copayDue : 0, selfPayStatus: payMode === "probono" ? "probono" : payMode === "insurance" ? (copayDisp === "waived" ? "waived" : null) : (selfPay === "paid" ? null : selfPay), notes: finalNotes, ...(forId ? { clinicianId: forId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save the session.");
@@ -411,6 +412,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
               </button>
               <button type="button" role="tab" aria-selected={payMode === "insurance"} className={`ls-mode ${payMode === "insurance" ? "on" : ""}`} onClick={() => switchPay("insurance")}>
                 Through insurance<small>co-pay now, rest billed</small>
+              </button>
+              <button type="button" role="tab" aria-selected={payMode === "probono"} className={`ls-mode ${payMode === "probono" ? "on" : ""}`} onClick={() => switchPay("probono")}>
+                Pro bono<small>free care, no charge</small>
               </button>
             </div>
             {payMode === "insurance" && (
@@ -632,7 +636,9 @@ export default function SessionForm({ insurers, cptCodes, clients = [], forClini
         </div>
         <div className="ls-sline"><span className="k"><span className="ls-dot" style={{ background: "var(--teal)" }} />Collected at visit</span><span className="v">{money(collectedAtVisit)}</span></div>
         <div className="ls-sline"><span className="k"><span className="ls-dot" style={{ background: "var(--indigo)" }} />Billed to insurance</span><span className="v">{money(billedToInsurance)}</span></div>
-        {insurerId ? (
+        {payMode === "probono" ? (
+          <div className="ls-status self"><span className="ic">♥</span><span>Pro bono — free care. The {money(totalCost)} fee is recorded as pro bono value only; nothing is billed or collected.</span></div>
+        ) : insurerId ? (
           <div className="ls-status ins"><span className="ic">→</span><span>{money(billedToInsurance)} enters the billing queue for <b>{insurer?.name}</b> once you save.</span></div>
         ) : (
           selfPay === "owing" ? (

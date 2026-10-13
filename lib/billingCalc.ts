@@ -47,7 +47,7 @@ export function benefitUsed(sessions: BillingSession[], year: number): number {
  *  has come in so far; "waived" = written off, nothing collected. */
 export function collectedAtVisit(s: BillingSession): number {
   if (!s.insurerId) {
-    if (s.selfPayStatus === "waived") return 0;
+    if (s.selfPayStatus === "waived" || s.selfPayStatus === "probono") return 0;
     if (s.selfPayStatus === "owing") return round2(Math.min(s.totalCost || 0, s.copayCollected || 0));
     return round2(s.totalCost || 0);
   }
@@ -62,6 +62,11 @@ export function selfPayOutstanding(s: BillingSession): number {
 /** The fee written off on a waived self-pay visit (0 otherwise). */
 export function selfPayWaived(s: BillingSession): number {
   return !s.insurerId && s.selfPayStatus === "waived" ? round2(s.totalCost || 0) : 0;
+}
+/** The fee given away as PRO BONO care (0 otherwise). Free care recorded at its
+ *  standard value for reporting — never revenue, never collected, never paid out. */
+export function proBono(s: BillingSession): number {
+  return !s.insurerId && s.selfPayStatus === "probono" ? round2(s.totalCost || 0) : 0;
 }
 /** Co-pay DUE but not collected AND still owed (the biller should invoice it).
  *  A waived co-pay is excluded — that's forgiven, not owed. Insured visits only. */
@@ -162,6 +167,7 @@ export interface ClinicianMonth {
   outstandingThisMonth: number;  // insurance portion of this month's visits not yet billed
   uncollectedCopay: number;      // co-pay due at this month's visits, not collected, still OWED (invoice)
   waivedCopay: number;           // co-pay due at this month's visits, deliberately WAIVED (written off)
+  proBono: number;               // fee value of this month's PRO BONO visits (free care given)
   // cashflow ("money actually in this month" — drives payout)
   insuranceBilledThisMonth: number; // insurance cash collected this month (any visit month)
   insuranceThisMonthVisits: number; // of that, the part for THIS month's visits
@@ -214,7 +220,7 @@ export function computeClinicianMonth(
   // Realizable production: the value of this month's visits LESS anything written
   // off (contractual) or written down (uncollectable). A written-off/down amount
   // is never revenue for the clinician, so it never counts as earned.
-  const revenueGenerated = sumBy(visits, (s) => (s.totalCost || 0) - contractualWriteoff(s) - writeDown(s));
+  const revenueGenerated = sumBy(visits, (s) => (s.totalCost || 0) - contractualWriteoff(s) - writeDown(s) - proBono(s));
   // A co-pay counts when it actually CAME IN — its copayPaidDate (which defaults
   // to the visit date for copays taken at the visit, so the common case is
   // unchanged). A copay collected late books to the month it arrived, like
@@ -296,6 +302,7 @@ export function computeClinicianMonth(
     outstandingThisMonth: sumBy(visitsUnbilled, insurancePortion),
     uncollectedCopay: sumBy(visits, uncollectedCopay),
     waivedCopay: sumBy(visits, waivedCopay),
+    proBono: sumBy(visits, proBono),
     insuranceBilledThisMonth,
     insuranceThisMonthVisits,
     insurancePriorVisits,
@@ -334,6 +341,7 @@ export interface BusinessMonth {
   copays: number;             // co-pays collected this month
   uncollectedCopay: number;   // co-pay due this month, not collected, still owed (invoice)
   waivedCopay: number;        // co-pay due this month, deliberately waived (written off)
+  proBono: number;            // fee value of this month's pro bono visits (free care given)
   contractualWriteoff: number; // insurance billed written off (contractual) this month
   writeDown: number;          // insurance billed written down this month
   outstanding: number;        // total not yet paid by insurance (running)
@@ -360,6 +368,7 @@ export function computeBusinessMonth(perClinician: ClinicianMonth[], year: numbe
     copays: s((c) => c.copayThisMonth),
     uncollectedCopay: s((c) => c.uncollectedCopay),
     waivedCopay: s((c) => c.waivedCopay),
+    proBono: s((c) => c.proBono),
     contractualWriteoff: s((c) => c.contractualWriteoff),
     writeDown: s((c) => c.writeDown),
     outstanding: s((c) => c.outstanding),

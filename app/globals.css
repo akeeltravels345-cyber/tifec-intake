@@ -3574,7 +3574,7 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 
 /* Log a session: an explicit choice between a returning client and a new one,
    replacing a wall of name chips that would grow unusable with a real caseload. */
-.biz .ls-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.biz .ls-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .biz .ls-mode {
   display: flex; flex-direction: column; gap: 3px; text-align: left; cursor: pointer;
   border: 1px solid #E1D9C8; background: var(--surface); border-radius: 11px; padding: 11px 14px;

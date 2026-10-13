@@ -49,11 +49,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const bodyPaid = isDate(body.paidDate) ? String(body.paidDate) : null;
   const billedDate = stage === "tobill" ? null : (bodyBilled ?? session.billedDate ?? dateOfService);
   const paidDate = settled ? (bodyPaid ?? session.paidDate ?? dateOfService) : null;
-  // Uncollected-amount disposition: self-pay owing/waived, or an insured co-pay
-  // waived (write-off). Anything else is null (collected / didn't-collect-owed).
+  // Uncollected-amount disposition: self-pay owing/waived/pro bono, or an insured
+  // co-pay waived (write-off). Anything else is null (collected / didn't-collect-owed).
   const selfPayStatus = insurerId
     ? (body.selfPayStatus === "waived" ? "waived" : null)
-    : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" ? body.selfPayStatus : null);
+    : (body.selfPayStatus === "owing" || body.selfPayStatus === "waived" || body.selfPayStatus === "probono" ? body.selfPayStatus : null);
 
   // Service (CPT) codes: only replace them when a valid non-empty list is sent;
   // otherwise leave the existing codes untouched.
@@ -68,6 +68,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const changes: string[] = [];
   if ((insurerId || null) !== (session.insurerId || null)) changes.push("changed insurer");
   if (selfPayStatus === "waived" && session.selfPayStatus !== "waived") changes.push(insurerId ? "waived the co-pay" : "waived the balance");
+  if (selfPayStatus === "probono" && session.selfPayStatus !== "probono") changes.push("marked pro bono");
   if (stage === "writeoff" && curStage !== "writeoff") changes.push("wrote off the claim");
   if (stage === "writedown" && curStage !== "writedown") changes.push("wrote down the claim");
   if (paid && curStage !== "paid") changes.push("marked paid");

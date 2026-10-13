@@ -188,8 +188,13 @@ export interface ClinicianBillingSettings {
 
 /** Self-pay disposition. Undefined/null = paid in full at the visit (the default,
  *  so legacy self-pay is unchanged). "owing" = a running balance the client still
- *  owes. "waived" = the fee was written off. Ignored for insured sessions. */
-export type SelfPayStatus = "owing" | "waived" | null;
+ *  owes. "waived" = the fee was written off. "probono" = free care, given at no
+ *  charge (recorded for reporting, never billed, collected, or paid out).
+ *  Ignored for insured sessions. */
+export type SelfPayStatus = "owing" | "waived" | "probono" | null;
+/** Coerce a stored/incoming value to a valid self-pay disposition. */
+export const asSelfPayStatus = (v: unknown): SelfPayStatus =>
+  v === "owing" || v === "waived" || v === "probono" ? v : null;
 
 export interface SessionInput {
   clinicianId: string;
@@ -606,7 +611,7 @@ function decryptSession(s: StoredSession): BillingSession {
     dateOfService: s.dateOfService, cptCodes: s.cptCodes || [], durationHours: num(s.durationHours), totalCost: num(s.totalCost),
     copayCollected: num(s.copayCollected), copayDue: s.copayDue == null ? num(s.copayCollected) : num(s.copayDue),
     copayPaidDate: s.copayPaidDate ?? null,
-    selfPayStatus: s.selfPayStatus === "owing" || s.selfPayStatus === "waived" ? s.selfPayStatus : null,
+    selfPayStatus: asSelfPayStatus(s.selfPayStatus),
     billedDate: s.billedDate ?? null, insurancePaid: !!s.insurancePaid, paidDate: s.paidDate,
     insuranceDisposition: s.insuranceDisposition === "writeoff" || s.insuranceDisposition === "writedown" ? s.insuranceDisposition : null,
     insuranceCollected: s.insuranceCollected == null ? null : num(s.insuranceCollected),
@@ -744,7 +749,7 @@ async function loadStored(): Promise<StoredSession[]> {
       // undefined so decryptSession falls back to copay_collected for those.
       totalCost: num(r.total_cost), copayCollected: num(r.copay_collected), copayDue: r.copay_due == null ? undefined : num(r.copay_due),
       copayPaidDate: copayDates[r.id as string] ?? null,
-      selfPayStatus: r.self_pay_status === "owing" || r.self_pay_status === "waived" ? r.self_pay_status : null,
+      selfPayStatus: asSelfPayStatus(r.self_pay_status),
       billedDate: r.billed_date ? String(r.billed_date).slice(0, 10) : null, insurancePaid: !!r.insurance_paid,
       paidDate: r.paid_date ? String(r.paid_date).slice(0, 10) : null,
       insuranceDisposition: adj[r.id as string]?.disposition ?? null, insuranceCollected: adj[r.id as string]?.collected ?? null,

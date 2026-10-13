@@ -22,7 +22,7 @@ export interface Activity {
   id: string; date: string; clinician: string; codes: string[]; codeLabel: string;
   insurer: string; insurerId: string | null; total: number; copay: number; copayDue: number;
   stage: "self" | "logged" | "billed" | "paid" | "writeoff" | "writedown"; paidDate: string | null; billedDate: string | null;
-  selfPayStatus?: "owing" | "waived" | null; selfPayOwed?: number; insuranceCollected?: number | null;
+  selfPayStatus?: "owing" | "waived" | "probono" | null; selfPayOwed?: number; insuranceCollected?: number | null;
   /** The biller's short note on an unbilled claim, so the clinician sees the status. */
   billNote?: string;
 }
@@ -75,7 +75,7 @@ export default function ClientDetail({
   const [ecAdjMode, setEcAdjMode] = useState<"collected" | "adjusted">("adjusted");
   const [ecBilled, setEcBilled] = useState("");
   const [ecPaid, setEcPaid] = useState("");
-  const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived">("paid");
+  const [ecSelfPay, setEcSelfPay] = useState<"paid" | "owing" | "waived" | "probono">("paid");
   // Insured visit: the co-pay was waived (written off, not chased) rather than
   // just not collected. Mirrors the "Waive" option on the log-a-session form.
   const [ecCopayWaived, setEcCopayWaived] = useState(false);
@@ -122,9 +122,9 @@ export default function ClientDetail({
     setEcBilled(a.billedDate ?? "");
     // If the charge is already in a collected state but no collected date was ever
     // recorded, show today (what it would save as) rather than a blank field.
-    const paidOnOpen = a.insurerId ? a.stage === "paid" : (a.selfPayStatus !== "owing" && a.selfPayStatus !== "waived");
+    const paidOnOpen = a.insurerId ? a.stage === "paid" : (a.selfPayStatus !== "owing" && a.selfPayStatus !== "waived" && a.selfPayStatus !== "probono");
     setEcPaid(a.paidDate ?? (paidOnOpen ? today : ""));
-    setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : "paid");
+    setEcSelfPay(a.selfPayStatus === "owing" ? "owing" : a.selfPayStatus === "waived" ? "waived" : a.selfPayStatus === "probono" ? "probono" : "paid");
     setEcCopayWaived(!!a.insurerId && a.selfPayStatus === "waived");
     // Seed the adjustment amount from the stored collected amount (as the "adjusted" figure).
     const billedIns = round2(Math.max(0, (a.total || 0) - (a.copayDue || 0)));
@@ -1044,9 +1044,9 @@ export default function ClientDetail({
                               )}
                               <label>Insurer<select className="ls-in" value={ecInsurer} onChange={(e) => setEcInsurer(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
                               {!ecInsurer && <>
-                                <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => { const v = e.target.value as typeof ecSelfPay; setEcSelfPay(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option></select></label>
+                                <label>Was it paid?<select className="ls-in" value={ecSelfPay} onChange={(e) => { const v = e.target.value as typeof ecSelfPay; setEcSelfPay(v); if (v === "paid" && !ecPaid) setEcPaid(today); }}><option value="paid">Paid in full</option><option value="owing">Owing</option><option value="waived">Waived</option><option value="probono">Pro bono</option></select></label>
                                 {ecSelfPay === "owing" && <label>Collected so far<input type="number" step="0.01" min="0" className="ls-in" value={ecCopay} onChange={(e) => setEcCopay(e.target.value)} /></label>}
-                                {ecSelfPay !== "waived" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected. Set independently of the date of service." /></label>}
+                                {ecSelfPay !== "waived" && ecSelfPay !== "probono" && <label>Paid date <span className="opt">when collected</span><input type="date" className="ls-in" value={ecPaid} max={today} onChange={(e) => setEcPaid(e.target.value)} title="When the self-pay money was collected. Set independently of the date of service." /></label>}
                               </>}
                               {ecInsurer && <>
                                 <label>Co-pay due<input type="number" step="0.01" min="0" className="ls-in" value={ecDue} onChange={(e) => setEcDue(e.target.value)} /></label>
