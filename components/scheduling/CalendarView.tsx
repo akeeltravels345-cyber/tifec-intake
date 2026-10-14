@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Appointment, AppointmentType, AppointmentMode, AppointmentStatus, DayHours, DateOverride } from "@/lib/scheduling";
+import { getClinician } from "@/lib/clinicians";
 
 interface Clin { id: string; name: string; }
 interface Insurer { id: string; name: string; }
@@ -242,6 +243,22 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
 
   const typeById = (id: string | null) => types.find((t) => t.id === id) || null;
   const clinName = (id: string) => clinicians.find((c) => c.id === id)?.name || id;
+  // Who created this booking, in plain words. Client self-bookings read as the
+  // client; an Acuity import says so; otherwise it's the staff member (clinician
+  // or admin/owner) who entered it, resolved to their name even if they aren't
+  // on the bookable roster.
+  const bookedByLabel = (a: Appointment) => {
+    if (a.source === "client") return "the client (booked online)";
+    if (a.createdBy === "acuity-import") return "Acuity import";
+    if (!a.createdBy) return "staff";
+    return getClinician(a.createdBy)?.name || clinName(a.createdBy);
+  };
+  // Date + time a booking was made, in Cayman time (consistent with the rest of
+  // the calendar). Falls back to just the date if there's no timestamp.
+  const bookedWhen = (iso: string) => {
+    if (!iso) return "";
+    try { return `${prettyDate(cayDay(iso))} at ${label12(cayMinutes(iso))}`; } catch { return ""; }
+  };
   // Compact label for the calendar filter toggles: drop the title prefix
   // (Dr./Mrs./…) and keep the first name, which reads cleanly on a chip.
   const shortName = (full: string) => full.replace(/^(Dr|Dr\.|Mrs|Mrs\.|Mr|Mr\.|Ms|Ms\.)\s+/i, "").split(/\s+/)[0] || full;
@@ -906,6 +923,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   <div className="cvr-sec-h">Unavailable</div>
                   <Row k="Clinician" v={clinName(a.clinicianId)} />
                   {a.notes && <Row k="Note" v={a.notes} />}
+                  <Row k="Added by" v={bookedByLabel(a)} />
+                  {a.createdAt && <Row k="Added on" v={bookedWhen(a.createdAt)} />}
                 </div>
               ) : (
                 <>
@@ -950,6 +969,8 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     <Row k="Status" v={STATUS.find((x) => x.key === a.status)?.label || a.status} />
                     <Row k="Payment" v={a.insurancePath === "insurance" ? `Insurance${a.insurerId ? " · " + (insurers.find((i) => i.id === a.insurerId)?.name || "") : ""}` : "Self-pay"} />
                     {a.capacity > 1 && <Row k="Seats" v={`${(a.attendees || []).length} of ${a.capacity}`} />}
+                    <Row k="Booked by" v={bookedByLabel(a)} />
+                    {a.createdAt && <Row k="Booked on" v={bookedWhen(a.createdAt)} />}
                   </div>
 
                   <div className="cvr-sec">
