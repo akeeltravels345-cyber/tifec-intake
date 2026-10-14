@@ -6,6 +6,9 @@ import PwaRegister from "@/components/PwaRegister";
 export const metadata: Metadata = {
   title: "The Institute for Essential Care",
   description: "The Institute for Essential Care: secure scheduling, client intake, and billing.",
+  // Declared here (not as a raw <link>) so a nested route — e.g. the /m mobile
+  // scheduling app — can override it with its own manifest.
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,8 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             src script via next/script beforeInteractive — an inline <script>
             (even dangerouslySetInnerHTML) triggers a React 19 dev warning. */}
         <Script src="/theme-init.js" strategy="beforeInteractive" />
-        {/* Installable web app (Add to Home Screen). */}
-        <link rel="manifest" href="/manifest.webmanifest" />
+        {/* Installable web app (Add to Home Screen). The manifest itself is set
+            via the metadata export above so nested routes can override it. */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
