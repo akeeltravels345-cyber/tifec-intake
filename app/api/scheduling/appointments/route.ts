@@ -3,7 +3,7 @@ import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, canTreatClients, CLINICIANS, getClinician, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
-  createRecurring, deleteSeriesFrom, getAppointment, getAvailability, listAppointmentTypes,
+  createRecurring, createDayBlocks, deleteSeriesFrom, getAppointment, getAvailability, listAppointmentTypes,
   type Appointment,
 } from "@/lib/scheduling";
 import { externalBusyIntervals } from "@/lib/externalBusy";
@@ -151,6 +151,18 @@ export async function POST(req: Request) {
       }
       const base = { ...body, clinicianId, createdBy: me.id, source: "staff" } as Record<string, unknown>;
       delete base.repeatEveryDays; delete base.repeatCount; delete base.repeatUntil;
+      // Block off whole days across a date range (e.g. a vacation): one full-day
+      // block per day, so every day in the range stops taking bookings.
+      if (body.kind === "block" && body.allDay && body.blockThrough) {
+        const from = String(body.blockFrom || "").slice(0, 10);
+        const to = String(body.blockThrough).slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) {
+          return NextResponse.json({ error: "Pick a valid start and end date." }, { status: 400 });
+        }
+        delete base.allDay; delete base.blockFrom; delete base.blockThrough;
+        const { created, days, truncated } = await createDayBlocks(base as never, from, to);
+        return NextResponse.json({ ok: true, appointment: created[0], count: days, truncated });
+      }
       const everyDays = Number(body.repeatEveryDays) || 0;
       // Series can end after a fixed number of occurrences, or on a date.
       let count = Number(body.repeatCount) || 1;

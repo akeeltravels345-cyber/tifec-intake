@@ -73,7 +73,7 @@ const hhmm = (minutes: number) => `${pad(Math.floor(minutes / 60))}:${pad(minute
 const label12 = (minutes: number) => { let h = Math.floor(minutes / 60); const m = minutes % 60; const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12; return `${h}${m ? ":" + pad(m) : ""}${ap}`; };
 const prettyDate = (dateStr: string) => { const [y, m, d] = partsOf(dateStr); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" }); };
 
-type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number; _repeatEnds?: "count" | "date" | "year"; _repeatUntil?: string };
+type Draft = Partial<Appointment> & { _date?: string; _startMin?: number; _durMin?: number; _repeatEvery?: number; _repeatCount?: number; _repeatEnds?: "count" | "date" | "year"; _repeatUntil?: string; _allDay?: boolean; _blockThrough?: string };
 
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; };
 
@@ -306,18 +306,26 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     if (isGroup(draft) && !String(draft.clientName || "").trim()) draft.clientName = typeById(draft.typeId || "")?.name || "Group session";
     if (draft.kind !== "block" && !isGroup(draft) && !String(draft.clientName || "").trim()) { setErr("Who is it for?"); return; }
     if (!draft.clinicianId) { setErr("Pick a clinician."); return; }
-    const startAt = utcFromCay(draft._date!, draft._startMin!);
-    const endAt = utcFromCay(draft._date!, draft._startMin! + (draft._durMin || 50));
+    // A whole-day block over a date range (e.g. vacation): the server makes one
+    // full-day block per day, so start/duration don't apply — just the dates.
+    const isRangeBlock = !draft.id && draft.kind === "block" && !!draft._allDay;
+    if (isRangeBlock && draft._blockThrough && draft._blockThrough < (draft._date || "")) { setErr("The end date is before the start date."); return; }
+    const startAt = isRangeBlock ? utcFromCay(draft._date!, DAY_START * 60) : utcFromCay(draft._date!, draft._startMin!);
+    const endAt = isRangeBlock ? utcFromCay(draft._date!, DAY_END * 60) : utcFromCay(draft._date!, draft._startMin! + (draft._durMin || 50));
     setBusy(true);
     const payload: Record<string, unknown> = { ...draft, startAt, endAt };
-    if (!draft.id && draft._repeatEvery) {
+    if (isRangeBlock) {
+      payload.allDay = true;
+      payload.blockFrom = draft._date;
+      payload.blockThrough = draft._blockThrough || draft._date;
+    } else if (!draft.id && draft._repeatEvery) {
       payload.repeatEveryDays = draft._repeatEvery;
       if (draft._repeatEnds === "date" && draft._repeatUntil) payload.repeatUntil = draft._repeatUntil;
       // "Ongoing" materialises about a year's worth (the server caps at 52).
       else if (draft._repeatEnds === "year") payload.repeatCount = Math.min(52, Math.floor(365 / draft._repeatEvery));
       else payload.repeatCount = draft._repeatCount || 1;
     }
-    delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount; delete payload._repeatEnds; delete payload._repeatUntil;
+    delete payload._date; delete payload._startMin; delete payload._durMin; delete payload._repeatEvery; delete payload._repeatCount; delete payload._repeatEnds; delete payload._repeatUntil; delete payload._allDay; delete payload._blockThrough;
     const action = draft.id ? "update" : "create";
     const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload, notifyClient }) });
     const data = await res.json().catch(() => ({}));
@@ -576,16 +584,24 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   })()}
                   {placed.map(({ a, members, s, e, lane, laneCount }) => {
                     const t = typeById(a.typeId);
-                    const top = ((s - DAY_START * 60) / 60) * HOUR;
-                    const height = Math.max(18, ((e - s) / 60) * HOUR - 2);
-                    const width = 100 / laneCount, left = lane * width;
                     const isBlock = a.kind === "block";
+                    // A whole-day block (e.g. vacation) spans 00:00–23:59; clamp it
+                    // to the visible 8am–8pm window so it renders as a clean
+                    // full-column bar instead of overflowing the grid.
+                    const vs = isBlock ? Math.max(s, DAY_START * 60) : s;
+                    const ve = isBlock ? Math.min(e, DAY_END * 60) : e;
+                    const top = ((vs - DAY_START * 60) / 60) * HOUR;
+                    const height = Math.max(18, ((ve - vs) / 60) * HOUR - 2);
+                    const width = 100 / laneCount, left = lane * width;
                     const isGroup = members.length > 1; // several clients in one slot
                     const tint = isFreeConsult(t?.name) ? FREE_TINT : (MODE_TINT[a.mode] || MODE_TINT.either);
                     // Acuity-style label: "Client: Service - Format", then the time range.
                     const service = a.capacity > 1 ? `${t?.name || "Group"} (${(a.attendees || []).length}/${a.capacity})` : (t?.name || "");
                     const title = [service, CAL_MODE_LABEL[a.mode]].filter(Boolean).join(" - ");
-                    const timeRange = `${label12(s)}-${label12(e)}`;
+                    // A block covering the whole visible day reads as "All day"
+                    // rather than a literal 12am–11:59pm range.
+                    const allDayBlock = isBlock && s <= DAY_START * 60 && e >= DAY_END * 60;
+                    const timeRange = allDayBlock ? "All day" : `${label12(s)}-${label12(e)}`;
                     const style = { top, height, left: `${left}%`, width: `calc(${width}% - 3px)`,
                       ...(isBlock ? {} : { background: tint.bg, borderLeftColor: tint.bar, color: tint.fg }) };
                     return (
@@ -703,11 +719,25 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                   <input value={clinName(draft.clinicianId || ownId || "")} readOnly disabled />
                 )}
               </label>
-              <label className="cal-f"><span>Date</span><input type="date" value={draft._date || ""} onChange={(e) => setDraft({ ...draft, _date: e.target.value })} /></label>
-              <label className="cal-f"><span>Start</span><input type="time" value={hhmm(draft._startMin || 540)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); setDraft({ ...draft, _startMin: h * 60 + m }); }} /></label>
-              <label className="cal-f"><span>Duration (min)</span><input type="number" min={5} step={5} value={draft._durMin || 50} onChange={(e) => setDraft({ ...draft, _durMin: Number(e.target.value) })} /></label>
+              {draft.kind === "block" && !draft.id && (
+                <label className="cal-f"><span>Length</span>
+                  <select value={draft._allDay ? "allday" : "hours"} onChange={(e) => setDraft({ ...draft, _allDay: e.target.value === "allday" })}>
+                    <option value="hours">Part of the day</option>
+                    <option value="allday">Whole day(s)</option>
+                  </select>
+                </label>
+              )}
+              <label className="cal-f"><span>{draft.kind === "block" && draft._allDay ? "From" : "Date"}</span><input type="date" value={draft._date || ""} onChange={(e) => setDraft({ ...draft, _date: e.target.value })} /></label>
+              {draft.kind === "block" && draft._allDay ? (
+                <label className="cal-f"><span>To</span><input type="date" value={draft._blockThrough || draft._date || ""} min={draft._date} onChange={(e) => setDraft({ ...draft, _blockThrough: e.target.value })} /></label>
+              ) : (
+                <>
+                  <label className="cal-f"><span>Start</span><input type="time" value={hhmm(draft._startMin || 540)} onChange={(e) => { const [h, m] = e.target.value.split(":").map(Number); setDraft({ ...draft, _startMin: h * 60 + m }); }} /></label>
+                  <label className="cal-f"><span>Duration (min)</span><input type="number" min={5} step={5} value={draft._durMin || 50} onChange={(e) => setDraft({ ...draft, _durMin: Number(e.target.value) })} /></label>
+                </>
+              )}
 
-              {!draft.id && (
+              {!draft.id && !(draft.kind === "block" && draft._allDay) && (
                 <>
                   <label className="cal-f"><span>Repeat</span>
                     <select value={draft._repeatEvery || 0} onChange={(e) => setDraft({ ...draft, _repeatEvery: Number(e.target.value) })}>

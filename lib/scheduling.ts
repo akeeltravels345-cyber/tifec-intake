@@ -648,6 +648,29 @@ export async function createRecurring(input: ApptInput, everyDays: number, count
   return { created, skipped };
 }
 
+/** Block off whole days across a date range (e.g. a vacation). Creates one
+ *  full-day block (Cayman 00:00–23:59) per day from `fromDate` to `toDate`
+ *  inclusive, all sharing a seriesId so "remove this and all later" clears the
+ *  whole stretch. Unlike createRecurring it does NOT skip days that already have
+ *  appointments — the day is blocked regardless (it just stops NEW bookings).
+ *  Capped at ~6 months to guard against a runaway range. */
+export async function createDayBlocks(input: ApptInput, fromDate: string, toDate: string): Promise<{ created: Appointment[]; days: number; truncated: boolean }> {
+  const seriesId = randomId();
+  const MAX = 184; // ~6 months
+  const from = fromDate.slice(0, 10), to = toDate.slice(0, 10);
+  const created: Appointment[] = [];
+  let d = from, n = 0;
+  while (d <= to && n < MAX) {
+    created.push(await createAppointment({
+      ...input, kind: "block", seriesId,
+      startAt: utcAtCayMidnightStr(d),         // d 00:00 Cayman
+      endAt: utcFromCayMinutes(d, 24 * 60 - 1), // d 23:59 Cayman — blocks the whole day
+    }));
+    d = addDaysStr(d, 1); n++;
+  }
+  return { created, days: n, truncated: d <= to };
+}
+
 /** Delete this occurrence and every later one in the same series. Guarded so a
  *  pre-migration table (no series_id) just removes the single appointment. */
 export async function deleteSeriesFrom(seriesId: string, fromStartAt: string): Promise<number> {
