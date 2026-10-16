@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin, CLINICIANS, getClinician, type Clinician } from "@/lib/clinicians";
+import { isSystemAdmin, canTreatClients, CLINICIANS, getClinician, type Clinician } from "@/lib/clinicians";
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
   createRecurring, deleteSeriesFrom, getAppointment, getAvailability, listAppointmentTypes,
@@ -70,8 +70,14 @@ async function attachVideo(appt: Appointment): Promise<Appointment> {
 
 // Reads and writes are scoped: a treating clinician sees and edits only their
 // own agenda; the owner, Donnet O'Connor and the admin see and edit everyone.
-const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
-const isTreating = (c: Clinician) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
+// Edit-all (managers): must match seesAllSchedule in app/schedule/layout.tsx —
+// Nick (biller + practicum) oversees the practice, so he's included here too.
+const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor" || c.id === "nick-oconnor";
+// Can VIEW the calendar: any treating clinician — including a practicum biller
+// like Nick (canTreatClients allows a biller who is also practicum) — plus test
+// accounts. Admins come in via seesAll. Mirrors canTreatClients so this gate
+// never drifts from the roster rules again.
+const isTreating = (c: Clinician) => !!c.test || canTreatClients(c);
 
 export async function GET(req: Request) {
   const user = await getBillingUser();
