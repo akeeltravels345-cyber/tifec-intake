@@ -56,7 +56,7 @@ function useGlowBudget(key: string): boolean {
 export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarData; isDev?: boolean }) {
   const path = usePathname();
   const tab = useSearchParams().get("tab");
-  const { role, hasBilling, isAdmin, canSchedule, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
+  const { role, hasBilling, isAdmin, canSchedule, schedulingApp, meId, name, avatar, hasOwnClients, queueCount, needReview, teamUnread, openTickets, importPending, noteCount, notesEnabled, canSwitchViews, viewingAsRole, viewingAsName, switchTargets } = data;
   const navGlow = useGlowBudget("copaynav");
   const notesGlow = useGlowBudget("notesnew");
   const handbookGlow = useGlowBudget("handbooknew");
@@ -88,7 +88,17 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // Team group so it's easy to find.
   const uHipaa: Item = { href: "/team/hipaa", label: "HIPAA", icon: IcKey, match: (p) => p.startsWith("/team/hipaa"), highlight: hipaaGlow };
   let groups: Group[];
-  if (isAdmin && hasBilling) {
+  if (schedulingApp) {
+    // Standalone Scheduling app: scheduling-only navigation, nothing from
+    // billing / intake / team. The calendar's own "More" menu carries the rest
+    // (connections, services, stats) for managers.
+    groups = [
+      { label: "", items: [
+        uSchedule,
+        { href: "/schedule/hours", label: "Availability", icon: IcSetup, match: (p) => p.startsWith("/schedule/hours") },
+      ] },
+    ];
+  } else if (isAdmin && hasBilling) {
     // The admin's own menu is intentionally lean: just their admin tools + team.
     // Billing / intake / clinician screens are reached by "viewing as" that role
     // via the switcher at the top of the sidebar — no duplicated menus here.
@@ -195,9 +205,9 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
     <>
       <aside className="bo-side">
         <div className="bo-brandrow">
-          <Link href="/today" className="bo-brand">
+          <Link href={schedulingApp ? "/schedule" : "/today"} className="bo-brand">
             <img className="bo-logo" src="/tifec-mark.png" alt="TIFEC" />
-            <div><div className="bo-bt">TIFEC</div><div className="bo-bs">Essential Care</div></div>
+            <div><div className="bo-bt">TIFEC</div><div className="bo-bs">{schedulingApp ? "Schedule" : "Essential Care"}</div></div>
           </Link>
           <NotificationBell initialUnread={noteCount} unreadMessages={teamUnread} />
         </div>

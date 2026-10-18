@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentClinician } from "@/lib/auth";
+import { isSchedulingApp, SCHEDULING_HOME } from "@/lib/appMode";
 import LoginForm from "./LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +12,10 @@ export default async function LoginPage({
 }) {
   const { next, timeout } = await searchParams;
   const me = await getCurrentClinician();
-  // Only allow internal relative redirect targets.
-  const safeNext = next && next.startsWith("/") ? next : "/today";
+  // Only allow internal relative redirect targets. The scheduling app lands on
+  // the calendar after sign-in; the portal lands on Today.
+  const home = isSchedulingApp() ? SCHEDULING_HOME : "/today";
+  const safeNext = next && next.startsWith("/") ? next : home;
   if (me) redirect(safeNext);
 
   return (

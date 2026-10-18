@@ -13,12 +13,14 @@ import { listStaged } from "@/lib/importStaging";
 import { NOTES_ENABLED } from "@/lib/sessionNotes";
 import { getAvatar } from "@/lib/users";
 import { listClients } from "@/lib/clients";
+import { isSchedulingApp } from "@/lib/appMode";
 
 export interface SidebarData {
   role: "owner" | "biller" | "clinician";
   hasBilling: boolean;
   isAdmin: boolean;
   canSchedule: boolean; // can see the "my schedule" agenda (treating clinicians + owner + Donnet + admin)
+  schedulingApp: boolean; // this deployment is the standalone Scheduling app (SCHEDULING_APP) — nav is scheduling-only
   meId: string;
   name: string;
   avatar: string | null;
@@ -74,6 +76,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     isAdmin: me.contact === "admin",
     // Treating clinicians see their own agenda; the owner and Donnet see all.
     canSchedule: inScheduleBeta(me), // beta: Shion + Nick (+ admin/test) only
+    schedulingApp: isSchedulingApp(),
     meId: me.id,
     name: me.name,
     avatar,

@@ -82,6 +82,12 @@ async function passwordVersion(clinicianId: string): Promise<number> {
 // ---------------------------------------------------------------------------
 // Cookie helpers (call from route handlers / server actions only)
 // ---------------------------------------------------------------------------
+// Setting COOKIE_DOMAIN (e.g. ".caymanessentialcare.com") shares the session
+// across subdomains, so a clinician signed in on the portal is already signed
+// in on the standalone scheduling app (and vice versa). Unset = host-only (the
+// original behaviour), so a single-domain deployment is unaffected.
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
 export async function setSessionCookie(clinicianId: string) {
   const pv = await passwordVersion(clinicianId);
   const store = await cookies();
@@ -91,11 +97,22 @@ export async function setSessionCookie(clinicianId: string) {
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   });
 }
 
 export async function clearSessionCookie() {
   const store = await cookies();
+  // Overwrite with an expired cookie on the same domain so a shared-domain
+  // session is actually cleared (store.delete alone won't match a Domain cookie).
+  store.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+  });
   store.delete(COOKIE_NAME);
 }
 

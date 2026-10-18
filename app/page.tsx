@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isSchedulingApp, SCHEDULING_HOME } from "@/lib/appMode";
 
 export default function Home() {
+  // On the standalone Scheduling deployment, the root is the calendar, not the
+  // client/clinician door page.
+  if (isSchedulingApp()) redirect(SCHEDULING_HOME);
   return (
     <div className="container">
       <div className="card hero">
