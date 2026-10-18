@@ -139,15 +139,24 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
               </div>
             </li>
           ))}
+          {/* Tasks ticked off move up here in the exact same safeguard format. */}
+          {doneTasks.map((t) => (
+            <li key={t.id}>
+              <span className="hp-safe-ic" aria-hidden="true">✓</span>
+              <div>
+                <div className="hp-safe-t">{t.title}</div>
+                <div className="hp-safe-d">{t.detail}</div>
+                <button
+                  type="button"
+                  onClick={() => changeStatus(t.id, "todo")}
+                  style={{ marginTop: 8, background: "none", border: 0, padding: 0, font: "inherit", fontSize: 12.5, fontWeight: 600, color: "var(--muted,#6b7679)", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  Move back to Still to do
+                </button>
+              </div>
+            </li>
+          ))}
         </ul>
-        {doneTasks.length > 0 && (
-          <>
-            <h3 className="hp-doneh" style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted,#5f6b75)", margin: "22px 0 2px" }}>Completed from the checklist</h3>
-            <ol className="hp-list">
-              {doneTasks.map(renderTask)}
-            </ol>
-          </>
-        )}
       </section>
 
       <section className="hp-sec">
