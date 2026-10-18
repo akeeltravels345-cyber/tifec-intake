@@ -4,6 +4,8 @@ import { isSystemAdmin, inScheduleBeta, type Clinician } from "@/lib/clinicians"
 import { getSidebarData } from "@/lib/sidebarData";
 import UnifiedSidebar from "@/components/UnifiedSidebar";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
+import InstallPrompt from "@/components/InstallPrompt";
+import { isSchedulingApp } from "@/lib/appMode";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export default async function ScheduleLayout({ children }: { children: React.Rea
     <div className="biz">
       {!devMode() && <IdleLogoutForUser />}
       <UnifiedSidebar data={data} isDev={devMode()} />
-      <main className="bo-main">{children}</main>
+      <main className="bo-main">{isSchedulingApp() && <InstallPrompt />}{children}</main>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { getBillingUser, devMode } from "@/lib/billingRole";
 import { inScheduleBeta } from "@/lib/clinicians";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import MobileNav from "@/components/scheduling/MobileNav";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function MobileAppLayout({ children }: { children: React.Re
         <span className="mapp-title">Schedule</span>
         <span className="mapp-who">{user.clinician.name}</span>
       </header>
-      <main className="mapp-main">{children}</main>
+      <main className="mapp-main"><InstallPrompt />{children}</main>
       <MobileNav />
     </div>
   );
