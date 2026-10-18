@@ -5290,7 +5290,7 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mapp-main {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 10px 10px calc(env(safe-area-inset-bottom, 0px) + 80px); /* clear the fixed bottom nav */
+  padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 76px); /* full-bleed; clear the fixed bottom nav */
 }
 
 .mnav {
@@ -5338,3 +5338,66 @@ body:has(.mapp) .sitefoot { display: none !important; }
   font-size: 15px; line-height: 1; padding: 6px; cursor: pointer; border-radius: 8px;
 }
 .installbar-x:hover { background: var(--panel); color: var(--muted); }
+
+/* ============================================================================
+   Mobile agenda — the "Today" screen of the scheduling app (/m). A committed
+   light look with a deep navy header band, independent of host dark mode.
+   ========================================================================== */
+.mag { display: flex; flex-direction: column; }
+.mag-head { background: #1E2A44; color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 14px; }
+.mag-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mag-dow { font-size: 12px; color: #9FB2C9; }
+.mag-date { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 1px; }
+.mag-av { width: 38px; height: 38px; border-radius: 50%; background: #2F8E93; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: 0 0 auto; }
+.mag-strip { display: flex; align-items: center; gap: 2px; margin-top: 16px; }
+.mag-wk { background: transparent; border: 0; color: #9FB2C9; font-size: 20px; line-height: 1; padding: 6px 4px; cursor: pointer; flex: 0 0 auto; }
+.mag-day { flex: 1 1 0; background: transparent; border: 0; color: #cdd8e6; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0 2px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mag-day-l { font-size: 11px; color: #9FB2C9; }
+.mag-day-n { font-size: 14px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.mag-day-n.today { color: #6CC2BD; font-weight: 700; }
+.mag-day.on .mag-day-n { background: #2F8E93; color: #fff; font-weight: 700; }
+.mag-day.on .mag-day-l { color: #fff; }
+.mag-dot { width: 4px; height: 4px; border-radius: 50%; background: transparent; }
+.mag-dot.show { background: #6CC2BD; }
+.mag-day.on .mag-dot.show { background: #fff; }
+
+.mag-body { padding: 12px 14px 0; }
+.mag-count { font-size: 12px; color: #6B7679; margin: 2px 2px 10px; }
+.mag-list { display: flex; flex-direction: column; gap: 10px; }
+.mag-card { width: 100%; text-align: left; background: #fff; border: 1px solid #E7ECEE; border-left: 4px solid #2F8E93; border-radius: 12px; padding: 12px 12px 12px 13px; display: flex; gap: 12px; align-items: stretch; cursor: pointer; -webkit-tap-highlight-color: transparent; font: inherit; }
+.mag-card:active { background: #f7f9f9; }
+.mag-card-time { min-width: 48px; display: flex; flex-direction: column; }
+.mag-card-time b { font-size: 15px; color: #232a3d; font-weight: 700; }
+.mag-card-time small { font-size: 11px; color: #8a969a; }
+.mag-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mag-card-name { font-size: 15px; font-weight: 600; color: #232a3d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mag-card-sub { font-size: 12.5px; color: #6B7679; }
+.mag-card-mode { font-size: 11px; color: #256E72; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.mag-card-mode svg { flex: 0 0 auto; }
+.mag-logged { color: #0F6E56; }
+.mag-intake { color: #9a3b2a; }
+.mag-card-go { color: #c3ccce; align-self: center; font-size: 20px; }
+
+.mag-empty { text-align: center; color: #6B7679; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.mag-empty-ic { font-size: 26px; color: #c3ccce; }
+.mag-empty p { margin: 0; font-size: 14px; }
+.mag-empty-btn { display: inline-block; background: #2F8E93; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 10px; }
+
+.mag-fab { position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); width: 54px; height: 54px; border-radius: 50%; background: #2F8E93; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(47,142,147,.45); text-decoration: none; z-index: 45; }
+.mag-fab:active { background: #256E72; }
+
+.mag-sheet-ov { position: fixed; inset: 0; background: rgba(20,25,35,.45); z-index: 60; display: flex; align-items: flex-end; }
+.mag-sheet { width: 100%; background: #fff; border-radius: 20px 20px 0 0; padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 18px); max-height: 85vh; overflow-y: auto; }
+.mag-sheet-grab { width: 38px; height: 4px; border-radius: 3px; background: #d7dde0; margin: 4px auto 12px; }
+.mag-sheet-name { font-size: 19px; font-weight: 700; color: #232a3d; }
+.mag-sheet-sub { font-size: 13px; color: #6B7679; margin-top: 3px; }
+.mag-sheet-join { display: flex; align-items: center; justify-content: center; gap: 6px; background: #2F8E93; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 12px; margin: 14px 0; }
+.mag-sheet-rows { border-top: 1px solid #eef1f2; padding-top: 10px; margin-top: 12px; }
+.mag-sheet-rows > div { display: flex; justify-content: space-between; font-size: 13.5px; padding: 6px 0; }
+.mag-sheet-rows span { color: #6B7679; }
+.mag-sheet-rows b { color: #232a3d; font-weight: 600; }
+.mag-sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.mag-btn { display: block; text-align: center; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 11px; border: 0; cursor: pointer; font: inherit; }
+.mag-btn.primary { background: #2E3192; color: #fff; }
+.mag-btn.ghost { background: transparent; color: #6B7679; border: 1px solid #e3e9ed; }
+.mag-done { text-align: center; font-size: 13.5px; color: #0F6E56; background: #E1F5EE; border-radius: 11px; padding: 12px; }

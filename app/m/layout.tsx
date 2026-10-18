@@ -4,7 +4,6 @@ import { getBillingUser, devMode } from "@/lib/billingRole";
 import { inScheduleBeta } from "@/lib/clinicians";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import MobileNav from "@/components/scheduling/MobileNav";
-import InstallPrompt from "@/components/InstallPrompt";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +24,12 @@ export default async function MobileAppLayout({ children }: { children: React.Re
   if (!user) redirect("/login?next=/m");
   if (!inScheduleBeta(user.clinician)) redirect("/today");
 
+  // Full-bleed shell: each screen renders its own dark header (date strip,
+  // month nav, profile, …), so there's no generic top bar here.
   return (
     <div className="biz mapp">
       {!devMode() && <IdleLogoutForUser />}
-      <header className="mapp-top">
-        <span className="mapp-title">Schedule</span>
-        <span className="mapp-who">{user.clinician.name}</span>
-      </header>
-      <main className="mapp-main"><InstallPrompt />{children}</main>
+      <main className="mapp-main">{children}</main>
       <MobileNav />
     </div>
   );
