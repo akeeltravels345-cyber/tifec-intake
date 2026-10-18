@@ -14,7 +14,7 @@ export default async function LoginPage({
   const me = await getCurrentClinician();
   // Only allow internal relative redirect targets. The scheduling app lands on
   // the calendar after sign-in; the portal lands on Today.
-  const home = isSchedulingApp() ? SCHEDULING_HOME : "/today";
+  const home = (await isSchedulingApp()) ? SCHEDULING_HOME : "/today";
   const safeNext = next && next.startsWith("/") ? next : home;
   if (me) redirect(safeNext);
 

@@ -76,7 +76,7 @@ export async function getSidebarData(me: Clinician): Promise<SidebarData> {
     isAdmin: me.contact === "admin",
     // Treating clinicians see their own agenda; the owner and Donnet see all.
     canSchedule: inScheduleBeta(me), // beta: Shion + Nick (+ admin/test) only
-    schedulingApp: isSchedulingApp(),
+    schedulingApp: await isSchedulingApp(),
     meId: me.id,
     name: me.name,
     avatar,
