@@ -55,6 +55,55 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
     finally { setBusy(""); }
   }
 
+  // Done tasks move up into "Already in place"; only the rest stay in "Still to do".
+  const pending = items.filter((i) => i.status !== "done");
+  const doneTasks = items.filter((i) => i.status === "done");
+
+  function renderTask(t: HipaaBoardItem) {
+    return (
+      <li key={t.id} className={`hp-task ${t.status}`}>
+        <div className="hp-task-head">
+          <span className={`hp-dot big ${t.status}`} />
+          <div className="hp-task-title">
+            <span className="hp-tt">{t.title}</span>
+            <span className="hp-tags">
+              <span className="hp-cat">{t.category}</span>
+              {t.priority && <span className={`hp-pri ${t.priority}`}>{PRIORITY_LABEL[t.priority] ?? t.priority}</span>}
+            </span>
+          </div>
+          <select className={`hp-status ${t.status}`} value={t.status} onChange={(e) => changeStatus(t.id, e.target.value as HipaaStatus)} aria-label={`Status for ${t.title}`}>
+            {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </select>
+        </div>
+
+        <p className="hp-detail">{t.detail}</p>
+
+        <div className="hp-notes">
+          {t.comments.length > 0 && (
+            <ul className="hp-comments">
+              {t.comments.map((c) => (
+                <li key={c.id}>
+                  <div className="hp-c-meta"><span className="hp-c-by">{c.byName || "Someone"}</span><span className="hp-c-at">{fmt(c.at)}</span></div>
+                  <div className="hp-c-text">{c.text}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="hp-addnote">
+            <input
+              className="hp-note-in"
+              placeholder="Add a progress note…"
+              value={drafts[t.id] ?? ""}
+              onChange={(e) => setDrafts((d) => ({ ...d, [t.id]: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(t.id); } }}
+            />
+            <button type="button" className="hp-note-btn" onClick={() => addComment(t.id)} disabled={busy === t.id || !(drafts[t.id] ?? "").trim()}>{busy === t.id ? "Saving…" : "Add"}</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
   return (
     <div className="hp-wrap">
       <header className="hp-head">
@@ -79,7 +128,7 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
 
       <section className="hp-sec">
         <h2 className="hp-sech">Already in place</h2>
-        <p className="hp-secsub">Safeguards the app already provides to protect health information.</p>
+        <p className="hp-secsub">Safeguards the app already provides, plus anything you&apos;ve ticked off below.</p>
         <ul className="hp-safe">
           {safeguards.map((s) => (
             <li key={s.title}>
@@ -91,6 +140,14 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
             </li>
           ))}
         </ul>
+        {doneTasks.length > 0 && (
+          <>
+            <h3 className="hp-doneh" style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted,#5f6b75)", margin: "22px 0 2px" }}>Completed from the checklist</h3>
+            <ol className="hp-list">
+              {doneTasks.map(renderTask)}
+            </ol>
+          </>
+        )}
       </section>
 
       <section className="hp-sec">
@@ -99,48 +156,9 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
       </section>
 
       <ol className="hp-list">
-        {items.map((t) => (
-          <li key={t.id} className={`hp-task ${t.status}`}>
-            <div className="hp-task-head">
-              <span className={`hp-dot big ${t.status}`} />
-              <div className="hp-task-title">
-                <span className="hp-tt">{t.title}</span>
-                <span className="hp-tags">
-                  <span className="hp-cat">{t.category}</span>
-                  {t.priority && <span className={`hp-pri ${t.priority}`}>{PRIORITY_LABEL[t.priority] ?? t.priority}</span>}
-                </span>
-              </div>
-              <select className={`hp-status ${t.status}`} value={t.status} onChange={(e) => changeStatus(t.id, e.target.value as HipaaStatus)} aria-label={`Status for ${t.title}`}>
-                {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-              </select>
-            </div>
-
-            <p className="hp-detail">{t.detail}</p>
-
-            <div className="hp-notes">
-              {t.comments.length > 0 && (
-                <ul className="hp-comments">
-                  {t.comments.map((c) => (
-                    <li key={c.id}>
-                      <div className="hp-c-meta"><span className="hp-c-by">{c.byName || "Someone"}</span><span className="hp-c-at">{fmt(c.at)}</span></div>
-                      <div className="hp-c-text">{c.text}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="hp-addnote">
-                <input
-                  className="hp-note-in"
-                  placeholder="Add a progress note…"
-                  value={drafts[t.id] ?? ""}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [t.id]: e.target.value }))}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addComment(t.id); } }}
-                />
-                <button type="button" className="hp-note-btn" onClick={() => addComment(t.id)} disabled={busy === t.id || !(drafts[t.id] ?? "").trim()}>{busy === t.id ? "Saving…" : "Add"}</button>
-              </div>
-            </div>
-          </li>
-        ))}
+        {pending.length > 0
+          ? pending.map(renderTask)
+          : <li className="hp-task"><p className="hp-detail" style={{ margin: 0 }}>🎉 Everything on this checklist is done. Great work.</p></li>}
       </ol>
 
       <p className="hp-foot">This board tracks the compliance project — it isn&apos;t legal advice or an official certification. A qualified HIPAA professional should confirm what applies and review the final setup. Because the practice is in the Cayman Islands, the Cayman Islands Data Protection Act (2021) also applies.</p>
