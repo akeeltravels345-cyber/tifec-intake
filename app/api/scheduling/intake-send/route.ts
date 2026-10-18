@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getBillingUser } from "@/lib/billingRole";
-import { isSystemAdmin, getClinician, type Clinician } from "@/lib/clinicians";
+import { isSystemAdmin, canTreatClients, getClinician, type Clinician } from "@/lib/clinicians";
 import { getAppointment, listAppointmentTypes, updateAppointment } from "@/lib/scheduling";
 import { sendIntakeInvite } from "@/lib/bookingCore";
 import { intakeLinkPath } from "@/lib/intakeRouting";
@@ -10,8 +10,10 @@ import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
 
-const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor";
-const isTreating = (c: Clinician) => !!c.test || (!c.intakeHidden && c.contact !== "biller" && c.contact !== "admin");
+// Keep in step with the scheduling API's gates (a practicum biller like Nick
+// counts as treating; managers include Nick).
+const seesAll = (c: Clinician) => isSystemAdmin(c) || c.contact === "owner" || c.id === "donnet-oconnor" || c.id === "nick-oconnor";
+const isTreating = (c: Clinician) => !!c.test || canTreatClients(c);
 
 // Manually send one or more intake forms to an appointment's client — e.g. for
 // appointments imported from Acuity (which come in marked "not required") that

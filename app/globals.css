@@ -5401,3 +5401,47 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mag-btn.primary { background: #2E3192; color: #fff; }
 .mag-btn.ghost { background: transparent; color: #6B7679; border: 1px solid #e3e9ed; }
 .mag-done { text-align: center; font-size: 13.5px; color: #0F6E56; background: #E1F5EE; border-radius: 11px; padding: 12px; }
+
+/* ===== Mobile appointment detail screen (/m/appt/[id]) ===== */
+.madet { display: flex; flex-direction: column; }
+.madet-head { background: #1E2A44; color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 18px; }
+.madet-head-top { margin-bottom: 8px; }
+.madet-back { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; margin-left: -8px; color: #cdd8e6; border-radius: 50%; }
+.madet-back:active { background: rgba(255,255,255,.08); }
+.madet-title { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+.madet-sub { font-size: 13px; color: #9FB2C9; margin-top: 3px; }
+.madet-when { font-size: 13px; color: #cdd8e6; margin-top: 10px; }
+
+.madet-body { padding: 14px; }
+.madet-join { display: flex; align-items: center; justify-content: center; gap: 7px; background: #2F8E93; color: #fff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 13px; border-radius: 12px; margin-bottom: 14px; }
+.madet-join:active { background: #256E72; }
+.madet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.madet-chip { font-size: 11.5px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+.madet-chip.ok { background: #E1F5EE; color: #0F6E56; }
+.madet-chip.warn { background: #f6e4e2; color: #9a3b2a; }
+
+.madet-rows { border-top: 1px solid #eef1f2; margin-top: 12px; padding-top: 6px; }
+.madet-rows > div { display: flex; justify-content: space-between; gap: 14px; font-size: 13.5px; padding: 8px 0; border-bottom: 1px solid #f3f5f6; }
+.madet-rows > div:last-child { border-bottom: 0; }
+.madet-rows span { color: #6B7679; flex: 0 0 auto; }
+.madet-rows b { color: #232a3d; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+
+.madet-msg { margin-top: 14px; font-size: 13px; padding: 10px 12px; border-radius: 10px; }
+.madet-msg.ok { background: #E1F5EE; color: #0F6E56; }
+.madet-msg.err { background: #f6e4e2; color: #9a3b2a; }
+
+.madet-actions { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
+.madet-row2 { display: flex; gap: 9px; }
+.madet-row2 .madet-btn { flex: 1; }
+.madet-btn { display: block; width: 100%; text-align: center; text-decoration: none; font-size: 14.5px; font-weight: 600; padding: 13px; border-radius: 12px; border: 0; cursor: pointer; font: inherit; }
+.madet-btn.primary { background: #2E3192; color: #fff; }
+.madet-btn.ghost { background: #fff; color: #232a3d; border: 1px solid #dde3e6; }
+.madet-btn.ghost:disabled { color: #b4b2a9; }
+.madet-btn.danger { background: #fff; color: #993C1D; border: 1px solid #f0dad5; }
+.madet-done { text-align: center; font-size: 13.5px; color: #0F6E56; background: #E1F5EE; border-radius: 12px; padding: 13px; }
+
+.madet-f { margin-top: 12px; }
+.madet-f label { display: block; font-size: 12px; color: #6B7679; margin-bottom: 5px; }
+.madet-f input { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #dde3e6; border-radius: 10px; background: #fff; color: #232a3d; box-sizing: border-box; }
+.madet-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6B7679; margin: 14px 0 4px; }
+.mag-btn.danger-solid { background: #b4432a; color: #fff; }

@@ -26,12 +26,10 @@ const initialsOf = (name: string) => {
   const words = name.replace(/\b(dr|mr|mrs|ms|mx|prof)\.?\b/gi, "").split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
 };
-const isLink = (v: string) => /^https?:\/\//.test(v || "");
 
 export default function MobileAgenda({ appts, types, todayCayman, clinicianName }: { appts: Appt[]; types: Type[]; todayCayman: string; clinicianName: string }) {
   const [selected, setSelected] = useState(todayCayman);
   const [weekStart, setWeekStart] = useState(mondayOf(todayCayman));
-  const [sheet, setSheet] = useState<Appt | null>(null);
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);
@@ -94,7 +92,7 @@ export default function MobileAgenda({ appts, types, todayCayman, clinicianName 
               const s = cayMin(a.startAt), lbl = label12(s);
               const virtual = a.mode === "virtual";
               return (
-                <button key={a.id} className="mag-card" style={{ borderLeftColor: accentOf(a) }} onClick={() => setSheet(a)}>
+                <a key={a.id} className="mag-card" style={{ borderLeftColor: accentOf(a) }} href={`/m/appt/${a.id}`}>
                   <span className="mag-card-time"><b>{lbl.t}</b><small>{lbl.ap}</small></span>
                   <span className="mag-card-main">
                     <span className="mag-card-name">{titleOf(a)}</span>
@@ -105,7 +103,7 @@ export default function MobileAgenda({ appts, types, todayCayman, clinicianName 
                     </span>
                   </span>
                   <span className="mag-card-go" aria-hidden="true">›</span>
-                </button>
+                </a>
               );
             })}
           </div>
@@ -113,40 +111,6 @@ export default function MobileAgenda({ appts, types, todayCayman, clinicianName 
       </div>
 
       <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>
-
-      {sheet && (() => {
-        const t = sheet.typeId ? typeById.get(sheet.typeId) : undefined;
-        const s = cayMin(sheet.startAt), e = cayMin(sheet.endAt);
-        const ls = label12(s), le = label12(e);
-        const virtual = sheet.mode === "virtual";
-        const d = parts(cayDate(sheet.startAt));
-        const when = `${d.toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" })} · ${ls.t}${ls.ap}–${le.t}${le.ap}`;
-        return (
-          <div className="mag-sheet-ov" onClick={() => setSheet(null)}>
-            <div className="mag-sheet" onClick={(ev) => ev.stopPropagation()}>
-              <div className="mag-sheet-grab" aria-hidden="true" />
-              <div className="mag-sheet-head">
-                <div className="mag-sheet-name">{titleOf(sheet)}</div>
-                <div className="mag-sheet-sub">{cleanType(t?.name) || "Appointment"} · {when}</div>
-              </div>
-              {virtual && isLink(sheet.locationOrLink) && (
-                <a className="mag-sheet-join" href={sheet.locationOrLink} target="_blank" rel="noopener noreferrer"><Ic n="video" /> Join video call</a>
-              )}
-              <div className="mag-sheet-rows">
-                <div><span>Mode</span><b>{virtual ? "Online" : "In person"}</b></div>
-                <div><span>Payment</span><b>{sheet.insurancePath === "insurance" ? "Insurance" : "Self-pay"}</b></div>
-                <div><span>Intake</span><b>{sheet.intakeStatus === "received" ? "Complete" : sheet.intakeStatus === "pending" ? "Outstanding" : "Not required"}</b></div>
-              </div>
-              <div className="mag-sheet-actions">
-                {sheet.billingSessionId
-                  ? <div className="mag-done">✓ Logged for billing</div>
-                  : <a className="mag-btn primary" href={`/billing/sessions/new?fromAppt=${sheet.id}`}>Log this session</a>}
-                <button className="mag-btn ghost" onClick={() => setSheet(null)}>Close</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
