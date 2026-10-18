@@ -144,9 +144,9 @@ export interface PracticeConfig {
 export const DEFAULT_PRACTICE_CONFIG: PracticeConfig = {
   billerCommissionPct: 3,
   processingFeePct: 2,
-  // The 2% platform fee went live as a real deduction on 2026-10-13 — charged only
-  // on cash collected on/after this date, so earlier months are untouched.
-  processingFeeStart: "2026-10-13",
+  // The 2% platform fee starts as a real deduction on 2027-01-01 — charged only on
+  // cash collected on/after this date, so nothing is charged for the rest of 2026.
+  processingFeeStart: "2027-01-01",
   provider: {},
   runningExpenses: [
     { id: "mktg", name: "Marketing & admin", detail: "Akeel O'Connor", amount: 1300, breakdown: [
