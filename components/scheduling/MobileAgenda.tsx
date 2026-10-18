@@ -27,10 +27,29 @@ const initialsOf = (name: string) => {
   return words.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
 };
 
-export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string }) {
+export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName, bookingUrl }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string; bookingUrl: string }) {
   const start0 = initialDay || todayCayman;
   const [selected, setSelected] = useState(start0);
   const [weekStart, setWeekStart] = useState(mondayOf(start0));
+  const [account, setAccount] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [signing, setSigning] = useState(false);
+
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(bookingUrl); }
+    catch { try { const ta = document.createElement("textarea"); ta.value = bookingUrl; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); } catch { /* ignore */ } }
+    setCopied(true); setTimeout(() => setCopied(false), 1600);
+  };
+  const shareLink = async () => {
+    const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
+    if (nav.share) { try { await nav.share({ title: "Book an appointment", url: bookingUrl }); return; } catch { /* fall through */ } }
+    copyLink();
+  };
+  const signOut = async () => {
+    setSigning(true);
+    try { document.cookie = "dev_role=; path=/; max-age=0"; document.cookie = "dev_as=; path=/; max-age=0"; await fetch("/api/auth/logout", { method: "POST" }); } catch { /* ignore */ }
+    window.location.href = "/login?next=/m";
+  };
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);
@@ -59,7 +78,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
             <div className="mag-dow">{headDow}</div>
             <div className="mag-date">{headDate}</div>
           </div>
-          <div className="mag-av">{initialsOf(clinicianName)}</div>
+          <button className="mag-av" onClick={() => setAccount(true)} aria-label="Account and booking link">{initialsOf(clinicianName)}</button>
         </div>
         <div className="mag-strip">
           <button className="mag-wk" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
@@ -112,6 +131,26 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
       </div>
 
       <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>
+
+      {account && (
+        <div className="mag-sheet-ov" onClick={() => setAccount(false)}>
+          <div className="mag-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="mag-sheet-grab" aria-hidden="true" />
+            <div className="mag-sheet-name">{clinicianName}</div>
+            <div className="mme-sec">Your booking link</div>
+            <div className="mme-link">{bookingUrl.replace(/^https?:\/\//, "")}</div>
+            <div className="mme-linkrow">
+              <button className="mme-btn teal" onClick={shareLink}>Share link</button>
+              <button className="mme-btn ghost" onClick={copyLink}>{copied ? "Copied ✓" : "Copy"}</button>
+            </div>
+            <div className="mag-acct-rows">
+              <a className="mme-row" href="/m/hours"><span>Your hours &amp; availability</span><span className="mme-chev" aria-hidden="true">›</span></a>
+              <a className="mme-row" href="/today"><span>Open the full web app</span><span className="mme-chev" aria-hidden="true">›</span></a>
+              <button className="mme-row danger" onClick={signOut} disabled={signing}><span>{signing ? "Signing out…" : "Sign out"}</span></button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

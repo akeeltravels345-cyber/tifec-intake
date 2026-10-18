@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { inScheduleBeta } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
@@ -27,10 +28,13 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
   const today = caymanToday();
   const monday = mondayOf(today);
 
-  const [types, appts] = await Promise.all([
+  const [types, appts, h] = await Promise.all([
     listAppointmentTypes(),
     listAppointments({ from: utcAtCayMidnight(addDays(monday, -7)), to: utcAtCayMidnight(addDays(monday, 56)), clinicianId: me.id }),
+    headers(),
   ]);
+  const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
+  const bookingUrl = `${origin}/book?clinician=${encodeURIComponent(me.id)}`;
 
   // Lean shape for the client — only what the agenda renders.
   const lean = appts
@@ -49,6 +53,7 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
       todayCayman={today}
       initialDay={initialDay}
       clinicianName={me.name}
+      bookingUrl={bookingUrl}
     />
   );
 }
