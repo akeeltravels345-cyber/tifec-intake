@@ -11,7 +11,10 @@ import { NextResponse, type NextRequest } from "next/server";
 // *.vercel.app URLs) are left alone, and limited to page requests so Vercel cron
 // jobs and OAuth callbacks that may hit the vercel host over /api keep working.
 // =============================================================================
-const CANONICAL_HOST = "portal.caymanessentialcare.com";
+// The portal's canonical domain by default; the standalone Scheduling
+// deployment overrides this (CANONICAL_HOST=schedule.caymanessentialcare.com)
+// so its own *.vercel.app URL bounces to the scheduling domain, not the portal.
+const CANONICAL_HOST = process.env.CANONICAL_HOST || "portal.caymanessentialcare.com";
 
 // =============================================================================
 // View-as is READ-ONLY.
