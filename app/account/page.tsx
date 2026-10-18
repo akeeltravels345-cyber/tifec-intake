@@ -8,7 +8,8 @@ import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import IdleTimeoutSetting from "@/components/IdleTimeoutSetting";
 import AvatarUpload from "@/components/AvatarUpload";
 import ThemeToggle from "@/components/ThemeToggle";
-import { getIdleMinutes, getAvatar, IDLE_MINUTES_CHOICES } from "@/lib/users";
+import MfaSetting from "@/components/MfaSetting";
+import { getIdleMinutes, getAvatar, getMfaState, IDLE_MINUTES_CHOICES } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function AccountPage() {
   const sidebar = await getSidebarData(me);
   const idleMinutes = await getIdleMinutes(me.id);
   const avatar = await getAvatar(me.id);
+  const mfa = await getMfaState(me.id);
   const myInitials = initials(me.name);
 
   return (
@@ -49,6 +51,10 @@ export default async function AccountPage() {
 
           <div className="card" style={{ marginTop: 18 }}>
             <AccountClient />
+          </div>
+
+          <div className="card" style={{ marginTop: 18 }}>
+            <MfaSetting initialEnabled={mfa.enabled} initialBackupRemaining={mfa.backupRemaining} />
           </div>
 
           <div className="card" style={{ marginTop: 18 }}>

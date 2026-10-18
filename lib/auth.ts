@@ -116,6 +116,67 @@ export async function clearSessionCookie() {
   store.delete(COOKIE_NAME);
 }
 
+// ---------------------------------------------------------------------------
+// Two-step login (MFA) challenge.
+//
+// When a password is correct but the account has two-step login on, we do NOT
+// create a session yet. Instead we set this short-lived, signed "challenge"
+// cookie naming who is half-logged-in, and only exchange it for a real session
+// once the one-time code is verified (POST /api/auth/mfa). It carries no
+// privileges on its own and expires in minutes, so a stolen password is useless
+// without the second factor.
+// ---------------------------------------------------------------------------
+const MFA_COOKIE = "tifec_mfa";
+const MFA_TTL_SECONDS = 5 * 60; // 5 minutes to enter the code
+
+export function createMfaChallengeToken(clinicianId: string): string {
+  const exp = Math.floor(Date.now() / 1000) + MFA_TTL_SECONDS;
+  const payloadB64 = Buffer.from(JSON.stringify({ cid: clinicianId, exp, k: "mfa" })).toString("base64url");
+  return `${payloadB64}.${sign(payloadB64)}`;
+}
+
+function verifyMfaChallengeToken(token: string): string | null {
+  const [payloadB64, sig] = token.split(".");
+  if (!payloadB64 || !sig) return null;
+  const expected = sign(payloadB64);
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  try {
+    const { cid, exp, k } = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+    if (k !== "mfa" || typeof exp !== "number" || exp < Math.floor(Date.now() / 1000)) return null;
+    return typeof cid === "string" ? cid : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setMfaChallengeCookie(clinicianId: string) {
+  const store = await cookies();
+  store.set(MFA_COOKIE, createMfaChallengeToken(clinicianId), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: MFA_TTL_SECONDS,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+  });
+}
+
+export async function clearMfaChallengeCookie() {
+  const store = await cookies();
+  store.set(MFA_COOKIE, "", {
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax",
+    path: "/", maxAge: 0, ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+  });
+  store.delete(MFA_COOKIE);
+}
+
+/** The clinician id of a valid, unexpired MFA challenge, or null. */
+export async function getMfaChallengeClinicianId(): Promise<string | null> {
+  const store = await cookies();
+  const token = store.get(MFA_COOKIE)?.value;
+  return token ? verifyMfaChallengeToken(token) : null;
+}
+
 /** The REAL signed-in clinician (ignoring any admin "view as"), or null. */
 async function resolveRealClinician(store: Awaited<ReturnType<typeof cookies>>): Promise<Clinician | null> {
   // 1) A real signed-in session always wins — this is how per-person logins work.

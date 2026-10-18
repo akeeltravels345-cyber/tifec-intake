@@ -253,6 +253,21 @@ button.primary:active { transform: translateY(0); }
 button.primary:disabled { opacity: .6; cursor: default; box-shadow: none; transform: none; filter: none; }
 button.primary-lg { padding: 14px 28px; font-size: 16px; border-radius: 11px; }
 
+/* Secondary / low-emphasis button (Cancel, Keep it on, Copy codes, etc.) */
+button.ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+button.ghost:hover { background: var(--raise, #f6f8f9); }
+button.ghost:disabled { opacity: .6; cursor: default; }
+
 .consent-text {
   font-size: 13px;
   line-height: 1.6;

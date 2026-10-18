@@ -59,9 +59,9 @@ export const HIPAA_TASKS: HipaaTask[] = [
   { id: "risk-assessment", title: "Documented risk assessment", category: "Assessment", priority: "soon",
     detail: "A written review of where the information lives and what could go wrong, usually done with a compliance consultant and refreshed periodically." },
   { id: "mfa", title: "Turn on two-step login (MFA) for staff", category: "Technical", priority: "soon",
-    detail: "A one-time code from a phone in addition to the password. Not built yet — Akeel can add it. One of the strongest, cheapest ways to prevent stolen-password break-ins." },
+    detail: "A one-time code from a phone in addition to the password. BUILT: each person turns it on under Account, Two-step login (scan a QR with an authenticator app; backup codes provided). One of the strongest, cheapest ways to prevent stolen-password break-ins. Remaining step: have all staff switch it on." },
   { id: "tech-hygiene", title: "Technical hygiene: private repo, key vault, backups", category: "Technical", priority: "later",
-    detail: "Make the code repository private, store the master encryption key in a secure vault with a rotation plan, and confirm the database's automatic backups are on and can be restored." },
+    detail: "Encryption key: DONE. Kept only in the host's secure environment variables, with a written rotation/backup plan (KEY_MANAGEMENT.md) and safe in-app rotation support. Still to do: flip the code repository to Private in GitHub settings (a one-time toggle), and confirm the database's automatic backups are on and can be restored." },
   { id: "sign-off", title: "Professional HIPAA sign-off", category: "Sign-off", priority: "later",
     detail: "Have a HIPAA compliance consultant or healthcare attorney review the whole setup — what turns 'we built it carefully' into 'we are compliant', on paper." },
 ];

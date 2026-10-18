@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getClinicianByEmail } from "@/lib/clinicians";
-import { getUser } from "@/lib/users";
-import { verifyPassword, setSessionCookie } from "@/lib/auth";
+import { getUser, getMfaState } from "@/lib/users";
+import { verifyPassword, setSessionCookie, setMfaChallengeCookie } from "@/lib/auth";
 import { logAuth } from "@/lib/db";
 import { rateLimit, rateLimitReset } from "@/lib/ratelimit";
 
@@ -52,6 +52,24 @@ export async function POST(req: Request) {
     // Log failed attempts only for known accounts (avoid storing attacker emails).
     await logAuth(clinician.id, "login_failed", "failed sign-in");
     return fail();
+  }
+
+  // Two-step login: a correct password is only step one. If this account has it
+  // turned on, issue a short-lived challenge instead of a session, and let the
+  // client collect the one-time code (verified at POST /api/auth/mfa).
+  let mfa = { enabled: false };
+  try { mfa = await getMfaState(clinician.id); } catch { /* columns absent → treat as off */ }
+  if (mfa.enabled) {
+    try {
+      await setMfaChallengeCookie(clinician.id);
+    } catch {
+      return NextResponse.json(
+        { error: "Server session is not configured (SESSION_SECRET). Contact your administrator." },
+        { status: 500 }
+      );
+    }
+    rateLimitReset(key); // password proven; the code step has its own limiter
+    return NextResponse.json({ ok: true, mfa: true });
   }
 
   try {
