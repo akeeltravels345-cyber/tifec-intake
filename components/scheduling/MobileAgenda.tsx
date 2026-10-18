@@ -23,13 +23,14 @@ const DOW = ["M", "T", "W", "T", "F", "S", "S"];
 const isFreeConsult = (name?: string | null) => /free\b.*consult/i.test(name || "");
 const cleanType = (name?: string | null) => (name || "").replace(/\s*-\s*(in\s*person|online|virtual)\b/i, "").replace(/\s{2,}/g, " ").trim();
 const initialsOf = (name: string) => {
-  const words = name.replace(/\b(dr|mr|mrs|ms|mx|prof)\.?\b/gi, "").split(/\s+/).filter(Boolean);
+  const words = name.replace(/^\s*(dr|mr|mrs|ms|mx|prof)\.?\s+/i, "").trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
 };
 
-export default function MobileAgenda({ appts, types, todayCayman, clinicianName }: { appts: Appt[]; types: Type[]; todayCayman: string; clinicianName: string }) {
-  const [selected, setSelected] = useState(todayCayman);
-  const [weekStart, setWeekStart] = useState(mondayOf(todayCayman));
+export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string }) {
+  const start0 = initialDay || todayCayman;
+  const [selected, setSelected] = useState(start0);
+  const [weekStart, setWeekStart] = useState(mondayOf(start0));
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);

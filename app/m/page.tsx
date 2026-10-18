@@ -16,12 +16,14 @@ const addDays = (d: string, n: number) => { const [y, m, dd] = d.split("-").map(
 const mondayOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); const w = (new Date(Date.UTC(y, m - 1, dd)).getUTCDay() + 6) % 7; return addDays(d, -w); };
 const utcAtCayMidnight = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd, CAY, 0)).toISOString(); };
 
-export default async function MobileTodayPage() {
+export default async function MobileTodayPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/m");
   const me = user.clinician;
   if (!inScheduleBeta(me)) redirect("/today");
 
+  const sp = await searchParams;
+  const initialDay = sp.d && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) ? sp.d : undefined;
   const today = caymanToday();
   const monday = mondayOf(today);
 
@@ -45,6 +47,7 @@ export default async function MobileTodayPage() {
       appts={lean}
       types={types.map((t) => ({ id: t.id, name: t.name, mode: t.mode, capacity: t.capacity ?? 1 }))}
       todayCayman={today}
+      initialDay={initialDay}
       clinicianName={me.name}
     />
   );
