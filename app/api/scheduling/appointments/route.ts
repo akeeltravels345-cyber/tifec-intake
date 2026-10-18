@@ -12,6 +12,7 @@ import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 import { sendBookingConfirmation, sendIntakeInvite } from "@/lib/bookingCore";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
+import { clientNameInSystem } from "@/lib/clients";
 import { caymanWhen } from "@/lib/caymanTime";
 import { portalToken } from "@/lib/portalAuth";
 import { randomBytes } from "crypto";
@@ -26,7 +27,12 @@ async function notifyClientOfBooking(appt: Appointment, origin: string): Promise
   const clinicianName = getClinician(appt.clinicianId)?.name || "your clinician";
   const assessment = await assessClientIntake(appt.clientName, type?.name || "", appt.clientEmail);
   const missingForms = assessment.missingForms;
-  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
+  // Don't auto-send intake to someone already in our client system — they're an
+  // established client, so only a brand-new name gets intake. (Staff can still
+  // send it by hand from the appointment.) Scheduling doesn't create the client
+  // record, so this reflects the pre-booking roster.
+  const alreadyClient = await clientNameInSystem(appt.clientName);
+  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0 && !alreadyClient;
   const coupleId = needsIntake && missingForms.includes("couples") ? (appt.coupleId || randomBytes(6).toString("hex")) : undefined;
   if (needsIntake) {
     const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(appt.clinicianId, form, coupleId)}` }));

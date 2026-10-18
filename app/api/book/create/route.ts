@@ -6,7 +6,7 @@ import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intake
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
-import { addClients } from "@/lib/clients";
+import { addClients, clientNameInSystem } from "@/lib/clients";
 import { sendPushToClinician } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +65,13 @@ export async function POST(req: Request) {
   if (!type) return NextResponse.json({ error: "That service is unavailable." }, { status: 404 });
   if (!canBook(clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
 
+  // Don't auto-send intake to someone already in our client system — they're an
+  // established client. Snapshot this BEFORE ensureBookingClient runs below, or it
+  // would see the record it just created. A client who tells us they're new
+  // (firstVisit) still gets intake, so a genuine namesake isn't shut out.
+  const firstVisit = body.firstVisit === true;
+  const suppressIntake = !firstVisit && await clientNameInSystem(name);
+
   // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
   // session (single booking only; month bookings are for 1:1 services).
   // session rather than booking the whole slot. They join the roster; a full or
@@ -86,9 +93,8 @@ export async function POST(req: Request) {
     const clinicianName = getClinician(clinicianId)?.name || "your clinician";
 
     const assessment = await assessClientIntake(name, type.name, email);
-    const firstVisit = body.firstVisit === true;
     const missingForms = firstVisit && assessment.requiredForms.length > 0 ? assessment.requiredForms : assessment.missingForms;
-    const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
+    const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0 && !suppressIntake;
     const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;
     if (needsIntake) {
       const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId || undefined)}` }));
@@ -144,10 +150,11 @@ export async function POST(req: Request) {
   // consultation needs none. If the client tells us they're new, treat every
   // required form as outstanding even if a same-name match exists.
   const assessment = await assessClientIntake(name, type.name, email);
-  const firstVisit = body.firstVisit === true;
   const missingForms = firstVisit && assessment.requiredForms.length > 0 ? assessment.requiredForms : assessment.missingForms;
-  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0;
-  const intakeStatus = assessment.requiredForms.length === 0 ? "not_required" : (needsIntake ? "pending" : "received");
+  const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0 && !suppressIntake;
+  // An established client we're skipping intake for is "not_required" (nothing to
+  // collect or remind about), not "received" (which would imply they filed it).
+  const intakeStatus = assessment.requiredForms.length === 0 || suppressIntake ? "not_required" : (needsIntake ? "pending" : "received");
   // One couple id, stored on the appointment, so the invite and any later
   // reminder share the same link and both partners' submissions group together.
   const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;

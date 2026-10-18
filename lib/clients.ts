@@ -411,6 +411,26 @@ export async function resolveClient(clinicianId: string, input: ClientInput): Pr
   return client.id;
 }
 
+/** True if someone with this name is already a client in the practice's system
+ *  (the client hub), matched on the same name key the hub uses for dedup
+ *  (case- and spacing-insensitive). Used to suppress AUTOMATIC intake sends to
+ *  established clients at booking time — staff can still send intake by hand.
+ *  A blank name is never a match. Must be evaluated BEFORE a booking creates or
+ *  links its own client record, or it would see the record it just made. */
+export async function clientNameInSystem(name: string): Promise<boolean> {
+  const parts = name.trim().replace(/\s+/g, " ").split(" ");
+  const first = parts[0] ?? "";
+  const last = parts.length > 1 ? parts.slice(1).join(" ") : "";
+  if (!first && !last) return false;
+  const key = nameKeyOf(first, last);
+  try {
+    const all = await loadStoredClients();
+    return all.some((c) => c.nameKey === key);
+  } catch {
+    return false; // store unreachable: fail open (don't block a genuine send)
+  }
+}
+
 /** Bulk add (from an import). Practice-level dedup: an existing person is reused
  *  (and linked to this clinician) rather than duplicated. */
 export async function addClients(
