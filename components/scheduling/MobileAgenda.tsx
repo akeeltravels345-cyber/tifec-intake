@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import InstallPrompt from "@/components/InstallPrompt";
 import MobileWhoPicker from "@/components/scheduling/MobileWhoPicker";
 
@@ -21,6 +21,10 @@ const addDays = (d: string, n: number) => { const [y, m, dd] = d.split("-").map(
 const mondayOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); const w = (new Date(Date.UTC(y, m - 1, dd)).getUTCDay() + 6) % 7; return addDays(d, -w); };
 const parts = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd)); };
 const DOW = ["M", "T", "W", "T", "F", "S", "S"];
+// Day-grid (Acuity-style): hours down the side, appointment blocks placed by time.
+const DAY_START = 7, DAY_END = 21, HOUR = 58; // 7am–9pm, px per hour
+const hourLabel = (h: number) => `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
+const tintOf = (free: boolean, group: boolean) => free ? { bg: "#faeae4", bar: "#D85A30" } : group ? { bg: "#e9eaf6", bar: "#2E3192" } : { bg: "#e4f3ee", bar: "#1f7a6f" };
 
 const isFreeConsult = (name?: string | null) => /free\b.*consult/i.test(name || "");
 const cleanType = (name?: string | null) => (name || "").replace(/\s*-\s*(in\s*person|online|virtual)\b/i, "").replace(/\s{2,}/g, " ").trim();
@@ -64,12 +68,27 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
     live.filter((a) => cayDate(a.startAt) === selected).sort((a, b) => a.startAt.localeCompare(b.startAt)),
     [live, selected]);
 
+  // Lane-pack overlapping appointments so they sit side by side in the grid.
+  const placed = useMemo(() => {
+    const items = dayList.map((a) => ({ a, s: cayMin(a.startAt), e: Math.max(cayMin(a.startAt) + 15, cayMin(a.endAt)) })).sort((x, y) => x.s - y.s || x.e - y.e);
+    const lanes: number[] = [];
+    const out = items.map((it) => { let lane = lanes.findIndex((end) => end <= it.s); if (lane === -1) { lane = lanes.length; lanes.push(it.e); } else lanes[lane] = it.e; return { ...it, lane }; });
+    const laneCount = Math.max(1, lanes.length);
+    return out.map((p) => ({ ...p, laneCount }));
+  }, [dayList]);
+
+  // The red "now" line, client-side only (avoids a hydration mismatch).
+  const [nowMin, setNowMin] = useState<number | null>(null);
+  useEffect(() => {
+    const upd = () => { const d = new Date(Date.now() - CAY * 3600e3); setNowMin(d.getUTCHours() * 60 + d.getUTCMinutes()); };
+    upd(); const id = setInterval(upd, 60000); return () => clearInterval(id);
+  }, []);
+
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const selDate = parts(selected);
   const headDow = selDate.toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "long" });
   const headDate = selDate.toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "long" });
 
-  const accentOf = (a: Appt) => { const t = a.typeId ? typeById.get(a.typeId) : undefined; return isFreeConsult(t?.name) ? "#D85A30" : (a.capacity > 1 ? "#2E3192" : "#2F8E93"); };
   const titleOf = (a: Appt) => { const t = a.typeId ? typeById.get(a.typeId) : undefined; return a.capacity > 1 ? (cleanType(t?.name) || "Group session") : (a.clientName || "Appointment"); };
   const subOf = (a: Appt) => { const t = a.typeId ? typeById.get(a.typeId) : undefined; return a.capacity > 1 ? `${a.capacity} people` : (cleanType(t?.name) || "Appointment"); };
 
@@ -108,35 +127,37 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
           <span className="mag-count">{dayList.length === 0 ? "none" : `${dayList.length} appt${dayList.length === 1 ? "" : "s"}`}</span>
         </div>
 
-        {dayList.length === 0 ? (
-          <div className="mag-empty">
-            <span className="mag-empty-ic" aria-hidden="true">✦</span>
-            <p>Nothing booked for this day.</p>
-            {viewingOwn && <a className="mag-empty-btn" href="/m/book">Book an appointment</a>}
-          </div>
-        ) : (
-          <div className="mag-list">
-            {dayList.map((a) => {
-              const s = cayMin(a.startAt), lbl = label12(s);
-              const virtual = a.mode === "virtual";
+        <div className="mgrid" style={{ height: (DAY_END - DAY_START) * HOUR + 10 }}>
+          {Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => DAY_START + i).map((h) => (
+            <div key={h} className="mgrid-row" style={{ top: (h - DAY_START) * HOUR }}>
+              <span className="mgrid-hr">{hourLabel(h)}</span>
+              <span className="mgrid-line" />
+            </div>
+          ))}
+          {selected === todayCayman && nowMin != null && nowMin >= DAY_START * 60 && nowMin <= DAY_END * 60 && (
+            <div className="mgrid-now" style={{ top: ((nowMin - DAY_START * 60) / 60) * HOUR }}><span /></div>
+          )}
+          <div className="mgrid-appts">
+            {placed.map((p) => {
+              const a = p.a;
+              const vs = Math.max(p.s, DAY_START * 60), ve = Math.min(p.e, DAY_END * 60);
+              if (ve <= vs) return null;
+              const top = ((vs - DAY_START * 60) / 60) * HOUR, height = Math.max(28, ((ve - vs) / 60) * HOUR - 2);
+              const w = 100 / p.laneCount, left = p.lane * w;
+              const t = a.typeId ? typeById.get(a.typeId) : undefined;
+              const tint = tintOf(isFreeConsult(t?.name), a.capacity > 1);
+              const lbl = label12(cayMin(a.startAt));
               return (
-                <a key={a.id} className="mag-card" style={{ borderLeftColor: accentOf(a) }} href={`/m/appt/${a.id}`}>
-                  <span className="mag-card-time"><b>{lbl.t}</b><small>{lbl.ap}</small></span>
-                  <span className="mag-card-main">
-                    <span className="mag-card-name">{titleOf(a)}</span>
-                    <span className="mag-card-sub">{subOf(a)}</span>
-                    <span className="mag-card-mode">
-                      {virtual ? <><Ic n="video" /> Online</> : <><Ic n="pin" /> In person</>}
-                      {showAll && a.clinicianId ? <span className="mag-card-who">· {lastName(clinName(a.clinicianId))}</span> : null}
-                      {a.billingSessionId ? <span className="mag-logged">· ✓ logged</span> : a.intakeStatus === "pending" ? <span className="mag-intake">· intake due</span> : null}
-                    </span>
-                  </span>
-                  <span className="mag-card-go" aria-hidden="true">›</span>
+                <a key={a.id} className="mgrid-appt" href={`/m/appt/${a.id}`} style={{ top, height, left: `${left}%`, width: `calc(${w}% - 3px)`, background: tint.bg, borderLeftColor: tint.bar }}>
+                  <span className="mgrid-appt-t">{lbl.t}{lbl.ap}{a.mode === "virtual" ? " · online" : ""}</span>
+                  <span className="mgrid-appt-n">{titleOf(a)}</span>
+                  {height > 44 && <span className="mgrid-appt-s">{subOf(a)}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
                 </a>
               );
             })}
           </div>
-        )}
+          {dayList.length === 0 && <div className="mgrid-empty">{viewingOwn ? <a href="/m/book">Nothing booked — tap + to add</a> : "Nothing booked"}</div>}
+        </div>
       </div>
 
       {viewingOwn && <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>}

@@ -5568,3 +5568,19 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mbk-catgrp.open .mbk-caret2 { transform: rotate(90deg); }
 .mbk-catlist { border-top: 1px solid #eef1f2; padding: 6px; display: flex; flex-direction: column; gap: 6px; background: #fafcfc; }
 .mbk-catlist .mbk-type { background: #fff; margin-bottom: 0; }
+
+/* ===== Mobile day grid (Acuity-style time grid on Today) ===== */
+.mgrid { position: relative; margin: 6px 4px 0; }
+.mgrid-row { position: absolute; left: 0; right: 0; height: 0; }
+.mgrid-hr { position: absolute; left: 0; top: -7px; width: 40px; text-align: right; font-size: 10.5px; color: #9aa4a7; }
+.mgrid-line { position: absolute; left: 48px; right: 0; top: 0; border-top: 1px solid #eef1f2; }
+.mgrid-now { position: absolute; left: 48px; right: 2px; height: 0; border-top: 2px solid #d8453a; z-index: 3; }
+.mgrid-now span { position: absolute; left: -3px; top: -4px; width: 7px; height: 7px; border-radius: 50%; background: #d8453a; }
+.mgrid-appts { position: absolute; left: 48px; right: 2px; top: 0; bottom: 0; }
+.mgrid-appt { position: absolute; overflow: hidden; border-radius: 7px; border-left: 3px solid #1f7a6f; padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.mgrid-appt:active { filter: brightness(0.97); }
+.mgrid-appt-t { font-size: 10px; color: #6b7679; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgrid-appt-n { font-size: 12.5px; font-weight: 600; color: #232a3d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgrid-appt-s { font-size: 10.5px; color: #6b7679; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgrid-empty { position: absolute; top: 96px; left: 48px; right: 2px; text-align: center; color: #b4b2a9; font-size: 13px; }
+.mgrid-empty a { color: #256E72; }
