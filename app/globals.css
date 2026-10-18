@@ -5466,8 +5466,20 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mme-chev { color: #c3ccce; }
 
 .mcal { display: flex; flex-direction: column; }
-.mcal-head { background: #1E2A44; color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px; display: flex; align-items: center; justify-content: space-between; }
+.mcal-head { background: #1E2A44; color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px; }
+.mcal-navrow { display: flex; align-items: center; justify-content: space-between; }
 .mcal-nav { background: transparent; border: 0; color: #9FB2C9; font-size: 24px; line-height: 1; padding: 4px 10px; cursor: pointer; }
+.mcal-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-top: 14px; background: rgba(255,255,255,.08); border-radius: 10px; padding: 3px; }
+.mcal-seg button { border: 0; background: transparent; color: #cdd8e6; font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px; border-radius: 8px; cursor: pointer; }
+.mcal-seg button.on { background: #fff; color: #1E2A44; }
+.mcal-week { padding: 8px 14px 0; }
+.mcal-wday { margin-bottom: 4px; }
+.mcal-wday-h { display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: #232a3d; font-size: 13px; padding: 12px 2px 6px; border-bottom: 1px solid #eef1f2; }
+.mcal-wday-h b { font-weight: 700; }
+.mcal-wday-h.today { color: #256E72; }
+.mcal-wday-c { font-size: 11px; color: #8a969a; min-width: 16px; text-align: right; }
+.mcal-wlist { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
+.mcal-wnone { font-size: 12.5px; color: #b4b2a9; padding: 7px 2px 4px; }
 .mcal-month { font-size: 18px; font-weight: 700; }
 .mcal-body { padding: 12px 10px; }
 .mcal-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: #8a969a; margin-bottom: 6px; }
