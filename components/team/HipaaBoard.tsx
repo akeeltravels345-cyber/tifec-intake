@@ -126,6 +126,77 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
 
       {err && <p className="hp-err">{err}</p>}
 
+      <style>{`
+        .hpx-p{margin:0 0 12px;max-width:72ch;font-size:15px;line-height:1.6}
+        .hpx-rule{font-size:14px;color:var(--muted,#6b7679);background:var(--surface-2,#eef2f6);border:1px solid var(--line,#e3e9ed);border-radius:10px;padding:12px 14px;margin:6px 0 20px}
+        .hpx-layers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+        @media (max-width:640px){.hpx-layers{grid-template-columns:1fr}}
+        .hpx-layer{background:var(--surface,#fff);border:1px solid var(--line,#e3e9ed);border-radius:12px;padding:16px}
+        .hpx-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-bottom:10px}
+        .hpx-tag.bind{color:#2e3192;background:#ecedff}
+        .hpx-tag.best{color:#1f6b6f;background:#dcefef}
+        .hpx-layer h4{margin:0 0 2px;font-size:16px}
+        .hpx-role{font-size:13px;color:var(--muted,#6b7679);margin:0 0 10px}
+        .hpx-layer ul{margin:0;padding-left:18px}
+        .hpx-layer li{font-size:13.5px;line-height:1.45;margin-bottom:7px}
+        .hpx-tablewrap{overflow-x:auto;border:1px solid var(--line,#e3e9ed);border-radius:12px}
+        .hpx-table{border-collapse:collapse;width:100%;min-width:680px;font-size:13px}
+        .hpx-table th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6b7679);font-weight:600;padding:11px 13px;background:var(--surface-2,#eef2f6);border-bottom:1px solid var(--line,#e3e9ed)}
+        .hpx-table td{padding:12px 13px;border-top:1px solid var(--line,#e3e9ed);vertical-align:top;line-height:1.4}
+        .hpx-table td.area{font-weight:600;white-space:nowrap}
+        .hpx-led{display:inline-block;font-size:10px;font-weight:700;color:#1f6b6f;background:#dcefef;border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+      `}</style>
+
+      <section className="hp-sec">
+        <h2 className="hp-sech">How this works: Cayman law + HIPAA</h2>
+        <p className="hp-secsub">The compliance model behind this board. Cayman law is what binds the practice; HIPAA is the framework we borrow to meet it to a high standard.</p>
+
+        <p className="hpx-p">We do not have to choose between HIPAA and Cayman law. <strong>Cayman law is what actually binds us</strong>: it sets the definitions, the regulator we answer to, and the deadlines we must meet. <strong>HIPAA is the framework we borrow to put that into practice</strong>, a mature, well documented system of controls and paperwork we adopt to meet Cayman&apos;s requirements to a defensible standard.</p>
+        <div className="hpx-rule"><strong>Rule of thumb:</strong> when the two differ on <em>what</em> is required, Cayman wins. When we need to decide <em>how</em> to do it well, we follow HIPAA.</div>
+
+        <div className="hpx-layers">
+          <div className="hpx-layer">
+            <span className="hpx-tag bind">Foundation, binding</span>
+            <h4>Cayman law</h4>
+            <p className="hpx-role">What we are legally required to do.</p>
+            <ul>
+              <li><strong>Data Protection Act (2021 Revision)</strong>, overseen by the Ombudsman: eight data-protection principles, patient rights, breach notification, limits on sending data overseas.</li>
+              <li><strong>Professional confidentiality</strong>, the duty clinicians owe under their codes and common law.</li>
+              <li><strong>Health Insurance Law</strong>, relevant to billing and claims.</li>
+            </ul>
+          </div>
+          <div className="hpx-layer">
+            <span className="hpx-tag best">Overlay, best practice</span>
+            <h4>HIPAA</h4>
+            <p className="hpx-role">The framework we adopt to do it well.</p>
+            <ul>
+              <li><strong>Privacy Rule</strong>: how health information may be used and shared, the &quot;minimum necessary&quot; habit, a complete privacy notice.</li>
+              <li><strong>Security Rule</strong>: a concrete checklist of administrative, physical and technical safeguards, plus a written risk assessment.</li>
+              <li><strong>Breach Notification Rule</strong> and the <strong>Business Associate</strong> model for vendors who touch patient data.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="hpx-tablewrap">
+          <table className="hpx-table">
+            <thead><tr><th>Area</th><th>Cayman DPA (binding)</th><th>HIPAA adds</th><th>Our meshed standard</th></tr></thead>
+            <tbody>
+              <tr><td className="area">Lawful basis</td><td>Health is &quot;sensitive personal data&quot;; it needs a specific condition to process (a medical purpose handled by a professional under a duty of confidence, or explicit consent).</td><td>Frames use around treatment, payment and operations.</td><td>Take explicit consent at intake and record the medical-purpose basis in writing.</td></tr>
+              <tr><td className="area">Privacy notice</td><td>Tell people clearly and up front how their data is used.</td><td>Prescribes a full Notice of Privacy Practices with required sections.</td><td>A Cayman-grounded notice, written to HIPAA&apos;s level of completeness.</td></tr>
+              <tr><td className="area">Patient rights</td><td>Access (answer within about 30 days), correction, objection, complaint to the Ombudsman, compensation.</td><td>Adds accounting of disclosures, restriction requests, confidential-communication choices.</td><td>Honour the Cayman rights; add HIPAA&apos;s disclosure log and restriction handling.</td></tr>
+              <tr><td className="area">Security</td><td>&quot;Appropriate technical and organisational measures&quot;, deliberately open-ended.</td><td>A concrete safeguard checklist plus a formal risk analysis.</td><td>Use HIPAA&apos;s control list as our evidence that the Cayman standard is met.</td></tr>
+              <tr><td className="area">Vendors</td><td>Our duty of care extends to the processors we rely on.</td><td>A signed Business Associate Agreement with everyone who handles patient data.</td><td>Signed data agreements with host, database, email and Zoom.</td></tr>
+              <tr><td className="area">Breach response</td><td>Notify the Ombudsman and affected people without undue delay.<span className="hpx-led">Cayman-led</span></td><td>Notify individuals, keep a full record, escalate large breaches.</td><td>One plan on the Cayman clock, documented to HIPAA&apos;s depth.</td></tr>
+              <tr><td className="area">Data overseas</td><td>Data may leave Cayman only with adequate protection or a valid condition.<span className="hpx-led">Cayman-led</span></td><td>No equivalent (HIPAA is US-domestic).</td><td>Document a basis for our US hosting (contracts plus consent).</td></tr>
+              <tr><td className="area">Mental-health notes</td><td>Sensitive data plus the confidentiality duty.</td><td>Psychotherapy notes kept separate, with a higher bar to disclose.</td><td>Keep process notes separate from the record and extra-restricted.</td></tr>
+              <tr><td className="area">Retention</td><td>Keep data no longer than necessary.</td><td>Written retention schedules.</td><td>A schedule that meets Cayman medical-record norms.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="hpx-p" style={{ fontSize: 13, color: "var(--muted,#6b7679)", marginTop: 14, marginBottom: 0 }}>Internal planning summary, not legal advice. Because the practice is in the Cayman Islands, a Cayman-qualified attorney should confirm what applies and approve the final program.</p>
+      </section>
+
       <section className="hp-sec">
         <h2 className="hp-sech">Already in place</h2>
         <p className="hp-secsub">Safeguards the app already provides, plus anything you&apos;ve ticked off below.</p>
