@@ -2,14 +2,16 @@
 
 import { useMemo, useState } from "react";
 import InstallPrompt from "@/components/InstallPrompt";
+import MobileWhoPicker from "@/components/scheduling/MobileWhoPicker";
 
 type Appt = {
   id: string; startAt: string; endAt: string; clientName: string; typeId: string | null;
   mode: "in_person" | "virtual" | "either"; status: string; capacity: number;
   locationOrLink: string; billingSessionId: string | null; intakeStatus: string;
-  insurancePath: string | null; insurerId: string | null; seriesId: string | null;
+  insurancePath: string | null; insurerId: string | null; seriesId: string | null; clinicianId?: string;
 };
 type Type = { id: string; name: string; mode: string; capacity: number };
+const lastName = (name: string) => name.replace(/^\s*(dr|mr|mrs|ms|mx|prof)\.?\s+/i, "").trim().split(/\s+/).pop() || name;
 
 const CAY = 5; // Cayman UTC-5, no DST
 const cayDate = (iso: string) => new Date(Date.parse(iso) - CAY * 3600e3).toISOString().slice(0, 10);
@@ -27,7 +29,10 @@ const initialsOf = (name: string) => {
   return words.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
 };
 
-export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName, bookingUrl }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string; bookingUrl: string }) {
+export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName, bookingUrl, clinicians, who, myId }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string; bookingUrl: string; clinicians: { id: string; name: string }[]; who: string; myId: string }) {
+  const viewingOwn = who === myId;
+  const showAll = who === "all";
+  const clinName = (id?: string) => (id ? (clinicians.find((c) => c.id === id)?.name || "") : "");
   const start0 = initialDay || todayCayman;
   const [selected, setSelected] = useState(start0);
   const [weekStart, setWeekStart] = useState(mondayOf(start0));
@@ -98,13 +103,16 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
 
       <div className="mag-body">
         <InstallPrompt />
-        <div className="mag-count">{dayList.length === 0 ? "No appointments" : `${dayList.length} appointment${dayList.length === 1 ? "" : "s"}`}</div>
+        <div className="mag-toprow">
+          <MobileWhoPicker clinicians={clinicians} who={who} myId={myId} />
+          <span className="mag-count">{dayList.length === 0 ? "none" : `${dayList.length} appt${dayList.length === 1 ? "" : "s"}`}</span>
+        </div>
 
         {dayList.length === 0 ? (
           <div className="mag-empty">
             <span className="mag-empty-ic" aria-hidden="true">✦</span>
             <p>Nothing booked for this day.</p>
-            <a className="mag-empty-btn" href="/m/book">Book an appointment</a>
+            {viewingOwn && <a className="mag-empty-btn" href="/m/book">Book an appointment</a>}
           </div>
         ) : (
           <div className="mag-list">
@@ -119,6 +127,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
                     <span className="mag-card-sub">{subOf(a)}</span>
                     <span className="mag-card-mode">
                       {virtual ? <><Ic n="video" /> Online</> : <><Ic n="pin" /> In person</>}
+                      {showAll && a.clinicianId ? <span className="mag-card-who">· {lastName(clinName(a.clinicianId))}</span> : null}
                       {a.billingSessionId ? <span className="mag-logged">· ✓ logged</span> : a.intakeStatus === "pending" ? <span className="mag-intake">· intake due</span> : null}
                     </span>
                   </span>
@@ -130,7 +139,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
         )}
       </div>
 
-      <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>
+      {viewingOwn && <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>}
 
       {account && (
         <div className="mag-sheet-ov" onClick={() => setAccount(false)}>

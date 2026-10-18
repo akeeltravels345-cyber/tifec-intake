@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { inScheduleBeta } from "@/lib/clinicians";
+import { inScheduleBeta, isBookableClinician, CLINICIANS } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
 import { caymanToday } from "@/lib/caymanTime";
 import MobileAgenda from "@/components/scheduling/MobileAgenda";
 
 export const dynamic = "force-dynamic";
+
+// The whole treating roster — everyone can VIEW any colleague's schedule (or
+// Everyone). Editing stays gated to your own appointments on the detail screen.
+const roster = CLINICIANS.filter((c) => isBookableClinician(c) && !c.test).map((c) => ({ id: c.id, name: c.name }));
 
 // The mobile "Today" agenda: the signed-in clinician's own day, as a swipeable
 // date strip + a list of appointment cards. Same data + APIs as the web
@@ -17,7 +21,7 @@ const addDays = (d: string, n: number) => { const [y, m, dd] = d.split("-").map(
 const mondayOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); const w = (new Date(Date.UTC(y, m - 1, dd)).getUTCDay() + 6) % 7; return addDays(d, -w); };
 const utcAtCayMidnight = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd, CAY, 0)).toISOString(); };
 
-export default async function MobileTodayPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
+export default async function MobileTodayPage({ searchParams }: { searchParams: Promise<{ d?: string; who?: string }> }) {
   const user = await getBillingUser();
   if (!user) redirect("/login?next=/m");
   const me = user.clinician;
@@ -25,12 +29,15 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
 
   const sp = await searchParams;
   const initialDay = sp.d && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) ? sp.d : undefined;
+  // Whose schedule: "all", a colleague's id, or (default) my own.
+  const who = sp.who === "all" ? "all" : (roster.some((c) => c.id === sp.who) ? sp.who! : me.id);
+  const forClinician = who === "all" ? undefined : who;
   const today = caymanToday();
   const monday = mondayOf(today);
 
   const [types, appts, h] = await Promise.all([
     listAppointmentTypes(),
-    listAppointments({ from: utcAtCayMidnight(addDays(monday, -7)), to: utcAtCayMidnight(addDays(monday, 56)), clinicianId: me.id }),
+    listAppointments({ from: utcAtCayMidnight(addDays(monday, -7)), to: utcAtCayMidnight(addDays(monday, 56)), clinicianId: forClinician }),
     headers(),
   ]);
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
@@ -42,7 +49,7 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
     .map((a) => ({
       id: a.id, startAt: a.startAt, endAt: a.endAt, clientName: a.clientName, typeId: a.typeId,
       mode: a.mode, status: a.status, capacity: a.capacity, locationOrLink: a.locationOrLink,
-      billingSessionId: a.billingSessionId, intakeStatus: a.intakeStatus,
+      billingSessionId: a.billingSessionId, intakeStatus: a.intakeStatus, clinicianId: a.clinicianId,
       insurancePath: a.insurancePath, insurerId: a.insurerId, seriesId: a.seriesId,
     }));
 
@@ -54,6 +61,9 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
       initialDay={initialDay}
       clinicianName={me.name}
       bookingUrl={bookingUrl}
+      clinicians={roster}
+      who={who}
+      myId={me.id}
     />
   );
 }

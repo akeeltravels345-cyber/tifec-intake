@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import MobileWhoPicker from "@/components/scheduling/MobileWhoPicker";
 
-type Appt = { id: string; startAt: string; endAt: string; clientName: string; typeId: string | null; mode: string; status: string; capacity: number; billingSessionId: string | null; intakeStatus: string };
+type Appt = { id: string; startAt: string; endAt: string; clientName: string; typeId: string | null; mode: string; status: string; capacity: number; billingSessionId: string | null; intakeStatus: string; clinicianId?: string };
 type Type = { id: string; name: string; capacity: number };
+const lastName = (name: string) => name.replace(/^\s*(dr|mr|mrs|ms|mx|prof)\.?\s+/i, "").trim().split(/\s+/).pop() || name;
 
 const CAY = 5;
 const cayDate = (iso: string) => new Date(Date.parse(iso) - CAY * 3600e3).toISOString().slice(0, 10);
@@ -19,9 +21,11 @@ const DOW = ["M", "T", "W", "T", "F", "S", "S"];
 const isFreeConsult = (name?: string | null) => /free\b.*consult/i.test(name || "");
 const cleanType = (name?: string | null) => (name || "").replace(/\s*-\s*(in\s*person|online|virtual)\b/i, "").replace(/\s{2,}/g, " ").trim();
 
-export default function MobileCalendar({ appts, types, today }: { appts: Appt[]; types: Type[]; today: string }) {
+export default function MobileCalendar({ appts, types, today, clinicians, who, myId }: { appts: Appt[]; types: Type[]; today: string; clinicians: { id: string; name: string }[]; who: string; myId: string }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(today);
+  const showAll = who === "all";
+  const clinName = (id?: string) => (id ? (clinicians.find((c) => c.id === id)?.name || "") : "");
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);
@@ -69,6 +73,7 @@ export default function MobileCalendar({ appts, types, today }: { appts: Appt[];
           <span className="mag-card-sub">{subOf(a)}</span>
           <span className="mag-card-mode">
             {a.mode === "virtual" ? "Online" : "In person"}
+            {showAll && a.clinicianId ? <span className="mag-card-who">· {lastName(clinName(a.clinicianId))}</span> : null}
             {a.billingSessionId ? <span className="mag-logged">· ✓ logged</span> : a.intakeStatus === "pending" ? <span className="mag-intake">· intake due</span> : null}
           </span>
         </span>
@@ -90,6 +95,8 @@ export default function MobileCalendar({ appts, types, today }: { appts: Appt[];
           <button role="tab" aria-selected={view === "month"} className={view === "month" ? "on" : ""} onClick={() => setView("month")}>Month</button>
         </div>
       </header>
+
+      <div className="mcal-toprow"><MobileWhoPicker clinicians={clinicians} who={who} myId={myId} /></div>
 
       {view === "month" ? (
         <div className="mcal-body">

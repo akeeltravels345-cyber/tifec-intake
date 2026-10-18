@@ -5512,3 +5512,19 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mbk-summary { font-size: 13px; color: #6B7679; background: #f3f6f7; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; }
 .mbk-foot { display: flex; gap: 9px; padding: 12px 14px calc(env(safe-area-inset-bottom, 0px) + 14px); border-top: 1px solid #eef1f2; }
 .mbk-foot .mag-btn { flex: 1; }
+
+/* Mobile app links are app controls (cards, tabs, rows) — never underlined. */
+.mapp a { text-decoration: none; }
+
+/* ===== Mobile: "whose schedule" picker ===== */
+.mag-toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 2px 10px; }
+.mag-toprow .mag-count { margin: 0; flex: 0 0 auto; }
+.mcal-toprow { padding: 10px 14px 0; }
+.mwho { display: inline-flex; align-items: center; gap: 6px; background: #eef5f5; border: 1px solid #d6e6e5; color: #256E72; font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 20px; cursor: pointer; -webkit-tap-highlight-color: transparent; max-width: 70%; }
+.mwho > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mwho-caret { font-size: 10px; opacity: .7; flex: 0 0 auto; }
+.mwho-list { display: flex; flex-direction: column; margin-top: 8px; }
+.mwho-opt { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid #f3f5f6; padding: 14px 4px; font: inherit; font-size: 15px; color: #232a3d; cursor: pointer; }
+.mwho-opt:last-child { border-bottom: 0; }
+.mwho-opt.on { color: #256E72; font-weight: 600; }
+.mag-card-who { color: #6B7679; }
