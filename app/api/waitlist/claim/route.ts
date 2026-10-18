@@ -9,7 +9,7 @@ import { getOffer, winOffer, setOfferAppt, readClaimToken } from "@/lib/waitlist
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
-import { clientNameInSystem } from "@/lib/clients";
+import { clientInSystem } from "@/lib/clients";
 import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   // gets it. (Staff can still send it by hand.) This runs before the appointment
   // is created, so it reflects the pre-booking roster.
   const assessment = await assessClientIntake(entry.name, serviceName, entry.email);
-  const suppressIntake = await clientNameInSystem(entry.name);
+  const suppressIntake = await clientInSystem(entry.name, entry.email);
   const needsIntake = assessment.requiredForms.length > 0 && assessment.missingForms.length > 0 && !suppressIntake;
   const intakeStatus = assessment.requiredForms.length === 0 || suppressIntake ? "not_required" : (needsIntake ? "pending" : "received");
   const coupleId = assessment.missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;

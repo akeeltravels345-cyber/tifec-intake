@@ -12,7 +12,7 @@ import { maybeBridgeSeen } from "@/lib/schedulingBridge";
 import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEvent, deleteGoogleEvent } from "@/lib/videoConnections";
 import { sendBookingConfirmation, sendIntakeInvite } from "@/lib/bookingCore";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
-import { clientNameInSystem } from "@/lib/clients";
+import { clientInSystem } from "@/lib/clients";
 import { caymanWhen } from "@/lib/caymanTime";
 import { portalToken } from "@/lib/portalAuth";
 import { randomBytes } from "crypto";
@@ -31,7 +31,7 @@ async function notifyClientOfBooking(appt: Appointment, origin: string): Promise
   // established client, so only a brand-new name gets intake. (Staff can still
   // send it by hand from the appointment.) Scheduling doesn't create the client
   // record, so this reflects the pre-booking roster.
-  const alreadyClient = await clientNameInSystem(appt.clientName);
+  const alreadyClient = await clientInSystem(appt.clientName, appt.clientEmail);
   const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0 && !alreadyClient;
   const coupleId = needsIntake && missingForms.includes("couples") ? (appt.coupleId || randomBytes(6).toString("hex")) : undefined;
   if (needsIntake) {

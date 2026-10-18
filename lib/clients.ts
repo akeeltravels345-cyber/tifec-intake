@@ -411,21 +411,31 @@ export async function resolveClient(clinicianId: string, input: ClientInput): Pr
   return client.id;
 }
 
-/** True if someone with this name is already a client in the practice's system
- *  (the client hub), matched on the same name key the hub uses for dedup
- *  (case- and spacing-insensitive). Used to suppress AUTOMATIC intake sends to
- *  established clients at booking time — staff can still send intake by hand.
- *  A blank name is never a match. Must be evaluated BEFORE a booking creates or
+/** True if this person is already a client in the practice's system (the client
+ *  hub): their NAME matches an existing record AND that record's email matches
+ *  the one given. Name is matched on the same key the hub uses for dedup (case-
+ *  and spacing-insensitive); email narrows it so two different people who share a
+ *  name aren't treated as the same client. Used to suppress AUTOMATIC intake
+ *  sends to established clients at booking — staff can still send intake by hand.
+ *  Without an email to confirm identity we can't be sure it's the same person, so
+ *  we return false (lean toward sending). The guardian's email counts too, for
+ *  minors billed through a parent. Must be evaluated BEFORE a booking creates or
  *  links its own client record, or it would see the record it just made. */
-export async function clientNameInSystem(name: string): Promise<boolean> {
+export async function clientInSystem(name: string, email?: string): Promise<boolean> {
   const parts = name.trim().replace(/\s+/g, " ").split(" ");
   const first = parts[0] ?? "";
   const last = parts.length > 1 ? parts.slice(1).join(" ") : "";
-  if (!first && !last) return false;
+  const wantEmail = (email || "").trim().toLowerCase();
+  if ((!first && !last) || !wantEmail) return false;
   const key = nameKeyOf(first, last);
   try {
     const all = await loadStoredClients();
-    return all.some((c) => c.nameKey === key);
+    return all.some((c) => {
+      if (c.nameKey !== key) return false;
+      const p = decodeProfile(c.profileEnc);
+      const emails = [p.email, p.guardian?.email].map((e) => (e || "").trim().toLowerCase()).filter(Boolean);
+      return emails.includes(wantEmail);
+    });
   } catch {
     return false; // store unreachable: fail open (don't block a genuine send)
   }

@@ -6,7 +6,7 @@ import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intake
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
-import { addClients, clientNameInSystem } from "@/lib/clients";
+import { addClients, clientInSystem } from "@/lib/clients";
 import { sendPushToClinician } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   // would see the record it just created. A client who tells us they're new
   // (firstVisit) still gets intake, so a genuine namesake isn't shut out.
   const firstVisit = body.firstVisit === true;
-  const suppressIntake = !firstVisit && await clientNameInSystem(name);
+  const suppressIntake = !firstVisit && await clientInSystem(name, email);
 
   // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
   // session (single booking only; month bookings are for 1:1 services).
