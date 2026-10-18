@@ -51,40 +51,57 @@ export default function MobileBook({ clinicianId, today, types }: { clinicianId:
   return (
     <div className="mbk">
       <header className="mbk-head">
-        <a href="/m" className="mbk-x" aria-label="Close">✕</a>
+        <a href="/m" className="mbk-x" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></a>
         <div className="mbk-title">New appointment</div>
-        <div className="mbk-steps">{STEPS.map((s, i) => <span key={s} className={i === step ? "on" : i < step ? "done" : ""}>{i < step ? "✓ " : ""}{s}</span>)}</div>
+        <div className="mbk-stepper">
+          {STEPS.map((s, i) => (
+            <div key={s} className={`mbk-st${i === step ? " on" : i < step ? " done" : ""}`}>
+              <span className="mbk-st-dot">{i < step ? "✓" : i + 1}</span>
+              <span className="mbk-st-lb">{s}</span>
+            </div>
+          ))}
+        </div>
       </header>
 
       <div className="mbk-body">
         {step === 0 && (
           <>
-            <div className="madet-f"><label>Client name</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus /></div>
-            <div className="madet-f"><label>Client email (optional)</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="for confirmation and reminders" /></div>
+            <div className="mbk-h">Who&apos;s it for?</div>
+            <div className="mbk-card">
+              <div className="madet-f"><label>Client name</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus /></div>
+              <div className="madet-f" style={{ marginBottom: 0 }}><label>Client email <span className="mbk-opt">optional</span></label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@email.com" /></div>
+            </div>
+            <p className="mbk-note">An email address lets us send the confirmation and any intake forms automatically.</p>
           </>
         )}
 
         {step === 1 && (
-          <div className="mbk-types">
-            {cats.map((cat) => (
-              <div key={cat}>
-                <div className="mbk-cat">{cat}</div>
-                {types.filter((t) => t.category === cat).map((t) => (
-                  <button key={t.id} className={`mbk-type${typeId === t.id ? " on" : ""}`} onClick={() => { setTypeId(t.id); setErr(""); setStep(2); }}>
-                    <span>{t.name}</span>
-                    <small>{t.durationMin} min · {modeLabel(t.mode)}</small>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="mbk-h">Pick a service</div>
+            <div className="mbk-types">
+              {cats.map((cat) => (
+                <div key={cat}>
+                  <div className="mbk-cat">{cat}</div>
+                  {types.filter((t) => t.category === cat).map((t) => (
+                    <button key={t.id} className={`mbk-type${typeId === t.id ? " on" : ""}`} onClick={() => { setTypeId(t.id); setErr(""); setStep(2); }}>
+                      <span className="mbk-type-main"><span>{t.name}</span><small>{t.durationMin} min · {modeLabel(t.mode)}</small></span>
+                      <span className="mbk-type-go" aria-hidden="true">›</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {step === 2 && (
           <>
-            <div className="mbk-summary">{name} · {type?.name}</div>
-            <div className="madet-f"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="madet-f"><label>Start time</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+            <div className="mbk-h">When?</div>
+            <div className="mbk-summary"><span className="mbk-sum-who">{name || "Client"}</span><span className="mbk-sum-svc">{type?.name}</span></div>
+            <div className="mbk-card">
+              <div className="madet-f"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+              <div className="madet-f" style={{ marginBottom: 0 }}><label>Start time</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+            </div>
             <label className="madet-toggle"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Email the client their confirmation</label>
           </>
         )}

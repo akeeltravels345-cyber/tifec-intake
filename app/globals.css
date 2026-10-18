@@ -5528,3 +5528,30 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mwho-opt:last-child { border-bottom: 0; }
 .mwho-opt.on { color: #256E72; font-weight: 600; }
 .mag-card-who { color: #6B7679; }
+
+/* ===== Mobile Book wizard — polished ===== */
+.mbk-stepper { display: flex; margin-top: 16px; }
+.mbk-st { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; position: relative; }
+.mbk-st:not(:last-child)::after { content: ""; position: absolute; top: 13px; left: 50%; width: 100%; height: 2px; background: rgba(255,255,255,.14); }
+.mbk-st.done:not(:last-child)::after { background: #2F8E93; }
+.mbk-st-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.12); color: #9FB2C9; position: relative; z-index: 1; }
+.mbk-st.on .mbk-st-dot { background: #fff; color: #1E2A44; }
+.mbk-st.done .mbk-st-dot { background: #2F8E93; color: #fff; }
+.mbk-st-lb { font-size: 11px; color: #9FB2C9; }
+.mbk-st.on .mbk-st-lb { color: #fff; font-weight: 600; }
+
+.mbk-h { font-size: 18px; font-weight: 700; color: #232a3d; margin: 4px 2px 14px; }
+.mbk-card { background: #fff; border: 1px solid #E7ECEE; border-radius: 14px; padding: 14px; }
+.mbk-card .madet-f { margin-top: 0; margin-bottom: 14px; }
+.mbk-note { font-size: 12.5px; color: #8a969a; margin: 10px 4px 0; line-height: 1.5; }
+.mbk-opt { color: #b4b2a9; font-weight: 400; }
+
+.mbk-type { flex-direction: row; align-items: center; justify-content: space-between; }
+.mbk-type-main { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; min-width: 0; }
+.mbk-type-main > span { font-size: 14.5px; font-weight: 600; color: #232a3d; }
+.mbk-type-main small { font-size: 12px; color: #6B7679; }
+.mbk-type-go { color: #c3ccce; font-size: 20px; flex: 0 0 auto; }
+
+.mbk-summary { display: flex; flex-direction: column; gap: 2px; background: #eef5f5; border: 1px solid #d6e6e5; border-radius: 12px; padding: 11px 13px; margin-bottom: 14px; }
+.mbk-sum-who { font-size: 14px; font-weight: 600; color: #232a3d; }
+.mbk-sum-svc { font-size: 12.5px; color: #256E72; }
