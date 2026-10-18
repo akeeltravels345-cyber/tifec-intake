@@ -19,6 +19,7 @@ export default function MobileBook({ clinicianId, today, types }: { clinicianId:
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [openCat, setOpenCat] = useState<string | null>(null);
 
   const type = types.find((t) => t.id === typeId);
   const cats = [...new Set(types.map((t) => t.category))];
@@ -78,18 +79,29 @@ export default function MobileBook({ clinicianId, today, types }: { clinicianId:
         {step === 1 && (
           <>
             <div className="mbk-h">Pick a service</div>
-            <div className="mbk-types">
-              {cats.map((cat) => (
-                <div key={cat}>
-                  <div className="mbk-cat">{cat}</div>
-                  {types.filter((t) => t.category === cat).map((t) => (
-                    <button key={t.id} className={`mbk-type${typeId === t.id ? " on" : ""}`} onClick={() => { setTypeId(t.id); setErr(""); setStep(2); }}>
-                      <span className="mbk-type-main"><span>{t.name}</span><small>{t.durationMin} min · {modeLabel(t.mode)}</small></span>
-                      <span className="mbk-type-go" aria-hidden="true">›</span>
+            <div className="mbk-cats">
+              {cats.map((cat) => {
+                const items = types.filter((t) => t.category === cat);
+                const open = openCat === cat;
+                return (
+                  <div key={cat} className={`mbk-catgrp${open ? " open" : ""}`}>
+                    <button className="mbk-cathead" onClick={() => setOpenCat(open ? null : cat)} aria-expanded={open}>
+                      <span className="mbk-cathead-l">{cat}</span>
+                      <span className="mbk-cathead-r"><span className="mbk-catcount">{items.length}</span><span className="mbk-caret2" aria-hidden="true">›</span></span>
                     </button>
-                  ))}
-                </div>
-              ))}
+                    {open && (
+                      <div className="mbk-catlist">
+                        {items.map((t) => (
+                          <button key={t.id} className={`mbk-type${typeId === t.id ? " on" : ""}`} onClick={() => { setTypeId(t.id); setErr(""); setStep(2); }}>
+                            <span className="mbk-type-main"><span>{t.name}</span><small>{t.durationMin} min · {modeLabel(t.mode)}</small></span>
+                            <span className="mbk-type-go" aria-hidden="true">›</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

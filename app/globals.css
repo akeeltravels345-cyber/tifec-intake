@@ -5555,3 +5555,16 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mbk-summary { display: flex; flex-direction: column; gap: 2px; background: #eef5f5; border: 1px solid #d6e6e5; border-radius: 12px; padding: 11px 13px; margin-bottom: 14px; }
 .mbk-sum-who { font-size: 14px; font-weight: 600; color: #232a3d; }
 .mbk-sum-svc { font-size: 12.5px; color: #256E72; }
+
+/* ===== Mobile Book: service categories as collapsible dropdowns ===== */
+.mbk-cats { display: flex; flex-direction: column; gap: 10px; }
+.mbk-catgrp { background: #fff; border: 1px solid #E7ECEE; border-radius: 12px; overflow: hidden; }
+.mbk-cathead { display: flex; align-items: center; justify-content: space-between; width: 100%; background: transparent; border: 0; font: inherit; padding: 15px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mbk-cathead:active { background: #f7f9f9; }
+.mbk-cathead-l { font-size: 14.5px; font-weight: 600; color: #232a3d; text-align: left; }
+.mbk-cathead-r { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.mbk-catcount { font-size: 12px; color: #6B7679; background: #f1f4f5; border-radius: 20px; padding: 2px 9px; }
+.mbk-caret2 { color: #b4c0c3; font-size: 18px; line-height: 1; transition: transform .15s ease; display: inline-block; }
+.mbk-catgrp.open .mbk-caret2 { transform: rotate(90deg); }
+.mbk-catlist { border-top: 1px solid #eef1f2; padding: 6px; display: flex; flex-direction: column; gap: 6px; background: #fafcfc; }
+.mbk-catlist .mbk-type { background: #fff; margin-bottom: 0; }
