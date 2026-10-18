@@ -9,6 +9,7 @@ type Appt = {
   mode: "in_person" | "virtual" | "either"; status: string; capacity: number;
   locationOrLink: string; billingSessionId: string | null; intakeStatus: string;
   insurancePath: string | null; insurerId: string | null; seriesId: string | null; clinicianId?: string;
+  kind?: string; title?: string | null;
 };
 type Type = { id: string; name: string; mode: string; capacity: number };
 const lastName = (name: string) => name.replace(/^\s*(dr|mr|mrs|ms|mx|prof)\.?\s+/i, "").trim().split(/\s+/).pop() || name;
@@ -22,7 +23,7 @@ const mondayOf = (d: string) => { const [y, m, dd] = d.split("-").map(Number); c
 const parts = (d: string) => { const [y, m, dd] = d.split("-").map(Number); return new Date(Date.UTC(y, m - 1, dd)); };
 const DOW = ["M", "T", "W", "T", "F", "S", "S"];
 // Day-grid (Acuity-style): hours down the side, appointment blocks placed by time.
-const DAY_START = 7, DAY_END = 21, HOUR = 58; // 7am–9pm, px per hour
+const DAY_START = 7, DAY_END = 21, HOUR = 84; // 7am–9pm, px per hour (roomy, Acuity-style)
 const hourLabel = (h: number) => `${h % 12 || 12}${h < 12 ? "am" : "pm"}`;
 const tintOf = (free: boolean, group: boolean) => free ? { bg: "#faeae4", bar: "#D85A30" } : group ? { bg: "#e9eaf6", bar: "#2E3192" } : { bg: "#e4f3ee", bar: "#1f7a6f" };
 
@@ -43,6 +44,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
   const [account, setAccount] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signing, setSigning] = useState(false);
+  const [fabMenu, setFabMenu] = useState(false);
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(bookingUrl); }
@@ -62,10 +64,15 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);
-  const daysWithAppts = useMemo(() => new Set(live.map((a) => cayDate(a.startAt))), [live]);
+  const daysWithAppts = useMemo(() => new Set(live.filter((a) => a.kind !== "block").map((a) => cayDate(a.startAt))), [live]);
 
   const dayList = useMemo(() =>
-    live.filter((a) => cayDate(a.startAt) === selected).sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    live.filter((a) => a.kind !== "block" && cayDate(a.startAt) === selected).sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    [live, selected]);
+
+  // Blocked-off time on the selected day — grey bands behind the appointments.
+  const dayBlocks = useMemo(() =>
+    live.filter((a) => a.kind === "block" && cayDate(a.startAt) === selected),
     [live, selected]);
 
   // Lane-pack overlapping appointments so they sit side by side in the grid.
@@ -132,8 +139,19 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
             <div key={h} className="mgrid-row" style={{ top: (h - DAY_START) * HOUR }}>
               <span className="mgrid-hr">{hourLabel(h)}</span>
               <span className="mgrid-line" />
+              {h < DAY_END && <span className="mgrid-half" style={{ top: HOUR / 2 }} />}
             </div>
           ))}
+          {dayBlocks.map((b) => {
+            const bs = Math.max(cayMin(b.startAt), DAY_START * 60), be = Math.min(Math.max(cayMin(b.startAt) + 15, cayMin(b.endAt)), DAY_END * 60);
+            if (be <= bs) return null;
+            const top = ((bs - DAY_START * 60) / 60) * HOUR, height = Math.max(22, ((be - bs) / 60) * HOUR - 2);
+            return (
+              <div key={b.id} className="mgrid-block" style={{ top, height }}>
+                <span className="mgrid-block-l">{(b.title || "Blocked").trim()}</span>
+              </div>
+            );
+          })}
           {selected === todayCayman && nowMin != null && nowMin >= DAY_START * 60 && nowMin <= DAY_END * 60 && (
             <div className="mgrid-now" style={{ top: ((nowMin - DAY_START * 60) / 60) * HOUR }}><span /></div>
           )}
@@ -146,21 +164,34 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
               const w = 100 / p.laneCount, left = p.lane * w;
               const t = a.typeId ? typeById.get(a.typeId) : undefined;
               const tint = tintOf(isFreeConsult(t?.name), a.capacity > 1);
-              const lbl = label12(cayMin(a.startAt));
+              const lblS = label12(cayMin(a.startAt)), lblE = label12(cayMin(a.endAt));
+              const timeRange = `${lblS.t}${lblS.ap !== lblE.ap ? lblS.ap : ""}–${lblE.t}${lblE.ap}`;
               return (
                 <a key={a.id} className="mgrid-appt" href={`/m/appt/${a.id}`} style={{ top, height, left: `${left}%`, width: `calc(${w}% - 3px)`, background: tint.bg, borderLeftColor: tint.bar }}>
-                  <span className="mgrid-appt-t">{lbl.t}{lbl.ap}{a.mode === "virtual" ? " · online" : ""}</span>
+                  <span className="mgrid-appt-t">{timeRange}</span>
                   <span className="mgrid-appt-n">{titleOf(a)}</span>
-                  {height > 44 && <span className="mgrid-appt-s">{subOf(a)}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
+                  {height > 50 && <span className="mgrid-appt-s">{subOf(a)} · {a.mode === "virtual" ? "Online" : "In person"}{a.billingSessionId ? " · ✓ logged" : ""}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
                 </a>
               );
             })}
           </div>
-          {dayList.length === 0 && <div className="mgrid-empty">{viewingOwn ? <a href="/m/book">Nothing booked — tap + to add</a> : "Nothing booked"}</div>}
+          {dayList.length === 0 && dayBlocks.length === 0 && <div className="mgrid-empty">{viewingOwn ? <a href="/m/book">Nothing booked — tap + to add</a> : "Nothing booked"}</div>}
         </div>
       </div>
 
-      {viewingOwn && <a className="mag-fab" href="/m/book" aria-label="Book an appointment"><Ic n="plus" /></a>}
+      {viewingOwn && <button className="mag-fab" onClick={() => setFabMenu(true)} aria-label="Add"><Ic n="plus" /></button>}
+
+      {fabMenu && (
+        <div className="mag-sheet-ov" onClick={() => setFabMenu(false)}>
+          <div className="mag-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="mag-sheet-grab" aria-hidden="true" />
+            <div className="mag-acct-rows">
+              <a className="mme-row" href={`/m/book?d=${selected}`}><span>Book an appointment</span><span className="mme-chev" aria-hidden="true">›</span></a>
+              <a className="mme-row" href={`/m/block?d=${selected}`}><span>Block off time</span><span className="mme-chev" aria-hidden="true">›</span></a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {account && (
         <div className="mag-sheet-ov" onClick={() => setAccount(false)}>

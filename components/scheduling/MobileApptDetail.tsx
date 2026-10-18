@@ -9,10 +9,8 @@ type Appt = {
   intakeStatus: string; insurancePath: string | null; seriesId: string | null; startAtDate: string;
 };
 
-const CAY = 5;
 const isLink = (v: string) => /^https?:\/\//.test(v || "");
 const STATUS: Record<string, string> = { booked: "Booked", confirmed: "Confirmed", seen: "Seen", no_show: "No-show", cancelled: "Cancelled" };
-const utcFromCay = (date: string, hhmm: string) => { const [y, m, d] = date.split("-").map(Number); const [h, mi] = hhmm.split(":").map(Number); return new Date(Date.UTC(y, m - 1, d, CAY + h, mi)).toISOString(); };
 
 export default function MobileApptDetail({ appt, typeName, durMin, whenText, insurerName, bookedBy, bookedOn, intakeForms, canEdit }: {
   appt: Appt; typeName: string; durMin: number; whenText: string; insurerName: string | null;
@@ -21,10 +19,6 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [resched, setResched] = useState(false);
-  const [rDate, setRDate] = useState(appt.startAtDate);
-  const [rTime, setRTime] = useState("09:00");
-  const [notify, setNotify] = useState(true);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const virtual = appt.mode === "virtual";
@@ -39,19 +33,6 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
       const d = await res.json();
       setMsg(res.ok ? { ok: true, text: `Intake sent to ${appt.clientName || "the client"}.` } : { ok: false, text: d.error || "Couldn't send the intake." });
     } catch { setMsg({ ok: false, text: "Couldn't send the intake." }); }
-    setBusy("");
-  }
-
-  async function saveResched() {
-    setBusy("resched"); setMsg(null);
-    try {
-      const startAt = utcFromCay(rDate, rTime);
-      const endAt = new Date(Date.parse(startAt) + durMin * 60000).toISOString();
-      const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update", id: appt.id, startAt, endAt, notifyClient: notify }) });
-      const d = await res.json();
-      if (res.ok) { setResched(false); router.push("/m"); router.refresh(); }
-      else setMsg({ ok: false, text: d.error || "Couldn't reschedule." });
-    } catch { setMsg({ ok: false, text: "Couldn't reschedule." }); }
     setBusy("");
   }
 
@@ -111,7 +92,7 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
               <>
                 <div className="madet-row2">
                   <button className="madet-btn ghost" disabled={!!busy || !appt.clientEmail} onClick={sendIntake}>{busy === "intake" ? "Sending…" : "Send intake"}</button>
-                  <button className="madet-btn ghost" disabled={!!busy} onClick={() => { setResched(true); setMsg(null); }}>Reschedule</button>
+                  <a className="madet-btn ghost" href={`/m/appt/${appt.id}/edit`}>Edit</a>
                 </div>
                 <button className="madet-btn danger" disabled={!!busy} onClick={() => setConfirmCancel(true)}>Cancel &amp; ask to rebook</button>
               </>
@@ -119,22 +100,6 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
           </div>
         )}
       </div>
-
-      {resched && (
-        <div className="mag-sheet-ov" onClick={() => setResched(false)}>
-          <div className="mag-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="mag-sheet-grab" aria-hidden="true" />
-            <div className="mag-sheet-name">Reschedule</div>
-            <div className="madet-f"><label>New date</label><input type="date" value={rDate} onChange={(e) => setRDate(e.target.value)} /></div>
-            <div className="madet-f"><label>Start time</label><input type="time" value={rTime} onChange={(e) => setRTime(e.target.value)} /></div>
-            <label className="madet-toggle"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Email the client the new time</label>
-            <div className="mag-sheet-actions">
-              <button className="mag-btn primary" disabled={!!busy} onClick={saveResched}>{busy === "resched" ? "Saving…" : "Save new time"}</button>
-              <button className="mag-btn ghost" onClick={() => setResched(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {confirmCancel && (
         <div className="mag-sheet-ov" onClick={() => !busy && setConfirmCancel(false)}>

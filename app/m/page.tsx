@@ -43,15 +43,14 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
   const bookingUrl = `${origin}/book?clinician=${encodeURIComponent(me.id)}`;
 
-  // Lean shape for the client — only what the agenda renders.
-  const lean = appts
-    .filter((a) => a.kind === "appointment")
-    .map((a) => ({
-      id: a.id, startAt: a.startAt, endAt: a.endAt, clientName: a.clientName, typeId: a.typeId,
-      mode: a.mode, status: a.status, capacity: a.capacity, locationOrLink: a.locationOrLink,
-      billingSessionId: a.billingSessionId, intakeStatus: a.intakeStatus, clinicianId: a.clinicianId,
-      insurancePath: a.insurancePath, insurerId: a.insurerId, seriesId: a.seriesId,
-    }));
+  // Lean shape for the client — appointments AND blocks (grey bands on the grid).
+  const lean = appts.map((a) => ({
+    id: a.id, startAt: a.startAt, endAt: a.endAt, clientName: a.clientName, typeId: a.typeId,
+    mode: a.mode, status: a.status, capacity: a.capacity, locationOrLink: a.locationOrLink,
+    billingSessionId: a.billingSessionId, intakeStatus: a.intakeStatus, clinicianId: a.clinicianId,
+    insurancePath: a.insurancePath, insurerId: a.insurerId, seriesId: a.seriesId,
+    kind: a.kind, title: a.title,
+  }));
 
   return (
     <MobileAgenda

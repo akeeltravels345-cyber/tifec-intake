@@ -5584,3 +5584,21 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mgrid-appt-s { font-size: 10.5px; color: #6b7679; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mgrid-empty { position: absolute; top: 96px; left: 48px; right: 2px; text-align: center; color: #b4b2a9; font-size: 13px; }
 .mgrid-empty a { color: #256E72; }
+
+/* Day grid polish: half-hour lines + roomier blocks */
+.mgrid-half { position: absolute; left: 48px; right: 0; top: 0; border-top: 1px dashed #f1f4f5; }
+.mgrid-appt { padding: 6px 9px; gap: 2px; box-shadow: 0 1px 2px rgba(30,42,68,.06); }
+.mgrid-appt-t { font-size: 11px; }
+.mgrid-appt-n { font-size: 13.5px; }
+.mgrid-appt-s { font-size: 11px; line-height: 1.35; white-space: normal; }
+
+/* Blocked-off time: grey hatched band behind appointments */
+.mgrid-block { position: absolute; left: 48px; right: 2px; z-index: 1; border-radius: 7px; border: 1px dashed #c7cdd0; background: repeating-linear-gradient(135deg, #f1f3f5, #f1f3f5 7px, #e9ecee 7px, #e9ecee 14px); display: flex; align-items: flex-start; padding: 4px 8px; overflow: hidden; }
+.mgrid-block-l { font-size: 11px; font-weight: 600; color: #7b8488; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== Mobile appointment edit ===== */
+.mbk-select { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #dde3e6; border-radius: 10px; background: #fff; color: #232a3d; box-sizing: border-box; }
+.medit-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.medit-seg button { border: 1px solid #dde3e6; background: #fff; color: #232a3d; font: inherit; font-size: 14px; padding: 10px; border-radius: 10px; cursor: pointer; }
+.medit-seg button.on { background: #e4f3ee; border-color: #2F8E93; color: #1f6b60; font-weight: 600; }
+.medit-ta { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #dde3e6; border-radius: 10px; background: #fff; color: #232a3d; box-sizing: border-box; resize: vertical; }
