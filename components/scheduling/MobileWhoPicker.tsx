@@ -11,11 +11,13 @@ export default function MobileWhoPicker({ clinicians, who, myId }: { clinicians:
   const [open, setOpen] = useState(false);
   const path = usePathname() || "/m";
   const label = who === "all" ? "Everyone" : who === myId ? "My schedule" : (clinicians.find((c) => c.id === who)?.name || "Schedule");
-  // Remember the pick in a cookie so it sticks across tabs (Today ↔ Calendar)
-  // and reloads — the bottom-nav links carry no ?who=, so the pages fall back to
-  // this cookie. The ?who= on the immediate navigation keeps the reload instant.
+  // Remember the pick in a SESSION cookie so it sticks across tabs (Today ↔
+  // Calendar) while the app is open, but resets to My schedule on a fresh start.
+  // The bottom-nav links carry no ?who=, so the pages fall back to this cookie;
+  // the ?who= on the immediate navigation keeps the reload instant. No max-age =
+  // session cookie, cleared when the app is closed.
   const go = (w: string) => {
-    try { document.cookie = `m_who=${encodeURIComponent(w)}; path=/; max-age=31536000; samesite=lax`; } catch { /* ignore */ }
+    try { document.cookie = `m_who=${encodeURIComponent(w)}; path=/; samesite=lax`; } catch { /* ignore */ }
     window.location.href = `${path}?who=${encodeURIComponent(w)}`;
   };
 
