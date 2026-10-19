@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getBillingUser, devMode } from "@/lib/billingRole";
@@ -15,6 +15,15 @@ export const metadata: Metadata = {
   title: "TIFEC Schedule",
   manifest: "/schedule.webmanifest",
   appleWebApp: { capable: true, title: "Schedule", statusBarStyle: "default" },
+};
+
+// viewport-fit=cover is required for env(safe-area-inset-*) to report real
+// values on notched phones — without it the fixed bottom nav floats above the
+// home-indicator strip instead of sitting flush at the screen bottom.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 // The mobile scheduling app shell. Deliberately does NOT render UnifiedSidebar —

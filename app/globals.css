@@ -5602,6 +5602,10 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .msheet-plain + .msheet-plain { border-top: 1px solid var(--line2); }
 .mdet-cancel-sub { font-size: 13.5px; color: var(--muted); margin: 2px 2px 14px; line-height: 1.4; }
 
+/* Block-off-time: whole-day checkbox row */
+.mblk-whole { display: flex; align-items: center; gap: 10px; margin: 14px 2px; font-size: 14.5px; font-weight: 600; color: var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mblk-whole input { width: 20px; height: 20px; accent-color: var(--primary); }
+
 /* ===== Install (Add to Home Screen) helper — scheduling app ===== */
 .installbar {
   display: flex; align-items: center; gap: 11px;

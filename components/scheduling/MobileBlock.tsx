@@ -40,42 +40,42 @@ export default function MobileBlock({ clinicianId, today }: { clinicianId: strin
   }
 
   return (
-    <div className="mbk">
-      <header className="mbk-head">
-        <a href="/m" className="mbk-x" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></a>
-        <div className="mbk-title">Block off time</div>
+    <div className="mflow">
+      <header className="mflow-head">
+        <a href="/m" className="mflow-x" aria-label="Close"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></a>
+        <div className="mflow-title">Block off time</div>
       </header>
 
-      <div className="mbk-body">
-        <div className="mbk-card">
-          <div className="madet-f" style={{ marginBottom: 0 }}><label>Label <span className="mbk-opt">optional</span></label><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Lunch, Leave, Admin" autoFocus /></div>
+      <div className="mflow-body">
+        <div className="mcard">
+          <div className="mfield" style={{ marginBottom: 0 }}><label>Label <span style={{ color: "var(--muted3)", fontWeight: 400 }}>optional</span></label><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Lunch, Leave, Admin" autoFocus /></div>
         </div>
 
-        <label className="madet-toggle" style={{ marginTop: 14 }}><input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Block whole day(s)</label>
+        <label className="mblk-whole"><input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Block whole day(s)</label>
 
         {allDay ? (
-          <div className="mbk-card" style={{ marginTop: 6 }}>
-            <div className="madet-f"><label>From</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="madet-f" style={{ marginBottom: 0 }}><label>To</label><input type="date" value={toDate} min={date} onChange={(e) => setToDate(e.target.value)} /></div>
+          <div className="mcard">
+            <div className="mfield"><label>From</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div className="mfield" style={{ marginBottom: 0 }}><label>To</label><input type="date" value={toDate} min={date} onChange={(e) => setToDate(e.target.value)} /></div>
           </div>
         ) : (
-          <div className="mbk-card" style={{ marginTop: 6 }}>
-            <div className="madet-f"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="madet-f"><label>Start time</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
-            <div className="madet-f" style={{ marginBottom: 0 }}><label>Length</label>
-              <div className="medit-seg" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+          <div className="mcard">
+            <div className="mfield"><label>Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div className="mfield"><label>Start time</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
+            <div className="mfield" style={{ marginBottom: 0 }}><label>Length</label>
+              <div className="mseg">
                 {[30, 60, 90, 120].map((m) => <button key={m} type="button" className={len === m ? "on" : ""} onClick={() => setLen(m)}>{m < 60 ? `${m}m` : `${m / 60}h`}</button>)}
               </div>
             </div>
           </div>
         )}
 
-        {err && <div className="madet-msg err">{err}</div>}
+        {err && <div className="mmsg err">{err}</div>}
       </div>
 
-      <div className="mbk-foot">
-        <a className="mag-btn ghost" href="/m" style={{ flex: 1, lineHeight: "1.5" }}>Cancel</a>
-        <button className="mag-btn primary" disabled={busy} onClick={create}>{busy ? "Blocking…" : "Block it off"}</button>
+      <div className="mflow-foot">
+        <a className="mbtn ghost" href="/m" style={{ flex: "0 0 104px" }}>Cancel</a>
+        <button className="mbtn primary block" disabled={busy} onClick={create}>{busy ? "Blocking…" : "Block it off"}</button>
       </div>
     </div>
   );
