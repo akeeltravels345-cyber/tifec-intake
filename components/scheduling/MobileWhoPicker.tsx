@@ -11,7 +11,13 @@ export default function MobileWhoPicker({ clinicians, who, myId }: { clinicians:
   const [open, setOpen] = useState(false);
   const path = usePathname() || "/m";
   const label = who === "all" ? "Everyone" : who === myId ? "My schedule" : (clinicians.find((c) => c.id === who)?.name || "Schedule");
-  const go = (w: string) => { window.location.href = `${path}?who=${encodeURIComponent(w)}`; };
+  // Remember the pick in a cookie so it sticks across tabs (Today ↔ Calendar)
+  // and reloads — the bottom-nav links carry no ?who=, so the pages fall back to
+  // this cookie. The ?who= on the immediate navigation keeps the reload instant.
+  const go = (w: string) => {
+    try { document.cookie = `m_who=${encodeURIComponent(w)}; path=/; max-age=31536000; samesite=lax`; } catch { /* ignore */ }
+    window.location.href = `${path}?who=${encodeURIComponent(w)}`;
+  };
 
   return (
     <>

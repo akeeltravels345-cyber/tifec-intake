@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import MobileBack from "./MobileBack";
 
 type Appt = {
   id: string; clientName: string; clientEmail: string; mode: "in_person" | "virtual" | "either";
@@ -75,7 +76,7 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
     <div className="mflow mdet">
       <header className="mdet-head">
         <div className="mdet-head-row">
-          <a href="/m" className="mflow-x" aria-label="Back"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></a>
+          <MobileBack className="mflow-x" ariaLabel="Back"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></MobileBack>
           {canEdit && !cancelled && <button className="mflow-x" onClick={() => setSheet("more")} aria-label="More"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></svg></button>}
         </div>
         <div className="meyebrow">{typeName.toUpperCase()} · {durMin} MIN</div>

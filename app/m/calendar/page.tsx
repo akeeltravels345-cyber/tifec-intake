@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { inScheduleBeta, isBookableClinician, CLINICIANS } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointments, listAppointmentTypes } from "@/lib/scheduling";
@@ -19,7 +20,11 @@ export default async function MobileCalendarPage({ searchParams }: { searchParam
   if (!inScheduleBeta(me)) redirect("/today");
 
   const sp = await searchParams;
-  const who = sp.who === "all" ? "all" : (roster.some((c) => c.id === sp.who) ? sp.who! : me.id);
+  // Share the last-picked schedule with Today via the m_who cookie, so tapping
+  // the Calendar tab keeps showing whoever you selected rather than resetting.
+  const cookieWho = (await cookies()).get("m_who")?.value;
+  const sel = sp.who ?? cookieWho ?? me.id;
+  const who = sel === "all" ? "all" : (roster.some((c) => c.id === sel) ? sel : me.id);
   const forClinician = who === "all" ? undefined : who;
   const today = caymanToday();
 

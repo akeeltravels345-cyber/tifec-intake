@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { inScheduleBeta, isBookableClinician, CLINICIANS } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
@@ -28,8 +29,11 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
 
   const sp = await searchParams;
   const initialDay = sp.d && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) ? sp.d : undefined;
-  // Whose schedule: "all", a colleague's id, or (default) my own.
-  const who = sp.who === "all" ? "all" : (roster.some((c) => c.id === sp.who) ? sp.who! : me.id);
+  // Whose schedule: the explicit ?who=, else the last pick (m_who cookie, so it
+  // sticks across the Today/Calendar tabs), else (default) my own.
+  const cookieWho = (await cookies()).get("m_who")?.value;
+  const sel = sp.who ?? cookieWho ?? me.id;
+  const who = sel === "all" ? "all" : (roster.some((c) => c.id === sel) ? sel : me.id);
   const forClinician = who === "all" ? undefined : who;
   const today = caymanToday();
   const monday = mondayOf(today);

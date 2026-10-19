@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import MobileBack from "./MobileBack";
 
 const CAY = 5;
 const utcFromCay = (date: string, hhmm: string) => { const [y, m, d] = date.split("-").map(Number); const [h, mi] = hhmm.split(":").map(Number); return new Date(Date.UTC(y, m - 1, d, CAY + h, mi)).toISOString(); };
@@ -42,7 +43,7 @@ export default function MobileBlock({ clinicianId, today }: { clinicianId: strin
   return (
     <div className="mflow">
       <header className="mflow-head">
-        <a href="/m" className="mflow-x" aria-label="Close"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></a>
+        <MobileBack className="mflow-x" ariaLabel="Close"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></MobileBack>
         <div className="mflow-title">Block off time</div>
       </header>
 
@@ -74,7 +75,7 @@ export default function MobileBlock({ clinicianId, today }: { clinicianId: strin
       </div>
 
       <div className="mflow-foot">
-        <a className="mbtn ghost" href="/m" style={{ flex: "0 0 104px" }}>Cancel</a>
+        <MobileBack className="mbtn ghost" ariaLabel="Cancel" style={{ flex: "0 0 104px" }}>Cancel</MobileBack>
         <button className="mbtn primary block" disabled={busy} onClick={create}>{busy ? "Blocking…" : "Block it off"}</button>
       </div>
     </div>
