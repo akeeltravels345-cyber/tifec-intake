@@ -1,0 +1,89 @@
+/* Hours & availability ("Teal lead" redesign). Tokens only, namespaced .mhrs-*.
+   Shell, cards, buttons, segmented controls, switches and toast come from the
+   shared kit in globals.css; this file adds only the weekly rows, steppers,
+   amber override rows and a sticky footer. */
+
+/* Header: title plus a short subtitle under it */
+.mhrs-head { align-items: flex-start; }
+.mhrs-heading { display: flex; flex-direction: column; gap: 2px; }
+.mhrs-sub { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Section eyebrows between cards */
+.mhrs-eye { display: block; margin: 0 2px 8px; }
+.mhrs-eye.mt { margin-top: 22px; }
+
+/* Keep the body scrolling under a pinned footer */
+.mhrs .mflow-foot { position: sticky; bottom: 0; }
+.mhrs .mflow-foot .mbtn { flex: 1 1 auto; height: 52px; }
+
+/* Clinician picker */
+.mhrs-pick { display: block; }
+.mhrs-pick select {
+  display: block; width: 100%; min-height: 44px; margin-top: 8px;
+  border: 1px solid var(--border); border-radius: var(--r-input);
+  background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 600;
+  padding: 0 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mhrs-pick select:focus { outline: none; border-color: var(--accent-ink); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* Weekly hours: a card of day rows */
+.mhrs-week { padding: 0; overflow: hidden; }
+.mhrs-day + .mhrs-day { border-top: 1px solid var(--line); }
+.mhrs-dayhead { display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+.mhrs-dayrow {
+  flex: 1 1 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 52px; padding: 11px 0; border: 0; background: none; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.mhrs-dayrow:disabled { cursor: default; }
+.mhrs-dname { font-size: 14px; font-weight: 600; width: 96px; }
+.mhrs-drange { flex: 1 1 auto; text-align: right; font-size: 13px; font-weight: 600; color: var(--ink); }
+.mhrs-drange.off { color: var(--muted3); }
+
+/* Start / End steppers, shown when an on-day row is expanded */
+.mhrs-steppers { display: flex; gap: 8px; padding: 0 14px 14px; animation: mhrsFade .2s ease; }
+@keyframes mhrsFade { from { opacity: 0; } to { opacity: 1; } }
+.mhrs-step { flex: 1 1 0; background: var(--ground); border-radius: var(--r-input); padding: 8px 10px; }
+.mhrs-step-lbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted2); }
+.mhrs-step-ctl { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.mhrs-step-val { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mhrs-rnd {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: transform .1s;
+}
+.mhrs-rnd:active { transform: scale(.94); }
+.mhrs-rnd:disabled { opacity: .4; cursor: default; }
+
+/* Booking rules */
+.mhrs-rules { display: flex; flex-direction: column; gap: 14px; }
+.mhrs-rule-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+
+/* Date overrides: amber rows plus a dashed add button */
+.mhrs-ovs { display: flex; flex-direction: column; gap: 8px; }
+.mhrs-ov {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--amber-bg); border-radius: var(--r-input); padding: 11px 12px;
+}
+.mhrs-ov-ic { flex: 0 0 auto; color: var(--amber-icon); }
+.mhrs-ov-txt { flex: 1 1 auto; font-size: 13.5px; color: var(--amber-ink); }
+.mhrs-ov-txt b { font-weight: 700; }
+.mhrs-ov-x {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+  border: 0; background: rgba(255, 255, 255, .6); color: var(--amber-ink);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mhrs-add {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 46px; border-radius: var(--r-input);
+  border: 1px dashed var(--dash); background: transparent; color: var(--accent-ink);
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mhrs-add:active { transform: scale(.98); }
+
+/* The native date picker that drives "Add a day off" stays off-screen */
+.mhrs-datein { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

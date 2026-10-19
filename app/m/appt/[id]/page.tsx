@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { inScheduleBeta, getClinician } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
-import { getAppointment, listAppointmentTypes } from "@/lib/scheduling";
+import { getAppointment, listAppointmentTypes, appointmentContext } from "@/lib/scheduling";
 import { listInsurers } from "@/lib/billing";
 import { requiredIntakeForms, formShortLabel } from "@/lib/intakeRouting";
 import { seesAllSchedule } from "../../../schedule/layout";
@@ -25,13 +25,14 @@ export default async function MobileApptPage({ params }: { params: Promise<{ id:
   if (!appt || appt.kind !== "appointment") redirect("/m");
   const a = appt!;
 
-  const [types, insurers] = await Promise.all([listAppointmentTypes(), listInsurers()]);
+  const [types, insurers, ctx] = await Promise.all([listAppointmentTypes(), listInsurers(), appointmentContext(a)]);
   const type = types.find((t) => t.id === a.typeId);
   const insurerName = a.insurerId ? (insurers.find((i) => i.id === a.insurerId)?.name ?? null) : null;
+  const lastSeenText = ctx.lastSeen ? dayLabel(cayShift(ctx.lastSeen)) : null;
 
   const start = cayShift(a.startAt), end = cayShift(a.endAt);
   const durMin = Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 60000);
-  const whenText = `${dayLabel(start)} · ${time12(start)}–${time12(end)}`;
+  const whenText = `${dayLabel(start)} · ${time12(start)}-${time12(end)}`;
 
   // Who booked it + when (Cayman), same wording as the web detail.
   const bookedBy = a.source === "client" ? "the client (online)"
@@ -52,6 +53,7 @@ export default async function MobileApptPage({ params }: { params: Promise<{ id:
         id: a.id, clientName: a.clientName, clientEmail: a.clientEmail, mode: a.mode, status: a.status,
         capacity: a.capacity, locationOrLink: a.locationOrLink, billingSessionId: a.billingSessionId,
         intakeStatus: a.intakeStatus, insurancePath: a.insurancePath, seriesId: a.seriesId, startAtDate: start.toISOString().slice(0, 10),
+        startAt: a.startAt, endAt: a.endAt,
       }}
       typeName={type?.name ?? "Appointment"}
       durMin={durMin}
@@ -61,6 +63,10 @@ export default async function MobileApptPage({ params }: { params: Promise<{ id:
       bookedOn={bookedOn}
       intakeForms={intakeForms}
       canEdit={canEdit}
+      attended={ctx.attended}
+      seriesIndex={ctx.seriesIndex}
+      seriesTotal={ctx.seriesTotal}
+      lastSeenText={lastSeenText}
     />
   );
 }

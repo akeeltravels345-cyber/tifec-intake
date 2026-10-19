@@ -1,0 +1,62 @@
+/* Edit appointment ("Teal lead" redesign). Tokens only, namespaced .medit2-*.
+   Shell/cards/buttons/segmented/toggle/toast come from the shared kit in
+   globals.css; this file adds only the chips, day chips and start-time grid. */
+
+.medit2 .mcard + .mcard { margin-top: 12px; }
+
+.medit2 input:focus,
+.medit2 textarea:focus {
+  outline: none;
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+/* Labels inside cards (service / mode / day / time) */
+.medit2-lbl { display: block; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.medit2-lbl.mt { margin-top: 14px; }
+.medit2-opt { font-weight: 400; color: var(--muted3); }
+
+/* Service chips */
+.medit2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.medit2-chip {
+  min-height: 36px; padding: 0 13px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.medit2-chip.on { border-color: var(--primary); background: var(--primary-tint); color: var(--primary); }
+
+/* Day chips (horizontal scroll) */
+.medit2-days { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.medit2-days::-webkit-scrollbar { display: none; }
+.medit2-day {
+  flex: 0 0 auto; width: 52px; height: 58px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.medit2-day.on { border-color: var(--primary); background: var(--primary); color: #fff; }
+.medit2-day .dow { font-size: 10.5px; font-weight: 700; opacity: .75; }
+.medit2-day .num { font-family: var(--font-display); font-weight: 500; font-size: 18px; }
+
+/* Start-time grid */
+.medit2-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.medit2-slot {
+  min-height: 40px; border-radius: 12px; font: inherit; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.medit2-slot.on { border-color: var(--primary); background: var(--primary); color: #fff; }
+.medit2-hint { margin-top: 8px; font-size: 12px; color: var(--muted3); }
+
+/* "Email the client" toggle row */
+.medit2-toggle-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-card); padding: 12px 14px;
+}
+.medit2-toggle-row span { font-size: 13.5px; color: var(--ink); }
+
+/* Footer buttons */
+.medit2-cancel { flex: 0 0 104px; }
+.medit2-save { flex: 1 1 auto; }

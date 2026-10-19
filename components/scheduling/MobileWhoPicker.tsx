@@ -22,10 +22,10 @@ export default function MobileWhoPicker({ clinicians, who, myId }: { clinicians:
       </button>
 
       {open && (
-        <div className="mag-sheet-ov" onClick={() => setOpen(false)}>
-          <div className="mag-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="mag-sheet-grab" aria-hidden="true" />
-            <div className="mag-sheet-name">Whose schedule</div>
+        <div className="msheet-ov" onClick={() => setOpen(false)}>
+          <div className="msheet" onClick={(e) => e.stopPropagation()}>
+            <div className="msheet-grab" aria-hidden="true" />
+            <div className="msheet-title">Whose schedule</div>
             <div className="mwho-list">
               <button className={`mwho-opt${who === myId ? " on" : ""}`} onClick={() => go(myId)}>My schedule {who === myId && <span aria-hidden="true">✓</span>}</button>
               <button className={`mwho-opt${who === "all" ? " on" : ""}`} onClick={() => go("all")}>Everyone {who === "all" && <span aria-hidden="true">✓</span>}</button>
