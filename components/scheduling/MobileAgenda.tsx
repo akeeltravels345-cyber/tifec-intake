@@ -166,17 +166,26 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
               const a = p.a;
               const vs = Math.max(p.s, DAY_START * 60), ve = Math.min(p.e, DAY_END * 60);
               if (ve <= vs) return null;
-              const top = ((vs - DAY_START * 60) / 60) * HOUR, height = Math.max(28, ((ve - vs) / 60) * HOUR - 2);
+              const top = ((vs - DAY_START * 60) / 60) * HOUR, height = Math.max(30, ((ve - vs) / 60) * HOUR - 2);
               const w = 100 / p.laneCount, left = p.lane * w;
               const t = a.typeId ? typeById.get(a.typeId) : undefined;
               const tint = tintOf(isFreeConsult(t?.name), a.capacity > 1);
               const lblS = label12(cayMin(a.startAt)), lblE = label12(cayMin(a.endAt));
-              const timeRange = `${lblS.t}${lblS.ap !== lblE.ap ? lblS.ap : ""}–${lblE.t}${lblE.ap}`;
+              const timeRange = `${lblS.t}${lblS.ap !== lblE.ap ? lblS.ap : ""}-${lblE.t}${lblE.ap}`;
+              // Short appointments (e.g. a 20-min consult) don't have room for two
+              // lines, so they get one compact line: start time + who.
+              const compact = height < 46;
               return (
-                <a key={a.id} className="mgrid-appt" href={`/m/appt/${a.id}`} style={{ top, height, left: `${left}%`, width: `calc(${w}% - 3px)`, background: tint.bg, borderLeftColor: tint.bar }}>
-                  <span className="mgrid-appt-t">{timeRange}</span>
-                  <span className="mgrid-appt-n">{titleOf(a)}</span>
-                  {height > 50 && <span className="mgrid-appt-s">{subOf(a)} · {a.mode === "virtual" ? "Online" : "In person"}{a.billingSessionId ? " · ✓ logged" : ""}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
+                <a key={a.id} className={`mgrid-appt${compact ? " compact" : ""}`} href={`/m/appt/${a.id}`} style={{ top, height, left: `${left}%`, width: `calc(${w}% - 3px)`, background: tint.bg, borderLeftColor: tint.bar }}>
+                  {compact ? (
+                    <span className="mgrid-appt-c"><b>{lblS.t}{lblS.ap}</b> {titleOf(a)}</span>
+                  ) : (
+                    <>
+                      <span className="mgrid-appt-t">{timeRange}</span>
+                      <span className="mgrid-appt-n">{titleOf(a)}</span>
+                      {height > 66 && <span className="mgrid-appt-s">{subOf(a)} · {a.mode === "virtual" ? "Online" : "In person"}{a.billingSessionId ? " · ✓ logged" : ""}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
+                    </>
+                  )}
                 </a>
               );
             })}

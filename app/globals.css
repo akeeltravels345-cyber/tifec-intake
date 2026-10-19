@@ -5596,6 +5596,11 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mgrid-appt-n { font-size: 13.5px; }
 .mgrid-appt-s { font-size: 11px; line-height: 1.35; white-space: normal; }
 
+/* Short appointments: one compact centred line (start time + who) */
+.mgrid-appt.compact { justify-content: center; padding-top: 3px; padding-bottom: 3px; gap: 0; }
+.mgrid-appt-c { font-size: 12px; color: #232a3d; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgrid-appt-c b { color: #6b7679; font-weight: 600; margin-right: 2px; }
+
 /* Blocked-off time: grey hatched band behind appointments */
 .mgrid-block { position: absolute; left: 48px; right: 2px; z-index: 1; border-radius: 7px; border: 1px dashed #c7cdd0; background: repeating-linear-gradient(135deg, #f1f3f5, #f1f3f5 7px, #e9ecee 7px, #e9ecee 14px); display: flex; align-items: flex-start; padding: 4px 8px; overflow: hidden; }
 .mgrid-block-l { font-size: 11px; font-weight: 600; color: #7b8488; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
