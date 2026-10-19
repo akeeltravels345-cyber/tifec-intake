@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import InstallPrompt from "@/components/InstallPrompt";
 import MobileWhoPicker from "@/components/scheduling/MobileWhoPicker";
 import MobilePeekSheet, { type PeekAppt } from "@/components/scheduling/MobilePeekSheet";
+import MobileWalkthrough, { WT_KEY } from "@/components/scheduling/MobileWalkthrough";
 
 type Appt = {
   id: string; startAt: string; endAt: string; clientName: string; typeId: string | null;
@@ -44,6 +45,21 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
   const [selected, setSelected] = useState(start0);
   const [weekStart, setWeekStart] = useState(mondayOf(start0));
   const [peekId, setPeekId] = useState<string | null>(null);
+  const [showTour, setShowTour] = useState(false);
+
+  // First-run walkthrough: show once (localStorage), or on demand via ?tour=1
+  // (the Me screen links there to replay it). Client-only to avoid a flash.
+  useEffect(() => {
+    try {
+      const forced = new URLSearchParams(window.location.search).get("tour") === "1";
+      const seen = localStorage.getItem(WT_KEY);
+      if (forced || !seen) setShowTour(true);
+    } catch { /* ignore */ }
+  }, []);
+  const closeTour = () => {
+    setShowTour(false);
+    try { if (new URLSearchParams(window.location.search).get("tour")) window.history.replaceState(null, "", window.location.pathname); } catch { /* ignore */ }
+  };
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const live = useMemo(() => appts.filter((a) => a.status !== "cancelled"), [appts]);
@@ -201,9 +217,9 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
                     <span className="mg2-c"><b>{lblS.t}{lblS.ap}</b> {titleOf(a)}</span>
                   ) : (
                     <>
-                      <span className="mg2-t">{lblS.t}{lblS.ap !== lblE.ap ? lblS.ap : ""}–{lblE.t}{lblE.ap}{online && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ marginLeft: 4, verticalAlign: "-1px" }}><path d="M15 10l5-3v10l-5-3" /><rect x="3" y="6" width="12" height="12" rx="2" /></svg>}</span>
+                      <span className="mg2-t">{lblS.t}{lblS.ap !== lblE.ap ? lblS.ap : ""}-{lblE.t}{lblE.ap}{online && <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ marginLeft: 4, verticalAlign: "-1px" }}><path d="M15 10l5-3v10l-5-3" /><rect x="3" y="6" width="12" height="12" rx="2" /></svg>}</span>
                       <span className="mg2-n">{titleOf(a)}</span>
-                      {height > 84 && <span className="mg2-s">{subOf(a)}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
+                      {height > 52 && <span className="mg2-s">{subOf(a)} · {online ? "Online" : "In person"}{a.insurancePath === "insurance" ? " · Insurance" : ""}{a.intakeStatus === "pending" ? " · Intake due" : ""}{showAll && a.clinicianId ? ` · ${lastName(clinName(a.clinicianId))}` : ""}</span>}
                       {past && !logged && <span className="mg2-tolog">To log</span>}
                       {logged && <span className="mg2-check" aria-label="Logged"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg></span>}
                     </>
@@ -226,6 +242,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
       </div>
 
       {peekData && <MobilePeekSheet appt={peekData} onClose={() => setPeekId(null)} />}
+      {showTour && <MobileWalkthrough onClose={closeTour} />}
     </div>
   );
 }

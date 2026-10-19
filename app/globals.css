@@ -5608,6 +5608,24 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mblk-whole { display: flex; align-items: center; gap: 10px; margin: 14px 2px; font-size: 14.5px; font-weight: 600; color: var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mblk-whole input { width: 20px; height: 20px; accent-color: var(--primary); }
 
+/* ===== First-run walkthrough wizard ===== */
+.mwt { position: fixed; inset: 0; z-index: 80; background: var(--ground); display: flex; flex-direction: column; padding: calc(env(safe-area-inset-top, 0px) + 18px) 24px calc(env(safe-area-inset-bottom, 0px) + 22px); animation: mFade .2s ease; }
+.mwt-skip { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 18px; background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; padding: 6px 4px; -webkit-tap-highlight-color: transparent; }
+.mwt-body { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.mwt-ic { width: 84px; height: 84px; border-radius: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+.mwt-ic.t1 { background: var(--t1-bg); color: var(--t1-fg); }
+.mwt-ic.t2 { background: var(--t2-bg); color: var(--t2-fg); }
+.mwt-ic.t3 { background: var(--t3-bg); color: var(--t3-fg); }
+.mwt-title { font-family: var(--font-display); font-weight: 500; font-size: 27px; line-height: 1.15; color: var(--ink); margin: 0 0 12px; max-width: 320px; letter-spacing: -.01em; }
+.mwt-text { font-size: 15.5px; line-height: 1.5; color: var(--muted); margin: 0; max-width: 320px; }
+.mwt-foot { flex: 0 0 auto; }
+.mwt-dots { display: flex; gap: 7px; justify-content: center; margin-bottom: 18px; }
+.mwt-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--dash); transition: width .2s, background .2s; }
+.mwt-dots span.on { background: var(--primary); width: 20px; border-radius: 4px; }
+.mwt-btns { display: flex; gap: 10px; }
+.mwt-btns .mbtn.ghost { flex: 0 0 96px; }
+.mwt-btns .mbtn.primary { flex: 1 1 auto; height: 52px; }
+
 /* ===== Install (Add to Home Screen) helper — scheduling app ===== */
 .installbar {
   display: flex; align-items: center; gap: 11px;
