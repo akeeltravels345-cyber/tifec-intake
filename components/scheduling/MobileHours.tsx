@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import type { ClinicianAvailability, DayHours, TimeBlock, DateOverride } from "@/lib/scheduling";
 import "./mobile-hours.css";
-import MobileBack from "./MobileBack";
 
 interface Clin { id: string; name: string; }
 
@@ -134,7 +133,7 @@ export default function MobileHours({ clinicians, selectedId, initial }: {
   return (
     <div className="mflow mhrs">
       <header className="mflow-head mhrs-head">
-        <MobileBack className="mflow-x" ariaLabel="Back to calendar"><Icon d="M15 18l-6-6 6-6" size={21} /></MobileBack>
+        <a href="/m" className="mflow-x" aria-label="Back to calendar"><Icon d="M15 18l-6-6 6-6" size={21} /></a>
         <div className="mhrs-heading">
           <div className="mflow-title">Hours &amp; availability</div>
           <p className="mhrs-sub">Clients can only book inside these times.</p>

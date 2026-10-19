@@ -3,7 +3,6 @@
 import "./mobile-book.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import MobileBack from "./MobileBack";
 
 type T = { id: string; name: string; durationMin: number; mode: string; category: string };
 
@@ -110,9 +109,9 @@ export default function MobileBook({ clinicianId, today, types }: { clinicianId:
   return (
     <div className="mflow mbook2">
       <header className="mflow-head">
-        <MobileBack className="mflow-x" ariaLabel="Close">
+        <a href="/m" className="mflow-x" aria-label="Close">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </MobileBack>
+        </a>
         <div className="mflow-title">New appointment</div>
         <span className="mbook2-stepcount">Step {step + 1} of 3</span>
       </header>
