@@ -5,8 +5,8 @@
 import fs from "fs";
 import path from "path";
 
-export interface ClinicianPrefs { dailyAgenda: boolean; newBookings: boolean; }
-const DEFAULTS: ClinicianPrefs = { dailyAgenda: true, newBookings: true };
+export interface ClinicianPrefs { dailyAgenda: boolean; newBookings: boolean; apptReminders: boolean; }
+const DEFAULTS: ClinicianPrefs = { dailyAgenda: true, newBookings: true, apptReminders: true };
 
 const usePostgres = !!process.env.DATABASE_URL;
 async function pg() { const { neon } = await import("@neondatabase/serverless"); return neon(process.env.DATABASE_URL as string); }
@@ -20,6 +20,7 @@ function normalize(row: Record<string, unknown> | null): ClinicianPrefs {
   return {
     dailyAgenda: row.daily_agenda == null ? true : !!row.daily_agenda,
     newBookings: row.new_bookings == null ? true : !!row.new_bookings,
+    apptReminders: row.appt_reminders == null ? true : !!row.appt_reminders,
   };
 }
 
@@ -40,10 +41,12 @@ export async function setClinicianPrefs(clinicianId: string, patch: Partial<Clin
       await sql`INSERT INTO scheduling_clinician_prefs (clinician_id, daily_agenda, updated_at)
         VALUES (${clinicianId}, ${next.dailyAgenda}, now())
         ON CONFLICT (clinician_id) DO UPDATE SET daily_agenda=${next.dailyAgenda}, updated_at=now()`;
-      // Guarded: new_bookings added later — self-migrate the column, then set it,
-      // so an un-migrated table still saves dailyAgenda above.
+      // Guarded: new_bookings + appt_reminders added later — self-migrate each
+      // column, then set it, so an un-migrated table still saves dailyAgenda above.
       try { await sql`ALTER TABLE scheduling_clinician_prefs ADD COLUMN IF NOT EXISTS new_bookings boolean DEFAULT true`; } catch { /* no perms / already exists */ }
       try { await sql`UPDATE scheduling_clinician_prefs SET new_bookings=${next.newBookings} WHERE clinician_id=${clinicianId}`; } catch { /* column not present */ }
+      try { await sql`ALTER TABLE scheduling_clinician_prefs ADD COLUMN IF NOT EXISTS appt_reminders boolean DEFAULT true`; } catch { /* no perms / already exists */ }
+      try { await sql`UPDATE scheduling_clinician_prefs SET appt_reminders=${next.apptReminders} WHERE clinician_id=${clinicianId}`; } catch { /* column not present */ }
     } else {
       const all = readJson<Record<string, ClinicianPrefs>>(FILE, {}); all[clinicianId] = next; writeJson(FILE, all);
     }

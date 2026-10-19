@@ -7,7 +7,7 @@ import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
 import { portalToken } from "@/lib/portalAuth";
 import { addClients, clientInSystem } from "@/lib/clients";
-import { sendPushToClinician } from "@/lib/push";
+import { notifyClinician } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +109,8 @@ export async function POST(req: Request) {
       intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
       extraNotes: ["To change or cancel your seat, just reply to this email and we'll help."],
     });
+    // Notify the clinician: inbox entry + push to their devices.
+    await notifyClinician(clinicianId, { type: "booking", title: "New booking", body: `${name} · ${type.name}\n${caymanWhen(session.startAt)}`, apptId: session.id }).catch(() => {});
     return NextResponse.json({
       ok: true,
       appointment: { id: session.id, startAt: session.startAt, endAt: session.endAt },
@@ -219,16 +221,13 @@ export async function POST(req: Request) {
     events: isMulti ? booked.map((b) => ({ id: b.id, startAt: b.startAt, endAt: b.endAt })) : undefined,
   });
 
-  // Alert the clinician on their devices (best-effort; never blocks the booking).
-  try {
-    const extra = booked.length > 1 ? ` (+${booked.length - 1} more)` : "";
-    await sendPushToClinician(clinicianId, {
-      title: "New booking",
-      body: `${name} · ${type.name}${extra}\n${caymanWhen(appt.startAt)}`,
-      url: "/schedule",
-      tag: `booking-${appt.id}`,
-    });
-  } catch { /* non-fatal */ }
+  // Alert the clinician: inbox entry + push to their devices (best-effort).
+  const extra = booked.length > 1 ? ` (+${booked.length - 1} more)` : "";
+  await notifyClinician(clinicianId, {
+    type: "booking", title: "New booking",
+    body: `${name} · ${type.name}${extra}\n${caymanWhen(appt.startAt)}`,
+    apptId: appt.id,
+  }).catch(() => { /* non-fatal */ });
 
   return NextResponse.json({
     ok: true,

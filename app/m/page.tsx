@@ -4,6 +4,7 @@ import { inScheduleBeta, isBookableClinician, CLINICIANS } from "@/lib/clinician
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
 import { caymanToday } from "@/lib/caymanTime";
+import { unreadCount } from "@/lib/notifications";
 import MobileAgenda from "@/components/scheduling/MobileAgenda";
 
 export const dynamic = "force-dynamic";
@@ -35,10 +36,11 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
   const today = caymanToday();
   const monday = mondayOf(today);
 
-  const [types, appts, h] = await Promise.all([
+  const [types, appts, h, unread] = await Promise.all([
     listAppointmentTypes(),
     listAppointments({ from: utcAtCayMidnight(addDays(monday, -7)), to: utcAtCayMidnight(addDays(monday, 56)), clinicianId: forClinician }),
     headers(),
+    unreadCount(me.id),
   ]);
   const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
   const bookingUrl = `${origin}/book?clinician=${encodeURIComponent(me.id)}`;
@@ -63,6 +65,7 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
       clinicians={roster}
       who={who}
       myId={me.id}
+      unread={unread}
     />
   );
 }

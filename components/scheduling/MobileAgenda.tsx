@@ -34,7 +34,7 @@ const initialsOf = (name: string) => {
   return words.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
 };
 
-export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName, bookingUrl, clinicians, who, myId }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string; bookingUrl: string; clinicians: { id: string; name: string }[]; who: string; myId: string }) {
+export default function MobileAgenda({ appts, types, todayCayman, initialDay, clinicianName, bookingUrl, clinicians, who, myId, unread = 0 }: { appts: Appt[]; types: Type[]; todayCayman: string; initialDay?: string; clinicianName: string; bookingUrl: string; clinicians: { id: string; name: string }[]; who: string; myId: string; unread?: number }) {
   const viewingOwn = who === myId;
   const showAll = who === "all";
   const clinName = (id?: string) => (id ? (clinicians.find((c) => c.id === id)?.name || "") : "");
@@ -109,7 +109,13 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
             <div className="mag-dow">{headDow}</div>
             <div className="mag-date">{headDate}</div>
           </div>
-          <button className="mag-av" onClick={() => setAccount(true)} aria-label="Account and booking link">{initialsOf(clinicianName)}</button>
+          <div className="mag-head-actions">
+            <a className="mag-bell" href="/m/notifications" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}>
+              <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+              {unread > 0 && <span className="mag-bell-badge">{unread > 9 ? "9+" : unread}</span>}
+            </a>
+            <button className="mag-av" onClick={() => setAccount(true)} aria-label="Account and booking link">{initialsOf(clinicianName)}</button>
+          </div>
         </div>
         <div className="mag-strip">
           <button className="mag-wk" aria-label="Previous week" onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
@@ -205,6 +211,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
               <button className="mme-btn ghost" onClick={copyLink}>{copied ? "Copied ✓" : "Copy"}</button>
             </div>
             <div className="mag-acct-rows">
+              <a className="mme-row" href="/m/notifications"><span>Notifications{unread > 0 ? ` (${unread})` : ""}</span><span className="mme-chev" aria-hidden="true">›</span></a>
               <a className="mme-row" href="/m/hours"><span>Your hours &amp; availability</span><span className="mme-chev" aria-hidden="true">›</span></a>
               <a className="mme-row" href="/today"><span>Open the full web app</span><span className="mme-chev" aria-hidden="true">›</span></a>
               <button className="mme-row danger" onClick={signOut} disabled={signing}><span>{signing ? "Signing out…" : "Sign out"}</span></button>

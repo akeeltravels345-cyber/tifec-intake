@@ -10,6 +10,7 @@ import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } fro
 import { portalToken } from "@/lib/portalAuth";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { clientInSystem } from "@/lib/clients";
+import { notifyClinician } from "@/lib/notifications";
 import { caymanWhen } from "@/lib/caymanTime";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,8 @@ export async function POST(req: Request) {
   appt = await attachVideoAndCalendar(appt, { clientName: entry.name, email: entry.email, phone, serviceName, durationMin });
   await setOfferAppt(offer.id, appt.id);
   await setWaitlistStatus(entry.id, "booked");
+  // Notify the clinician: inbox entry + push (a waitlister claimed a freed slot).
+  await notifyClinician(offer.clinicianId, { type: "booking", title: "New booking", body: `${entry.name} · ${serviceName}\n${caymanWhen(appt.startAt)}`, apptId: appt.id }).catch(() => {});
   // Everyone else who was offered this slot goes back to plain "waiting".
   await Promise.all(offer.notifiedEntryIds.filter((id) => id !== entry.id).map((id) => setWaitlistStatus(id, "waiting").catch(() => {})));
 

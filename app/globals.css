@@ -5350,6 +5350,10 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mag-date { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 1px; }
 .mag-av { width: 38px; height: 38px; border-radius: 50%; background: #2F8E93; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: 0 0 auto; border: 0; padding: 0; cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent; }
 .mag-av:active { background: #256E72; }
+.mag-head-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.mag-head .mag-bell { position: relative; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #E9EEF5; background: rgba(255,255,255,.08); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.mag-head .mag-bell:active { background: rgba(255,255,255,.16); }
+.mag-bell-badge { position: absolute; top: -2px; right: -2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #D85A30; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; border: 2px solid #1E2A44; box-sizing: content-box; }
 .mag-acct-rows { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
 .mag-strip { display: flex; align-items: center; gap: 2px; margin-top: 16px; }
 .mag-wk { background: transparent; border: 0; color: #9FB2C9; font-size: 20px; line-height: 1; padding: 6px 4px; cursor: pointer; flex: 0 0 auto; }
@@ -5602,3 +5606,42 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .medit-seg button { border: 1px solid #dde3e6; background: #fff; color: #232a3d; font: inherit; font-size: 14px; padding: 10px; border-radius: 10px; cursor: pointer; }
 .medit-seg button.on { background: #e4f3ee; border-color: #2F8E93; color: #1f6b60; font-weight: 600; }
 .medit-ta { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #dde3e6; border-radius: 10px; background: #fff; color: #232a3d; box-sizing: border-box; resize: vertical; }
+
+/* ===== Mobile notifications (inbox + settings) ===== */
+.mnot { min-height: 100%; background: #F4F6F7; }
+.mnot-head { background: #1E2A44; color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px; display: flex; align-items: center; gap: 10px; }
+.mnot-back { color: #cdd6e4; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: -6px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.mnot-title { font-size: 20px; font-weight: 700; }
+.mnot-body { padding: 14px; }
+.mnot-card { background: #fff; border: 1px solid #E7ECEE; border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+.mnot-set { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.mnot-set-t { font-size: 14.5px; font-weight: 600; color: #232a3d; }
+.mnot-set-s { font-size: 12.5px; color: #6b7679; margin-top: 2px; line-height: 1.35; }
+.mnot-note { font-size: 12.5px; color: #6b7679; margin-top: 10px; line-height: 1.4; }
+.mnot-msg { font-size: 13px; margin-top: 10px; padding: 9px 11px; border-radius: 9px; }
+.mnot-msg.ok { background: #e4f3ee; color: #1f6b60; }
+.mnot-msg.err { background: #fbe9e4; color: #9a3a1e; }
+/* iOS-style switch */
+.mnot-sw { flex: 0 0 auto; width: 46px; height: 28px; border-radius: 999px; background: #d4dadd; border: 0; padding: 0; position: relative; cursor: pointer; transition: background .15s; -webkit-tap-highlight-color: transparent; }
+.mnot-sw.on { background: #2F8E93; }
+.mnot-sw span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.mnot-sw.on span { transform: translateX(18px); }
+.mnot-sw:disabled { opacity: .5; }
+.mnot-list { display: flex; flex-direction: column; gap: 8px; }
+.mnot-item { display: flex; align-items: flex-start; gap: 11px; width: 100%; text-align: left; background: #fff; border: 1px solid #E7ECEE; border-radius: 12px; padding: 12px; font: inherit; cursor: pointer; position: relative; -webkit-tap-highlight-color: transparent; }
+.mnot-item:active { background: #fafbfb; }
+.mnot-item.unread { background: #f3f8f9; border-color: #cfe4e5; }
+.mnot-ic { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+.mnot-ic.booking { background: #e4f3ee; color: #1f7a6f; }
+.mnot-ic.reschedule { background: #e9eaf6; color: #2E3192; }
+.mnot-ic.cancel { background: #fbe9e4; color: #c0472a; }
+.mnot-ic.reminder { background: #fdf1dc; color: #a9791c; }
+.mnot-item-main { flex: 1 1 auto; min-width: 0; }
+.mnot-item-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-right: 14px; }
+.mnot-item-title { font-size: 14px; font-weight: 600; color: #232a3d; }
+.mnot-item-time { flex: 0 0 auto; font-size: 11.5px; color: #93999b; }
+.mnot-item-body { display: block; font-size: 13px; color: #5b6568; margin-top: 2px; white-space: pre-line; line-height: 1.35; }
+.mnot-dot { position: absolute; top: 14px; right: 11px; width: 8px; height: 8px; border-radius: 50%; background: #2F8E93; }
+.mnot-empty { text-align: center; color: #9aa4a7; padding: 48px 24px; }
+.mnot-empty svg { color: #c4ccce; margin-bottom: 12px; }
+.mnot-empty p { font-size: 14px; line-height: 1.5; max-width: 260px; margin: 0 auto; }

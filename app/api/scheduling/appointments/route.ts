@@ -13,6 +13,7 @@ import { createVideoLink, cancelVideoLink, hasGoogleConnection, upsertGoogleEven
 import { sendBookingConfirmation, sendIntakeInvite } from "@/lib/bookingCore";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { clientInSystem } from "@/lib/clients";
+import { notifyClinician } from "@/lib/notifications";
 import { caymanWhen } from "@/lib/caymanTime";
 import { portalToken } from "@/lib/portalAuth";
 import { randomBytes } from "crypto";
@@ -47,6 +48,24 @@ async function notifyClientOfBooking(appt: Appointment, origin: string): Promise
     intakeForms: needsIntake ? missingForms.map((f) => formShortLabel(f)) : [],
   });
   return needsIntake ? missingForms.map((f) => formShortLabel(f)) : [];
+}
+
+// Ping the appointment's clinician (in-app inbox + push) about activity on their
+// schedule. Skips the clinician who made the change themselves (actorId), skips
+// blocks, and never throws — purely a best-effort heads-up.
+async function notifyClinicianOfAppt(appt: Appointment, kind: "booking" | "reschedule" | "cancel", actorId: string): Promise<void> {
+  if (appt.kind === "block") return;
+  try {
+    const svc = (await listAppointmentTypes()).find((t) => t.id === appt.typeId)?.name || "Appointment";
+    const who = appt.clientName || "A client";
+    const when = caymanWhen(appt.startAt);
+    const copy = {
+      booking: { title: "New appointment", body: `${who} · ${svc}\n${when}` },
+      reschedule: { title: "Appointment moved", body: `${who} · ${svc}\nNow ${when}` },
+      cancel: { title: "Appointment cancelled", body: `${who} · ${svc}\nWas ${when}` },
+    }[kind];
+    await notifyClinician(appt.clinicianId, { type: kind, title: copy.title, body: copy.body, apptId: appt.id }, { actorId });
+  } catch (e) { console.error("clinician notify failed", e); }
 }
 
 // For a virtual individual appointment with no link yet, auto-create a meeting
@@ -186,11 +205,13 @@ export async function POST(req: Request) {
         const { created, skipped } = await createRecurring(base as never, everyDays, count);
         const withVideo = await Promise.all(created.map((a) => attachVideo(a)));
         if (notify && withVideo[0]) { try { await notifyClientOfBooking(withVideo[0], origin); } catch (e) { console.error("staff booking email failed", e); } }
+        if (withVideo[0]) await notifyClinicianOfAppt(withVideo[0], "booking", me.id);
         return NextResponse.json({ ok: true, appointment: withVideo[0], count: withVideo.length, skipped: skipped.length });
       }
       const appt = await attachVideo(await createAppointment(base as never));
       let intakeSent: string[] = [];
       if (notify) { try { intakeSent = await notifyClientOfBooking(appt, origin); } catch (e) { console.error("staff booking email failed", e); } }
+      await notifyClinicianOfAppt(appt, "booking", me.id);
       return NextResponse.json({ ok: true, appointment: appt, intakeSent });
     }
 
@@ -212,6 +233,14 @@ export async function POST(req: Request) {
       // meeting on the clinician's connected Zoom/Meet so they can share it.
       if (action === "update" && appt.kind !== "block" && appt.mode === "virtual" && !appt.locationOrLink && appt.capacity <= 1) {
         appt = await attachVideo(appt);
+      }
+      // Heads-up to the appointment's clinician when someone else moved or
+      // cancelled their appointment (push + inbox; skipped if they did it).
+      if (before && appt.kind !== "block" && body.status !== "cancelled" && before.startAt !== appt.startAt) {
+        await notifyClinicianOfAppt(appt, "reschedule", me.id);
+      }
+      if (appt.kind !== "block" && body.status === "cancelled") {
+        await notifyClinicianOfAppt(appt, "cancel", me.id);
       }
       // A drag/edit that moved the time can email the client (staff chose to).
       if (body.notifyClient && appt.kind !== "block" && appt.clientEmail && before && before.startAt !== appt.startAt) {
@@ -249,6 +278,7 @@ export async function POST(req: Request) {
       const existing = await getAppointment(id);
       if (!existing || existing.kind !== "appointment") return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
       const appt = await updateAppointment(id, { status: "cancelled" } as never);
+      await notifyClinicianOfAppt(existing, "cancel", me.id);
       // Free the meeting + remove the mirrored Google event.
       if (existing.mode === "virtual" && existing.locationOrLink) await cancelVideoLink(existing.clinicianId, existing.locationOrLink, existing.videoEventId || undefined);
       if (existing.videoEventId && !/meet\.google\.com/i.test(existing.locationOrLink || "")) await deleteGoogleEvent(existing.clinicianId, existing.videoEventId);
