@@ -5272,11 +5272,74 @@ a.cal-linktext:hover { text-decoration: underline; }
 body:has(.mapp) .brandbar,
 body:has(.mapp) .sitefoot { display: none !important; }
 
+/* ---- Redesign token layer ("Teal lead"). Light + dark, scoped to the /m shell.
+   Mobile styles below read these, so the palette is themed in one place. ---- */
+.mapp {
+  --primary: #1F6F73; --primary-tint: #E3F0EF;
+  --accent: #2E3192; --accent-ink: #2E3192; --accent-tint: #ECEDF8;
+  --ground: #F6F7F4; --surface: #FFFFFF; --track: #E9EEEA;
+  --line: #E2E8E4; --line2: #F3EFE6; --border: #DFE5E1;
+  --ink: #22283A; --muted: #6B7580; --muted2: #8A8F86; --muted3: #9AA0A6;
+  --dash: #CFC8B8; --press: #FAFAF7; --bar: rgba(255,255,255,.96);
+  --ok-bg: #E3F1EA; --ok-ink: #2C7A55;
+  --amber-bg: #F6ECD9; --amber-ink: #8A5A12; --amber-icon: #BE8127;
+  --err-bg: #F6E4E2; --err-ink: #9A3B2A;
+  --t1-bg: #E6F2F1; --t1-fg: #256E72;
+  --t2-bg: #ECEDF8; --t2-fg: #2E3192;
+  --t3-bg: #FBEDE6; --t3-fg: #B5512B;
+  --hatch1: #F3F0E8; --hatch2: #ECE7DC;
+  --now: #B91C1C; --badge: #D85A30;
+  --font-display: "Newsreader", "Newsreader Fallback", Georgia, serif;
+  --font-body: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r-card: 16px; --r-sheet: 26px; --r-block: 10px; --r-tile: 18px; --r-input: 12px;
+  --shadow-sheet: 0 -10px 40px rgba(34,40,58,.2);
+  --shadow-float: 0 18px 40px rgba(17,23,24,.28);
+  --ease-sheet: cubic-bezier(.2,.8,.2,1);
+}
+.mapp[data-theme="dark"] {
+  --primary: #2A8A8E; --primary-tint: #173A3B;
+  --accent-ink: #8FD3CF; --accent-tint: #173537;
+  --ground: #111718; --surface: #1A2223; --track: #232D2E;
+  --line: #283334; --line2: #222C2D; --border: #2E393A;
+  --ink: #E6ECEA; --muted: #A1ACAB; --muted2: #8C9897; --muted3: #7C8887;
+  --dash: #3B4748; --press: #222B2C; --bar: rgba(26,34,35,.94);
+  --ok-bg: #183327; --ok-ink: #7FD3A6;
+  --amber-bg: #352812; --amber-ink: #EBC27A; --amber-icon: #E3A845;
+  --err-bg: #3A1E1B; --err-ink: #F0A196;
+  --t1-bg: #173537; --t1-fg: #7DD0CC;
+  --t2-bg: #23264A; --t2-fg: #AEB0F2;
+  --t3-bg: #3A2419; --t3-fg: #F1A684;
+  --hatch1: #1E2728; --hatch2: #253031;
+}
+/* Follow the phone's dark setting unless the clinician explicitly chose light. */
+@media (prefers-color-scheme: dark) {
+  .mapp:not([data-theme="light"]) {
+    --primary: #2A8A8E; --primary-tint: #173A3B;
+    --accent-ink: #8FD3CF; --accent-tint: #173537;
+    --ground: #111718; --surface: #1A2223; --track: #232D2E;
+    --line: #283334; --line2: #222C2D; --border: #2E393A;
+    --ink: #E6ECEA; --muted: #A1ACAB; --muted2: #8C9897; --muted3: #7C8887;
+    --dash: #3B4748; --press: #222B2C; --bar: rgba(26,34,35,.94);
+    --ok-bg: #183327; --ok-ink: #7FD3A6;
+    --amber-bg: #352812; --amber-ink: #EBC27A; --amber-icon: #E3A845;
+    --err-bg: #3A1E1B; --err-ink: #F0A196;
+    --t1-bg: #173537; --t1-fg: #7DD0CC;
+    --t2-bg: #23264A; --t2-fg: #AEB0F2;
+    --t3-bg: #3A2419; --t3-fg: #F1A684;
+    --hatch1: #1E2728; --hatch2: #253031;
+  }
+}
+@keyframes mShimmer { from { background-position: -200px 0; } to { background-position: 200px 0; } }
+.m-skel { background: linear-gradient(90deg, var(--track) 0%, var(--line2) 50%, var(--track) 100%); background-size: 400px 100%; animation: mShimmer 1.2s linear infinite; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .mapp *, .mapp *::before, .mapp *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+
 .mapp {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
 }
 .mapp-top {
   position: sticky; top: 0; z-index: 30;

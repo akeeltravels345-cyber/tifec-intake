@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getBillingUser, devMode } from "@/lib/billingRole";
 import { inScheduleBeta } from "@/lib/clinicians";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
@@ -24,10 +25,16 @@ export default async function MobileAppLayout({ children }: { children: React.Re
   if (!user) redirect("/login?next=/m");
   if (!inScheduleBeta(user.clinician)) redirect("/today");
 
-  // Full-bleed shell: each screen renders its own dark header (date strip,
-  // month nav, profile, …), so there's no generic top bar here.
+  // Theme: an explicit light/dark choice is stored in the `m-theme` cookie (set
+  // from the Me screen) and applied server-side so there's no flash. With no
+  // cookie, the app follows the phone's setting via prefers-color-scheme (CSS).
+  const themeCookie = (await cookies()).get("m-theme")?.value;
+  const dataTheme = themeCookie === "dark" || themeCookie === "light" ? themeCookie : undefined;
+
+  // Full-bleed shell: each screen renders its own header; MobileNav is the only
+  // chrome (and hides itself on full-screen flows like Book/Edit/Detail/Hours).
   return (
-    <div className="biz mapp">
+    <div className="biz mapp" data-theme={dataTheme}>
       {!devMode() && <IdleLogoutForUser />}
       <main className="mapp-main">{children}</main>
       <MobileNav />
