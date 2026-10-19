@@ -5487,8 +5487,10 @@ body:has(.mapp) .sitefoot { display: none !important; }
 .mtoday-date { font-family: var(--font-display); font-weight: 500; font-size: 28px; color: var(--ink); line-height: 1.1; margin-top: 3px; letter-spacing: -.01em; }
 .mtoday-pill { flex: 0 0 auto; margin-top: 6px; border: 0; background: var(--primary-tint); color: var(--primary); font: inherit; font-size: 12.5px; font-weight: 700; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
 
-.mtoday-strip { padding: 12px 14px 0; }
-.mstrip-track { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: var(--track); border-radius: 16px; padding: 4px; }
+.mtoday-strip { display: flex; align-items: stretch; gap: 2px; padding: 12px 10px 0; }
+.mstrip-nav { flex: 0 0 auto; width: 26px; border: 0; background: transparent; color: var(--muted2); display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mstrip-nav:active { background: var(--track); }
+.mstrip-track { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; background: var(--track); border-radius: 16px; padding: 4px; }
 .mstrip-day { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 0 6px; min-height: 60px; justify-content: flex-start; border: 0; background: transparent; border-radius: 12px; cursor: pointer; color: var(--ink); -webkit-tap-highlight-color: transparent; }
 .mstrip-l { font-size: 10.5px; font-weight: 700; color: var(--muted2); }
 .mstrip-day.wk .mstrip-l, .mstrip-day.wk .mstrip-n { color: var(--muted3); }

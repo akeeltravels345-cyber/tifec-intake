@@ -80,6 +80,9 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
   const subOf = (a: Appt) => { const t = a.typeId ? typeById.get(a.typeId) : undefined; return a.capacity > 1 ? `${a.capacity} people` : (cleanType(t?.name) || "Appointment"); };
 
   const pickDay = (d: string) => { setSelected(d); if (d < weekStart || d > addDays(weekStart, 6)) setWeekStart(mondayOf(d)); };
+  // Move the date strip a whole week back/forward, carrying the selected weekday
+  // with it so the grid follows.
+  const shiftWeek = (delta: number) => { setWeekStart(addDays(weekStart, delta * 7)); setSelected(addDays(selected, delta * 7)); };
 
   // Up next: the first non-block session today that starts after now.
   const upNext = useMemo(() => {
@@ -109,6 +112,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
       </header>
 
       <div className="mtoday-strip">
+        <button className="mstrip-nav" onClick={() => shiftWeek(-1)} aria-label="Previous week"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg></button>
         <div className="mstrip-track">
           {weekDays.map((d, i) => {
             const on = d === selected, day = parts(d), weekend = i >= 5, count = countByDay.get(d) || 0;
@@ -122,6 +126,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
             );
           })}
         </div>
+        <button className="mstrip-nav" onClick={() => shiftWeek(1)} aria-label="Next week"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg></button>
       </div>
 
       <div className="mtoday-body">
