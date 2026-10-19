@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import InstallPrompt from "@/components/InstallPrompt";
 import MobileWhoPicker from "@/components/scheduling/MobileWhoPicker";
 import MobilePeekSheet, { type PeekAppt } from "@/components/scheduling/MobilePeekSheet";
-import MobileWalkthrough, { WT_KEY } from "@/components/scheduling/MobileWalkthrough";
+import MobileSetup, { SETUP_KEY } from "@/components/scheduling/MobileSetup";
 
 type Appt = {
   id: string; startAt: string; endAt: string; clientName: string; typeId: string | null;
@@ -45,20 +45,21 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
   const [selected, setSelected] = useState(start0);
   const [weekStart, setWeekStart] = useState(mondayOf(start0));
   const [peekId, setPeekId] = useState<string | null>(null);
-  const [showTour, setShowTour] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
 
-  // First-run walkthrough: show once (localStorage), or on demand via ?tour=1
-  // (the Me screen links there to replay it). Client-only to avoid a flash.
+  // First-run setup wizard: show once (localStorage), or on demand via ?setup=1
+  // (the Me screen links there to re-run it). Client-only to avoid a flash, and
+  // only for your own schedule (not while viewing a colleague's).
   useEffect(() => {
     try {
-      const forced = new URLSearchParams(window.location.search).get("tour") === "1";
-      const seen = localStorage.getItem(WT_KEY);
-      if (forced || !seen) setShowTour(true);
+      const forced = new URLSearchParams(window.location.search).get("setup") === "1";
+      const seen = localStorage.getItem(SETUP_KEY);
+      if (forced || (!seen && who === myId)) setShowSetup(true);
     } catch { /* ignore */ }
-  }, []);
-  const closeTour = () => {
-    setShowTour(false);
-    try { if (new URLSearchParams(window.location.search).get("tour")) window.history.replaceState(null, "", window.location.pathname); } catch { /* ignore */ }
+  }, [who, myId]);
+  const closeSetup = () => {
+    setShowSetup(false);
+    try { if (new URLSearchParams(window.location.search).get("setup")) window.history.replaceState(null, "", window.location.pathname); } catch { /* ignore */ }
   };
 
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
@@ -242,7 +243,7 @@ export default function MobileAgenda({ appts, types, todayCayman, initialDay, cl
       </div>
 
       {peekData && <MobilePeekSheet appt={peekData} onClose={() => setPeekId(null)} />}
-      {showTour && <MobileWalkthrough onClose={closeTour} />}
+      {showSetup && <MobileSetup myId={myId} onClose={closeSetup} />}
     </div>
   );
 }
