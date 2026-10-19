@@ -390,6 +390,7 @@ export const CLINICIANS: Clinician[] = [
     extraSections: [],
     admin: true,
     intakeHidden: true, // admin-only account - not a clinician clients can be assigned to
+    privateBooking: true, // bookable via a direct ?clinician=akeel-test link only (stays out of the public picker) — used to test the schedule + notifications on the admin account
   },
   // TEST clinician for exercising the schedule + video-connection flow.
   // Hidden from billing / booking / intake / client assignment; only the
