@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { inScheduleBeta, isBookableClinician, CLINICIANS } from "@/lib/clinicians";
 import { getBillingUser } from "@/lib/billingRole";
 import { listAppointmentTypes, listAppointments } from "@/lib/scheduling";
 import { caymanToday } from "@/lib/caymanTime";
-import { unreadCount } from "@/lib/notifications";
 import MobileAgenda from "@/components/scheduling/MobileAgenda";
 
 export const dynamic = "force-dynamic";
@@ -36,14 +34,10 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
   const today = caymanToday();
   const monday = mondayOf(today);
 
-  const [types, appts, h, unread] = await Promise.all([
+  const [types, appts] = await Promise.all([
     listAppointmentTypes(),
     listAppointments({ from: utcAtCayMidnight(addDays(monday, -7)), to: utcAtCayMidnight(addDays(monday, 56)), clinicianId: forClinician }),
-    headers(),
-    unreadCount(me.id),
   ]);
-  const origin = process.env.APP_URL?.replace(/\/$/, "") || `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
-  const bookingUrl = `${origin}/book?clinician=${encodeURIComponent(me.id)}`;
 
   // Lean shape for the client — appointments AND blocks (grey bands on the grid).
   const lean = appts.map((a) => ({
@@ -60,12 +54,9 @@ export default async function MobileTodayPage({ searchParams }: { searchParams: 
       types={types.map((t) => ({ id: t.id, name: t.name, mode: t.mode, capacity: t.capacity ?? 1 }))}
       todayCayman={today}
       initialDay={initialDay}
-      clinicianName={me.name}
-      bookingUrl={bookingUrl}
       clinicians={roster}
       who={who}
       myId={me.id}
-      unread={unread}
     />
   );
 }

@@ -5,6 +5,7 @@ import { getBillingUser, devMode } from "@/lib/billingRole";
 import { inScheduleBeta } from "@/lib/clinicians";
 import IdleLogoutForUser from "@/components/IdleLogoutForUser";
 import MobileNav from "@/components/scheduling/MobileNav";
+import { unreadCount } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function MobileAppLayout({ children }: { children: React.Re
   // cookie, the app follows the phone's setting via prefers-color-scheme (CSS).
   const themeCookie = (await cookies()).get("m-theme")?.value;
   const dataTheme = themeCookie === "dark" || themeCookie === "light" ? themeCookie : undefined;
+  const unread = await unreadCount(user.clinician.id);
 
   // Full-bleed shell: each screen renders its own header; MobileNav is the only
   // chrome (and hides itself on full-screen flows like Book/Edit/Detail/Hours).
@@ -37,7 +39,7 @@ export default async function MobileAppLayout({ children }: { children: React.Re
     <div className="biz mapp" data-theme={dataTheme}>
       {!devMode() && <IdleLogoutForUser />}
       <main className="mapp-main">{children}</main>
-      <MobileNav />
+      <MobileNav unread={unread} />
     </div>
   );
 }

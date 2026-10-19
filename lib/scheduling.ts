@@ -476,6 +476,49 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
   return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.id === id) ?? null;
 }
 
+// Derived context the redesign shows on an appointment: whether the client
+// attended (from status), where this sits in a recurring series ("6 of 12"), and
+// when the client was last seen. All derived — no new columns. Best-effort.
+export interface AppointmentContext {
+  attended: boolean | null;   // status "seen" -> true, "no_show" -> false, else null
+  seriesIndex: number | null; // 1-based position within its series
+  seriesTotal: number | null; // total live sessions in the series
+  lastSeen: string | null;    // ISO start of the client's previous completed (seen) session
+}
+
+export function attendedFromStatus(status: AppointmentStatus): boolean | null {
+  return status === "seen" ? true : status === "no_show" ? false : null;
+}
+
+export async function appointmentContext(appt: Appointment): Promise<AppointmentContext> {
+  const ctx: AppointmentContext = { attended: attendedFromStatus(appt.status), seriesIndex: null, seriesTotal: null, lastSeen: null };
+  if (appt.kind === "block") return ctx;
+  try {
+    const from = new Date(Date.now() - 730 * 86400e3).toISOString(); // 2 years back
+    const to = new Date(Date.now() + 365 * 86400e3).toISOString();   // 1 year forward
+    const all = await listAppointments({ from, to, clinicianId: appt.clinicianId });
+    if (appt.seriesId) {
+      const series = all
+        .filter((a) => a.seriesId === appt.seriesId && a.kind === "appointment" && a.status !== "cancelled")
+        .sort((a, b) => a.startAt.localeCompare(b.startAt));
+      if (series.length > 1) {
+        ctx.seriesTotal = series.length;
+        const i = series.findIndex((a) => a.id === appt.id);
+        ctx.seriesIndex = i >= 0 ? i + 1 : null;
+      }
+    }
+    const nm = appt.clientName.trim().toLowerCase(), em = appt.clientEmail.trim().toLowerCase();
+    const sameClient = (a: Appointment) => appt.clientId
+      ? a.clientId === appt.clientId
+      : (!!nm && a.clientName.trim().toLowerCase() === nm && !!em && a.clientEmail.trim().toLowerCase() === em);
+    const prior = all
+      .filter((a) => a.id !== appt.id && a.kind === "appointment" && a.status === "seen" && a.startAt < appt.startAt && sameClient(a))
+      .sort((a, b) => b.startAt.localeCompare(a.startAt));
+    ctx.lastSeen = prior[0]?.startAt ?? null;
+  } catch { /* best-effort: derived context is optional */ }
+  return ctx;
+}
+
 type ApptInput = Partial<Omit<Appointment, "id" | "createdAt" | "updatedAt">>;
 
 function normalizeAppt(input: ApptInput, base?: Appointment): Appointment {
