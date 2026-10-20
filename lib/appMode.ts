@@ -34,5 +34,6 @@ export async function isSchedulingApp(): Promise<boolean> {
 }
 
 // Where the scheduling app sends people who land on the root or just signed in.
-// /schedule is the responsive web calendar (and /m is the installable phone app).
-export const SCHEDULING_HOME = "/schedule";
+// The scheduling domain opens straight into the installable phone app (/m); the
+// responsive web calendar still lives at /schedule for anyone who navigates there.
+export const SCHEDULING_HOME = "/m";
