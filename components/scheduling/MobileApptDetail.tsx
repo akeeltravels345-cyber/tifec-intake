@@ -52,6 +52,15 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
     } catch { setMsg({ ok: false, text: "Something went wrong." }); }
     setBusy("");
   }
+  async function resendConfirm() {
+    setBusy("resend"); setMsg(null); setSheet(null);
+    try {
+      const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "resendConfirmation", id: appt.id }) });
+      const d = await res.json().catch(() => ({}));
+      setMsg(res.ok ? { ok: true, text: `Confirmation sent to ${d.sentTo || appt.clientName || "the client"}.` } : { ok: false, text: d.error || "Couldn't resend the confirmation." });
+    } catch { setMsg({ ok: false, text: "Couldn't resend the confirmation." }); }
+    setBusy("");
+  }
   async function sendIntake() {
     if (!intakeForms.length) return setMsg({ ok: false, text: "No intake form applies to this service." });
     setBusy("intake"); setMsg(null);
@@ -154,6 +163,7 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
             {noShow
               ? <button className="msheet-plain" disabled={!!busy} onClick={() => act({ action: "status", id: appt.id, status: "booked" }, "undo", () => { setSheet(null); router.refresh(); })}>Undo no-show</button>
               : <button className="msheet-plain" disabled={!!busy} onClick={() => act({ action: "status", id: appt.id, status: "no_show" }, "noshow", () => { setSheet(null); router.refresh(); })}>Mark as no-show</button>}
+            <button className="msheet-plain" disabled={!!busy || !appt.clientEmail} onClick={resendConfirm}>{busy === "resend" ? "Sending…" : "Resend confirmation email"}</button>
             <button className="msheet-plain danger" onClick={() => setSheet("cancel")}>Cancel and ask to rebook</button>
           </div>
         </div>

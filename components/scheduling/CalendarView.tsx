@@ -359,6 +359,16 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
     } catch { setActMsg("Could not send the intake form."); }
     finally { setActBusy(false); }
   }
+  async function resendConfirmation(a: Appointment) {
+    setActBusy(true); setActMsg("");
+    try {
+      const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "resendConfirmation", id: a.id }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setActMsg(data.error || "Could not resend the confirmation.");
+      else { setActMsg(`✓ Confirmation resent to ${data.sentTo || "the client"}.`); load(); }
+    } catch { setActMsg("Could not resend the confirmation."); }
+    finally { setActBusy(false); }
+  }
   async function cancelAndRebook(a: Appointment) {
     if (!confirm("Cancel this appointment and email the client to ask them to rebook?")) return;
     setActBusy(true); setActMsg("");
@@ -943,6 +953,7 @@ export default function CalendarView({ clinicians, types, insurers, availabiliti
                     </select>
                     <button type="button" className="cvr-actbtn" disabled={actBusy || !a.clientEmail} onClick={() => sendIntake(a, intakeFormKey)} title={a.clientEmail ? "" : "No client email on file"}>Send intake form</button>
                   </div>
+                  <button type="button" className="cvr-actbtn" disabled={actBusy || !a.clientEmail} onClick={() => resendConfirmation(a)} title={a.clientEmail ? "Email the client their booking confirmation again" : "No client email on file"}>Resend confirmation</button>
                   <button type="button" className="cvr-actbtn warn" disabled={actBusy} onClick={() => cancelAndRebook(a)}>Cancel &amp; ask to rebook</button>
                 </div>
               )}

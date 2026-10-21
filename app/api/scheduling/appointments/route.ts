@@ -215,6 +215,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, appointment: appt, intakeSent });
     }
 
+    if (action === "resendConfirmation") {
+      // Re-send the booking confirmation for an existing appointment — e.g. the
+      // client's email was mistyped at booking and has since been corrected, so
+      // the original confirmation never reached them. Sends the SAME email a new
+      // booking sends (minus any intake invite), and first makes sure a virtual
+      // session has its join link (no-op if it already does).
+      const id = String(body.id || "");
+      if (!id) return NextResponse.json({ error: "Missing appointment id." }, { status: 400 });
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      let appt = await getAppointment(id);
+      if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      if (appt.kind === "block") return NextResponse.json({ error: "Not an appointment." }, { status: 400 });
+      if (!appt.clientEmail) return NextResponse.json({ error: "No client email on file to send to." }, { status: 400 });
+      const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+      appt = await attachVideo(appt);
+      const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+      const clinicianName = getClinician(appt.clinicianId)?.name || "your clinician";
+      try {
+        await sendBookingConfirmation({
+          id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
+          to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+          whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
+          manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
+          portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
+          intakeForms: [],
+        });
+      } catch (e) {
+        console.error("resend confirmation failed", e);
+        return NextResponse.json({ error: "Could not send the email. Try again." }, { status: 502 });
+      }
+      return NextResponse.json({ ok: true, sentTo: appt.clientEmail, appointment: appt });
+    }
+
     if (action === "series:removeFrom") {
       // Bulk series delete stays with the schedule owners only.
       if (!all) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
