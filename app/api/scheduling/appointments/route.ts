@@ -248,6 +248,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, sentTo: appt.clientEmail, appointment: appt });
     }
 
+    if (action === "ensureLink") {
+      // Backfill a video link onto an existing virtual appointment that has none
+      // (imported from Acuity, or booked before the clinician connected a video
+      // provider). Generates the meeting on the clinician's connected Zoom/Google
+      // account. No-op if it isn't virtual, already has a link, or the clinician
+      // has no connected provider. Never emails anyone.
+      const id = String(body.id || "");
+      if (!id) return NextResponse.json({ error: "Missing appointment id." }, { status: 400 });
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      let appt = await getAppointment(id);
+      if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      if (appt.kind === "block") return NextResponse.json({ error: "Not an appointment." }, { status: 400 });
+      const had = /^https?:\/\//.test(appt.locationOrLink || "");
+      appt = await attachVideo(appt);
+      const linked = /^https?:\/\//.test(appt.locationOrLink || "");
+      return NextResponse.json({ ok: true, linked, generated: linked && !had, alreadyHad: had, locationOrLink: appt.locationOrLink || "", appointment: appt });
+    }
+
     if (action === "series:removeFrom") {
       // Bulk series delete stays with the schedule owners only.
       if (!all) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
