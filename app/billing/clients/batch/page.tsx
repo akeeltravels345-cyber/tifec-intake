@@ -110,7 +110,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
       <div className="hcfa-bar hcfa-noprint">
         <Link href="/billing/clients" className="ls-back">← All clients</Link>
         <div style={{ flex: 1 }} />
-        {totalForms > 0 && <PrintButton label={`Print ${totalForms} claim${totalForms === 1 ? "" : "s"} / Save PDF`} className="bl-cta hcfa-noprint" />}
+        {totalForms > 0 && <a href={`/api/billing/clients/batch/pdf?${new URLSearchParams({ ...(idsParam ? { ids: idsParam } : {}), ...(sessionsParam ? { sessions: sessionsParam } : {}) }).toString()}`} target="_blank" rel="noopener noreferrer" className="bl-cta hcfa-noprint">{`Print ${totalForms} claim${totalForms === 1 ? "" : "s"} / Save PDF`}</a>}
       </div>
 
       {(!prov.npi || !prov.ein) && (

@@ -55,7 +55,7 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
         <Link href={`/billing/clients/${id}`} className="ls-back">← Back to client</Link>
         <div style={{ flex: 1 }} />
         {forms.length > 0 && <ClaimEmail clientId={id} clientName={client.first} />}
-        {forms.length > 0 && <PrintButton label="Print / Save PDF" className="bl-cta hcfa-noprint" />}
+        {forms.length > 0 && <a href={`/api/billing/clients/${id}/cms1500/pdf`} target="_blank" rel="noopener noreferrer" className="bl-cta hcfa-noprint">Print / Save PDF</a>}
       </div>
 
       {(!prov.npi || !prov.ein) && (
