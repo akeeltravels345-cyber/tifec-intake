@@ -6,7 +6,7 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
 import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
-import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
+import Cms1500Official0805, { OFFICIAL_0805_CSS } from "@/components/billing/Cms1500Official0805";
 import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
 import ClaimEmail from "@/components/billing/ClaimEmail";
@@ -106,7 +106,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
 
   return (
     <div className="hcfa-page">
-      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_0805_CSS }} />
       <div className="hcfa-bar hcfa-noprint">
         <Link href="/billing/clients" className="ls-back">← All clients</Link>
         <div style={{ flex: 1 }} />
@@ -115,7 +115,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
 
       {(!prov.npi || !prov.ein) && (
         <div className="hcfa-warn hcfa-noprint">
-          Provider identifiers aren&apos;t set yet, so boxes 25, 31–33 will print blank. Add them in <Link href="/billing/config">Setup</Link>.
+          Tax ID and NPI aren&apos;t set yet, so those boxes print &ldquo;here&rdquo; (as Practice Perfect does). Add them in <Link href="/billing/config">Setup</Link>.
         </div>
       )}
       {(skipped > 0 || noClaims > 0) && (
@@ -151,7 +151,7 @@ export default async function BatchCms1500Page({ searchParams }: { searchParams:
         <div className="hcfa-warn hcfa-noprint">{invoiceLinks.length > 0 ? "No standard CMS-1500 claims — use the invoice links above." : "Nothing to claim for the selected clients."}</div>
       ) : (
         <Cms1500Toggle
-          official={blocks.map((b) => b.forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />))}
+          official={blocks.map((b) => b.forms.map((f) => <Cms1500Official0805 key={f.key} f={f} provider={prov} />))}
           sheet={blocks.map((b) => (
             <div key={b.name}>
               <div className="hcfa-clientlab">{b.name}</div>

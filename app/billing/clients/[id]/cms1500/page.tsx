@@ -6,7 +6,7 @@ import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
 import { buildClaimForms } from "@/lib/cms1500";
 import Cms1500Form, { HCFA_CSS } from "@/components/billing/Cms1500Form";
-import Cms1500OfficialForm, { OFFICIAL_CSS } from "@/components/billing/Cms1500OfficialForm";
+import Cms1500Official0805, { OFFICIAL_0805_CSS } from "@/components/billing/Cms1500Official0805";
 import Cms1500Toggle from "@/components/billing/Cms1500Toggle";
 import PrintButton from "@/components/billing/PrintButton";
 import ClaimEmail from "@/components/billing/ClaimEmail";
@@ -50,7 +50,7 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
 
   return (
     <div className="hcfa-page">
-      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: HCFA_CSS + OFFICIAL_0805_CSS }} />
       <div className="hcfa-bar hcfa-noprint">
         <Link href={`/billing/clients/${id}`} className="ls-back">← Back to client</Link>
         <div style={{ flex: 1 }} />
@@ -60,8 +60,8 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
 
       {(!prov.npi || !prov.ein) && (
         <div className="hcfa-warn hcfa-noprint">
-          Provider identifiers aren&apos;t set yet, so boxes 25, 31–33 (Tax ID, NPI, billing provider) will print blank.
-          Add them in <Link href="/billing/config">Setup</Link> once you have them.
+          Tax ID and NPI aren&apos;t set yet, so boxes 25 and the NPI lines print &ldquo;here&rdquo; (the same placeholder Practice Perfect uses).
+          Add them in <Link href="/billing/config">Setup</Link> once you have them and they&apos;ll show instead.
         </div>
       )}
 
@@ -79,7 +79,7 @@ export default async function Cms1500Page({ params }: { params: Promise<{ id: st
         <div className="hcfa-warn hcfa-noprint">{invoicePayers.length > 0 ? "No standard-claim insurers for this client — use the invoice link above." : "This client has no insured sessions to claim. Self-pay visits don't go on a CMS-1500."}</div>
       ) : (
         <Cms1500Toggle
-          official={forms.map((f) => <Cms1500OfficialForm key={f.key} f={f} provider={prov} />)}
+          official={forms.map((f) => <Cms1500Official0805 key={f.key} f={f} provider={prov} />)}
           sheet={forms.map((f) => <Cms1500Form key={f.key} f={f} provider={prov} />)}
         />
       )}
