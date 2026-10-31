@@ -84,7 +84,7 @@ export const ICD10: Icd10Code[] = [
   { code: "F80.0", description: "Phonological disorder", category: "Neurodevelopmental & Child/Adolescent" },
   { code: "F80.1", description: "Expressive language disorder", category: "Neurodevelopmental & Child/Adolescent" },
   { code: "F80.2", description: "Mixed receptive-expressive language disorder", category: "Neurodevelopmental & Child/Adolescent" },
-  { code: "F81.0", description: "Specific reading disorder", category: "Neurodevelopmental & Child/Adolescent" },
+  { code: "F81.0", description: "Specific reading disorder (dyslexia)", category: "Neurodevelopmental & Child/Adolescent" },
   { code: "F81.2", description: "Mathematics disorder", category: "Neurodevelopmental & Child/Adolescent" },
   { code: "F81.81", description: "Disorder of written expression", category: "Neurodevelopmental & Child/Adolescent" },
   { code: "F81.9", description: "Developmental disorder of scholastic skills, unspecified", category: "Neurodevelopmental & Child/Adolescent" },
@@ -173,6 +173,6 @@ export const ICD10_ALIASES: Record<string, string[]> = {
   bipolar: ["F31.9"], panic: ["F41.0"], insomnia: ["F51.01"], hypersomnia: ["F51.11"],
   anorexia: ["F50.00"], bulimia: ["F50.2"], arfid: ["F50.82"], bdd: ["F45.22"],
   agoraphobia: ["F40.01", "F40.02"], grief: ["F43.81"], bereavement: ["Z63.4"],
-  autism: ["F84.0"], asperger: ["F84.5"], dysthymia: ["F34.1"], cyclothymia: ["F34.0"],
+  autism: ["F84.0"], asperger: ["F84.5"], dyslexia: ["F81.0"], dysthymia: ["F34.1"], cyclothymia: ["F34.0"],
   ed: ["F50.00", "F50.2", "F50.82"], gd: ["F63.0"], schizophrenia: ["F20"],
 };
