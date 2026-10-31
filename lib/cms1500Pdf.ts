@@ -25,6 +25,17 @@ const dsp = (v?: string) => { const m = (v ?? "").match(/^(\d{2})\/(\d{2})\/(\d{
 const dxNum = (p?: string) => { if (!p) return ""; const i = "ABCDEFGHIJKL".indexOf(p.toUpperCase()); return i >= 0 ? String(i + 1) : p; };
 const phone = (p?: string) => { const d = (p ?? "").replace(/\D/g, ""); return d.length >= 10 ? `${d.slice(0, 3)} ${d.slice(3)}` : (p ?? ""); };
 const trunc = (s: string, maxChars: number) => (s.length > maxChars ? s.slice(0, maxChars) : s);
+// Fit a signing-provider name into the narrow box 31: never cut mid-word, and
+// drop a dangling trailing connector so it reads "Hamilton, Sofia MSc", not
+// "Hamilton, Sofia MSc in Couns".
+function fitSig(s: string, maxChars: number): string {
+  s = (s ?? "").trim();
+  if (s.length <= maxChars) return s;
+  let cut = s.slice(0, maxChars);
+  const sp = cut.lastIndexOf(" ");
+  if (sp > 0) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,.·&-]+$/, "").replace(/\s+(in|of|the|and|at|for|a)$/i, "").trim();
+}
 function todayMDY() { const m = caymanToday().match(/(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[2]}/${m[3]}/${m[1].slice(2)}` : ""; }
 
 export interface ClaimProvider { practiceName?: string; npi?: string; ein?: string; phone?: string; addressLine1?: string; addressLine2?: string; city?: string; region?: string; postal?: string; country?: string }
@@ -103,6 +114,7 @@ function drawForm(page: import("pdf-lib").PDFPage, img: import("pdf-lib").PDFIma
   t(street, 381.4, 733.6, 9);
   t(cityzip, 186.8, 745.0, 9);
   t(cityzip, 381.4, 745.0, 9);
+  t(fitSig(f.signature ?? "", 27), 27.2, 749.5, 9); // 31 signing clinician (name + credentials)
   t(todayMDY(), 129.3, 755.6, 9);                   // 31 date
   t(npi, 191.7, 759.8, 9);                          // 32a NPI
   t(npi, 386.1, 759.8, 9);                          // 33a NPI
