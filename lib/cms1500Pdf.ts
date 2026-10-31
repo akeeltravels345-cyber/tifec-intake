@@ -64,7 +64,7 @@ function drawForm(page: import("pdf-lib").PDFPage, img: import("pdf-lib").PDFIma
   t(phone(f.phone), 483.4, 215.8);            // 7 tel
   t("X", 312.1, 261.7);                       // 10a NO
   t(dsp(f.insuredDob), 400.9, 261.7);         // 11a DOB
-  t("X", f.insuredSex === "M" ? 520 : 557.3, 262.6); // 11a sex
+  t("X", f.insuredSex === "M" ? 507.8 : 557.3, 262.6); // 11a sex (M + F centered in their squares)
   t("X", 312.1, 285.6);                       // 10b NO
   t("X", 312.1, 309.6);                       // 10c NO
   t(f.carrierCode ? `# ${f.carrierCode}` : "", 241.8, 333.8); // 10d
