@@ -109,6 +109,12 @@ export default function HipaaBoard({ board, safeguards, meId, meName }: { board:
       <header className="hp-head">
         <h1 className="hp-h1">HIPAA compliance</h1>
         <p className="hp-sub">Where the practice stands on protecting health information, and what&apos;s left. Update a status or add a progress note — you and Akeel share this board.</p>
+        <p className="hp-sub" style={{ marginTop: 6, fontSize: 14 }}>
+          Policies:{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal,#2E8E93)", fontWeight: 600 }}>Privacy policy</a>
+          {" · "}
+          <a href="/team/security-policy" style={{ color: "var(--teal,#2E8E93)", fontWeight: 600 }}>Security policy</a>
+        </p>
       </header>
 
       <div className="hp-progress">
