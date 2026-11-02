@@ -61,6 +61,16 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
     } catch { setMsg({ ok: false, text: "Couldn't resend the confirmation." }); }
     setBusy("");
   }
+  async function regenerateLink() {
+    setBusy("regen"); setMsg(null); setSheet(null);
+    try {
+      const res = await fetch("/api/scheduling/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "regenerateLink", id: appt.id }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setMsg({ ok: true, text: d.sentTo ? `New link created and emailed to ${d.sentTo}.` : "New link created." }); router.refresh(); }
+      else setMsg({ ok: false, text: d.error || "Couldn't regenerate the link." });
+    } catch { setMsg({ ok: false, text: "Couldn't regenerate the link." }); }
+    setBusy("");
+  }
   async function sendIntake() {
     if (!intakeForms.length) return setMsg({ ok: false, text: "No intake form applies to this service." });
     setBusy("intake"); setMsg(null);
@@ -164,6 +174,9 @@ export default function MobileApptDetail({ appt, typeName, durMin, whenText, ins
               ? <button className="msheet-plain" disabled={!!busy} onClick={() => act({ action: "status", id: appt.id, status: "booked" }, "undo", () => { setSheet(null); router.refresh(); })}>Undo no-show</button>
               : <button className="msheet-plain" disabled={!!busy} onClick={() => act({ action: "status", id: appt.id, status: "no_show" }, "noshow", () => { setSheet(null); router.refresh(); })}>Mark as no-show</button>}
             <button className="msheet-plain" disabled={!!busy || !appt.clientEmail} onClick={resendConfirm}>{busy === "resend" ? "Sending…" : "Resend confirmation email"}</button>
+            {online && isLink(appt.locationOrLink) && !cancelled && (
+              <button className="msheet-plain" disabled={!!busy} onClick={regenerateLink}>{busy === "regen" ? "Creating…" : "Regenerate video link"}</button>
+            )}
             <button className="msheet-plain danger" onClick={() => setSheet("cancel")}>Cancel and ask to rebook</button>
           </div>
         </div>

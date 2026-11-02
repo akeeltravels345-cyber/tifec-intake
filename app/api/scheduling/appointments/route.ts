@@ -266,6 +266,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, linked, generated: linked && !had, alreadyHad: had, locationOrLink: appt.locationOrLink || "", appointment: appt });
     }
 
+    if (action === "regenerateLink") {
+      // Replace an existing video link with a fresh one on the clinician's
+      // CURRENTLY connected account, then email the client the new link.
+      // Needed when a clinician reconnects a different account: Zoom/Meet links
+      // stay owned by the account that created them, so the old link leaves the
+      // clinician as a guest (or dead, if that account is gone). Regenerating
+      // mints a new meeting the clinician owns. The old meeting is cancelled
+      // best-effort (a no-op 404 when it lived on the now-disconnected account).
+      const id = String(body.id || "");
+      if (!id) return NextResponse.json({ error: "Missing appointment id." }, { status: 400 });
+      if (!(await ownsTarget(id))) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+      let appt = await getAppointment(id);
+      if (!appt) return NextResponse.json({ error: "Appointment not found." }, { status: 404 });
+      if (appt.kind === "block") return NextResponse.json({ error: "Not an appointment." }, { status: 400 });
+      if (appt.mode !== "virtual") return NextResponse.json({ error: "This isn't a virtual appointment." }, { status: 400 });
+      const oldLink = appt.locationOrLink || "";
+      if (!/^https?:\/\//.test(oldLink)) {
+        return NextResponse.json({ error: "No video link to regenerate. Use “Generate link” instead." }, { status: 400 });
+      }
+      // Mint the new meeting FIRST, so a missing/failed connection never strands
+      // the appointment without any link.
+      const link = await createVideoLink(appt.clinicianId, {
+        topic: `TIFEC session${appt.clientName ? ` - ${appt.clientName}` : ""}`,
+        startAtISO: appt.startAt, durationMin: Math.round((Date.parse(appt.endAt) - Date.parse(appt.startAt)) / 60000),
+      });
+      if (!link) {
+        return NextResponse.json({ error: "No connected video account to generate a new link. Connect Zoom or Google first." }, { status: 400 });
+      }
+      // Tear down the previous meeting/event (best-effort; never throws).
+      await cancelVideoLink(appt.clinicianId, oldLink, appt.videoEventId || undefined);
+      appt = (await updateAppointment(appt.id, { locationOrLink: link.url, videoEventId: link.ref || null })) || appt;
+      // Mirror onto Google Calendar when the new link is Zoom (a Meet link
+      // already carries its own calendar event).
+      appt = await attachVideo(appt);
+      // Auto-email the client their new link (same confirmation a booking sends).
+      let sentTo = "";
+      if (appt.clientEmail) {
+        const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+        const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+        const clinicianName = getClinician(appt.clinicianId)?.name || "your clinician";
+        try {
+          await sendBookingConfirmation({
+            id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
+            to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+            whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
+            manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
+            portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
+            intakeForms: [],
+          });
+          sentTo = appt.clientEmail;
+        } catch (e) { console.error("regenerate link email failed", e); }
+      }
+      return NextResponse.json({ ok: true, oldLink, newLink: appt.locationOrLink || "", sentTo, appointment: appt });
+    }
+
     if (action === "series:removeFrom") {
       // Bulk series delete stays with the schedule owners only.
       if (!all) return NextResponse.json({ error: "Not permitted." }, { status: 403 });
