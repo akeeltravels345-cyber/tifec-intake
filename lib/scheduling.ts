@@ -476,6 +476,22 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
   return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.id === id) ?? null;
 }
 
+/** Repoint every appointment from one client record to another (client-merge
+ *  tool). Returns how many appointments moved. */
+export async function reassignAppointmentsClient(fromClientId: string, toClientId: string): Promise<number> {
+  if (!fromClientId || !toClientId || fromClientId === toClientId) return 0;
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`UPDATE scheduling_appointments SET client_id = ${toClientId} WHERE client_id = ${fromClientId} RETURNING id`) as { id: string }[];
+    return rows.length;
+  }
+  const all = readJson<Appointment[]>(APPT_FILE, []);
+  let n = 0;
+  for (const a of all) if (a.clientId === fromClientId) { a.clientId = toClientId; n++; }
+  if (n) writeJson(APPT_FILE, all);
+  return n;
+}
+
 // Derived context the redesign shows on an appointment: whether the client
 // attended (from status), where this sits in a recurring series ("6 of 12"), and
 // when the client was last seen. All derived — no new columns. Best-effort.

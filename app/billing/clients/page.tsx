@@ -87,6 +87,7 @@ export default async function ClientsPage() {
             ? "Every client in the practice. Open one for their details and history, or tick several and build their CMS-1500 claims in one run."
             : "The clients you've seen. Open one for their details and history, or tick several to build their CMS-1500 claims together."}
         </p>
+        {seesAll && <p className="su-sub" style={{ marginTop: 4 }}><a href="/billing/duplicates">Review possible duplicate clients →</a></p>}
       </div>
       <ClientsList
         rows={rows}

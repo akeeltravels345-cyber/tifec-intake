@@ -775,6 +775,30 @@ export async function getSession(id: string): Promise<BillingSession | null> {
   return s ? decryptSession(s) : null;
 }
 
+/** Count sessions per client id (for the duplicate-merge review). */
+export async function sessionCountsByClient(): Promise<Map<string, number>> {
+  const all = await loadStored();
+  const m = new Map<string, number>();
+  for (const s of all) if (s.clientId) m.set(s.clientId, (m.get(s.clientId) ?? 0) + 1);
+  return m;
+}
+
+/** Repoint every session from one client record to another (client-merge tool).
+ *  Returns how many sessions moved. */
+export async function reassignSessionsClient(fromClientId: string, toClientId: string): Promise<number> {
+  if (!fromClientId || !toClientId || fromClientId === toClientId) return 0;
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`UPDATE billing_sessions SET client_id = ${toClientId} WHERE client_id = ${fromClientId} RETURNING id`) as { id: string }[];
+    return rows.length;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  let n = 0;
+  for (const s of all) if (s.clientId === fromClientId) { s.clientId = toClientId; n++; }
+  if (n) writeJson(SESS_FILE, all);
+  return n;
+}
+
 /** Settle (or unsettle) a self-pay balance from the billing queue: paid means the
  *  client cleared the balance, so record the full fee collected + the payment date;
  *  undo puts the whole fee back as owed. Keeps self_pay_status = 'owing' so the

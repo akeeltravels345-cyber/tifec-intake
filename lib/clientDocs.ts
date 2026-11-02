@@ -77,6 +77,22 @@ export async function getDocFile(docId: string): Promise<DocFile | null> {
   return { clientId: d.clientId, base64: decrypt(d.contentEnc), mime: d.mime, size: d.size, name: d.name ?? null };
 }
 
+/** Repoint every stored document file from one client to another (client-merge
+ *  tool). Returns how many files moved. */
+export async function reassignDocsClient(fromClientId: string, toClientId: string): Promise<number> {
+  if (!fromClientId || !toClientId || fromClientId === toClientId) return 0;
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`UPDATE billing_client_docs SET client_id = ${toClientId} WHERE client_id = ${fromClientId} RETURNING id`) as { id: string }[];
+    return rows.length;
+  }
+  const all = readLocal();
+  let n = 0;
+  for (const k of Object.keys(all)) if (all[k].clientId === fromClientId) { all[k].clientId = toClientId; n++; }
+  if (n) writeLocal(all);
+  return n;
+}
+
 /** Remove one document's bytes. */
 export async function deleteDocFile(docId: string): Promise<void> {
   if (usePostgres) {

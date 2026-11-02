@@ -499,6 +499,129 @@ export async function addClients(
   return { added, linked, duplicates, ids };
 }
 
+// ---------------------------------------------------------------------------
+// Duplicate detection + merge (cleanup tool). Finds records that are the same
+// person (same name AND a shared email or the same birthday), and merges the
+// extras into one survivor without losing data.
+// ---------------------------------------------------------------------------
+
+export interface DuplicateRecord {
+  id: string; first: string; last: string;
+  dob?: string; email?: string; guardianEmail?: string; phone?: string;
+  insurerId: string | null; createdAt: string; clinicianIds: string[];
+  docCount: number; noteCount: number; isSample: boolean;
+}
+export interface DuplicateGroup { key: string; records: DuplicateRecord[] }
+
+/** Groups of client records that look like the SAME person: same name, plus a
+ *  shared email (client or guardian) or the same birthday in any date format.
+ *  Read-only — nothing is changed. Two genuinely different same-name people with
+ *  no shared email or birthday are NOT grouped. */
+export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
+  const all = await loadStoredClients();
+  const rows = all.map((c) => ({ c, p: decodeProfile(c.profileEnc), nm: decodeName(c.nameEnc) }));
+  const byName = new Map<string, typeof rows>();
+  for (const r of rows) { const a = byName.get(r.c.nameKey) ?? []; a.push(r); byName.set(r.c.nameKey, a); }
+  const linkMap = await clinicianIdsFor(all.map((c) => c.id));
+
+  const groups: DuplicateGroup[] = [];
+  for (const arr of byName.values()) {
+    if (arr.length < 2) continue;
+    // Union-find: connect records that share an email or a (format-independent)
+    // birthday, so a chain of partial matches collapses to one person.
+    const parent = arr.map((_, i) => i);
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    const sig = arr.map((r) => ({ emails: emailsOf(r.p), dob: dobKey(r.p.dob) }));
+    for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) {
+      const a = sig[i], b = sig[j];
+      const sharedEmail = a.emails.length > 0 && b.emails.length > 0 && a.emails.some((e) => b.emails.includes(e));
+      const sameDob = !!a.dob && a.dob === b.dob;
+      if (sharedEmail || sameDob) parent[find(i)] = find(j);
+    }
+    const clusters = new Map<number, number[]>();
+    for (let i = 0; i < arr.length; i++) { const root = find(i); const list = clusters.get(root) ?? []; list.push(i); clusters.set(root, list); }
+    for (const list of clusters.values()) {
+      if (list.length < 2) continue;
+      const records: DuplicateRecord[] = list.map((i) => {
+        const { c, p, nm } = arr[i];
+        return {
+          id: c.id, first: nm.first, last: nm.last,
+          dob: p.dob, email: p.email, guardianEmail: p.guardian?.email, phone: p.phone,
+          insurerId: c.insurerId, createdAt: c.createdAt, clinicianIds: linkMap.get(c.id) ?? [],
+          docCount: p.documents?.length ?? 0, noteCount: p.notes?.length ?? 0, isSample: !!p.sample,
+        };
+      });
+      groups.push({ key: records.map((r) => r.id).sort().join("-"), records });
+    }
+  }
+  return groups;
+}
+
+const byId = <T extends { id: string }>(xs: T[]): T[] => {
+  const seen = new Set<string>(); const out: T[] = [];
+  for (const x of xs) { if (x.id && seen.has(x.id)) continue; if (x.id) seen.add(x.id); out.push(x); }
+  return out;
+};
+
+/** Combine two client profiles for a merge: the survivor's own values win, the
+ *  duplicate fills any gaps, and the list fields (notes, documents, diagnoses,
+ *  sent emails, deductible draws) are UNIONED so nothing is dropped. */
+function combineProfiles(a: ClientProfile, b: ClientProfile): ClientProfile {
+  const keep = <T>(x: T | undefined, y: T | undefined) => (x !== undefined && x !== null && x !== "" ? x : y);
+  const obj = <T extends object>(x: T | undefined, y: T | undefined) => (x || y ? { ...(y as object), ...(x as object) } as T : undefined);
+  const out: ClientProfile = { ...b, ...a };
+  out.dob = keep(a.dob, b.dob); out.sex = keep(a.sex, b.sex);
+  out.phone = keep(a.phone, b.phone); out.email = keep(a.email, b.email);
+  out.address = obj(a.address, b.address);
+  out.insurance = obj(a.insurance, b.insurance);
+  out.guardian = obj(a.guardian, b.guardian);
+  out.deductible = keep(a.deductible, b.deductible);
+  out.benefit = keep(a.benefit, b.benefit);
+  out.referral = keep(a.referral, b.referral);
+  const dx = [...new Set([...(a.diagnosis ?? []), ...(b.diagnosis ?? [])])];
+  if (dx.length) out.diagnosis = dx; else delete out.diagnosis;
+  const dlog = [...(a.diagnosisLog ?? []), ...(b.diagnosisLog ?? [])];
+  if (dlog.length) out.diagnosisLog = dlog; else delete out.diagnosisLog;
+  const docs = byId([...(a.documents ?? []), ...(b.documents ?? [])]);
+  if (docs.length) out.documents = docs; else delete out.documents;
+  const notes = byId([...(a.notes ?? []), ...(b.notes ?? [])]).sort((x, y) => x.addedAt.localeCompare(y.addedAt));
+  if (notes.length) out.notes = notes; else delete out.notes;
+  const applied = [...(a.deductibleApplied ?? []), ...(b.deductibleApplied ?? [])];
+  if (applied.length) out.deductibleApplied = applied; else delete out.deductibleApplied;
+  const sent = byId([...(a.sentEmails ?? []), ...(b.sentEmails ?? [])]);
+  if (sent.length) out.sentEmails = sent; else delete out.sentEmails;
+  // The merged record is a real client unless EVERY part was a demo sample.
+  if (a.sample && b.sample) out.sample = true; else delete out.sample;
+  return out;
+}
+
+/** Client-table half of a merge: union the duplicates' profiles into the
+ *  survivor, move their clinician links over, then delete the duplicate rows.
+ *  Session/document/appointment reassignment is done by the caller
+ *  (lib/clientMerge) BEFORE this runs, while the duplicate ids still exist. */
+export async function mergeClientRecords(survivorId: string, duplicateIds: string[]): Promise<{ merged: string[] }> {
+  const all = await loadStoredClients();
+  const survivor = all.find((c) => c.id === survivorId);
+  if (!survivor) throw new Error("Survivor record not found.");
+  const dups = [...new Set(duplicateIds)].filter((id) => id && id !== survivorId)
+    .map((id) => all.find((c) => c.id === id)).filter((c): c is StoredClient => !!c);
+  if (!dups.length) return { merged: [] };
+
+  let profile = decodeProfile(survivor.profileEnc);
+  let insurerId = survivor.insurerId;
+  const linkMap = await clinicianIdsFor([survivorId, ...dups.map((d) => d.id)]);
+  for (const d of dups) {
+    profile = combineProfiles(profile, decodeProfile(d.profileEnc));
+    if (!insurerId) insurerId = d.insurerId;
+    for (const clin of linkMap.get(d.id) ?? []) await insertLink(survivorId, clin);
+  }
+  const sname = decodeName(survivor.nameEnc);
+  const identityKey = profile.dob ? identityKeyOf(sname.first, sname.last, profile.dob) : survivor.identityKey;
+  await saveClientFields(survivorId, insurerId, identityKey, encodeProfile(profile));
+  for (const d of dups) await deleteClient(d.id);
+  return { merged: dups.map((d) => d.id) };
+}
+
 /** Remove a client record and its clinician links (used to clear demo data). */
 export async function deleteClient(id: string): Promise<void> {
   if (usePostgres) {
