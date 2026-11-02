@@ -7,10 +7,10 @@ import {
   listInsurers, listSessions, getPracticeConfig, listExternalClinicians, listCptCodes,
   markSessionBilled, type BillingSession, type Insurer,
 } from "@/lib/billing";
-import { buildClaimForms } from "@/lib/cms1500";
+import { buildClaimForms, claimPdfBaseName, claimEmailSubject } from "@/lib/cms1500";
 import { claimPdf } from "@/lib/claimPdf";
 import { saveDocFile } from "@/lib/clientDocs";
-import { buildClaimEmail, defaultClaimMessage, sendClaimEmail } from "@/lib/email";
+import { defaultClaimMessage, sendClaimEmail } from "@/lib/email";
 import { randomId } from "@/lib/crypto";
 import { logChange } from "@/lib/db";
 
@@ -107,7 +107,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const patientName = `${client.last}, ${client.first}`;
   const to = payer.email ?? "";
   const message = defaultClaimMessage(payer.name, patientName, practiceName, total, forms[0]?.memberId);
-  const { subject } = buildClaimEmail({ to, payerName: payer.name, patientName, practiceName, claimCount: lineCount, total, memberId: forms[0]?.memberId, message });
+  // Subject = the attached PDF's name, except CINICO, which requires its provider
+  // line at the front (see claimEmailSubject).
+  const subject = claimEmailSubject({ last: client.last, first: client.first, memberId: forms[0]?.memberId, payerName: payer.name, forms });
 
   return NextResponse.json({
     ok: true, ready: true,
@@ -152,6 +154,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const pdf = await claimPdf(forms, prov);
   const today = caymanToday();
 
+  // Name the attachment (and the stored copy) the way the biller asked:
+  // "LASTNAME, Firstname claim 29-30Dec26". The subject follows the PDF name,
+  // except CINICO, which prepends its provider line.
+  const baseName = claimPdfBaseName(client.last, client.first, forms);
+  const subject = subjectOverride || claimEmailSubject({ last: client.last, first: client.first, memberId: forms[0]?.memberId, payerName: payer.name, forms });
+
   const result = await sendClaimEmail({
     to,
     payerName: payer.name,
@@ -160,7 +168,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     claimCount: lineCount,
     total,
     memberId: forms[0]?.memberId,
-    subject: subjectOverride,
+    subject,
     message,
     replyToName,
     replyToEmail,
@@ -169,10 +177,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       phone: prov.phone, email: prov.email, website: prov.website,
     },
     pdf,
-    filename: `CMS-1500-${patientName.replace(/[^\w-]+/g, "_")}-${today}.pdf`,
+    filename: `${baseName}.pdf`,
   });
-
-  const { subject } = buildClaimEmail({ to, payerName: payer.name, patientName, practiceName, claimCount: lineCount, total, memberId: forms[0]?.memberId, subject: subjectOverride, message });
 
   // Truthful paper trail: record the send (success or failure) on the client record.
   await recordSentEmail(id, {
@@ -189,7 +195,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   // not-yet-billed session on this claim as submitted today.
   const bytes = Buffer.from(pdf);
   const docId = randomId();
-  const docName = `CMS-1500 claim — ${payer.name} — ${today}`;
+  // Store under the same name that went out, so Documents mirrors the attachment.
+  const docName = baseName;
   await saveDocFile(docId, id, bytes.toString("base64"), "application/pdf", bytes.length, `${docName}.pdf`);
   const doc: ClientDocument = { id: docId, name: docName, kind: "claim", stored: true, mime: "application/pdf", size: bytes.length, addedAt: today };
   const documents = [...(client.profile.documents ?? []), doc];

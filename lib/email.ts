@@ -689,9 +689,8 @@ export function buildClaimEmail(args: ClaimEmailArgs): { subject: string; text: 
         <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
         <tr><td align="center" style="padding:32px 40px 0;">${header}</td></tr>
         <tr><td align="center" style="padding:22px 40px 0;">
-          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${BRAND_MUTED};">Insurance claim · CMS-1500</div>
-          <div style="font-size:26px;font-weight:700;color:${INV_INDIGO};margin:7px 0 3px;">${invMoney(args.total)}</div>
-          <div style="font-size:12.5px;color:${BRAND_MUTED};">${escapeHtml(args.patientName)}${args.memberId ? ` · member ${escapeHtml(args.memberId)}` : ""}</div>
+          <div style="font-size:14px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.patientName)}</div>
+          ${args.memberId ? `<div style="font-size:12.5px;color:${BRAND_MUTED};margin-top:3px;">member ${escapeHtml(args.memberId)}</div>` : ""}
         </td></tr>
         <tr><td style="padding:22px 40px 0;"><div style="border-top:1px solid ${BRAND_LINE};font-size:0;line-height:0;">&nbsp;</div></td></tr>
         <tr><td style="padding:22px 40px 26px;font-size:15px;line-height:1.7;color:${BRAND_CHARCOAL};">${bodyHtml}</td></tr>
@@ -699,7 +698,7 @@ export function buildClaimEmail(args: ClaimEmailArgs): { subject: string; text: 
           <div style="font-size:13.5px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:5px;">${escapeHtml(args.practiceName)}</div>
           ${addressLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${addressLine}</div>` : ""}
           ${contactLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${contactLine}</div>` : ""}
-          <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;margin-top:9px;">This email and its attachment contain protected health information intended only for the named payer. If you received it in error, please delete it and notify us.</div>
+          <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;margin-top:9px;">DISCLAIMER: This e-mail and any file(s) transmitted with it, is intended for the exclusive use by the person(s) mentioned above as recipient(s). This e-mail may contain confidential information and/or information protected by intellectual property rights or other rights. If you are not the intended recipient of this e-mail, you are hereby notified that any dissemination, distribution, copying, or action taken in relation to the contents of and attachments to this e-mail is strictly prohibited and may be unlawful. If you have received this e-mail in error, please notify the sender and delete the original and any copies of this e-mail and any printouts immediately from your system and destroy all copies of it.</div>
         </td></tr>
       </table>
     </td></tr>

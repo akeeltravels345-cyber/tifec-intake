@@ -2,7 +2,7 @@ import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { listInsurers, listSessions, getPracticeConfig, listExternalClinicians, listCptCodes } from "@/lib/billing";
 import { getClient, clinicianSeesClient } from "@/lib/clients";
 import { getClinician } from "@/lib/clinicians";
-import { buildClaimForms } from "@/lib/cms1500";
+import { buildClaimForms, claimPdfBaseName } from "@/lib/cms1500";
 import { cms1500Pdf } from "@/lib/cms1500Pdf";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return new Response(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="CMS1500-${client.last}-${client.first}.pdf"`,
+      "Content-Disposition": `inline; filename="${claimPdfBaseName(client.last, client.first, forms).replace(/"/g, "")}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

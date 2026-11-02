@@ -151,3 +151,71 @@ export function buildClaimForms(
   }
   return forms;
 }
+
+// ===========================================================================
+// Claim naming + email subject. The attached PDF, the stored document, the
+// "Save PDF" download and the email subject all read from here so they stay in
+// lock-step with what the biller asked for:
+//   PDF / default subject:  "LASTNAME, Firstname claim 29-30Dec26"
+//   CINICO subject:         "Shion O'Connor #9361 LASTNAME, Firstname <MemberId> DOS DD-MM-YYYY"
+// ===========================================================================
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Payer-specific subject prefixes — a provider identifier the payer requires at
+// the very front of the subject. CINICO requires the credentialed provider line
+// ("#9361" is the TIFEC/provider identifier, not the client's member ID). Keyed
+// by upper-cased insurer name; add payers here as their rules arrive (or lift
+// this into Setup later).
+const CLAIM_SUBJECT_PREFIX: Record<string, string> = {
+  CINICO: "Shion O'Connor #9361",
+};
+
+/** Distinct dates of service across every form, ascending. */
+function claimServiceDates(forms: ClaimForm[]): { y: number; m: number; d: number }[] {
+  const seen = new Set<string>();
+  const out: { y: number; m: number; d: number }[] = [];
+  for (const f of forms) for (const l of f.lines) {
+    const mt = l.date.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+    if (!mt || seen.has(l.date)) continue;
+    seen.add(l.date);
+    out.push({ y: 2000 + Number(mt[3]), m: Number(mt[1]), d: Number(mt[2]) });
+  }
+  return out.sort((a, b) => a.y - b.y || a.m - b.m || a.d - b.d);
+}
+
+/** Compact DOS for the PDF / default subject, e.g. "29-30Dec26". Dates in one
+ *  month+year collapse to "day-day-…Mon YY"; dates spanning months list each as
+ *  its own "DMonYY" token. */
+export function claimDosCompact(forms: ClaimForm[]): string {
+  const ds = claimServiceDates(forms);
+  if (ds.length === 0) return "";
+  const yy = (y: number) => String(y).slice(2);
+  const sameMY = ds.every((x) => x.m === ds[0].m && x.y === ds[0].y);
+  if (sameMY) return `${ds.map((x) => x.d).join("-")}${MONTHS[ds[0].m - 1]}${yy(ds[0].y)}`;
+  return ds.map((x) => `${x.d}${MONTHS[x.m - 1]}${yy(x.y)}`).join("-");
+}
+
+/** DOS for the CINICO subject: "DD-MM-YYYY" per date (comma-joined if several). */
+export function claimDosLong(forms: ClaimForm[]): string {
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  return claimServiceDates(forms).map((x) => `${p2(x.d)}-${p2(x.m)}-${x.y}`).join(", ");
+}
+
+/** The attachment / document base name (no extension): "DELFOSSE, Skii claim 29-30Dec26". */
+export function claimPdfBaseName(last: string, first: string, forms: ClaimForm[]): string {
+  const dos = claimDosCompact(forms);
+  return `${last.toUpperCase()}, ${first} claim${dos ? ` ${dos}` : ""}`.trim();
+}
+
+/** The email subject. Non-CINICO payers reuse the PDF name; a payer with a
+ *  required provider prefix (CINICO) gets "<prefix> LAST, First <MemberId> DOS <dates>". */
+export function claimEmailSubject(opts: { last: string; first: string; memberId?: string; payerName: string; forms: ClaimForm[] }): string {
+  const prefix = CLAIM_SUBJECT_PREFIX[(opts.payerName || "").trim().toUpperCase()];
+  if (!prefix) return claimPdfBaseName(opts.last, opts.first, opts.forms);
+  const parts = [prefix, `${opts.last.toUpperCase()}, ${opts.first}`];
+  if (opts.memberId?.trim()) parts.push(opts.memberId.trim());
+  const dos = claimDosLong(opts.forms);
+  if (dos) parts.push(`DOS ${dos}`);
+  return parts.join(" ");
+}
