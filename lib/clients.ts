@@ -345,6 +345,30 @@ export interface ClientInput {
   profile?: ClientProfile;
 }
 
+/** Normalised contact emails on a profile (the client's and the guardian's) —
+ *  used as an identity signal when matching, so a shared email proves two
+ *  same-name records are the same person. */
+function emailsOf(p: ClientProfile): string[] {
+  return [p.email, p.guardian?.email].map((e) => (e || "").trim().toLowerCase()).filter(Boolean);
+}
+
+/** A date-format-independent birthday key: the 4-digit year plus the other two
+ *  numbers (day/month, order-independent), so "2010-05-14", "05/14/2010" and
+ *  "14/05/2010" all compare equal. This matters because the stored blind index
+ *  only matches an IDENTICAL DOB string, so the same birthday written in a
+ *  different format would otherwise look like a new person and duplicate the
+ *  record. Falls back to the lowercased raw string for an unfamiliar shape. */
+function dobKey(dob?: string): string {
+  const s = (dob || "").trim();
+  if (!s) return "";
+  const nums = s.match(/\d+/g);
+  if (!nums || nums.length < 3) return s.toLowerCase();
+  const yi = nums.findIndex((n) => n.length === 4);
+  if (yi === -1) return s.toLowerCase();
+  const rest = nums.filter((_, i) => i !== yi).map((n) => n.padStart(2, "0")).sort();
+  return `${nums[yi]}-${rest.join("-")}`;
+}
+
 interface EnsureResult { client: StoredClient; created: boolean; linked: boolean }
 
 /** Find-or-create a practice-level client by NAME + DOB, then make sure the
@@ -360,22 +384,34 @@ async function ensureClient(clinicianId: string, input: ClientInput, all: Stored
   // Candidates: same name across the practice.
   const sameName = all.filter((c) => c.nameKey === nk);
   // A match may cross into another clinician's record, so guard the isolation
-  // boundary: a bare NAME collision (no DOB on one side) must NOT link one
-  // clinician to a different clinician's client. We only reuse another clinician's
-  // record when identity is PROVEN by name + DOB; otherwise we reuse only a record
-  // the caller already sees, and fall back to creating a fresh record.
+  // boundary: a bare NAME collision must NOT link one clinician to a different
+  // clinician's client. We reuse another clinician's record only when identity is
+  // PROVEN — exact name+DOB, a SHARED EMAIL, or the SAME birthday in a different
+  // date format — otherwise we reuse only a record the caller already sees, and
+  // fall back to creating a fresh one.
   const linkMap = sameName.length ? await clinicianIdsFor(sameName.map((c) => c.id)) : new Map<string, string[]>();
   const callerLinked = (c: StoredClient) => (linkMap.get(c.id) ?? []).includes(clinicianId);
+
+  // Decode the same-name profiles once so email + birthday can be compared
+  // against stored data directly (not just via the exact-string blind index).
+  // This is what stops the duplicates: intake arrives with an email and a DOB,
+  // and an existing booking/hub record for the same person is reused instead of
+  // a second record being created — even if that record wasn't linked to this
+  // clinician yet, or stored the DOB in another format.
+  const sameNameP = sameName.map((c) => ({ c, p: decodeProfile(c.profileEnc) }));
+  const wantEmails = emailsOf(profile);
+  const wantDob = dobKey(dob);
+  const shareEmail = (p: ClientProfile) => { const es = emailsOf(p); return es.length > 0 && es.some((e) => wantEmails.includes(e)); };
+
   let match: StoredClient | undefined;
-  if (dob) {
-    match =
-      sameName.find((c) => c.identityKey === idk) ||                          // exact name+DOB — same person, safe to share
-      sameName.find((c) => c.identityKey === nk && callerLinked(c));          // upgrade the caller's OWN name-only stub with this DOB
-  } else {
-    match =
-      sameName.find((c) => c.identityKey === idk && callerLinked(c)) ||       // the caller's own name-only record
-      sameName.find((c) => callerLinked(c));                                  // any of this name the caller already sees
-  }
+  // Proven identity — safe to reconcile even across clinicians:
+  if (dob) match = sameName.find((c) => c.identityKey === idk);                              // exact name + DOB
+  if (!match && wantEmails.length) match = sameNameP.find((x) => shareEmail(x.p))?.c;        // same name + shared email
+  if (!match && wantDob) match = sameNameP.find((x) => dobKey(x.p.dob) === wantDob)?.c;      // same name + same birthday, any format
+  // Caller-scoped fallbacks — can't prove identity to another clinician's record:
+  if (!match && dob) match = sameName.find((c) => c.identityKey === nk && callerLinked(c));  // upgrade the caller's OWN name-only stub
+  if (!match && !dob) match = sameName.find((c) => c.identityKey === idk && callerLinked(c)) // the caller's own name-only record
+    || sameName.find((c) => callerLinked(c));                                               // any of this name the caller already sees
 
   if (match) {
     // Enrich: fill the usual insurer + any missing profile fields; upgrade a
