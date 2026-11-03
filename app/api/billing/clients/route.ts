@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
-import { resolveClient } from "@/lib/clients";
+import { resolveClient, type ClientProfile } from "@/lib/clients";
 import { getClinician, canTreatClients } from "@/lib/clinicians";
 import { isExternalId, listExternalClinicians } from "@/lib/billing";
 import { logChange } from "@/lib/db";
@@ -27,8 +27,15 @@ export async function POST(req: Request) {
   const last = String(body.last ?? "").trim();
   const insurerId = body.insurerId ? String(body.insurerId) : null;
   const dob = body.dob && isDate(String(body.dob)) ? String(body.dob) : undefined;
+  const sex = (["M", "F", "U"] as const).find((s) => s === String(body.sex));
+  const memberId = body.memberId ? String(body.memberId).trim() || undefined : undefined;
 
   if (!first || !last) return NextResponse.json({ error: "Enter the client's first and last name." }, { status: 400 });
+
+  const profile: ClientProfile = {};
+  if (dob) profile.dob = dob;
+  if (sex) profile.sex = sex;
+  if (memberId) profile.insurance = { memberId };
 
   // The clinician must be a real treating provider (a regular clinician, or a
   // practicum biller like Nick who treats unpaid practicum clients), or a
@@ -40,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pick a clinician to assign this client to." }, { status: 400 });
   }
 
-  const clientId = await resolveClient(clinicianId, { first, last, insurerId, profile: dob ? { dob } : {} });
+  const clientId = await resolveClient(clinicianId, { first, last, insurerId, profile });
   await logChange(user.clinician.id, `client:${clientId}`, "create", "created client record");
   return NextResponse.json({ ok: true, clientId });
 }

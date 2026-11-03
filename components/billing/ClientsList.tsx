@@ -30,6 +30,8 @@ export default function ClientsList({ rows, seesAll, clinicians = [], assignable
   const [nLast, setNLast] = useState("");
   const [nInsurer, setNInsurer] = useState("");
   const [nDob, setNDob] = useState("");
+  const [nSex, setNSex] = useState("");
+  const [nMemberId, setNMemberId] = useState("");
   const [nBusy, setNBusy] = useState(false);
   const [nErr, setNErr] = useState("");
 
@@ -40,7 +42,7 @@ export default function ClientsList({ rows, seesAll, clinicians = [], assignable
     try {
       const res = await fetch("/api/billing/clients", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicianId: nClin, first: nFirst, last: nLast, insurerId: nInsurer || null, dob: nDob || null }),
+        body: JSON.stringify({ clinicianId: nClin, first: nFirst, last: nLast, insurerId: nInsurer || null, dob: nDob || null, sex: nSex || undefined, memberId: nMemberId.trim() || undefined }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not add the client.");
@@ -211,7 +213,13 @@ export default function ClientsList({ rows, seesAll, clinicians = [], assignable
                 {insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
             </label>
-            <label className="cl-lab">Date of birth <span className="cl-opt">optional, helps match records and claims</span><input type="date" className="ls-in" value={nDob} onChange={(e) => setNDob(e.target.value)} /></label>
+            {/* For an insurance client, a blank DOB / sex / member ID gets a subtle
+                amber nudge — these are what a clean CMS-1500 needs. Never blocks. */}
+            <label className={`cl-lab${nInsurer && !nDob ? " cl-attn" : ""}`}>Date of birth <span className="cl-opt">helps match records and claims</span><input type="date" className="ls-in" value={nDob} onChange={(e) => setNDob(e.target.value)} /></label>
+            <div className="cl-row2">
+              <label className={`cl-lab${nInsurer && !nSex ? " cl-attn" : ""}`}>Sex<select className="ls-in" value={nSex} onChange={(e) => setNSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select></label>
+              <label className={`cl-lab${nInsurer && !nMemberId ? " cl-attn" : ""}`}>Member / ID no.<input className="ls-in" value={nMemberId} onChange={(e) => setNMemberId(e.target.value)} /></label>
+            </div>
 
             {nErr && <div className="cl-err">{nErr}</div>}
             <div className="cl-modalfoot">
