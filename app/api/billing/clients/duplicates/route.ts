@@ -31,7 +31,7 @@ export async function GET() {
     }));
     // Suggest keeping the richest record; tie-break on the oldest (earliest created).
     const suggested = [...records].sort((a, b) => weight(b) - weight(a) || a.createdAt.localeCompare(b.createdAt))[0];
-    return { key: g.key, suggestedSurvivorId: suggested?.id ?? records[0]?.id, records };
+    return { key: g.key, confidence: g.confidence, reason: g.reason, suggestedSurvivorId: suggested?.id ?? records[0]?.id, records };
   });
 
   return NextResponse.json({ ok: true, groups: out });

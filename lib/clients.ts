@@ -507,64 +507,125 @@ export async function addClients(
 
 export interface DuplicateRecord {
   id: string; first: string; last: string;
-  dob?: string; email?: string; guardianEmail?: string; phone?: string;
+  dob?: string; email?: string; guardianEmail?: string; phone?: string; memberId?: string;
   insurerId: string | null; createdAt: string; clinicianIds: string[];
   docCount: number; noteCount: number; isSample: boolean;
 }
-export interface DuplicateGroup { key: string; records: DuplicateRecord[] }
-
-/** A forgiving name key for GROUPING candidates: lower-cased, every run of
- *  non-alphanumerics (spaces, hyphens, apostrophes, commas) treated as a break,
- *  and the name tokens sorted. So "Henry Moncrieffe", "HENRY-Moncrieffe" and
- *  "Moncrieffe Henry" all collapse to the same key. It only widens the candidate
- *  pool — records are still only GROUPED when they also share an email or a
- *  birthday, so this never merges two different people. */
-function looseNameKey(first: string, last: string): string {
-  return `${first} ${last}`.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).sort().join(" ");
+export interface DuplicateGroup {
+  key: string; records: DuplicateRecord[];
+  confidence: "likely" | "possible"; // "likely" = a hard identity match; "possible" = name-only, verify
+  reason: string;                     // why these were grouped, for the biller
 }
 
-/** Groups of client records that look like the SAME person: a matching name
- *  (spacing/hyphen/case/word-order forgiven), plus a shared email (client or
- *  guardian) or the same birthday in any date format. Read-only — nothing is
- *  changed. Two genuinely different people with no shared email or birthday are
- *  NOT grouped, even if their names look alike. */
+/** Name tokens, lower-cased, punctuation (spaces/hyphens/apostrophes/commas)
+ *  split out and de-duplicated, sorted — so word order, hyphenation and case
+ *  don't matter. "Henry Moncrieffe", "HENRY-Moncrieffe" and "Moncrieffe, Henry"
+ *  all yield the same tokens. */
+function nameTokens(first: string, last: string): string[] {
+  return [...new Set(`${first} ${last}`.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean))].sort();
+}
+/** Levenshtein distance, short-circuited once it exceeds `max` (we only care
+ *  about tiny typo distances). */
+function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]; let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      cur[j] = v; if (v < best) best = v;
+    }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+/** Do two names look like the same person? Three safe cases:
+ *   1. identical token sets (word order / hyphen / case already normalised),
+ *   2. one set fully contained in the other — a dropped or added surname
+ *      ("Brown" vs "Chambers Brown"), min two tokens so a lone first name can't
+ *      swallow everyone,
+ *   3. every token matches except ONE on each side, and that odd pair is a tiny
+ *      typo in a reasonably long token ("Markita"/"Martika", "Shaneka"/"Sheneka").
+ *  The length floor on case 3 is what keeps siblings/twins apart: short different
+ *  first names like "Jon"/"Jane" never pass. */
+function nameSimilar(ta: string[], tb: string[], ja: string, jb: string): boolean {
+  if (ja === jb) return true;
+  const sa = new Set(ta), sb = new Set(tb);
+  const subset = (s: Set<string>, t: Set<string>) => s.size >= 2 && [...s].every((x) => t.has(x));
+  if (subset(sa, sb) || subset(sb, sa)) return true;
+  if (ta.length !== tb.length) return false;
+  const onlyA = ta.filter((x) => !sb.has(x)), onlyB = tb.filter((x) => !sa.has(x));
+  if (onlyA.length !== 1 || onlyB.length !== 1) return false;         // more than one token differs
+  const [x, y] = [onlyA[0], onlyB[0]], maxLen = Math.max(x.length, y.length);
+  const d = editDistance(x, y, 2);
+  return maxLen >= 5 && d <= 2 && d <= Math.ceil(maxLen * 0.34);      // a typo in a long-ish name only
+}
+
+/** Groups of client records that look like the SAME person. Candidates are
+ *  joined when their NAMES match closely (spacing/hyphen/case/word-order
+ *  forgiven, plus a dropped surname or a small typo), OR when a shared email or
+ *  insurance member ID lines up with the same birthday. Each group is tagged
+ *  "likely" (a hard identity match — same birthday, member ID, email or
+ *  identical name) or "possible" (a near-name match to eyeball). Read-only. */
 export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
   const all = await loadStoredClients();
   const rows = all.map((c) => ({ c, p: decodeProfile(c.profileEnc), nm: decodeName(c.nameEnc) }));
-  const byName = new Map<string, typeof rows>();
-  for (const r of rows) { const k = looseNameKey(r.nm.first, r.nm.last); const a = byName.get(k) ?? []; a.push(r); byName.set(k, a); }
   const linkMap = await clinicianIdsFor(all.map((c) => c.id));
+  const n = rows.length;
+  const sig = rows.map((r) => {
+    const tokens = nameTokens(r.nm.first, r.nm.last);
+    return { tokens, joined: tokens.join(" "), emails: emailsOf(r.p), dob: dobKey(r.p.dob), member: (r.p.insurance?.memberId || "").trim() };
+  });
 
-  const groups: DuplicateGroup[] = [];
-  for (const arr of byName.values()) {
-    if (arr.length < 2) continue;
-    // Union-find: connect records that share an email or a (format-independent)
-    // birthday, so a chain of partial matches collapses to one person.
-    const parent = arr.map((_, i) => i);
-    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-    const sig = arr.map((r) => ({ emails: emailsOf(r.p), dob: dobKey(r.p.dob) }));
-    for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) {
-      const a = sig[i], b = sig[j];
-      const sharedEmail = a.emails.length > 0 && b.emails.length > 0 && a.emails.some((e) => b.emails.includes(e));
-      const sameDob = !!a.dob && a.dob === b.dob;
-      if (sharedEmail || sameDob) parent[find(i)] = find(j);
-    }
-    const clusters = new Map<number, number[]>();
-    for (let i = 0; i < arr.length; i++) { const root = find(i); const list = clusters.get(root) ?? []; list.push(i); clusters.set(root, list); }
-    for (const list of clusters.values()) {
-      if (list.length < 2) continue;
-      const records: DuplicateRecord[] = list.map((i) => {
-        const { c, p, nm } = arr[i];
-        return {
-          id: c.id, first: nm.first, last: nm.last,
-          dob: p.dob, email: p.email, guardianEmail: p.guardian?.email, phone: p.phone,
-          insurerId: c.insurerId, createdAt: c.createdAt, clinicianIds: linkMap.get(c.id) ?? [],
-          docCount: p.documents?.length ?? 0, noteCount: p.notes?.length ?? 0, isSample: !!p.sample,
-        };
-      });
-      groups.push({ key: records.map((r) => r.id).sort().join("-"), records });
+  const parent = rows.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = sig[i], b = sig[j];
+    const sharedEmail = a.emails.length > 0 && b.emails.length > 0 && a.emails.some((e) => b.emails.includes(e));
+    const sameDob = !!a.dob && a.dob === b.dob;
+    const sameMember = !!a.member && a.member === b.member;
+    // Name match on its own, OR a hard identifier (email/member) confirmed by the
+    // same birthday (the birthday rules out siblings on a shared policy/email).
+    if (nameSimilar(a.tokens, b.tokens, a.joined, b.joined) || ((sharedEmail || sameMember) && sameDob)) {
+      parent[find(i)] = find(j);
     }
   }
+
+  const clusters = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) { const root = find(i); const list = clusters.get(root) ?? []; list.push(i); clusters.set(root, list); }
+
+  const groups: DuplicateGroup[] = [];
+  for (const list of clusters.values()) {
+    if (list.length < 2) continue;
+    // Strongest shared signal across the group, for confidence + the biller's note.
+    let hasMember = false, hasDob = false, hasEmail = false, hasIdentical = false;
+    for (let x = 0; x < list.length; x++) for (let y = x + 1; y < list.length; y++) {
+      const a = sig[list[x]], b = sig[list[y]];
+      if (a.member && a.member === b.member) hasMember = true;
+      if (a.dob && a.dob === b.dob) hasDob = true;
+      if (a.emails.length && b.emails.length && a.emails.some((e) => b.emails.includes(e))) hasEmail = true;
+      if (a.joined === b.joined) hasIdentical = true;
+    }
+    const likely = hasMember || hasDob || hasEmail;
+    const reason = hasMember ? "Same insurance member ID"
+      : hasDob ? "Same date of birth"
+      : hasEmail ? "Shared email"
+      : hasIdentical ? "Identical name"
+      : "Similar name — please verify";
+    const records: DuplicateRecord[] = list.map((i) => {
+      const { c, p, nm } = rows[i];
+      return {
+        id: c.id, first: nm.first, last: nm.last,
+        dob: p.dob, email: p.email, guardianEmail: p.guardian?.email, phone: p.phone, memberId: p.insurance?.memberId,
+        insurerId: c.insurerId, createdAt: c.createdAt, clinicianIds: linkMap.get(c.id) ?? [],
+        docCount: p.documents?.length ?? 0, noteCount: p.notes?.length ?? 0, isSample: !!p.sample,
+      };
+    });
+    groups.push({ key: records.map((r) => r.id).sort().join("-"), records, confidence: likely ? "likely" : "possible", reason });
+  }
+  // Likely matches first, then by name.
+  groups.sort((a, b) => (a.confidence === b.confidence ? (a.records[0]?.last || "").localeCompare(b.records[0]?.last || "") : a.confidence === "likely" ? -1 : 1));
   return groups;
 }
 

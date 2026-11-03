@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 
 interface DupRecord {
   id: string; first: string; last: string;
-  dob?: string; email?: string; guardianEmail?: string; phone?: string;
+  dob?: string; email?: string; guardianEmail?: string; phone?: string; memberId?: string;
   insurerId: string | null; insurerName: string; createdAt: string;
   clinicianIds: string[]; clinicianNames: string[];
   sessionCount: number; docCount: number; noteCount: number; isSample: boolean;
 }
-interface Group { key: string; suggestedSurvivorId: string; records: DupRecord[] }
+interface Group { key: string; suggestedSurvivorId: string; confidence: "likely" | "possible"; reason: string; records: DupRecord[] }
 
 const fmtDate = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); };
 
@@ -81,8 +81,11 @@ export default function DuplicatesClient() {
         return (
           <div key={g.key} className="dup-group">
             <div className="dup-group-head">
-              <div className="dup-group-name">{name}</div>
-              <div className="dup-group-tag">{g.records.length} records look like the same person</div>
+              <div className="dup-group-name">
+                {name}
+                <span className={`dup-conf ${g.confidence}`}>{g.confidence === "likely" ? "Likely" : "Possible"}</span>
+              </div>
+              <div className="dup-group-tag">{g.records.length} records · {g.reason}</div>
             </div>
 
             <div className="dup-cards">
@@ -102,6 +105,7 @@ export default function DuplicatesClient() {
                       <div><dt>Email</dt><dd>{r.email || "—"}</dd></div>
                       {r.guardianEmail && <div><dt>Guardian</dt><dd>{r.guardianEmail}</dd></div>}
                       <div><dt>Phone</dt><dd>{r.phone || "—"}</dd></div>
+                      <div><dt>Member ID</dt><dd>{r.memberId || "—"}</dd></div>
                       <div><dt>Insurer</dt><dd>{r.insurerName || "Self-pay"}</dd></div>
                       <div><dt>Clinicians</dt><dd>{r.clinicianNames.join(", ") || "—"}</dd></div>
                       <div><dt>Data</dt><dd>{r.sessionCount} sessions · {r.docCount} docs · {r.noteCount} notes</dd></div>
@@ -140,7 +144,10 @@ const CSS = `
 .dup-empty-tick{font-size:30px;color:#4a9a5a;margin-bottom:8px;}
 .dup-group{border:1px solid var(--bl-line,#e7e3da);border-radius:16px;padding:16px 16px 14px;margin:14px 0;background:var(--bl-card,#fff);}
 .dup-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
-.dup-group-name{font-size:17px;font-weight:700;color:var(--bl-ink,#2b2824);}
+.dup-group-name{font-size:17px;font-weight:700;color:var(--bl-ink,#2b2824);display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.dup-conf{font-size:11px;font-weight:700;letter-spacing:.02em;border-radius:999px;padding:2px 9px;text-transform:uppercase;}
+.dup-conf.likely{background:#e6f2e6;color:#2f7a37;}
+.dup-conf.possible{background:#fbf0d9;color:#9a6a1a;}
 .dup-group-tag{font-size:12px;color:var(--bl-muted,#8a8578);}
 .dup-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
 .dup-card{display:block;border:1px solid var(--bl-line,#e7e3da);border-radius:12px;padding:11px 12px;cursor:pointer;background:var(--bl-bg,#fcfbf8);transition:border-color .12s,box-shadow .12s;}
