@@ -387,6 +387,7 @@ export interface ClientEmailArgs {
   buttons?: { label: string; url: string }[];  // call-to-action links
   note?: string;                               // subtle callout
   outro?: string;                              // closing paragraph before sign-off
+  footerNote?: string;                         // confidentiality line (defaults to the client wording)
   logoCid?: string;
 }
 
@@ -436,7 +437,7 @@ export function buildClientEmail(a: ClientEmailArgs): { text: string; html: stri
       </td></tr>
       <tr><td style="padding:20px 38px;background:${PC.footBg};border-top:1px solid ${PC.border};">
         <div style="font-size:12.5px;font-weight:700;color:${PC.ink};">${escapeHtml(PRACTICE_NAME)}</div>
-        <div style="font-size:10.5px;color:#9aa7a8;line-height:1.5;margin-top:3px;">This email is confidential and intended only for the named client.</div>
+        <div style="font-size:10.5px;color:#9aa7a8;line-height:1.5;margin-top:3px;">${escapeHtml(a.footerNote || "This email is confidential and intended only for the named client.")}</div>
       </td></tr>
     </table>
   </td></tr></table>

@@ -193,5 +193,6 @@ async function emailClinicianAlert(clinicianId: string, type: NotificationType, 
     rows,
     buttons: link ? [{ label: "View in the app", url: link }] : undefined,
     outro: "You can see all your appointments any time in the TIFEC app.",
+    footerNote: "This message is confidential and intended only for the named recipient.",
   });
 }

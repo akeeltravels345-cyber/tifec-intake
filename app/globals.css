@@ -2376,6 +2376,13 @@ body:has(.biz) { background: var(--panel); }
 .cd-fl { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--faint, #8a93a3); font-weight: 700; }
 .cd-v { font-size: 14.5px; color: var(--ink, #1c2330); }
 .cd-v.muted { color: #aab0bd; }
+/* Claim-essential field (DOB / sex / member ID) blank on an insurance client:
+   a subtle amber nudge, not a block. rgba tint reads on light and dark. */
+.cd-f-attn { border-radius: 7px; box-shadow: inset 2px 0 0 #d9a24a; padding-left: 9px; margin-left: -11px; }
+.cd-f-attn .cd-fl { color: #c0871f; }
+.cd-f-attn .cd-fl::before { content: "●\00a0"; font-size: 8px; vertical-align: 2px; color: #d9a24a; }
+.cd-f-attn .cd-v.muted { color: #c0871f; }
+.cd-f-attn .ls-in { border-color: #d9a24a; background: rgba(217, 162, 74, 0.10); }
 .cd-save { grid-column: span 2; display: flex; gap: 10px; margin-top: 6px; }
 .cd-stage { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
 .cd-stage.self { background: var(--panel); color: #5b6472; }

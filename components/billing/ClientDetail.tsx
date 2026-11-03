@@ -510,10 +510,16 @@ export default function ClientDetail({
     }
   };
   const generateSelectedInvoice = () => { if (selSelfIds.length) router.push(`/billing/clients/${id}/invoice?sessions=${selSelfIds.join(",")}`); };
-  const field = (label: string, node: React.ReactNode) => (
-    <div className="cd-f"><span className="cd-fl">{label}</span>{node}</div>
+  // `attn` gives a field a subtle amber cue. Used for the claim essentials
+  // (date of birth, sex, member ID) when this is an INSURANCE client and the
+  // field is still blank — a nudge to fill it, never a block.
+  const field = (label: string, node: React.ReactNode, attn = false) => (
+    <div className={`cd-f${attn ? " cd-f-attn" : ""}`}><span className="cd-fl">{label}</span>{node}</div>
   );
   const val = (v: string) => (v ? <span className="cd-v">{v}</span> : <span className="cd-v muted">-</span>);
+  // An insurance client needs DOB, sex and member ID for a clean CMS-1500.
+  const needView = !!insurerId; // saved state (view mode)
+  const needEdit = !!ins;       // live insurer choice (edit mode)
 
   return (
     <div className="cd-wrap">
@@ -628,23 +634,23 @@ export default function ClientDetail({
 
         {!edit ? (
           <div className="su-card cd-grid">
-            {field("Date of birth", val(profile.dob ?? ""))}
-            {field("Sex", val(profile.sex ?? ""))}
+            {field("Date of birth", val(profile.dob ?? ""), needView && !profile.dob)}
+            {field("Sex", val(profile.sex ?? ""), needView && !profile.sex)}
             {field("Phone", val(profile.phone ?? ""))}
             {field("Email", val(profile.email ?? ""))}
             {field("Address", val([profile.address?.line1, profile.address?.line2, profile.address?.city, profile.address?.region, profile.address?.postal, profile.address?.country].filter(Boolean).join(", ")))}
             {(profile.guardian?.name || profile.guardian?.email || profile.guardian?.phone) &&
               field("Parent / guardian", val([profile.guardian?.name, profile.guardian?.relationship ? `(${profile.guardian.relationship})` : "", profile.guardian?.email, profile.guardian?.phone].filter(Boolean).join(" · ")))}
             {field("Usual insurer", val(insurers.find((i) => i.id === insurerId)?.name ?? (insurerId ? "" : "Self-pay")))}
-            {field("Member / ID no.", val(profile.insurance?.memberId ?? ""))}
+            {field("Member / ID no.", val(profile.insurance?.memberId ?? ""), needView && !profile.insurance?.memberId)}
             {field("Relationship to insured", val(profile.insurance?.relationship ?? "self"))}
             {profile.insurance?.relationship && profile.insurance.relationship !== "self" &&
               field("Insured", val([profile.insurance?.insuredFirst, profile.insurance?.insuredLast, profile.insurance?.insuredDob].filter(Boolean).join(" ")))}
           </div>
         ) : (
           <div className="su-card cd-grid">
-            {field("Date of birth", <DobInput value={dob} onChange={setDob} />)}
-            {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>)}
+            {field("Date of birth", <DobInput value={dob} onChange={setDob} />, needEdit && !dob)}
+            {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>, needEdit && !sex)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}
             {field("Email", <input className="ls-in" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />)}
             <div style={{ gridColumn: "1 / -1", margin: "8px 0 -2px", fontWeight: 700, fontSize: "13.5px" }}>Parent / guardian <span style={{ fontWeight: 400, color: "var(--muted)" }}>· responsible for payment (for minors)</span></div>
@@ -653,7 +659,7 @@ export default function ClientDetail({
             {field("Email (for invoices)", <input className="ls-in" type="email" inputMode="email" value={gEmail} onChange={(e) => setGEmail(e.target.value)} placeholder="name@example.com" />)}
             {field("Phone", <input className="ls-in" value={gPhone} onChange={(e) => setGPhone(e.target.value)} />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
-            {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />)}
+            {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />, needEdit && !memberId)}
             {field("Relationship to insured", <select className="ls-in" value={relationship} onChange={(e) => setRelationship(e.target.value as typeof relationship)}><option value="self">Self</option><option value="spouse">Spouse</option><option value="child">Child</option><option value="other">Other</option></select>)}
             {relationship !== "self" && <>
               {field("Insured first name", <input className="ls-in" value={insuredFirst} onChange={(e) => setInsuredFirst(e.target.value)} />)}
