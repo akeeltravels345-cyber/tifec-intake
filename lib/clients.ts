@@ -585,9 +585,12 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
     const sharedEmail = a.emails.length > 0 && b.emails.length > 0 && a.emails.some((e) => b.emails.includes(e));
     const sameDob = !!a.dob && a.dob === b.dob;
     const sameMember = !!a.member && a.member === b.member;
+    // Two recorded birthdays that DISAGREE are proof it's not one person (e.g.
+    // "Cayla Ebanks" 2008 vs "Kayla Ebanks" 1997) — veto a name-only match.
+    const dobConflict = !!a.dob && !!b.dob && a.dob !== b.dob;
     // Name match on its own, OR a hard identifier (email/member) confirmed by the
     // same birthday (the birthday rules out siblings on a shared policy/email).
-    if (nameSimilar(a.tokens, b.tokens, a.joined, b.joined) || ((sharedEmail || sameMember) && sameDob)) {
+    if ((!dobConflict && nameSimilar(a.tokens, b.tokens, a.joined, b.joined)) || ((sharedEmail || sameMember) && sameDob)) {
       parent[find(i)] = find(j);
     }
   }
