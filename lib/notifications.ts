@@ -7,6 +7,8 @@ import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
 import { sendPushToClinician } from "./push";
+import { getClinician } from "./clinicians";
+import { sendBrandedEmail } from "./email";
 
 export type NotificationType = "booking" | "reschedule" | "cancel" | "reminder";
 
@@ -154,4 +156,42 @@ export async function notifyClinician(
   try {
     await sendPushToClinician(clinicianId, { title: n.title, body: n.body, url, tag: apptId ? `${n.type}-${apptId}` : undefined });
   } catch { /* push is best-effort; the inbox entry still landed */ }
+  // Email the clinician for the two moments they asked to hear about by email:
+  // a new booking, and the single pre-appointment reminder. Reschedule/cancel
+  // stay in-app + push only. Best-effort — email must never fail the booking.
+  if (n.type === "booking" || n.type === "reminder") {
+    try { await emailClinicianAlert(clinicianId, n.type, n.body, url); } catch (e) { console.error("clinician alert email failed", e); }
+  }
+}
+
+// Strip a title ("Dr."/"Mrs.") and return the first name, for "Hi Shion,".
+const clinicianFirstName = (full: string) =>
+  (full || "").replace(/^(dr|mrs|mr|ms|miss)\.?\s+/i, "").trim().split(/\s+/)[0] || undefined;
+
+// Send the booking / reminder heads-up to the clinician's own mailbox. The body
+// arrives pre-formatted as "Client · Service\nWhen" (same string the inbox and
+// push use), so we split it back into a tidy details table. Never throws.
+async function emailClinicianAlert(clinicianId: string, type: NotificationType, body: string, url: string): Promise<void> {
+  const clin = getClinician(clinicianId);
+  if (!clin?.email) return;
+  const base = (process.env.APP_URL || "").replace(/\/$/, "");
+  const link = /^https?:\/\//.test(url) ? url : (base ? `${base}${url}` : "");
+  const [first, ...rest] = (body || "").split("\n");
+  const [client, service] = first.split(" · ");
+  const when = rest.join(" ").trim();
+  const rows: { label: string; value: string }[] = [];
+  if (client) rows.push({ label: "Client", value: client });
+  if (service) rows.push({ label: "Service", value: service });
+  if (when) rows.push({ label: "When", value: when });
+  const isReminder = type === "reminder";
+  await sendBrandedEmail(clin.email, isReminder ? "Reminder: upcoming appointment" : "New appointment booked", {
+    heading: isReminder ? "You have an appointment coming up" : "A client just booked with you",
+    greetingName: clinicianFirstName(clin.name),
+    intro: isReminder
+      ? "A quick reminder of your next appointment:"
+      : "A new appointment has just been booked on your schedule:",
+    rows,
+    buttons: link ? [{ label: "View in the app", url: link }] : undefined,
+    outro: "You can see all your appointments any time in the TIFEC app.",
+  });
 }
