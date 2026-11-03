@@ -513,15 +513,26 @@ export interface DuplicateRecord {
 }
 export interface DuplicateGroup { key: string; records: DuplicateRecord[] }
 
-/** Groups of client records that look like the SAME person: same name, plus a
- *  shared email (client or guardian) or the same birthday in any date format.
- *  Read-only — nothing is changed. Two genuinely different same-name people with
- *  no shared email or birthday are NOT grouped. */
+/** A forgiving name key for GROUPING candidates: lower-cased, every run of
+ *  non-alphanumerics (spaces, hyphens, apostrophes, commas) treated as a break,
+ *  and the name tokens sorted. So "Henry Moncrieffe", "HENRY-Moncrieffe" and
+ *  "Moncrieffe Henry" all collapse to the same key. It only widens the candidate
+ *  pool — records are still only GROUPED when they also share an email or a
+ *  birthday, so this never merges two different people. */
+function looseNameKey(first: string, last: string): string {
+  return `${first} ${last}`.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).sort().join(" ");
+}
+
+/** Groups of client records that look like the SAME person: a matching name
+ *  (spacing/hyphen/case/word-order forgiven), plus a shared email (client or
+ *  guardian) or the same birthday in any date format. Read-only — nothing is
+ *  changed. Two genuinely different people with no shared email or birthday are
+ *  NOT grouped, even if their names look alike. */
 export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
   const all = await loadStoredClients();
   const rows = all.map((c) => ({ c, p: decodeProfile(c.profileEnc), nm: decodeName(c.nameEnc) }));
   const byName = new Map<string, typeof rows>();
-  for (const r of rows) { const a = byName.get(r.c.nameKey) ?? []; a.push(r); byName.set(r.c.nameKey, a); }
+  for (const r of rows) { const k = looseNameKey(r.nm.first, r.nm.last); const a = byName.get(k) ?? []; a.push(r); byName.set(k, a); }
   const linkMap = await clinicianIdsFor(all.map((c) => c.id));
 
   const groups: DuplicateGroup[] = [];

@@ -96,6 +96,7 @@ export default function DuplicatesClient() {
                       <span className="dup-card-role">{isKeep ? "Keep this one" : "Merge in"}</span>
                       {r.isSample && <span className="dup-sample">sample</span>}
                     </div>
+                    <div className="dup-card-name">{`${r.first} ${r.last}`.trim()}</div>
                     <dl className="dup-facts">
                       <div><dt>DOB</dt><dd>{r.dob || "—"}</dd></div>
                       <div><dt>Email</dt><dd>{r.email || "—"}</dd></div>
@@ -148,6 +149,7 @@ const CSS = `
 .dup-card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .dup-card-role{font-size:12.5px;font-weight:700;color:var(--bl-ink,#2b2824);}
 .dup-card.keep .dup-card-role{color:#2f5aa0;}
+.dup-card-name{font-size:14px;font-weight:700;color:var(--bl-ink,#2b2824);margin:0 0 8px;overflow-wrap:anywhere;}
 .dup-sample{margin-left:auto;font-size:10.5px;background:#efe9da;color:#8a7a52;border-radius:6px;padding:1px 6px;}
 .dup-facts{margin:0;display:grid;gap:3px;}
 .dup-facts>div{display:grid;grid-template-columns:76px 1fr;gap:8px;font-size:12.5px;}
