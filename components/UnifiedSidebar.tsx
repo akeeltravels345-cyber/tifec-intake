@@ -84,6 +84,8 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
   // The reference handbook. One route, but /billing/guide renders the guide that
   // matches the signed-in role, so every menu can link to the same place.
   const uHandbook: Item = { href: "/billing/guide", label: "Handbook", icon: IcDoc, match: (p) => p.startsWith("/billing/guide"), highlight: handbookGlow };
+  // Merge duplicate client records — a back-office cleanup for the biller/owner.
+  const uDuplicates: Item = { href: "/billing/duplicates", label: "Duplicates", icon: IcClin, match: (p) => p.startsWith("/billing/duplicates") };
   // HIPAA compliance tracker — an in-app board (owner + admin). First item in the
   // Team group so it's easy to find.
   const uHipaa: Item = { href: "/team/hipaa", label: "HIPAA", icon: IcKey, match: (p) => p.startsWith("/team/hipaa"), highlight: hipaaGlow };
@@ -127,6 +129,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
             { href: "/billing/payments", label: "Billing queue", icon: IcQueue, badge: queueCount, match: (p) => p.startsWith("/billing/payments") },
             { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
             { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+            uDuplicates,
             ...(showNotes ? [notesLink] : []),
             uHandbook,
           ]
@@ -137,6 +140,7 @@ export default function UnifiedSidebar({ data, isDev = false }: { data: SidebarD
               { href: "/billing/clinicians", label: "By clinician", icon: IcClin, match: (p) => p === "/billing/clinicians" || p.startsWith("/billing/clinician/") },
               { href: "/billing/balances", label: "Owed by clients", icon: IcOwed, match: (p) => p.startsWith("/billing/balances"), glow: "copaynav" },
               { href: "/billing/clients", label: "Clients", icon: IcUser, match: (p) => p.startsWith("/billing/clients") },
+              uDuplicates,
               // A biller who is also a practicum clinician (e.g. Nick) sees notes
               // for their own caseload; a pure biller has no linked clients, so
               // showNotes is false and this link is hidden.
