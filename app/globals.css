@@ -2616,6 +2616,9 @@ body:has(.biz) { background: var(--panel); }
 .su-tbl td.nm { font-weight: 600; }
 .su-in { border: 1px solid #E1D9C8; border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; background: var(--surface); width: 100%; color: var(--ink); }
 .su-in:focus { outline: none; border-color: var(--teal); }
+/* Claims email: wide enough to see a full address while typing (the table
+   scrolls horizontally if the row gets too wide for the screen). */
+.su-in.email { min-width: 275px; }
 .su-in.short { min-width: 64px; max-width: 96px; }
 /* Only the fields that hold bigger numbers (fees, rates, amounts) get a floor,
    so they never clip — without widening the tiny % / hrs fields or squeezing the
