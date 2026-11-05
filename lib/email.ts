@@ -72,6 +72,30 @@ function transport() {
   });
 }
 
+/** Check the SMTP connection + login WITHOUT sending any email (nodemailer's
+ *  verify). Reports which SMTP settings are present (never the secret values) and
+ *  the exact error if the handshake/auth fails — the quickest way to tell a
+ *  config problem (wrong password, blocked auth) from a per-message rejection. */
+export async function verifyEmailTransport(): Promise<{ ok: boolean; reason?: string; env: Record<string, unknown> }> {
+  const env = {
+    host: process.env.SMTP_HOST || null,
+    port: process.env.SMTP_PORT || "587 (default)",
+    secure: Number(process.env.SMTP_PORT) === 465,
+    hasUser: !!process.env.SMTP_USER,
+    hasPass: !!process.env.SMTP_PASS,
+    fromAddress: process.env.SMTP_FROM || process.env.SMTP_USER || null,
+    fromMatchesUser: (process.env.SMTP_FROM || process.env.SMTP_USER || "") === (process.env.SMTP_USER || ""),
+  };
+  if (!process.env.SMTP_HOST) return { ok: false, reason: "SMTP not configured (no SMTP_HOST)", env };
+  try {
+    await transport().verify();
+    return { ok: true, env };
+  } catch (err) {
+    const e = err as { response?: string; code?: string; message?: string };
+    return { ok: false, reason: `${e?.code ? `[${e.code}] ` : ""}${e?.response || e?.message || String(err)}`, env };
+  }
+}
+
 /** Title + first name, ignoring surname/parentheticals (e.g. "Dr. Joan Latty" → "Dr. Joan", "Nick O'Connor" → "Nick"). */
 function greetingName(name: string): string {
   const cleaned = name.replace(/\(.*?\)/g, "").trim();
@@ -736,6 +760,10 @@ export async function sendClaimEmail(args: ClaimEmailArgs & { pdf: Uint8Array; f
     return { sent: true };
   } catch (err) {
     console.error("Claim email failed:", err);
-    return { sent: false, reason: "send failed" };
+    // Surface the real reason (SMTP response / auth error) so the biller can see
+    // what went wrong instead of a bare "send failed".
+    const e = err as { response?: string; code?: string; message?: string };
+    const detail = e?.response || e?.message || String(err);
+    return { sent: false, reason: `send failed: ${e?.code ? `[${e.code}] ` : ""}${detail}` };
   }
 }

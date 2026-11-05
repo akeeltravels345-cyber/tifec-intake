@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin } from "@/lib/clinicians";
-import { sendBrandedEmail } from "@/lib/email";
+import { sendBrandedEmail, verifyEmailTransport } from "@/lib/email";
 import { appointmentInvite } from "@/lib/ical";
 
 export const dynamic = "force-dynamic";
+
+// Side-effect-free diagnostic: verify the SMTP login/connection and report the
+// config state. Sends NOTHING. Admin/owner only.
+export async function GET() {
+  const user = await getBillingUser();
+  if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  if (!isSystemAdmin(user.clinician) && user.clinician.contact !== "owner") return NextResponse.json({ error: "Not permitted." }, { status: 403 });
+  return NextResponse.json(await verifyEmailTransport());
+}
 
 // Diagnostic: send a test client email (plain, and one with a calendar invite
 // like a booking confirmation) and report exactly what the transport returned.
