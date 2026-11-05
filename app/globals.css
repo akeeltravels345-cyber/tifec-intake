@@ -2849,6 +2849,11 @@ body:has(.biz) { background: var(--panel); }
 .bo-uncollected .amt { font: 400 26px "Newsreader", serif; color: #9a3b2a; }
 .bo-uncollected .note { margin: 6px 0 0; font-size: 13px; color: #7a2414; }
 .su-sel { border: 1px solid #E1D9C8; border-radius: 8px; padding: 8px 11px; font: 14px "Open Sans"; background: var(--surface); width: 100%; color: var(--ink); }
+/* Insurer-table dropdowns: wide enough to read the chosen option (the table
+   scrolls sideways on a narrow screen rather than collapsing them to a chevron). */
+.su-sel.copay { min-width: 104px; }
+.su-sel.billby { min-width: 112px; }
+.su-sel.benefit { min-width: 170px; }
 .su-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .su-save { background: var(--surface); color: var(--indigo); border: 1px solid var(--indigo); border-radius: 8px; padding: 7px 14px; font: 600 12.5px "Open Sans"; cursor: pointer; }
 .su-save:hover { background: var(--panel); }
