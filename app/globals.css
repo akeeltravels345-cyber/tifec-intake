@@ -5008,14 +5008,14 @@ a.cal-linktext:hover { text-decoration: underline; }
 /* Public legal pages (/privacy, /terms) */
 .lgl { max-width: 760px; margin: 0 auto; padding: 48px 22px 80px; color: var(--ink); font: 15.5px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .lgl h1 { font-size: 30px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
-.lgl .lgl-sub { color: #6b6b66; font-size: 14px; margin: 0 0 30px; }
+.lgl .lgl-sub { color: var(--muted); font-size: 14px; margin: 0 0 30px; }
 .lgl h2 { font-size: 19px; font-weight: 700; margin: 34px 0 8px; }
-.lgl p, .lgl li { color: #333; }
+.lgl p, .lgl li { color: var(--ink); }
 .lgl ul { padding-left: 20px; margin: 8px 0; }
 .lgl li { margin: 4px 0; }
 .lgl a { color: var(--teal-deep); }
-.lgl .lgl-note { background: var(--panel); border: 1px solid #e6e0d2; border-radius: 10px; padding: 12px 15px; font-size: 13.5px; color: #6b6b66; margin: 26px 0 0; }
-.lgl-foot { margin-top: 40px; padding-top: 18px; border-top: 1px solid #eae5da; font-size: 13px; color: #8a877f; }
+.lgl .lgl-note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 15px; font-size: 13.5px; color: var(--muted); margin: 26px 0 0; }
+.lgl-foot { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--faint); }
 
 /* Privacy / Terms footer links */
 .auth-foot { text-align: center; margin-top: 18px; font-size: 12.5px; color: #8a877f; display: flex; gap: 8px; justify-content: center; align-items: center; }
