@@ -116,6 +116,32 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
   const openCount = tickets.filter((t) => t.status !== "resolved" || t.unread).length;
   const doneCount = tickets.filter((t) => t.status === "resolved").length;
 
+  // Group the open list by status so NEW and ON HOLD cluster into their own
+  // labelled sections, instead of being scattered through one flat list.
+  const OPEN_ORDER = ["open", "in_progress", "needs_info", "on_hold", "resolved"] as const;
+  const renderRow = (t: (typeof shown)[number]) => (
+    <Link key={t.id} href={`/team/tickets/${t.id}`} className={`tm-card tm-ticket${t.needsYou ? " needsyou" : ""}${t.unread ? " unread" : ""}`}>
+      <div className="tm-tleft">
+        <div className="tm-tsub">{t.unread && <span className="tm-unreaddot" title="Unread reply" aria-label="Unread reply" />}<span className="tm-ref">#{t.ref}</span>{t.subject}</div>
+        <div className="tm-tmeta">
+          <span className="tm-area">{t.area}</span>
+          {t.mine ? <>for <b>{nameList(t.assignees)}</b></> : <>from <b>{t.raisedBy}</b></>}
+          {t.enteredByName && <> · logged by {t.enteredByName}</>}
+          · {when(t.createdAt)}
+        </div>
+      </div>
+      <div className="tm-tright">
+        {t.unread && <span className="tm-ball new">New reply</span>}
+        {t.status !== "resolved" && (
+          t.needsYou
+            ? <span className="tm-ball you">Your turn</span>
+            : t.waitingOn.length > 0 && <span className="tm-ball">Waiting on {nameList(t.waitingOn)}</span>
+        )}
+        <span className={`tm-status ${t.status}`}>{TICKET_STATUS_LABEL[t.status as keyof typeof TICKET_STATUS_LABEL]}</span>
+      </div>
+    </Link>
+  );
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
@@ -225,31 +251,22 @@ export default function TicketList({ tickets, contacts, areas, seesAll, meId, me
           <div className="big">{filter === "done" ? "Nothing done yet" : "Nothing open"}</div>
           <div className="small">Raise one and it goes straight to whoever can sort it.</div>
         </div>
+      ) : filter === "done" ? (
+        <div className="tm-tickets">{shown.map(renderRow)}</div>
       ) : (
-        <div className="tm-tickets">
-          {shown.map((t) => (
-            <Link key={t.id} href={`/team/tickets/${t.id}`} className={`tm-card tm-ticket${t.needsYou ? " needsyou" : ""}${t.unread ? " unread" : ""}`}>
-              <div className="tm-tleft">
-                <div className="tm-tsub">{t.unread && <span className="tm-unreaddot" title="Unread reply" aria-label="Unread reply" />}<span className="tm-ref">#{t.ref}</span>{t.subject}</div>
-                <div className="tm-tmeta">
-                  <span className="tm-area">{t.area}</span>
-                  {t.mine ? <>for <b>{nameList(t.assignees)}</b></> : <>from <b>{t.raisedBy}</b></>}
-                  {t.enteredByName && <> · logged by {t.enteredByName}</>}
-                  · {when(t.createdAt)}
-                </div>
+        OPEN_ORDER.map((st) => {
+          const group = shown.filter((t) => t.status === st);
+          if (!group.length) return null;
+          return (
+            <div key={st} className="tm-group">
+              <div className="tm-grouphead">
+                <span className={`tm-status ${st}`}>{TICKET_STATUS_LABEL[st]}</span>
+                <span className="tm-groupcount">{group.length}</span>
               </div>
-              <div className="tm-tright">
-                {t.unread && <span className="tm-ball new">New reply</span>}
-                {t.status !== "resolved" && (
-                  t.needsYou
-                    ? <span className="tm-ball you">Your turn</span>
-                    : t.waitingOn.length > 0 && <span className="tm-ball">Waiting on {nameList(t.waitingOn)}</span>
-                )}
-                <span className={`tm-status ${t.status}`}>{TICKET_STATUS_LABEL[t.status as keyof typeof TICKET_STATUS_LABEL]}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+              <div className="tm-tickets">{group.map(renderRow)}</div>
+            </div>
+          );
+        })
       )}
     </>
   );

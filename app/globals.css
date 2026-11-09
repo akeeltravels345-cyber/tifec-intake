@@ -3350,6 +3350,11 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-status.on_hold::before { content: "\2016"; letter-spacing: -2px; }
 .tm-status.resolved { background: var(--pos-bg); color: var(--pos); }
 .tm-status.resolved::before { content: "\2713"; }
+/* Status group headers in the open ticket list (so NEW / ON HOLD etc. cluster). */
+.tm-group { margin-top: 12px; }
+.tm-group:first-child { margin-top: 0; }
+.tm-grouphead { display: flex; align-items: center; gap: 8px; margin: 2px 2px 8px; }
+.tm-groupcount { font-size: 12px; font-weight: 700; color: var(--muted); }
 /* Status pill + one-tap action buttons in the manage panel. */
 .tm-statusrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tm-sbtns { display: flex; gap: 8px; flex-wrap: wrap; }
