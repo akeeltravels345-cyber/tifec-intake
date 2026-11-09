@@ -679,33 +679,79 @@ export interface ClaimEmailArgs {
   logoCid?: string;
 }
 
-/** Default cover note to the insurer, shown in the preview for the biller to edit.
- *  Wording set by the biller; kept generic (no patient/amount interpolation). The
- *  args remain for callers and in case the message is personalised again later. */
+/** PLAIN vs BRANDED claim email. TIFEC wants a plain, un-branded email (no logo,
+ *  header, footer or disclaimer) with a sign-off; every OTHER practice that
+ *  reuses this app keeps the branded layout. TIFEC (this deployment) is plain by
+ *  default so it needs no config; a reused deployment turns the branding back on
+ *  with the env var CLAIM_EMAIL_STYLE=branded. */
+export function claimEmailPlain(): boolean {
+  return (process.env.CLAIM_EMAIL_STYLE || "").trim().toLowerCase() !== "branded";
+}
+
+/** Sign-off on the PLAIN claim cover note (TIFEC's billing contact). Editable
+ *  per-send in the preview; change here if the contact changes. */
+export const CLAIM_SIGNATURE = "Nick O'Connor, MBA\nBillings Coordinator";
+
+/** Default cover note to the insurer, shown in the preview for the biller to
+ *  edit. The plain (TIFEC) version ends with the sign-off; the branded version
+ *  relies on the footer, so it has none. */
 export function defaultClaimMessage(_payerName: string, _patientName: string, _practiceName: string, _total: number, _memberId?: string): string {
-  return [
+  const lines = [
     "Greetings to the Health Team,",
     "",
     "Please see attached claims for the subject patient.",
     "",
     "Thank you for your assistance with processing this claim.",
-    "",
-    CLAIM_SIGNATURE,
-  ].join("\n");
+  ];
+  if (claimEmailPlain()) lines.push("", CLAIM_SIGNATURE);
+  return lines.join("\n");
 }
 
-/** Sign-off on the claim cover note (biller asked for this exact block). Editable
- *  per-send in the preview; change here if the billing contact changes. */
-export const CLAIM_SIGNATURE = "Nick O'Connor, MBA\nBillings Coordinator";
-
-/** Subject + text + HTML for the claim email. The biller wants it to read like a
- *  plain email, so there's NO practice branding, logo, header, footer or
- *  disclaimer here — just the cover note, with the claim PDF attached. */
+/** Subject + text + HTML for the claim email. Plain mode (TIFEC) is just the
+ *  cover note; branded mode (default, for other practices) keeps the logo,
+ *  header, practice footer and confidentiality disclaimer. */
 export function buildClaimEmail(args: ClaimEmailArgs): { subject: string; text: string; html: string } {
   const subject = args.subject?.trim() || `${args.patientName} claim`;
   const text = args.message;
   const bodyHtml = escapeHtml(args.message).replace(/\n/g, "<br>");
-  const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;">${bodyHtml}</div></body></html>`;
+
+  if (claimEmailPlain()) {
+    const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;">${bodyHtml}</div></body></html>`;
+    return { subject, text, html };
+  }
+
+  // Branded (default) — the layout other practices using this app keep.
+  const header = args.logoCid
+    ? `<img src="cid:${args.logoCid}" alt="${escapeHtml(args.practiceName)}" height="46" style="height:46px;width:auto;display:block;margin:0 auto;" />`
+    : `<div style="font-size:20px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.practiceName)}</div>`;
+  const addressLine = (args.practice?.addressLines ?? []).map(escapeHtml).join(", ");
+  const contactLine = [args.practice?.phone, args.practice?.email, args.practice?.website]
+    .filter(Boolean).map((s) => escapeHtml(String(s))).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${BRAND_CREAM};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CREAM};padding:30px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border:1px solid ${BRAND_LINE};border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND_CHARCOAL};">
+        <tr><td style="height:5px;background:${INV_INDIGO};background:linear-gradient(90deg,${INV_INDIGO},${INV_TEAL},${INV_GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td align="center" style="padding:32px 40px 0;">${header}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 0;">
+          <div style="font-size:14px;font-weight:700;color:${INV_INDIGO};">${escapeHtml(args.patientName)}</div>
+          ${args.memberId ? `<div style="font-size:12.5px;color:${BRAND_MUTED};margin-top:3px;">member ${escapeHtml(args.memberId)}</div>` : ""}
+        </td></tr>
+        <tr><td style="padding:22px 40px 0;"><div style="border-top:1px solid ${BRAND_LINE};font-size:0;line-height:0;">&nbsp;</div></td></tr>
+        <tr><td style="padding:22px 40px 26px;font-size:15px;line-height:1.7;color:${BRAND_CHARCOAL};">${bodyHtml}</td></tr>
+        <tr><td align="center" style="padding:22px 40px 26px;background:#faf8f3;border-top:1px solid ${BRAND_LINE};">
+          <div style="font-size:13.5px;font-weight:700;color:${BRAND_CHARCOAL};margin-bottom:5px;">${escapeHtml(args.practiceName)}</div>
+          ${addressLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${addressLine}</div>` : ""}
+          ${contactLine ? `<div style="font-size:12px;color:${BRAND_MUTED};line-height:1.6;">${contactLine}</div>` : ""}
+          <div style="font-size:10.5px;color:#a7a49c;line-height:1.5;margin-top:9px;">DISCLAIMER: This e-mail and any file(s) transmitted with it, is intended for the exclusive use by the person(s) mentioned above as recipient(s). This e-mail may contain confidential information and/or information protected by intellectual property rights or other rights. If you are not the intended recipient of this e-mail, you are hereby notified that any dissemination, distribution, copying, or action taken in relation to the contents of and attachments to this e-mail is strictly prohibited and may be unlawful. If you have received this e-mail in error, please notify the sender and delete the original and any copies of this e-mail and any printouts immediately from your system and destroy all copies of it.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
   return { subject, text, html };
 }
 
@@ -713,15 +759,20 @@ export function buildClaimEmail(args: ClaimEmailArgs): { subject: string; text: 
  *  CMS-1500-<patient>.pdf. Replies (denials, queries) go to the sender. */
 export async function sendClaimEmail(args: ClaimEmailArgs & { pdf: Uint8Array; filename?: string }): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const { subject, text, html } = buildClaimEmail(args);
+    // Branded mode carries the practice logo inline; plain (TIFEC) mode has none.
+    const logo = claimEmailPlain() ? null : invoiceEmailLogo();
+    const logoCid = logo ? INVOICE_LOGO_CID : undefined;
+    const { subject, text, html } = buildClaimEmail({ ...args, logoCid });
     if (!process.env.SMTP_HOST) {
       console.log(`[email:dev] would email CMS-1500 claim for ${args.patientName} to ${args.to} — "${subject}"`);
       return { sent: false, reason: "SMTP not configured (dev mode)" };
     }
-    // Plain email, no inline logo — just the claim PDF(s).
     const attachments: nodemailer.SendMailOptions["attachments"] = [
       { filename: args.filename || `CMS-1500-${args.patientName.replace(/[^\w-]+/g, "_")}.pdf`, content: Buffer.from(args.pdf), contentType: "application/pdf" },
     ];
+    if (logo && logoCid) {
+      attachments.push({ filename: "logo.png", content: logo, cid: logoCid, contentType: "image/png", contentDisposition: "inline" });
+    }
     await transport().sendMail({
       from: { name: args.practiceName || FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
       to: args.to,
