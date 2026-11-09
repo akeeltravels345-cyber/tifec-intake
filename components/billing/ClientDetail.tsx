@@ -305,6 +305,8 @@ export default function ClientDetail({
   const [postal, setPostal] = useState(profile.address?.postal ?? "");
   const [country, setCountry] = useState(profile.address?.country ?? "");
   const [memberId, setMemberId] = useState(profile.insurance?.memberId ?? "");
+  const [groupNo, setGroupNo] = useState(profile.insurance?.groupNo ?? "");
+  const [planName, setPlanName] = useState(profile.insurance?.planName ?? "");
   const [relationship, setRelationship] = useState(profile.insurance?.relationship ?? "self");
   const [insuredFirst, setInsuredFirst] = useState(profile.insurance?.insuredFirst ?? "");
   const [insuredLast, setInsuredLast] = useState(profile.insurance?.insuredLast ?? "");
@@ -357,10 +359,8 @@ export default function ClientDetail({
       address: (line1 || city || region || postal || country || line2)
         ? { line1: line1 || undefined, line2: line2 || undefined, city: city || undefined, region: region || undefined, postal: postal || undefined, country: country || undefined }
         : undefined,
-      insurance: (memberId || profile.insurance?.groupNo || profile.insurance?.planName || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
-        // groupNo / planName aren't on this form (they come from imports); carry
-        // them through so a details edit never drops them from the CMS-1500.
-        ? { memberId: memberId || undefined, groupNo: profile.insurance?.groupNo || undefined, planName: profile.insurance?.planName || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
+      insurance: (memberId || groupNo || planName || relationship !== "self" || insuredFirst || insuredLast || insuredDob)
+        ? { memberId: memberId || undefined, groupNo: groupNo || undefined, planName: planName || undefined, relationship: relationship as NonNullable<ClientProfile["insurance"]>["relationship"], insuredFirst: insuredFirst || undefined, insuredLast: insuredLast || undefined, insuredDob: insuredDob || undefined }
         : undefined,
       // Referral is edited inline on the banner via its own endpoint; this form
       // never touches it (the server preserves the existing referral).
@@ -650,6 +650,8 @@ export default function ClientDetail({
               field("Parent / guardian", val([profile.guardian?.name, profile.guardian?.relationship ? `(${profile.guardian.relationship})` : "", profile.guardian?.email, profile.guardian?.phone].filter(Boolean).join(" · ")))}
             {field("Usual insurer", val(insurers.find((i) => i.id === insurerId)?.name ?? (insurerId ? "" : "Self-pay")))}
             {field("Member / ID no.", val(profile.insurance?.memberId ?? ""), needView && !profile.insurance?.memberId)}
+            {profile.insurance?.groupNo && field("Group no.", val(profile.insurance.groupNo))}
+            {profile.insurance?.planName && field("Insurance plan name", val(profile.insurance.planName))}
             {field("Relationship to insured", val(profile.insurance?.relationship ?? "self"))}
             {profile.insurance?.relationship && profile.insurance.relationship !== "self" &&
               field("Insured", val([profile.insurance?.insuredFirst, profile.insurance?.insuredLast, profile.insurance?.insuredDob].filter(Boolean).join(" ")))}
@@ -670,6 +672,8 @@ export default function ClientDetail({
             {field("Phone", <input className="ls-in" value={gPhone} onChange={(e) => setGPhone(e.target.value)} />)}
             {field("Usual insurer", <select className="ls-in" value={ins} onChange={(e) => setIns(e.target.value)}><option value="">Self-pay</option>{insurers.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>)}
             {field("Member / ID no.", <input className="ls-in" value={memberId} onChange={(e) => setMemberId(e.target.value)} />, needEdit && !memberId)}
+            {field("Group no.", <input className="ls-in" value={groupNo} onChange={(e) => setGroupNo(e.target.value)} placeholder="box 11" />)}
+            {field("Insurance plan name", <input className="ls-in" value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="box 11c" />)}
             {field("Relationship to insured", <select className="ls-in" value={relationship} onChange={(e) => setRelationship(e.target.value as typeof relationship)}><option value="self">Self</option><option value="spouse">Spouse</option><option value="child">Child</option><option value="other">Other</option></select>)}
             {relationship !== "self" && <>
               {field("Insured first name", <input className="ls-in" value={insuredFirst} onChange={(e) => setInsuredFirst(e.target.value)} />)}
