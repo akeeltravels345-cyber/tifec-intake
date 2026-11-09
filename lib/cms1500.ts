@@ -164,11 +164,11 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 // Payer-specific subject prefixes — a provider identifier the payer requires at
 // the very front of the subject. CINICO requires the credentialed provider line
-// ("#9361" is the TIFEC/provider identifier, not the client's member ID). Keyed
-// by upper-cased insurer name; add payers here as their rules arrive (or lift
-// this into Setup later).
+// ("#9362" is the TIFEC/provider identifier, not the client's member ID; it
+// comes from the biller's reference email). Keyed by upper-cased insurer name;
+// add payers here as their rules arrive (or lift this into Setup later).
 const CLAIM_SUBJECT_PREFIX: Record<string, string> = {
-  CINICO: "Shion O'Connor #9361",
+  CINICO: "Shion O'Connor #9362",
 };
 
 /** Distinct dates of service across every form, ascending. */
@@ -196,26 +196,22 @@ export function claimDosCompact(forms: ClaimForm[]): string {
   return ds.map((x) => `${x.d}${MONTHS[x.m - 1]}${yy(x.y)}`).join("-");
 }
 
-/** DOS for the CINICO subject: "DD-MM-YYYY" per date (comma-joined if several). */
-export function claimDosLong(forms: ClaimForm[]): string {
-  const p2 = (n: number) => String(n).padStart(2, "0");
-  return claimServiceDates(forms).map((x) => `${p2(x.d)}-${p2(x.m)}-${x.y}`).join(", ");
-}
-
 /** The attachment / document base name (no extension): "DELFOSSE, Skii claim 29-30Dec26". */
 export function claimPdfBaseName(last: string, first: string, forms: ClaimForm[]): string {
   const dos = claimDosCompact(forms);
   return `${last.toUpperCase()}, ${first} claim${dos ? ` ${dos}` : ""}`.trim();
 }
 
-/** The email subject. Non-CINICO payers reuse the PDF name; a payer with a
- *  required provider prefix (CINICO) gets "<prefix> LAST, First <MemberId> DOS <dates>". */
+/** The email subject. Non-CINICO payers reuse the PDF name ("EBANKS, Kayla claim
+ *  23Oct26"). CINICO gets the biller's exact format:
+ *  "Shion O'Connor #9362 -CHISOLM, Lucille - 996007016-DOS 28Oct26". */
 export function claimEmailSubject(opts: { last: string; first: string; memberId?: string; payerName: string; forms: ClaimForm[] }): string {
   const prefix = CLAIM_SUBJECT_PREFIX[(opts.payerName || "").trim().toUpperCase()];
   if (!prefix) return claimPdfBaseName(opts.last, opts.first, opts.forms);
-  const parts = [prefix, `${opts.last.toUpperCase()}, ${opts.first}`];
-  if (opts.memberId?.trim()) parts.push(opts.memberId.trim());
-  const dos = claimDosLong(opts.forms);
-  if (dos) parts.push(`DOS ${dos}`);
-  return parts.join(" ");
+  const member = opts.memberId?.trim();
+  const dos = claimDosCompact(opts.forms);
+  let subj = `${prefix} -${opts.last.toUpperCase()}, ${opts.first}`;
+  if (member) subj += ` - ${member}`;
+  if (dos) subj += `${member ? "" : " "}-DOS ${dos}`;
+  return subj;
 }
