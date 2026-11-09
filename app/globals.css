@@ -3337,11 +3337,19 @@ textarea.tm-in { resize: vertical; line-height: 1.55; }
 .tm-tmeta { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .tm-area { display: inline-block; font: 700 10px "Open Sans"; letter-spacing: .04em; text-transform: uppercase; color: var(--teal-dark); background: var(--panel); border-radius: 5px; padding: 2px 7px; margin-right: 8px; }
 .tm-status { font: 700 10.5px "Open Sans"; letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+/* A leading glyph per status so each one is distinct at a glance, not by colour
+   alone — especially NEW (filled amber dot) vs ON HOLD (outlined pause). */
+.tm-status::before { margin-right: 5px; font-weight: 800; }
 .tm-status.open { background: var(--amber-bg); color: #8a5d17; }
+.tm-status.open::before { content: "\25CF"; }
 .tm-status.in_progress { background: var(--brand-tint); color: var(--indigo); }
+.tm-status.in_progress::before { content: "\25D0"; }
 .tm-status.needs_info { background: var(--neg-bg); color: var(--neg); }
-.tm-status.on_hold { background: var(--panel); color: #5b6570; }
+.tm-status.needs_info::before { content: "?"; }
+.tm-status.on_hold { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.tm-status.on_hold::before { content: "\2016"; letter-spacing: -2px; }
 .tm-status.resolved { background: var(--pos-bg); color: var(--pos); }
+.tm-status.resolved::before { content: "\2713"; }
 /* Status pill + one-tap action buttons in the manage panel. */
 .tm-statusrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tm-sbtns { display: flex; gap: 8px; flex-wrap: wrap; }
