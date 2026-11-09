@@ -799,6 +799,24 @@ export async function reassignSessionsClient(fromClientId: string, toClientId: s
   return n;
 }
 
+/** Re-stamp the encrypted name snapshot on every session of a client after the
+ *  client is renamed, so the billing queue and lists show the corrected name
+ *  (claims already read the client record). Returns how many sessions updated. */
+export async function renameSessionsClient(clientId: string, first: string, last: string): Promise<number> {
+  if (!clientId) return 0;
+  const clientEnc = encrypt(JSON.stringify({ first, last }));
+  if (usePostgres) {
+    const sql = await pg();
+    const rows = (await sql`UPDATE billing_sessions SET client_enc = ${clientEnc} WHERE client_id = ${clientId} RETURNING id`) as { id: string }[];
+    return rows.length;
+  }
+  const all = readJson<StoredSession[]>(SESS_FILE, []);
+  let n = 0;
+  for (const s of all) if (s.clientId === clientId) { s.clientEnc = clientEnc; n++; }
+  if (n) writeJson(SESS_FILE, all);
+  return n;
+}
+
 /** Settle (or unsettle) a self-pay balance from the billing queue: paid means the
  *  client cleared the balance, so record the full fee collected + the payment date;
  *  undo puts the whole fee back as owed. Keeps self_pay_status = 'owing' so the

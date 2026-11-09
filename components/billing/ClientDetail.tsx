@@ -285,6 +285,10 @@ export default function ClientDetail({
   };
 
   // Flat form state mirrors the nested profile; assembled back on save.
+  // Name is editable (sent only on the main Save) so it can be corrected to match
+  // the insurer's records — a mismatch gets claims denied.
+  const [fFirst, setFFirst] = useState(first);
+  const [fLast, setFLast] = useState(last);
   const [ins, setIns] = useState(insurerId ?? "");
   const [dob, setDob] = useState(profile.dob ?? "");
   const [sex, setSex] = useState(profile.sex ?? "");
@@ -364,19 +368,22 @@ export default function ClientDetail({
       documents,
     };
   }
-  async function patchProfile(nextProfile: ClientProfile, done?: () => void) {
+  async function patchProfile(nextProfile: ClientProfile, done?: () => void, name?: { first: string; last: string }) {
     setBusy(true); setMsg("");
     try {
       const res = await fetch(`/api/billing/clients/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ insurerId: ins || null, profile: nextProfile }),
+        body: JSON.stringify({ insurerId: ins || null, profile: nextProfile, ...(name ? { first: name.first, last: name.last } : {}) }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
       done?.(); router.refresh();
     } catch (e) { setMsg(e instanceof Error ? e.message : "Could not save."); }
     finally { setBusy(false); }
   }
-  const save = () => patchProfile(buildProfile(), () => { setMsg("Saved."); setEdit(false); });
+  const save = () => {
+    if (!fFirst.trim()) { setMsg("A first name is required."); return; }
+    patchProfile(buildProfile(), () => { setMsg("Saved."); setEdit(false); }, { first: fFirst.trim(), last: fLast.trim() });
+  };
   async function saveReferral() {
     setBusy(true); setMsg("");
     try {
@@ -649,6 +656,9 @@ export default function ClientDetail({
           </div>
         ) : (
           <div className="su-card cd-grid">
+            {field("First name", <input className="ls-in" value={fFirst} onChange={(e) => setFFirst(e.target.value)} />)}
+            {field("Last name", <input className="ls-in" value={fLast} onChange={(e) => setFLast(e.target.value)} />)}
+            <div className="su-hint" style={{ gridColumn: "1 / -1", margin: "-4px 0 2px" }}>Use the exact name the insurer has on file — a mismatch gets claims denied. This updates the name on new CMS-1500s and across the record.</div>
             {field("Date of birth", <DobInput value={dob} onChange={setDob} />, needEdit && !dob)}
             {field("Sex", <select className="ls-in" value={sex} onChange={(e) => setSex(e.target.value)}><option value="">-</option><option value="M">Male</option><option value="F">Female</option><option value="U">Unknown</option></select>, needEdit && !sex)}
             {field("Phone", <input className="ls-in" value={phone} onChange={(e) => setPhone(e.target.value)} />)}

@@ -327,6 +327,22 @@ async function saveClientFields(id: string, insurerId: string | null, identityKe
   writeJson(FILE, all);
 }
 
+/** Like saveClientFields but also rewrites the encrypted name and its blind
+ *  indexes — used when a client is renamed (e.g. to match the insurer's records
+ *  so claims aren't denied on a name mismatch). */
+async function saveClientNameFields(id: string, nameEnc: string, nameKey: string, insurerId: string | null, identityKey: string, profileEnc: string | null) {
+  if (usePostgres) {
+    const sql = await pg();
+    await sql`UPDATE billing_clients SET name_enc = ${nameEnc}, name_key = ${nameKey}, insurer_id = ${insurerId}, identity_key = ${identityKey}, profile_enc = ${profileEnc} WHERE id = ${id}`;
+    return;
+  }
+  const all = readJson<StoredClient[]>(FILE, []);
+  const s = all.find((x) => x.id === id);
+  if (!s) return;
+  s.nameEnc = nameEnc; s.nameKey = nameKey; s.insurerId = insurerId; s.identityKey = identityKey; s.profileEnc = profileEnc;
+  writeJson(FILE, all);
+}
+
 /** Merge two profiles, keeping existing non-empty values and filling gaps from
  *  the incoming one (so a later import can enrich a sparse record). */
 function mergeProfile(existing: ClientProfile, incoming: ClientProfile): ClientProfile {
@@ -866,13 +882,22 @@ export async function recordSentEmail(id: string, entry: Omit<SentEmail, "id" | 
 }
 
 /** Edit a client's usual insurer + profile (biller/clinician editing a record). */
-export async function updateClient(id: string, insurerId: string | null, profile: ClientProfile): Promise<Client | null> {
+export async function updateClient(id: string, insurerId: string | null, profile: ClientProfile, name?: { first: string; last: string }): Promise<Client | null> {
   const all = await loadStoredClients();
   const c = all.find((x) => x.id === id);
   if (!c) return null;
-  const { first, last } = decodeName(c.nameEnc);
+  const cur = decodeName(c.nameEnc);
+  // A rename supplies a new name; otherwise keep the stored one. The identity key
+  // (name + DOB) and name key are always recomputed from whichever name applies.
+  const first = name ? name.first : cur.first;
+  const last = name ? name.last : cur.last;
   const identityKey = identityKeyOf(first, last, profile.dob?.trim() || undefined);
   const profileEnc = encodeProfile(profile);
-  await saveClientFields(id, insurerId, identityKey, profileEnc);
+  if (name && (name.first !== cur.first || name.last !== cur.last)) {
+    const nameEnc = encrypt(JSON.stringify({ first, last }));
+    await saveClientNameFields(id, nameEnc, nameKeyOf(first, last), insurerId, identityKey, profileEnc);
+  } else {
+    await saveClientFields(id, insurerId, identityKey, profileEnc);
+  }
   return getClient(id);
 }

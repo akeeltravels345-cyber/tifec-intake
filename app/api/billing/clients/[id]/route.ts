@@ -3,7 +3,7 @@ import { caymanToday } from "@/lib/caymanTime";
 import { getBillingUser, isBiller, isOwner } from "@/lib/billingRole";
 import { getClient, clinicianSeesClient, updateClient, deleteClient, type ClientProfile } from "@/lib/clients";
 import { deleteDocFilesForClient } from "@/lib/clientDocs";
-import { listSessions, deleteSession } from "@/lib/billing";
+import { listSessions, deleteSession, renameSessionsClient } from "@/lib/billing";
 import { clearBillingSessionLink } from "@/lib/scheduling";
 import { logChange } from "@/lib/db";
 
@@ -117,8 +117,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   };
 
   const insurerId = body.insurerId ? String(body.insurerId) : null;
-  const updated = await updateClient(id, insurerId, profile);
+
+  // Name correction: the name captured at intake isn't always the name the
+  // insurer has on file, and a mismatch gets claims denied. When first/last are
+  // sent, re-encrypt the name and its blind indexes. A last name may be blank
+  // (mononym), but a first name is required.
+  const newFirst = typeof body.first === "string" ? body.first.trim() : undefined;
+  const newLast = typeof body.last === "string" ? body.last.trim() : undefined;
+  let name: { first: string; last: string } | undefined;
+  if (newFirst !== undefined || newLast !== undefined) {
+    const first = newFirst ?? client.first;
+    const last = newLast ?? client.last;
+    if (!first) return NextResponse.json({ error: "A first name is required." }, { status: 400 });
+    name = { first, last };
+  }
+  const renamed = !!name && (name.first !== client.first || name.last !== client.last);
+
+  const updated = await updateClient(id, insurerId, profile, name);
   if (!updated) return NextResponse.json({ error: "Client not found." }, { status: 404 });
-  await logChange(user.clinician.id, `client:${id}`, "edit", "edited client record");
+  // Keep each charge's name snapshot in step with the record (claims read the
+  // record; the queue/lists read the snapshot). Best-effort — never fail the save.
+  if (renamed && name) { try { await renameSessionsClient(id, name.first, name.last); } catch (e) { console.error("session name sync failed:", e); } }
+  // Don't write the name values into the plaintext audit log (it's PHI).
+  await logChange(user.clinician.id, `client:${id}`, "edit", renamed ? "edited client record and corrected the client's name" : "edited client record");
   return NextResponse.json({ ok: true });
 }
