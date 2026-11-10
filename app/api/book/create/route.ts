@@ -157,7 +157,7 @@ export async function POST(req: Request) {
 
   // New-client intake: which forms this service needs and whether the client
   // already has them on file (matched by name). Couples/Marriage/Pre-Marital
-  // get the couples intake; other services get General + DSM-5; the free
+  // get the Couples Intake + DSM-5; other services get General + DSM-5; the free
   // consultation needs none. If the client tells us they're new, treat every
   // required form as outstanding even if a same-name match exists.
   const assessment = await assessClientIntake(name, type.name, email);
