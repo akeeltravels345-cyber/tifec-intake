@@ -43,7 +43,9 @@ function peersDsm5(name: string): FormTemplateKey {
 /** The intake form(s) a booking of this service requires. */
 export function requiredIntakeForms(typeName: string): FormTemplateKey[] {
   if (skipsIntake(typeName)) return [];
-  if (isCoupleService(typeName)) return ["couples"];
+  // Marriage / Pre-Marital / Couples: the joint Couples Intake plus the adult
+  // DSM-5 wellbeing screening.
+  if (isCoupleService(typeName)) return ["couples", "dsm5-level1-adult"];
   if (isPeersService(typeName)) return ["peers-intake", peersDsm5(typeName)];
   return ["individual", "dsm5-level1-adult"];
 }

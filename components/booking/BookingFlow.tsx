@@ -554,7 +554,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
               <p className="bk-monthnote">You&apos;re booking <b>{picks.length} session{picks.length === 1 ? "" : "s"}</b> this month with {clinName(picks[0].clinicianId)}. Go back to add or remove times.</p>
             )}
             {!/free\s+online\s+consultation/i.test(type.name) && (firstVisit !== "no") && (
-              <p className="bk-intake">We&apos;ll email you your intake form{/couples?|marriage|pre[\s-]?marital/i.test(type.name) ? "" : " and a short wellbeing screening"} to complete before your visit. It helps your clinician prepare.</p>
+              <p className="bk-intake">We&apos;ll email you your intake form and a short wellbeing screening to complete before your visit. It helps your clinician prepare.</p>
             )}
             {policy && <label className="bk-policy"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> <span><b>Cancellation policy.</b> {policy}</span></label>}
             {err && <p className="bk-err">{err}</p>}
