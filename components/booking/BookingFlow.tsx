@@ -243,7 +243,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
     const clinicianId = month ? picks[0].clinicianId : slot!.clinicianId;
     const res = await fetch("/api/book/create", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preview, typeId: type.id, clinicianId, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", answers,
+      body: JSON.stringify({ preview, typeId: type.id, clinicianId, ...details, insurancePath: details.path, mode: chosenMode, firstVisit: firstVisit === "yes", returning: firstVisit === "no", answers,
         heardFrom: firstVisit === "yes" ? heardFrom : "", referralChannel,
         ...(month ? { sessions: picks.map((p) => ({ date: p.date, minute: p.minute })) } : { date, minute: slot!.minute }) }),
     });

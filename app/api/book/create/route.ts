@@ -65,12 +65,21 @@ export async function POST(req: Request) {
   if (!type) return NextResponse.json({ error: "That service is unavailable." }, { status: 404 });
   if (!canBook(clinicianId)) return NextResponse.json({ error: "That clinician is unavailable." }, { status: 404 });
 
-  // Don't auto-send intake to someone already in our client system — they're an
-  // established client. Snapshot this BEFORE ensureBookingClient runs below, or it
-  // would see the record it just created. A client who tells us they're new
-  // (firstVisit) still gets intake, so a genuine namesake isn't shut out.
+  // Don't auto-send intake to a returning client. We trust two signals, in order:
+  //   1. The booking form's own question ("Have you completed an intake with us
+  //      before?"): "Yes, I have" => body.returning. We honour that on its own —
+  //      requiring an exact name+email hub match on top of it was shutting out
+  //      returning clients who book with a different email than we have on file.
+  //   2. Otherwise, a hub match on name + email (covers the case where they
+  //      didn't answer the question).
+  // A client who says they're NEW ("No, I'm new" => firstVisit) always gets
+  // intake, so a genuine namesake is never shut out. Snapshot this BEFORE
+  // ensureBookingClient runs below, or it would see the record it just created.
+  // (If a returning client genuinely needs a new form for a new service, staff
+  // can still send it by hand from the appointment.)
   const firstVisit = body.firstVisit === true;
-  const suppressIntake = !firstVisit && await clientInSystem(name, email);
+  const saidReturning = body.returning === true;
+  const suppressIntake = !firstVisit && (saidReturning || await clientInSystem(name, email));
 
   // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
   // session (single booking only; month bookings are for 1:1 services).
