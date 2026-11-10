@@ -521,7 +521,7 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
                 </label>
               ))}
               {!/free\s+online\s+consultation/i.test(type.name) && (
-                <div className="bk-f"><span>Have you completed an intake form with us before?</span>
+                <div className="bk-f"><span>Have you completed an intake form with us before? <em>(required)</em></span>
                   <div className="bk-seg">
                     <button type="button" className={firstVisit === "no" ? "on" : ""} onClick={() => setFirstVisit("no")}>Yes, I have</button>
                     <button type="button" className={firstVisit === "yes" ? "on" : ""} onClick={() => setFirstVisit("yes")}>No, I&apos;m new</button>
@@ -558,7 +558,11 @@ export default function BookingFlow({ practiceName, types, clinicians, insurers,
             )}
             {policy && <label className="bk-policy"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> <span><b>Cancellation policy.</b> {policy}</span></label>}
             {err && <p className="bk-err">{err}</p>}
-            <button className="bk-cta" onClick={() => { if (policy && !agreed) { setErr("Please accept the cancellation policy."); return; } setErr(""); setStep("confirm"); }} disabled={!!policy && !agreed}>Review booking</button>
+            <button className="bk-cta" onClick={() => {
+              if (!/free\s+online\s+consultation/i.test(type.name) && !firstVisit) { setErr("Please let us know whether you've completed an intake form with us before."); return; }
+              if (policy && !agreed) { setErr("Please accept the cancellation policy."); return; }
+              setErr(""); setStep("confirm");
+            }} disabled={(!!policy && !agreed) || (!/free\s+online\s+consultation/i.test(type.name) && !firstVisit)}>Review booking</button>
           </section>
         )}
 
