@@ -6,6 +6,11 @@ import { insertSubmission } from "@/lib/db";
 import { addClients, type ClientInput } from "@/lib/clients";
 import type { ClientProfile } from "@/lib/clients";
 import { sendNotification } from "@/lib/email";
+import { getAppointmentByCoupleId, listAppointmentTypes } from "@/lib/scheduling";
+import { sendIntakeInvite } from "@/lib/bookingCore";
+import { findIntakeForClient } from "@/lib/intakeLink";
+import { intakeLinkPath } from "@/lib/intakeRouting";
+import { caymanWhen } from "@/lib/caymanTime";
 
 export const runtime = "nodejs"; // needs node crypto + nodemailer
 
@@ -36,6 +41,50 @@ function clientsFromAnswers(a: Record<string, string>): ClientInput[] {
   const out: ClientInput[] = [];
   for (const c of [mk(a.full_name, a.email), mk(a.his_name, a.his_email), mk(a.hers_name, a.hers_email)]) if (c) out.push(c);
   return out;
+}
+
+// A couples intake carries BOTH partners (his_/hers_), and it's the first point
+// we learn the partner's email. Each partner needs their OWN adult DSM-5
+// wellbeing screening, so send it here: the booker already got theirs with the
+// booking confirmation, and anyone who already has a DSM-5 on file is skipped.
+// Best-effort — never blocks or fails the (already saved) submission.
+async function invitePartnersToDsm5(
+  clinician: { id: string; name: string },
+  coupleId: string | null,
+  answers: Record<string, string>,
+  origin: string,
+): Promise<void> {
+  const partners = [
+    { name: (answers.his_name || "").trim(), email: (answers.his_email || "").trim() },
+    { name: (answers.hers_name || "").trim(), email: (answers.hers_email || "").trim() },
+  ].filter((p) => p.name && p.email);
+  if (partners.length === 0) return;
+
+  // Who booked? They already received their DSM-5 at booking, so skip them.
+  let bookerEmail = "", serviceName = "your appointment", whenText = "";
+  if (coupleId) {
+    const appt = await getAppointmentByCoupleId(coupleId);
+    if (appt) {
+      bookerEmail = (appt.clientEmail || "").trim().toLowerCase();
+      const type = (await listAppointmentTypes()).find((t) => t.id === appt.typeId);
+      serviceName = type?.name || serviceName;
+      whenText = appt.startAt ? caymanWhen(appt.startAt) : "";
+    }
+  }
+
+  for (const p of partners) {
+    if (bookerEmail && p.email.toLowerCase() === bookerEmail) continue; // booker already invited
+    const { first, last } = splitName(p.name);
+    try {
+      const hits = await findIntakeForClient(first, last, undefined, p.email);
+      if (hits.some((h) => h.formKey === "dsm5-level1-adult")) continue; // already screened
+    } catch { /* store unreachable: still send — a screening is better than none */ }
+    await sendIntakeInvite({
+      to: p.email, clientName: p.name, clinicianName: clinician.name,
+      serviceName, whenText,
+      forms: [{ form: "dsm5-level1-adult", url: `${origin}${intakeLinkPath(clinician.id, "dsm5-level1-adult")}` }],
+    });
+  }
 }
 
 export async function POST(req: Request) {
@@ -133,6 +182,17 @@ export async function POST(req: Request) {
   } catch (err) {
     // The submission is saved; a failed email shouldn't lose the client's data.
     console.error("Notification email failed:", err);
+  }
+
+  // Couples intake just revealed the partner's email — make sure BOTH partners
+  // get their individual DSM-5 screening. Best-effort; never blocks the submit.
+  if (formKey === "couples") {
+    try {
+      const origin = (process.env.APP_URL || new URL(req.url).origin).replace(/\/$/, "");
+      await invitePartnersToDsm5(clinician, coupleId, answers, origin);
+    } catch (err) {
+      console.error("partner DSM-5 invite failed:", err);
+    }
   }
 
   return NextResponse.json({ ok: true });

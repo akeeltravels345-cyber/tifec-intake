@@ -476,6 +476,18 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
   return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.id === id) ?? null;
 }
 
+// Find the booking a couples intake belongs to (both carry the same couple_id).
+// Used to learn who booked, so the partner's screening can skip them.
+export async function getAppointmentByCoupleId(coupleId: string): Promise<Appointment | null> {
+  if (!coupleId) return null;
+  if (usePostgres) {
+    const sql = await pg();
+    const res = (await sql`SELECT * FROM scheduling_appointments WHERE couple_id = ${coupleId} ORDER BY created_at ASC LIMIT 1`) as Record<string, unknown>[];
+    return res[0] ? rowToAppt(res[0]) : null;
+  }
+  return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.coupleId === coupleId) ?? null;
+}
+
 /** Repoint every appointment from one client record to another (client-merge
  *  tool). Returns how many appointments moved. */
 export async function reassignAppointmentsClient(fromClientId: string, toClientId: string): Promise<number> {
