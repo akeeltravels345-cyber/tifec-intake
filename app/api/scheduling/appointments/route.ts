@@ -37,11 +37,11 @@ async function notifyClientOfBooking(appt: Appointment, origin: string): Promise
   const coupleId = needsIntake && missingForms.includes("couples") ? (appt.coupleId || randomBytes(6).toString("hex")) : undefined;
   if (needsIntake) {
     const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(appt.clinicianId, form, coupleId)}` }));
-    await sendIntakeInvite({ to: appt.clientEmail, clientName: appt.clientName, clinicianName, serviceName: type?.name || "your appointment", whenText: caymanWhen(appt.startAt), forms });
+    await sendIntakeInvite({ to: appt.clientEmail, clientName: appt.clientName, clinicianName, clinicianEmail: getClinician(appt.clinicianId)?.email, serviceName: type?.name || "your appointment", whenText: caymanWhen(appt.startAt), forms });
   }
   await sendBookingConfirmation({
     id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
-    to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+    to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName, clinicianEmail: getClinician(appt.clinicianId)?.email,
     whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
     manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
     portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
@@ -235,7 +235,7 @@ export async function POST(req: Request) {
       try {
         await sendBookingConfirmation({
           id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
-          to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+          to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName, clinicianEmail: getClinician(appt.clinicianId)?.email,
           whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
           manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
           portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
@@ -309,7 +309,7 @@ export async function POST(req: Request) {
         try {
           await sendBookingConfirmation({
             id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
-            to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName,
+            to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "your appointment", clinicianName, clinicianEmail: getClinician(appt.clinicianId)?.email,
             whenText: caymanWhen(appt.startAt), mode: appt.mode, locationOrLink: appt.locationOrLink,
             manageUrl: `${origin}/book/manage?preview=peek&id=${appt.id}`,
             portalUrl: `${origin}/portal/${portalToken(appt.clientEmail)}`,
@@ -354,7 +354,7 @@ export async function POST(req: Request) {
         const loc = appt.mode === "virtual" ? appt.locationOrLink : (appt.locationOrLink || "The Institute for Essential Care");
         await notifyClientReschedule({
           to: appt.clientEmail, clientName: appt.clientName, serviceName: type?.name || "Appointment",
-          clinicianName: getClinician(appt.clinicianId)?.name || "your clinician",
+          clinicianName: getClinician(appt.clinicianId)?.name || "your clinician", clinicianEmail: getClinician(appt.clinicianId)?.email,
           id: appt.id, startAt: appt.startAt, endAt: appt.endAt, location: loc,
         });
       }

@@ -14,7 +14,7 @@ const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || undefined;
 const organizerEmail = () => process.env.SMTP_FROM || process.env.SMTP_USER || undefined;
 
 // Confirm a cancellation to the client + remove it from their calendar.
-async function sendCancelEmail(a: { to: string; clientName: string; serviceName: string; clinicianName: string; whenText: string; id: string; startAt: string; endAt: string }): Promise<void> {
+async function sendCancelEmail(a: { to: string; clientName: string; serviceName: string; clinicianName: string; clinicianEmail?: string; whenText: string; id: string; startAt: string; endAt: string }): Promise<void> {
   if (!a.to) return;
   const ics = appointmentInvite({
     id: a.id, startAt: a.startAt, endAt: a.endAt, serviceName: a.serviceName, clinicianName: a.clinicianName,
@@ -30,6 +30,7 @@ async function sendCancelEmail(a: { to: string; clientName: string; serviceName:
         { label: "Was", value: a.whenText },
       ],
       outro: "If this was a mistake, or you'd like to rebook, just visit our booking page or reply to this email and we'll be glad to help.",
+      replyTo: a.clinicianEmail ? { name: a.clinicianName, email: a.clinicianEmail } : undefined,
     }, { content: ics, method: "CANCEL", filename: "appointment.ics" });
   } catch { /* never block the change on email */ }
 }
@@ -85,7 +86,8 @@ export async function POST(req: Request) {
     const type = (await listAppointmentTypes()).find((t) => t.id === a.typeId);
     await sendCancelEmail({
       to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
-      clinicianName: getClinician(a.clinicianId)?.name || "your clinician", whenText: caymanWhen(a.startAt),
+      clinicianName: getClinician(a.clinicianId)?.name || "your clinician", clinicianEmail: getClinician(a.clinicianId)?.email,
+      whenText: caymanWhen(a.startAt),
       id: a.id, startAt: a.startAt, endAt: a.endAt,
     });
     // Offer the freed slot to any matching waitlisted clients (first to claim wins).
@@ -116,7 +118,7 @@ export async function POST(req: Request) {
       });
       await notifyClientReschedule({
         to: a.clientEmail, clientName: a.clientName, serviceName: type?.name || "Appointment",
-        clinicianName: getClinician(a.clinicianId)?.name || "your clinician",
+        clinicianName: getClinician(a.clinicianId)?.name || "your clinician", clinicianEmail: getClinician(a.clinicianId)?.email,
         id: a.id, startAt, endAt, location: loc,
       });
     }

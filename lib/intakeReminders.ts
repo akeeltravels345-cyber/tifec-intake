@@ -43,6 +43,7 @@ export async function sendIntakeReminderFor(id: string, opts: { origin: string; 
     ],
     buttons: assess.missingForms.map((f) => ({ label: `Complete your ${formShortLabel(f)}`, url: `${opts.origin}${intakeLinkPath(a.clinicianId, f, coupleId)}` })),
     note: "It only takes a few minutes and is kept confidential.",
+    replyTo: (() => { const c = getClinician(a.clinicianId); return c?.email ? { name: c.name, email: c.email } : undefined; })(),
   });
   await updateAppointment(a.id, { intakeReminderAt: new Date().toISOString() } as never);
   return "sent";

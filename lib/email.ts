@@ -412,6 +412,7 @@ export interface ClientEmailArgs {
   note?: string;                               // subtle callout
   outro?: string;                              // closing paragraph before sign-off
   footerNote?: string;                         // confidentiality line (defaults to the client wording)
+  replyTo?: { name?: string; email?: string }; // where a client's reply goes (e.g. the booking clinician)
   logoCid?: string;
 }
 
@@ -496,6 +497,8 @@ export async function sendBrandedEmail(to: string, subject: string, args: Client
     await transport().sendMail({
       from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
       to, subject, text, html, attachments: attachments.length ? attachments : undefined,
+      // Replies go to the booking clinician when one is given (else the mailbox).
+      ...(args.replyTo?.email ? { replyTo: { name: args.replyTo.name || "", address: args.replyTo.email } } : {}),
       // A text/calendar alternative helps Gmail / Apple show an "add to calendar" chip.
       ...(ics ? { icalEvent: { method: ics.method, content: ics.content } } : {}),
     });

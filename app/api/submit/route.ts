@@ -49,7 +49,7 @@ function clientsFromAnswers(a: Record<string, string>): ClientInput[] {
 // booking confirmation, and anyone who already has a DSM-5 on file is skipped.
 // Best-effort — never blocks or fails the (already saved) submission.
 async function invitePartnersToDsm5(
-  clinician: { id: string; name: string },
+  clinician: { id: string; name: string; email?: string },
   coupleId: string | null,
   answers: Record<string, string>,
   origin: string,
@@ -80,7 +80,7 @@ async function invitePartnersToDsm5(
       if (hits.some((h) => h.formKey === "dsm5-level1-adult")) continue; // already screened
     } catch { /* store unreachable: still send — a screening is better than none */ }
     await sendIntakeInvite({
-      to: p.email, clientName: p.name, clinicianName: clinician.name,
+      to: p.email, clientName: p.name, clinicianName: clinician.name, clinicianEmail: clinician.email,
       serviceName, whenText,
       forms: [{ form: "dsm5-level1-adult", url: `${origin}${intakeLinkPath(clinician.id, "dsm5-level1-adult")}` }],
     });

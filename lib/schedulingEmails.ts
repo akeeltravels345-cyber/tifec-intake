@@ -11,7 +11,7 @@ const firstNameOf = (full: string) => full.trim().split(/\s+/)[0] || undefined;
 const organizerEmail = () => process.env.SMTP_FROM || process.env.SMTP_USER || undefined;
 
 export interface RescheduleNotice {
-  to: string; clientName: string; serviceName: string; clinicianName: string;
+  to: string; clientName: string; serviceName: string; clinicianName: string; clinicianEmail?: string;
   id: string; startAt: string; endAt: string; location?: string;
 }
 
@@ -34,6 +34,7 @@ export async function notifyClientReschedule(a: RescheduleNotice): Promise<void>
         { label: "New time", value: caymanWhen(a.startAt) },
       ],
       outro: "Need to change it again? Manage your booking from the link in your original confirmation, or reply to this email. We look forward to seeing you.",
+      replyTo: a.clinicianEmail ? { name: a.clinicianName, email: a.clinicianEmail } : undefined,
     }, { content: ics, method: "REQUEST", filename: "appointment.ics" });
   } catch { /* never block the change on email */ }
 }
@@ -65,6 +66,7 @@ export async function notifyClientRebook(a: {
       ],
       buttons: [{ label: "Choose a new time", url: bookUrl }],
       outro: "Please pick a new time that suits you, or reply to this email and we'll be glad to help. Apologies again for the inconvenience.",
+      replyTo: (() => { const e = getClinician(a.clinicianId)?.email; return e ? { name: a.clinicianName, email: e } : undefined; })(),
     });
   } catch { /* never block the cancellation on email */ }
 }
@@ -84,7 +86,8 @@ export async function offerFreedSlotToWaitlist(a: Appointment, origin: string): 
 
     const type = a.typeId ? (await listAppointmentTypes()).find((t) => t.id === a.typeId) : null;
     const serviceName = type?.name || "an appointment";
-    const clinicianName = getClinician(a.clinicianId)?.name || "your clinician";
+    const clinician = getClinician(a.clinicianId);
+    const clinicianName = clinician?.name || "your clinician";
     const whenText = caymanWhen(a.startAt);
     const base = origin.replace(/\/$/, "");
 
@@ -106,6 +109,7 @@ export async function offerFreedSlotToWaitlist(a: Appointment, origin: string): 
           buttons: [{ label: "Claim this time", url: claimUrl }],
           note: "This time is open to everyone on the waitlist, so it goes to whoever claims it first. If it's already taken when you tap through, you'll stay on the list for the next opening.",
           outro: "If this time doesn't suit you, no action is needed and you'll keep your place on the waitlist.",
+          replyTo: clinician?.email ? { name: clinicianName, email: clinician.email } : undefined,
         });
         await setWaitlistStatus(entryId, "offered");
         sent++;

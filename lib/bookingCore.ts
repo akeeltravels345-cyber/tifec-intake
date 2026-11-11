@@ -40,7 +40,7 @@ export async function attachVideoAndCalendar(appt: Appointment, ctx: {
 
 // Email the client their outstanding intake link(s). Best-effort.
 export async function sendIntakeInvite(args: {
-  to: string; clientName: string; clinicianName: string; serviceName: string; whenText: string;
+  to: string; clientName: string; clinicianName: string; clinicianEmail?: string; serviceName: string; whenText: string;
   forms: { form: string; url: string }[];
 }): Promise<void> {
   if (args.forms.length === 0) return;
@@ -56,6 +56,7 @@ export async function sendIntakeInvite(args: {
       ],
       buttons: args.forms.map((f) => ({ label: `Complete your ${formShortLabel(f.form as never)}`, url: f.url })),
       note: "Each form takes a few minutes and is kept confidential. If you have any trouble, just reply to this email.",
+      replyTo: args.clinicianEmail ? { name: args.clinicianName, email: args.clinicianEmail } : undefined,
     });
   } catch { /* never block a booking on email */ }
 }
@@ -65,7 +66,7 @@ export async function sendIntakeInvite(args: {
 // client's calendar in one go.
 export async function sendBookingConfirmation(args: {
   id: string; startAt: string; endAt: string;
-  to: string; clientName: string; serviceName: string; clinicianName: string;
+  to: string; clientName: string; serviceName: string; clinicianName: string; clinicianEmail?: string;
   whenText: string; mode: string; locationOrLink: string; manageUrl: string; intakeForms: string[];
   seriesDates?: string[];   // pretty "when" strings for each booked occurrence (>1 = a series)
   skippedDates?: string[];  // pretty strings for weeks that couldn't be booked
@@ -132,6 +133,7 @@ export async function sendBookingConfirmation(args: {
       buttons,
       note: notes.length ? notes.join(" ") : undefined,
       outro: "We look forward to seeing you.",
+      replyTo: args.clinicianEmail ? { name: args.clinicianName, email: args.clinicianEmail } : undefined,
     }, { content: ics, method: "REQUEST", filename: "appointment.ics" });
   } catch { /* never block a booking on email */ }
 }

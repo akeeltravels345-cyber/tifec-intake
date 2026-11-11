@@ -107,11 +107,11 @@ export async function POST(req: Request) {
     const coupleId = missingForms.includes("couples") ? randomBytes(6).toString("hex") : null;
     if (needsIntake) {
       const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId || undefined)}` }));
-      await sendIntakeInvite({ to: email, clientName: name, clinicianName, serviceName: type.name, whenText: caymanWhen(session.startAt), forms });
+      await sendIntakeInvite({ to: email, clientName: name, clinicianName, clinicianEmail: getClinician(clinicianId)?.email, serviceName: type.name, whenText: caymanWhen(session.startAt), forms });
     }
     await sendBookingConfirmation({
       id: session.id, startAt: session.startAt, endAt: session.endAt,
-      to: email, clientName: name, serviceName: type.name, clinicianName,
+      to: email, clientName: name, serviceName: type.name, clinicianName, clinicianEmail: getClinician(clinicianId)?.email,
       whenText: caymanWhen(session.startAt), mode: session.mode, locationOrLink: session.locationOrLink,
       manageUrl: "", // a group attendee must not get the session's cancel link
       portalUrl: `${origin}/portal/${portalToken(email)}`,
@@ -213,14 +213,14 @@ export async function POST(req: Request) {
   // Auto-email the outstanding intake link(s) once (per client, not per session).
   if (needsIntake) {
     const forms = missingForms.map((form) => ({ form, url: `${origin}${intakeLinkPath(clinicianId, form, coupleId || undefined)}` }));
-    await sendIntakeInvite({ to: email, clientName: name, clinicianName, serviceName: type.name, whenText: caymanWhen(appt.startAt), forms });
+    await sendIntakeInvite({ to: email, clientName: name, clinicianName, clinicianEmail: getClinician(clinicianId)?.email, serviceName: type.name, whenText: caymanWhen(appt.startAt), forms });
   }
 
   // One "you're booked" confirmation. For a month booking it lists every booked
   // session, notes any that couldn't be reserved, and the .ics carries them all.
   await sendBookingConfirmation({
     id: appt.id, startAt: appt.startAt, endAt: appt.endAt,
-    to: email, clientName: name, serviceName: type.name, clinicianName,
+    to: email, clientName: name, serviceName: type.name, clinicianName, clinicianEmail: getClinician(clinicianId)?.email,
     whenText: caymanWhen(appt.startAt), mode, locationOrLink: appt.locationOrLink,
     manageUrl: `${origin}/book/manage?preview=${PREVIEW}&id=${appt.id}`,
     portalUrl: `${origin}/portal/${portalToken(email)}`,
