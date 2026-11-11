@@ -476,10 +476,11 @@ export default function ClientDetail({
   // The uploaded referral that set the dates (so the notice can name its source).
   const refFromDoc = profile.referral?.derivedFrom === "document" || profile.referral?.derivedFrom === "filename";
   const refDocName = profile.referral?.documentName;
-  // Only insurance clients need a referral. Show the referral panel when the
-  // client bills insurance, or already has a referral on file; a self-pay client
-  // with no referral isn't nudged to add one (that was over-flagging).
-  const showReferral = !!ins || referral.state !== "none" || refReview;
+  // Only CINICO requires a referral, so only CINICO clients are nudged to add
+  // one. Any client who already has a referral on file still shows its status
+  // (valid / expiring / expired / needs review), whatever their insurer.
+  const isCinico = /cinico/i.test(insurers.find((i) => i.id === ins)?.name ?? "");
+  const showReferral = isCinico || referral.state !== "none" || refReview;
 
   // Insured entries → CMS-1500 claim; self-pay entries (paid in full by the
   // client) → invoice. Both are selectable; the action bar offers whichever
