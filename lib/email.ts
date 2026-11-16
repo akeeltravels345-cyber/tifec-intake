@@ -396,6 +396,24 @@ export async function sendClientEmail(to: string, subject: string, text: string)
   }
 }
 
+/** Send a plain email carrying one file attachment (e.g. the weekly continuity
+ *  backup). Surfaces the real SMTP error so a failed backup is diagnosable. */
+export async function sendDocumentEmail(to: string, subject: string, text: string, filename: string, content: Buffer | string, contentType = "application/octet-stream"): Promise<{ sent: boolean; reason?: string }> {
+  try {
+    if (!process.env.SMTP_HOST) return { sent: false, reason: "SMTP not configured (dev mode)" };
+    await transport().sendMail({
+      from: { name: FROM_NAME, address: process.env.SMTP_FROM || process.env.SMTP_USER || "" },
+      to, subject, text,
+      attachments: [{ filename, content, contentType }],
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Document email failed:", err);
+    const e = err as { response?: string; message?: string };
+    return { sent: false, reason: e?.response || e?.message || String(err) };
+  }
+}
+
 // ---- Branded client email (booking, intake, reschedule, cancel) -------------
 // One template so every transactional client email reads the same: brand stripe,
 // logo, a heading, a greeting, an optional details table, optional buttons, an

@@ -153,7 +153,7 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
               <a className="bl-cta" href="/api/admin/continuity" target="_blank" rel="noopener noreferrer">Business continuity pack (print / PDF)</a>
               {isAdmin && <a className="bl-cta" style={{ background: "transparent", color: "var(--indigo)", border: "1px solid var(--indigo)" }} href="/api/admin/backup">Full data export (Excel)</a>}
             </div>
-            <p className="su-hint" style={{ margin: "10px 0 0" }}>The continuity pack is a readable snapshot — the next three weeks&apos; schedule with client phone numbers, every client&apos;s contact and insurance details, who owes money, insured work still to bill, and your clinician / insurer / fee reference — enough to keep seeing clients and billing by hand. Open it and &ldquo;Print / Save as PDF&rdquo;.</p>
+            <p className="su-hint" style={{ margin: "10px 0 0" }}>The continuity pack is a readable snapshot — the next three weeks&apos; schedule with client phone numbers, every client&apos;s contact and insurance details, who owes money, insured work still to bill, and your clinician / insurer / fee reference — enough to keep seeing clients and billing by hand. Open it and &ldquo;Print / Save as PDF&rdquo;. A copy is also emailed to your backup address automatically each week, once that address is set.</p>
           </div>
         </div>
       )}
