@@ -145,6 +145,19 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
     <>
       <div className="su-topbar"><h1 className="su-h1">Setup</h1><p className="su-sub">{canManageMoney ? "The money rules behind every payout — biller commission, running costs, insurers, codes, and clinician splits." : "Insurers, claim codes, service fees, and the practice details that print on your CMS-1500 claims."}</p></div>
 
+      {(canManageMoney || isAdmin) && (
+        <div className="su-sec">
+          <div className="su-sechead"><h2 className="su-sech">Backups</h2><span className="su-hint">Offline copies in case the portal is ever down. They hold full client details, so keep them somewhere secure.</span></div>
+          <div className="su-card" style={{ padding: 16 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <a className="bl-cta" href="/api/admin/continuity" target="_blank" rel="noopener noreferrer">Business continuity pack (print / PDF)</a>
+              {isAdmin && <a className="bl-cta" style={{ background: "transparent", color: "var(--indigo)", border: "1px solid var(--indigo)" }} href="/api/admin/backup">Full data export (Excel)</a>}
+            </div>
+            <p className="su-hint" style={{ margin: "10px 0 0" }}>The continuity pack is a readable snapshot — the next three weeks&apos; schedule with client phone numbers, every client&apos;s contact and insurance details, who owes money, insured work still to bill, and your clinician / insurer / fee reference — enough to keep seeing clients and billing by hand. Open it and &ldquo;Print / Save as PDF&rdquo;.</p>
+          </div>
+        </div>
+      )}
+
       {/* Biller's own % per clinician — biller only */}
       {isBillerUser && (
       <div className="su-sec">
