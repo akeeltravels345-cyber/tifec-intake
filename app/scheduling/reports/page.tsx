@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getBillingUser } from "@/lib/billingRole";
 import { isSystemAdmin, getClinician } from "@/lib/clinicians";
 import { schedulingStats } from "@/lib/scheduling";
+import { consultFunnel } from "@/lib/consultFunnel";
 import { caymanYearMonth } from "@/lib/caymanTime";
 import MonthNav from "@/components/billing/MonthNav";
 
@@ -21,6 +22,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const year = Number(sp.y) || nowYM.year;
   const month = Number(sp.m) || nowYM.month;
   const s = await schedulingStats(year, month);
+  const funnel = await consultFunnel(year, month);
 
   const maxType = Math.max(1, ...s.popularTypes.map((t) => t.count));
   const maxClin = Math.max(1, ...s.byClinician.map((c) => c.count));
@@ -51,6 +53,30 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <Tile k="No-shows" v={s.noShow} sub={`${s.noShowRate}% of kept`} tone={s.noShow ? "warn" : ""} />
           <Tile k="Cancelled" v={s.cancelled} sub={`${s.cancelRate}% of booked`} tone={s.cancelled ? "warn" : ""} />
           <Tile k="Self-booked" v={s.clientBookings} sub={`${s.staffBookings} by staff`} />
+        </div>
+
+        <div className="sr-card">
+          <h2>Free consultation funnel</h2>
+          <p className="sr-sub">Free Online Consultations &rarr; verified leads (booked, not cancelled or a no-show) &rarr; converted to paying clients (cash collected in billing). Each person is counted once.</p>
+          {funnel.allTime.consults === 0 ? (
+            <p className="sr-sub" style={{ margin: 0 }}>No free consultations booked yet. They&rsquo;ll show here as people book them.</p>
+          ) : (
+            <>
+              <h3 className="sr-subh">All time</h3>
+              <div className="sr-tiles">
+                <Tile k="Consults" v={funnel.allTime.consults} sub={`${funnel.allTime.bookings} booking${funnel.allTime.bookings === 1 ? "" : "s"}`} />
+                <Tile k="Verified leads" v={funnel.allTime.verifiedLeads} sub={`${funnel.allTime.leadRate}% of consults`} tone="good" />
+                <Tile k="Converted" v={funnel.allTime.converted} sub={`${funnel.allTime.convRate}% of leads`} tone={funnel.allTime.converted ? "good" : ""} />
+              </div>
+              <h3 className="sr-subh" style={{ marginTop: 18 }}>{MONTHS[month - 1]} {year}</h3>
+              <div className="sr-tiles">
+                <Tile k="Consults" v={funnel.month.consults} sub={`${funnel.month.bookings} booking${funnel.month.bookings === 1 ? "" : "s"}`} />
+                <Tile k="Verified leads" v={funnel.month.verifiedLeads} sub={`${funnel.month.leadRate}% of consults`} />
+                <Tile k="Converted" v={funnel.month.converted} sub={`${funnel.month.convRate}% of leads`} />
+              </div>
+              <p className="sr-sub" style={{ marginBottom: 0 }}>Conversions often land a month or two after the consult, so a single month&rsquo;s rate climbs over time, and the all-time figures are the truest read.</p>
+            </>
+          )}
         </div>
 
         {s.total === 0 ? (
