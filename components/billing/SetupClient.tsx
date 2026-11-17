@@ -70,6 +70,8 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
 }) {
   const router = useRouter();
   const [toast, setToast] = useState("");
+  const [sendingBackup, setSendingBackup] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(""), 1800); router.refresh(); };
   const run = async (body: Record<string, unknown>, msg: string) => { try { await post(body); flash(msg); } catch (e) { setToast(e instanceof Error ? e.message : "Error"); setTimeout(() => setToast(""), 2200); } };
 
@@ -151,9 +153,33 @@ export default function SetupClient({ insurers: insIn, cptCodes: cptIn, clinicia
           <div className="su-card" style={{ padding: 16 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <a className="bl-cta" href="/api/admin/continuity" target="_blank" rel="noopener noreferrer">Business continuity pack (print / PDF)</a>
+              <button
+                type="button"
+                className="bl-cta"
+                style={{ background: "transparent", color: "var(--indigo)", border: "1px solid var(--indigo)", cursor: sendingBackup ? "default" : "pointer", opacity: sendingBackup ? 0.6 : 1 }}
+                disabled={sendingBackup}
+                onClick={async () => {
+                  setBackupMsg(null);
+                  setSendingBackup(true);
+                  try {
+                    const r = await fetch("/api/admin/continuity", { method: "POST" });
+                    const d = await r.json().catch(() => ({}));
+                    setBackupMsg(r.ok
+                      ? { ok: true, text: `Sent to ${(d.recipients || []).join(", ") || "your backup address"}.` }
+                      : { ok: false, text: d.error || "Could not send the backup." });
+                  } catch {
+                    setBackupMsg({ ok: false, text: "Could not reach the server." });
+                  } finally {
+                    setSendingBackup(false);
+                  }
+                }}
+              >{sendingBackup ? "Sending…" : "Email me the backup now"}</button>
               {isAdmin && <a className="bl-cta" style={{ background: "transparent", color: "var(--indigo)", border: "1px solid var(--indigo)" }} href="/api/admin/backup">Full data export (Excel)</a>}
             </div>
-            <p className="su-hint" style={{ margin: "10px 0 0" }}>The continuity pack is a readable snapshot — the next three weeks&apos; schedule with client phone numbers, every client&apos;s contact and insurance details, who owes money, insured work still to bill, and your clinician / insurer / fee reference — enough to keep seeing clients and billing by hand. Open it and &ldquo;Print / Save as PDF&rdquo;. A copy is also emailed to your backup address automatically each week, once that address is set.</p>
+            {backupMsg && (
+              <p className="su-hint" style={{ margin: "8px 0 0", color: backupMsg.ok ? "var(--pos)" : "var(--neg)" }}>{backupMsg.text}</p>
+            )}
+            <p className="su-hint" style={{ margin: "10px 0 0" }}>The continuity pack is a readable snapshot — the next three weeks&apos; schedule with client phone numbers, every client&apos;s contact and insurance details, who owes money, insured work still to bill, and your clinician / insurer / fee reference — enough to keep seeing clients and billing by hand. Open it and &ldquo;Print / Save as PDF&rdquo;. A copy is also emailed to your backup address automatically each week, and you can send yourself one right now with &ldquo;Email me the backup now&rdquo; &mdash; both need that backup address set first.</p>
           </div>
         </div>
       )}
