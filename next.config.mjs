@@ -48,6 +48,13 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    // "/clients" is an intuitive guess (the nav label is "Clients"), but the
+    // page lives at /billing/clients. Send the bare path there instead of 404.
+    return [
+      { source: "/clients", destination: "/billing/clients", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;
