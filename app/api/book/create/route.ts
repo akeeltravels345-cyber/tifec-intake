@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { CLINICIANS, getClinician, isBookableClinician } from "@/lib/clinicians";
-import { listAppointmentTypes, availableSlots, createAppointment, utcFromCayMinutes, findGroupSession, joinGroupSession, type Appointment, type QuestionAnswer } from "@/lib/scheduling";
+import { listAppointmentTypes, availableSlots, createAppointment, utcFromCayMinutes, findGroupSession, joinGroupSession, hasEarlierAppointment, type Appointment, type QuestionAnswer } from "@/lib/scheduling";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { caymanWhen } from "@/lib/caymanTime";
 import { attachVideoAndCalendar, sendIntakeInvite, sendBookingConfirmation } from "@/lib/bookingCore";
@@ -79,7 +79,10 @@ export async function POST(req: Request) {
   // can still send it by hand from the appointment.)
   const firstVisit = body.firstVisit === true;
   const saidReturning = body.returning === true;
-  const suppressIntake = !firstVisit && (saidReturning || await clientInSystem(name, email));
+  // Established = said so, OR already in the client hub (name + email), OR has
+  // booked with us before (matched by email or name, so a different email than
+  // we have on file still counts). A self-reported NEW client always gets intake.
+  const suppressIntake = !firstVisit && (saidReturning || await clientInSystem(name, email) || await hasEarlierAppointment({ email, name }));
 
   // Group session (e.g. PEERS): the client reserves a SEAT in a staff-scheduled
   // session (single booking only; month bookings are for 1:1 services).

@@ -1,7 +1,7 @@
 // Intake gating helpers, shared by the nightly cron and the clinician-facing
 // "who's missing intake" page (where a clinician can send a reminder by hand).
 import { randomBytes } from "crypto";
-import { getAppointment, updateAppointment, listAppointments, listAppointmentTypes } from "@/lib/scheduling";
+import { getAppointment, updateAppointment, listAppointments, listAppointmentTypes, hasEarlierAppointment } from "@/lib/scheduling";
 import { getClinician } from "@/lib/clinicians";
 import { assessClientIntake, intakeLinkPath, formShortLabel } from "@/lib/intakeRouting";
 import { sendBrandedEmail } from "@/lib/email";
@@ -28,6 +28,14 @@ export async function sendIntakeReminderFor(id: string, opts: { origin: string; 
   if (!type) return "not_pending";
   const assess = await assessClientIntake(a.clientName, type.name, a.clientEmail);
   if (!assess.needsIntake) { await updateAppointment(a.id, { intakeStatus: "received" } as never); return "received"; }
+  // Established client (they've booked before): intake belonged on their first
+  // appointment, not this repeat one. Clear the stale "pending" so we never nag
+  // an old client, and stop here. Staff can still send a form by hand if a new
+  // service genuinely needs one.
+  if (await hasEarlierAppointment({ clientId: a.clientId, email: a.clientEmail, name: a.clientName }, { id: a.id, createdAt: a.createdAt })) {
+    await updateAppointment(a.id, { intakeStatus: "not_required" } as never);
+    return "not_pending";
+  }
   if (!a.clientEmail) return "no_email";
 
   // Reuse the couple id from booking so the reminder link matches the invite.
@@ -64,6 +72,11 @@ export async function listIntakeGaps(clinicianId: string | undefined, days = 21)
     if (!type) continue;
     const assess = await assessClientIntake(a.clientName, type.name, a.clientEmail);
     if (!assess.needsIntake) { await updateAppointment(a.id, { intakeStatus: "received" } as never); continue; }
+    // An established client (booked before) shouldn't surface as an intake gap on
+    // a repeat appointment — clear it and skip (mirrors sendIntakeReminderFor).
+    if (await hasEarlierAppointment({ clientId: a.clientId, email: a.clientEmail, name: a.clientName }, { id: a.id, createdAt: a.createdAt })) {
+      await updateAppointment(a.id, { intakeStatus: "not_required" } as never); continue;
+    }
     out.push({
       id: a.id, clientName: a.clientName, clientEmail: a.clientEmail, clinicianId: a.clinicianId,
       serviceName: type.name, startAt: a.startAt,

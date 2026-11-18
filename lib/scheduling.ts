@@ -476,6 +476,34 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
   return readJson<Appointment[]>(APPT_FILE, []).find((a) => a.id === id) ?? null;
 }
 
+// Has this person been booked before? True when there's another non-cancelled
+// appointment for the same person, created earlier than the one in hand. Matched
+// by client-hub id, else email, else name (so a returning client who books with
+// a different email than we have on file is still recognised). Used to decide
+// "established client -> no automatic intake": intake belongs on the FIRST
+// appointment only, not on every repeat booking.
+export async function hasEarlierAppointment(
+  person: { clientId?: string | null; email?: string; name?: string },
+  before?: { id?: string; createdAt?: string },
+): Promise<boolean> {
+  const norm = (s?: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const email = norm(person.email), name = norm(person.name);
+  if (!person.clientId && !email && !name) return false;
+  let all: Appointment[];
+  try { all = await listAppointments({}); } catch { return false; }
+  const cutoff = before?.createdAt || "";
+  return all.some((a) => {
+    if (a.kind !== "appointment" || a.status === "cancelled") return false;
+    if (before?.id && a.id === before.id) return false;
+    const match = (person.clientId && a.clientId === person.clientId) || (email && norm(a.clientEmail) === email) || (name && norm(a.clientName) === name);
+    if (!match) return false;
+    // When we know the appointment in hand, only count genuinely earlier ones, so
+    // a later session booked in the same batch doesn't mark the booker returning
+    // off their own booking.
+    return cutoff ? (a.createdAt || "") < cutoff : true;
+  });
+}
+
 // Find the booking a couples intake belongs to (both carry the same couple_id).
 // Used to learn who booked, so the partner's screening can skip them.
 export async function getAppointmentByCoupleId(coupleId: string): Promise<Appointment | null> {

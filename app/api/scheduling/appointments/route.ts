@@ -4,6 +4,7 @@ import { isSystemAdmin, canTreatClients, CLINICIANS, getClinician, type Clinicia
 import {
   listAppointments, createAppointment, updateAppointment, deleteAppointment,
   createRecurring, createDayBlocks, deleteSeriesFrom, getAppointment, getAvailability, listAppointmentTypes,
+  hasEarlierAppointment,
   type Appointment,
 } from "@/lib/scheduling";
 import { externalBusyIntervals } from "@/lib/externalBusy";
@@ -32,7 +33,10 @@ async function notifyClientOfBooking(appt: Appointment, origin: string): Promise
   // established client, so only a brand-new name gets intake. (Staff can still
   // send it by hand from the appointment.) Scheduling doesn't create the client
   // record, so this reflects the pre-booking roster.
-  const alreadyClient = await clientInSystem(appt.clientName, appt.clientEmail);
+  // Established = in the client hub (name + email), or has booked with us before
+  // (so a long-time client or a different email than we hold still counts).
+  const alreadyClient = (await clientInSystem(appt.clientName, appt.clientEmail))
+    || (await hasEarlierAppointment({ clientId: appt.clientId, email: appt.clientEmail, name: appt.clientName }, { id: appt.id, createdAt: appt.createdAt }));
   const needsIntake = assessment.requiredForms.length > 0 && missingForms.length > 0 && !alreadyClient;
   const coupleId = needsIntake && missingForms.includes("couples") ? (appt.coupleId || randomBytes(6).toString("hex")) : undefined;
   if (needsIntake) {
